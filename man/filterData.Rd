@@ -55,5 +55,5 @@ Filter data from a \code{\linkS4class{GRN}} object
 }
 \examples{
 GRN = loadExampleObject()
-GRN = filterData(GRN, forceRerun = TRUE)
+GRN = filterData(GRN, forceRerun = FALSE)
 }

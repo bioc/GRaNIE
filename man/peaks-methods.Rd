@@ -19,5 +19,7 @@ Integer. Number of peaks hat are defined in the \code{\linkS4class{GRN}} object,
 Return the number of peaks (all or only non-filtered ones) that are defined in the \code{\linkS4class{GRN}} object.
 }
 \examples{
+GRN = loadExampleObject()
 nPeaks(GRN, filter = TRUE)
+nPeaks(GRN, filter = FALSE)
 }

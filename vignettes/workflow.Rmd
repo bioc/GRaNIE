@@ -4,7 +4,7 @@ author: "Christian Arnold, Judith Zaugg, Rim Moussa"
 date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('GRaNIE')`"
 abstract: >
-  This workflow vignette shows how to use the `GRaNIE` package in a real-world example. For this purpose, you will use the `GRaNIEData` package for a more complex analysis to illustrate most of its features. Importantly, you will also learn in detail how to work with a `GRaNIE` object and what its main functions and properties are. The vignette will be continuously updated whenever new functionality becomes available or when we receive user feedback.
+  This workflow vignette shows how to use the `GRaNIE` package in a real-world example. For this purpose, you will use real data that is soon available in the `GRaNIEData` package for a more complex analysis to illustrate most of its features. Importantly, you will also learn in detail how to work with a `GRaNIE` object and what its main functions and properties are. The vignette will be continuously updated whenever new functionality becomes available or when we receive user feedback.
 vignette: >
   %\VignetteIndexEntry{Workflow example}
   %\VignetteEngine{knitr::rmarkdown}
@@ -56,7 +56,7 @@ pre[class] {
 # Example Workflow
 <a name="section1"></a>
 
-In the following example, you will use data from the `GRaNIEData` package to construct a eGRN from ATAC-seq, RNA-seq data as well transcription factor data.
+In the following example, you will use data from the `GRaNIEData` package (soon available) to construct a *eGRN* from ATAC-seq, RNA-seq data as well transcription factor data.
 
 
 ```{r <knitr, echo=FALSE, message=FALSE, results="hide", class.output="scroll-200"}
@@ -69,7 +69,7 @@ opts_chunk$set(
   results='hold')
 ```
 
-First, let's load the required libraries `GRaNIE` and `GRaNIEData`. The `tidyverse` package is already loaded and attached when loading the `GRaNIE` package, but we nevertheless load it here explicitly to highlight that we'll use various `tidyverse` functions for data import.
+First, let's load the required libraries. The `tidyverse` package is already loaded and attached when loading the `GRaNIE` package, but we nevertheless load it here explicitly to highlight that we'll use various `tidyverse` functions for data import.
 
 For reasons of brevity, we omit the output of this code chunk.
 

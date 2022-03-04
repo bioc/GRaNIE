@@ -9,7 +9,8 @@ build_eGRN_graph(
   model_TF_gene_nodes_separately = FALSE,
   allowLoops = FALSE,
   removeMultiple = FALSE,
-  directed = FALSE
+  directed = FALSE,
+  forceRerun = FALSE
 )
 }
 \arguments{
@@ -31,5 +32,5 @@ Builds a graph out of a set of connections
 }
 \examples{
 GRN = loadExampleObject()
-GRN = build_eGRN_graph(GRN)
+GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
 }

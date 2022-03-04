@@ -49,5 +49,5 @@ Add peak-gene connections to a \code{\linkS4class{GRN}} object
 }
 \examples{
 GRN = loadExampleObject()
-GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = TRUE)
+GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = FALSE)
 }

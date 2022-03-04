@@ -43,5 +43,5 @@ Produce a PCA plot of the data from a \code{\linkS4class{GRN}} object
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = TRUE)
+GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = FALSE)
 }

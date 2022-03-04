@@ -31,5 +31,5 @@ Add TF-gene correlations to a \code{\linkS4class{GRN}} object. The information i
 }
 \examples{
 GRN = loadExampleObject()
-GRN = add_TF_gene_correlation(GRN, forceRerun = TRUE)
+GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
 }

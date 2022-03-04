@@ -12,78 +12,84 @@
 #' GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
 #' @return The same \code{\linkS4class{GRN}} object.
 build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE, 
-                             allowLoops = FALSE, removeMultiple = FALSE, directed = FALSE) {
+                             allowLoops = FALSE, removeMultiple = FALSE, directed = FALSE, forceRerun = FALSE) {
     
     checkmate::assertClass(GRN, "GRN")
     checkmate::assertFlag( model_TF_gene_nodes_separately)
     checkmate::assertFlag(allowLoops)
     checkmate::assertFlag(removeMultiple)
     checkmate::assertFlag(directed)
+    checkmate::assertFlag(forceRerun)
     
     # This function returns the tf-peak-gene and the tf-gene graphs in dataframe format
     # tf-peak-gene graph is weighted (r), tf-gene graph is unweighted
     
-    # Should the TF nodes and gene nodes represent the same or different nodes? 
-    # If set to TRUE, the new default, self-loops can happen and the graph is not strictly tripartite anymore
-    if (model_TF_gene_nodes_separately) {
-        TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
-            dplyr::filter(!is.na(gene.ENSEMBL)) %>% 
-            dplyr::select(c("TF.name", "peak.ID", "TF.ENSEMBL", "TF_peak.r")) %>%
+    if (is.null(GRN@graph$TF_gene) | is.null(GRN@graph$TF_peak_gene) | forceRerun) {
+        
+        # Should the TF nodes and gene nodes represent the same or different nodes? 
+        # If set to TRUE, the new default, self-loops can happen and the graph is not strictly tripartite anymore
+        if (model_TF_gene_nodes_separately) {
+            TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
+                dplyr::filter(!is.na(gene.ENSEMBL)) %>% 
+                dplyr::select(c("TF.name", "peak.ID", "TF.ENSEMBL", "TF_peak.r")) %>%
+                stats::na.omit() %>% 
+                dplyr::mutate(V2_name = NA) %>%
+                unique() %>%
+                dplyr::rename(V1 = TF.name, V2 = peak.ID, V1_name = TF.ENSEMBL, r = TF_peak.r) %>%
+                dplyr::mutate_at(c("V1","V2"), as.vector)
+        } else {
+            # Get Ensembl ID for TFs here to make a clean join and force a TF that is regulated by a peak to be the same node
+            TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
+                dplyr::filter(!is.na(gene.ENSEMBL)) %>% 
+                dplyr::select(c("TF.ENSEMBL", "peak.ID", "TF.name", "TF_peak.r")) %>%
+                stats::na.omit() %>% 
+                dplyr::mutate(V2_name = NA) %>%
+                unique() %>%
+                dplyr::rename(V1 = TF.ENSEMBL, V2 = peak.ID, V1_name = TF.name, r = TF_peak.r) %>%
+                dplyr::mutate_at(c("V1","V2"), as.vector)
+        }
+        
+        
+        peak_gene.df = GRN@connections$all.filtered[["0"]][,c("peak.ID", "gene.ENSEMBL", "gene.name", "peak_gene.r")] %>% 
             stats::na.omit() %>% 
-            dplyr::mutate(V2_name = NA) %>%
+            dplyr::mutate(V1_name = NA) %>%
             unique() %>%
-            dplyr::rename(V1 = TF.name, V2 = peak.ID, V1_name = TF.ENSEMBL, r = TF_peak.r) %>%
+            dplyr::rename(V1 = peak.ID, V2 = gene.ENSEMBL, V2_name = gene.name, r = peak_gene.r) %>%
             dplyr::mutate_at(c("V1","V2"), as.vector)
-    } else {
-        # Get Ensembl ID for TFs here to make a clean join and force a TF that is regulated by a peak to be the same node
-        TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
-            dplyr::filter(!is.na(gene.ENSEMBL)) %>% 
-            dplyr::select(c("TF.ENSEMBL", "peak.ID", "TF.name", "TF_peak.r")) %>%
-            stats::na.omit() %>% 
-            dplyr::mutate(V2_name = NA) %>%
-            unique() %>%
-            dplyr::rename(V1 = TF.ENSEMBL, V2 = peak.ID, V1_name = TF.name, r = TF_peak.r) %>%
-            dplyr::mutate_at(c("V1","V2"), as.vector)
+        
+        TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak`=TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
+            dplyr::select(V1, V2, V1_name, V2_name, r, connectionType)
+        
+        TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2"="V1"), suffix = c(".TF_peak", ".peak_gene")) %>% 
+            dplyr::select(V1, V2.peak_gene, V1_name.TF_peak, V2_name.peak_gene) %>%
+            dplyr::rename(V1_name = V1_name.TF_peak, V2 = V2.peak_gene, V2_name = V2_name.peak_gene) %>%
+            dplyr::distinct() %>%
+            dplyr::mutate(connectionType = "tf-gene") 
+        
+        # If the graph is NOT directed, retrieving the graph structure as data frame may result in V1 and V2 switched
+        # This happens when TF-TF interactions occur. The order (V1, V2) is irrelevant for an undirected graph anyway
+        futile.logger::flog.info(paste0("Building TF-peak-gene graph..."))
+        GRN@graph$TF_peak_gene = list(table = TF_peak_gene.df,
+                                      graph = .buildGraph(TF_peak_gene.df, 
+                                                          directed = directed, 
+                                                          allowLoops = allowLoops, 
+                                                          removeMultiple = removeMultiple))
+        
+        futile.logger::flog.info(paste0("Building TF-gene graph..."))
+        GRN@graph$TF_gene      = list(table = TF_gene.df,
+                                      graph = .buildGraph(TF_gene.df, 
+                                                          directed = directed, 
+                                                          allowLoops = allowLoops, 
+                                                          removeMultiple = removeMultiple))
+        
+        
+        GRN@graph$parameters = list()
+        GRN@graph$parameters$directed       = directed
+        GRN@graph$parameters$allowLoops     = allowLoops
+        GRN@graph$parameters$removeMultiple = removeMultiple
+        
     }
     
-    
-    peak_gene.df = GRN@connections$all.filtered[["0"]][,c("peak.ID", "gene.ENSEMBL", "gene.name", "peak_gene.r")] %>% 
-        stats::na.omit() %>% 
-        dplyr::mutate(V1_name = NA) %>%
-        unique() %>%
-        dplyr::rename(V1 = peak.ID, V2 = gene.ENSEMBL, V2_name = gene.name, r = peak_gene.r) %>%
-        dplyr::mutate_at(c("V1","V2"), as.vector)
-    
-    TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak`=TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
-        dplyr::select(V1, V2, V1_name, V2_name, r, connectionType)
-    
-    TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2"="V1"), suffix = c(".TF_peak", ".peak_gene")) %>% 
-        dplyr::select(V1, V2.peak_gene, V1_name.TF_peak, V2_name.peak_gene) %>%
-        dplyr::rename(V1_name = V1_name.TF_peak, V2 = V2.peak_gene, V2_name = V2_name.peak_gene) %>%
-        dplyr::distinct() %>%
-        dplyr::mutate(connectionType = "tf-gene") 
-    
-    # If the graph is NOT directed, retrieving the graph structure as data frame may result in V1 and V2 switched
-    # This happens when TF-TF interactions occur. The order (V1, V2) is irrelevant for an undirected graph anyway
-    futile.logger::flog.info(paste0("Building TF-peak-gene graph..."))
-    GRN@graph$TF_peak_gene = list(table = TF_peak_gene.df,
-                                  graph = .buildGraph(TF_peak_gene.df, 
-                                                      directed = directed, 
-                                                      allowLoops = allowLoops, 
-                                                      removeMultiple = removeMultiple))
-    
-    futile.logger::flog.info(paste0("Building TF-gene graph..."))
-    GRN@graph$TF_gene      = list(table = TF_gene.df,
-                                  graph = .buildGraph(TF_gene.df, 
-                                                      directed = directed, 
-                                                      allowLoops = allowLoops, 
-                                                      removeMultiple = removeMultiple))
-    
-    
-    GRN@graph$parameters = list()
-    GRN@graph$parameters$directed       = directed
-    GRN@graph$parameters$allowLoops     = allowLoops
-    GRN@graph$parameters$removeMultiple = removeMultiple
     
     GRN
     

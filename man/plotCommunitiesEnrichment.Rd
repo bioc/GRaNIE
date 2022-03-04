@@ -61,5 +61,5 @@ Similarly to \code{\link{plotGeneralEnrichment}}, the results of the community-b
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotCommunitiesEnrichment(GRN)
+GRN = plotCommunitiesEnrichment(GRN, forceRerun = FALSE)
 }

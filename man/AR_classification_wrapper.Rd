@@ -40,5 +40,5 @@ Run the activator-repressor classification for the TFs for a \code{\linkS4class{
 }
 \examples{
 GRN = loadExampleObject()
-GRN = AR_classification_wrapper(GRN, forceRerun = TRUE)
+GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
 }

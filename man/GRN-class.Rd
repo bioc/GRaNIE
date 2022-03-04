@@ -54,7 +54,7 @@ Currently, a \code{\linkS4class{GRN}} object is created by executing the functio
 
 In the following code snippets, \code{GRN} is a \code{\linkS4class{GRN}} object.
 
-# Get general annotation of a GRN object
+# Get general annotation of a GRaNIE object
 
 \code{nPeaks(GRN))} and  \code{nGenes(GRN))}: Retrieve the number of peaks and genes, respectively, that have been added to the object (both before and after filtering)
 }

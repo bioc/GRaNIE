@@ -37,7 +37,7 @@ This function generates graphical summaries about the structure and connectivity
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotGeneralGraphStats(GRN)
+GRN = plotGeneralGraphStats(GRN, forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotGeneralEnrichment}}

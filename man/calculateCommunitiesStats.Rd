@@ -23,5 +23,5 @@ This function generates the TF-gene graph from the filtered GRN object, and clus
 }
 \examples{
 GRN = loadExampleObject()
-GRN = calculateCommunitiesStats(GRN)
+GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
 }

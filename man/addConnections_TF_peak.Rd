@@ -52,5 +52,5 @@ Add TF-peak connections to a \code{\linkS4class{GRN}} object
 }
 \examples{
 GRN = loadExampleObject()
-GRN = addConnections_TF_peak(GRN, forceRerun = TRUE)
+GRN = addConnections_TF_peak(GRN, forceRerun = FALSE)
 }

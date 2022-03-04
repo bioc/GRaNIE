@@ -40,5 +40,5 @@ Plot various network connectivity summaries for a \code{\linkS4class{GRN}} objec
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = TRUE)
+GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = FALSE)
 }

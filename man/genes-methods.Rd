@@ -19,5 +19,7 @@ Integer. Number of genes hat are defined in the \code{\linkS4class{GRN}} object,
 Return the number of genes (all or only non-filtered ones) that are defined in the \code{\linkS4class{GRN}} object.
 }
 \examples{
+GRN = loadExampleObject()
 nGenes(GRN, filter = TRUE)
+nGenes(GRN, filter = FALSE)
 }

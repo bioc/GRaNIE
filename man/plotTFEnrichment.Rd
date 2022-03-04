@@ -64,7 +64,7 @@ This function plots the enrichment results. The result consist of a dot plot per
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5)
+GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5, forceReun = FALSE)
 }
 \seealso{
 \code{\link{calculateTFEnrichment}}

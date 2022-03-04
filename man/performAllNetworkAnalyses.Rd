@@ -48,12 +48,12 @@ performAllNetworkAnalyses(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object. TODO changes
+The same \code{\linkS4class{GRN}} object, with added data from this function.
 }
 \description{
 A convenience function that calls all network-related functions in one-go, using selected default parameters and a set of adjustable ones also. For full adjustment, run the individual functions separately.
 }
 \examples{
 GRN = loadExampleObject()
-GRN = performAllNetworkAnalyses(GRN, forceRerun = TRUE)
+GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
 }

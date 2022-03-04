@@ -49,7 +49,7 @@ Similarly to the statistics produced by \code{\link{plotGeneralGraphStats}}, sum
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotCommunitiesStats(GRN, display = byRank, communities = c(1:5))
+GRN = plotCommunitiesStats(GRN, display = byRank, forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotGeneralGraphStats}}

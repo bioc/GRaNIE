@@ -43,7 +43,7 @@ After the vertices of the filtered GRN are clustered into communities using \cod
 }
 \examples{
 GRN = loadExampleObject()
-GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"))
+GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotCommunitiesEnrichment}}

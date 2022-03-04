@@ -49,5 +49,5 @@ This function plots the results of the general enrichment analysis for every spe
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, p = 0.05)
+GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, forceRerun = FALSE)
 }

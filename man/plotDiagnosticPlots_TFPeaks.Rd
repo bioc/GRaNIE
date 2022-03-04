@@ -31,5 +31,5 @@ Plot diagnostic plots for TF-peak connections for a \code{\linkS4class{GRN}} obj
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotDiagnosticPlots_TFPeaks(GRN, forceRerun = TRUE)
+GRN = plotDiagnosticPlots_TFPeaks(GRN, forceRerun = FALSE)
 }

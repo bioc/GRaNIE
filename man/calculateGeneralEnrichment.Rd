@@ -37,7 +37,7 @@ This function runs an enrichment analysis for the genes in the filtered network.
 }
 \examples{
 GRN = loadExampleObject()
-GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP")
+GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotGeneralEnrichment}}

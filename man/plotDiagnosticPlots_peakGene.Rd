@@ -49,5 +49,5 @@ Plot diagnostic plots for peak-gene connections for a \code{\linkS4class{GRN}} o
 }
 \examples{
 GRN = loadExampleObject()
-GRN = plotDiagnosticPlots_peakGene(GRN)
+GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
 }

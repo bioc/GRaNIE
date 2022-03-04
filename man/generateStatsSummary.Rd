@@ -46,6 +46,6 @@ Essentially, this functions calls \code{filterGRNAndConnectGenes} repeatedly and
 }
 \examples{
 GRN = loadExampleObject()
-GRN = generateStatsSummary(GRN, forceRerun = TRUE)
+GRN = generateStatsSummary(GRN, forceRerun = FALSE)
 
 }

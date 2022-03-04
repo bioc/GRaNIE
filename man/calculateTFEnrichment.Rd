@@ -46,6 +46,6 @@ This function calculates the GO enrichment per TF, i.e. for the set of genes a g
 }
 \examples{
 GRN = loadExampleObject()
-GRN = calculateTFEnrichment(GRN, rankType = "degree", n = 5, ontology = "GO_BP")
-GRN = calculateTFEnrichment(GRN, rankType = "EV", n = 5, ontology = c("GO_BP"))
+GRN = calculateTFEnrichment(GRN, rankType = "degree", n = 5, ontology = "GO_BP", forceRerun = FALSE)
+GRN = calculateTFEnrichment(GRN, rankType = "EV", n = 5, ontology = "GO_BP", forceRerun = FALSE)
 }
