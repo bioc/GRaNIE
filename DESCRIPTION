@@ -62,7 +62,7 @@ Imports:
     tibble,
     viridis
 Depends:
-    R (>= 4.2.0),
+    R (>= 4.1.0),
     tidyverse,
     topGO
 Suggests:

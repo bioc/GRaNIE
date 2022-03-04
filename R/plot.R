@@ -16,7 +16,7 @@
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for each specified \code{type}, a PDF file is produced with a PCA. We refer to the Vignettes for details and further explanations.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = TRUE)
+#' GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = FALSE)
 #' @export
 plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                         type = c("rna", "peaks"), topn = c(500,1000,5000), 
@@ -449,7 +449,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotDiagnosticPlots_TFPeaks(GRN, forceRerun = TRUE)
+#' GRN = plotDiagnosticPlots_TFPeaks(GRN, forceRerun = FALSE)
 #' @export
 plotDiagnosticPlots_TFPeaks <- function(GRN, 
                                         outputFolder = NULL, 
@@ -789,7 +789,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotDiagnosticPlots_peakGene(GRN)
+#' GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
 #' @export
 plotDiagnosticPlots_peakGene <- function(GRN, 
                                          outputFolder = NULL, 
@@ -1561,7 +1561,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for the specified \code{type}, a PDF file (default filename is GRN.connectionSummary_{type}.pdf) is produced with a connection summary. We refer to the Vignettes for details and further explanations.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = TRUE)
+#' GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = FALSE)
 #' @export
 #' @importFrom circlize colorRamp2
 plot_stats_connectionSummary <- function(GRN, type = "heatmap", 
@@ -1889,7 +1889,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotGeneralGraphStats(GRN)
+#' GRN = plotGeneralGraphStats(GRN, forceRerun = FALSE)
 #' @export
 plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, 
@@ -2053,7 +2053,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, p = 0.05)
+#' GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, forceRerun = FALSE)
 #' @export
 plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   ontology = NULL, topn_pvalue = 30, p = 0.05, 
@@ -2230,7 +2230,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @seealso \code{\link{calculateCommunitiesEnrichment}}
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotCommunitiesStats(GRN, display = byRank, communities = c(1:5))
+#' GRN = plotCommunitiesStats(GRN, display = byRank, forceRerun = FALSE)
 #' @export
 plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                  display = "byRank", communities = seq_len(10), 
@@ -2398,7 +2398,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @return  The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotCommunitiesEnrichment(GRN)
+#' GRN = plotCommunitiesEnrichment(GRN, forceRerun = FALSE)
 #' @export
 #' @import ggplot2
 #' @importFrom grid gpar
@@ -2698,7 +2698,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' @seealso \code{\link{calculateTFEnrichment}}
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5)
+#' GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5, forceReun = FALSE)
 #' @export
 #' @importFrom grid gpar
 plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL,

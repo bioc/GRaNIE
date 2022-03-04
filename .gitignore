@@ -3,3 +3,4 @@ Meta
 vignettes/*_files
 vignettes/*_cache
 vignettes/output
+.Rproj.user

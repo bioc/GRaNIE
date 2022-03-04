@@ -75,7 +75,7 @@ For reasons of brevity, we omit the output of this code chunk.
 
 ```{r loadLibaries2, echo=TRUE, message=FALSE, results="hide", warning=FALSE, class.output="scroll-200"}
 library(tidyverse)
-library(GRaNIEData)
+#library(GRaNIEData)
 library(GRaNIE)
 ```
 
@@ -99,16 +99,33 @@ The following data can be used optionally but are not required:
 So, let's import the enhancer and RNA-seq data as a data frame as well as some sample metadata. This can be done in any way you want as long as you end up with the right format. 
 
 ```{r importData, echo=TRUE, include=TRUE, class.output="scroll-200"}
-require(GRaNIEData)
-(files = list.files(pattern = "*",system.file("extdata", package = "GRaNIEData"),full.names = TRUE))
-file_peaks = files[grep("countsATAC.75k.tsv.gz", files)]
-file_RNA  = files[grep("countsRNA.sampled.tsv.gz", files)]
-file_sampleMetadata = files[grep("metadata.sampled.tsv", files)]
-folder_TFBS_first50 = files[grep("TFBS_selected", files)]
+#require(GRaNIEData)
+
+# When the GRaNIEData package is installed, the following code can be used:
+# (files = list.files(pattern = "*",system.file("extdata", package = "GRaNIEData"),full.names = TRUE))
+# file_peaks = files[grep("countsATAC.75k.tsv.gz", files)]
+# file_RNA  = files[grep("countsRNA.sampled.tsv.gz", files)]
+# file_sampleMetadata = files[grep("metadata.sampled.tsv", files)]
+# folder_TFBS_first50 = files[grep("TFBS_selected", files)]
+# 
+# countsRNA.df      = read_tsv(file_RNA, col_types = cols())
+# countsPeaks.df    = read_tsv(file_peaks, col_types = cols()) 
+# sampleMetadata.df = read_tsv(file_sampleMetadata, col_types = cols())
+
+# Temporarily, we load the data directly from the web without the GRaNIEData dependency:
+file_peaks = "https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz"
+file_RNA   = "https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz"
+file_sampleMetadata = "https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz"
+folder_TFBS_first50 = "TFBS_selected"
 
 countsRNA.df      = read_tsv(file_RNA, col_types = cols())
 countsPeaks.df    = read_tsv(file_peaks, col_types = cols()) 
 sampleMetadata.df = read_tsv(file_sampleMetadata, col_types = cols())
+
+# Download the zip of all TFBS files. Takes too long here, not executed therefore
+# filename <- "TFBS_selected.zip"
+# download.file("https://www.embl.de/download/zaugg/GRaNIE/TFBS_selected.zip", file.path(filename), quiet = FALSE)
+# unzip(file.path(filename), overwrite = TRUE, exdir = file.path("TFBS_selected"))
 
 # Let's check how the data looks like
 countsRNA.df
@@ -169,7 +186,7 @@ We are now ready to fill our empty object with data! After preparing the data be
 An important consideration is data normalization for RNA and ATAC. We currently support three choices of normalization: `quantile`, `DESeq_sizeFactor` and `none` and refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin enhancer data, it is `DESeq_sizeFactor` (i.e., a "regular" `DESeq` size factor normalization). Importantly, `DESeq_sizeFactor` requires raw data, while `quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or "none". 
 
 
-```{r addData, echo=TRUE, include=TRUE, class.output="scroll-200"}
+```{r addData, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}
 GRN = addData(GRN,
               countsPeaks.df, normalization_peaks = "DESeq_sizeFactor", idColumn_peaks = idColumn_peaks,
               countsRNA.df, normalization_rna = "quantile", idColumn_RNA = idColumn_RNA,
@@ -177,11 +194,16 @@ GRN = addData(GRN,
               forceRerun = TRUE)
 ```
 
-We can see from the output the details for the used normalization method, and the number of samples that are kept in the `GRaNIE` object. Here, all 29 samples from the RNA data are kept because they are also found in the enhancer data, while only 29 out of 31 samples from the enhancer data are also found in the RNA data, resulting in 29 shared samples overall. The RNA counts are also permuted, which will be the basis for all analysis and plots in subsequent steps that repeat the analysis for permuted data in addition to the real, non-permuted data.
+```{r loadObject, echo=FALSE, results = FALSE, eval = TRUE}
+GRN = readRDS(url("https://www.embl.de/download/zaugg/GRaNIE/GRN.rds"))
+```
+
+
+Only overlapping samples between the two data modalities are kept in the `GRaNIE` object. Here, all 29 samples from the RNA data are kept because they are also found in the peak data, while only 29 out of 31 samples from the peak data are also found in the RNA data, resulting in 29 shared samples overall. The RNA counts are also permuted, which will be the basis for all analysis and plots in subsequent steps that repeat the analysis for permuted data in addition to the real, non-permuted data.
 
 ## Quality control 1: PCA plots
 
-It is time for our first QC plots using the function `plotPCA_all()`! Now that we added enhancer and RNA data to the object, let's check with a *Principal Component Analysis* (PCA) for both enhancer and RNA-seq data as well as the original input and the normalized data (unless normalization has been set to none, in which case they are identical to the original data) where the variation in the data comes from. If sample metadata has been provided in the `addData()` function (something we strongly recommend), they are automatically added to the PCA plots by coloring the PCA results according to the provided metadata, so that potential batch effects can be examined and identified. For more details, see the R help (`?plotPCA_all`). 
+It is time for our first QC plots using the function `plotPCA_all()`! Now that we added peak and RNA data to the object, let's check with a *Principal Component Analysis* (PCA) for both peak and RNA-seq data as well as the original input and the normalized data (unless normalization has been set to none, in which case they are identical to the original data) where the variation in the data comes from. If sample metadata has been provided in the `addData()` function (something we strongly recommend), they are automatically added to the PCA plots by coloring the PCA results according to the provided metadata, so that potential batch effects can be examined and identified. For more details, see the R help (`?plotPCA_all`). 
 
 Note that while this step is recommended to do, it is fully optional from a workflow point of view.
 
@@ -190,7 +212,7 @@ Note that while this step is recommended to do, it is fully optional from a work
 GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = TRUE)
 ```
 
-Multiple output plots are produced, with two files for each of the specified `types`. Usually, this is the RNA-Seq counts (as specified with `rna` here) as well as the enhancer counts (`peaks`). For each of them, PCA plots are produced for both `raw` and `normalized` data. With `raw`, we here denote the original counts as given as input with the `addData()` function, irrespective of whether this was already pre-normalized or not. For more details, see the [Package Details Vignette](packageDetails.html). The `topn` argument specifies the number of top variable features to do PCA for - here 500.
+Multiple output plots are produced, with two files for each of the specified `types`. Usually, this is the RNA-Seq counts (as specified with `rna` here) as well as the peak counts (`peaks`). For each of them, PCA plots are produced for both `raw` and `normalized` data. With `raw`, we here denote the original counts as given as input with the `addData()` function, irrespective of whether this was already pre-normalized or not. For more details, see the [Package Details Vignette](packageDetails.html). The `topn` argument specifies the number of top variable features to do PCA for - here 500.
 
 Here, let's just take a look at one example page from one of the files that are produced, namely the original counts from the RNA-seq counts:
 
@@ -213,45 +235,45 @@ knitr::include_graphics("figs/PCA_RNA_raw/p-17.png")
 For all details and further comments on how to understand and interpret the plots, see the [Package Details Vignette](packageDetails.html).
 
 
-## Add TFs and TFBS and overlap with enhancers
+## Add TFs and TFBS and overlap with peak
 
-Now it is time to add data for TFs and predicted TF binding sites (TFBS)! Our `GRaNIE` package requires pre-computed TFBS that need to be in a specific format (see the [Package Details Vignette](packageDetails.html) for details). In brief, a 6-column bed file must be present for each TF, with a specific file name that starts with the name of the TF, an arbitrary and optional suffix (here: "_TFBS") and a particular file ending (supported are `bed` or `bed.gz`; here, we specify the latter). All these files must be located in a particular folder that the `addTFBS()` functions then searches in order to identify those files that match the specified patterns. We provide example TFBS for the 3 genome assemblies we support, see the comment below and the [Package Details Vignette](packageDetails.html) for details. After setting this up, we are ready to overlap the TFBS and the enhancers by calling the function `overlapPeaksAndTFBS()`.
+Now it is time to add data for TFs and predicted TF binding sites (TFBS)! Our `GRaNIE` package requires pre-computed TFBS that need to be in a specific format (see the [Package Details Vignette](packageDetails.html) for details). In brief, a 6-column bed file must be present for each TF, with a specific file name that starts with the name of the TF, an arbitrary and optional suffix (here: "_TFBS") and a particular file ending (supported are `bed` or `bed.gz`; here, we specify the latter). All these files must be located in a particular folder that the `addTFBS()` functions then searches in order to identify those files that match the specified patterns. We provide example TFBS for the 3 genome assemblies we support, see the comment below and the [Package Details Vignette](packageDetails.html) for details. After setting this up, we are ready to overlap the TFBS and the peaks by calling the function `overlapPeaksAndTFBS()`.
 
 For more parameter details, see the R help (`?addTFBS` and `?overlapPeaksAndTFBS`). 
 
-```{r addTFBS, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
+```{r addTFBS, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200", results='hold'}
 GRN = addTFBS(GRN, motifFolder = folder_TFBS_first50, TFs = "all", filesTFBSPattern = "_TFBS", fileEnding = ".bed.gz", forceRerun = TRUE)
 
 GRN = overlapPeaksAndTFBS(GRN, nCores = 1, forceRerun = TRUE)
 ```
 
-We see from the output that 75 TFs have been found in the specified input folder, and the number of TFBS that overlap our peaks for each of them. We now successfully added our TFs and TFBS to the `GRaNIE` object.
+We see from the output (omitted here for brevity) that 75 TFs have been found in the specified input folder, and the number of TFBS that overlap our peaks for each of them. We now successfully added our TFs and TFBS to the `GRaNIE` object.
 
 
 
 ## Filter data (optional)
 
-Optionally, we can filter both enhancers and RNA-Seq data according to various criteria using the function `filterData()`. 
+Optionally, we can filter both peaks and RNA-Seq data according to various criteria using the function `filterData()`. 
 
-For the open chromatin enhancers, we currently support three filters: 
+For the open chromatin peaks, we currently support three filters: 
 
 1. Filter by their normalized mean read counts (`minNormalizedMean_peaks`, default 5)
-2. Filter by their size / width (in bp) and discarding enhancers that exceed a particular threshold (`maxSize_peaks`, default: 10000 bp)
+2. Filter by their size / width (in bp) and discarding peaks that exceed a particular threshold (`maxSize_peaks`, default: 10000 bp)
 3. Filter by chromosome (only keep chromosomes that are provided as input to the function, `chrToKeep_peaks`)
 
 
 For RNA-seq, we currently support the analogous filter as for open chromatin for normalized mean counts as explained above (`minNormalizedMeanRNA`).
 
-The default values are usually suitable for bulk data and should result in the removal of very few enhancers / genes; however, for single-cell data, lowering them may more reasonable. The output will print clearly how many enhancers and genes have been filtered, so you can rerun the function with different values if needed.
+The default values are usually suitable for bulk data and should result in the removal of very few peaks / genes; however, for single-cell data, lowering them may more reasonable. The output will print clearly how many peaks and genes have been filtered, so you can rerun the function with different values if needed.
 
 For more parameter details, see the R help (`?filterData`). 
 
 ```{r filterData, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
-# Chromosomes to keep for enhancers. This should be a vector of chromosome names
+# Chromosomes to keep for peaks. This should be a vector of chromosome names
 chrToKeep_peaks = c(paste0("chr", 1:22), "chrX", "chrY")
 GRN = filterData(GRN, minNormalizedMean_peaks = 5, minNormalizedMeanRNA = 1, chrToKeep_peaks = chrToKeep_peaks, maxSize_peaks = 10000, forceRerun = TRUE)
 ```
-We can see from the output that no enhancers have been filtered due to their size and almost 11,000 have been filtered due to their small mean read counts, which collectively leaves around 64,000 enhancers out of 75,000 originally. For the RNA data, almost half of the data has been filtered (16,211 out of around 35,000 genes). 
+We can see from the output that no peaks have been filtered due to their size and almost 11,000 have been filtered due to their small mean read counts, which collectively leaves around 64,000 peaks out of 75,000 originally. For the RNA data, almost half of the data has been filtered (16,211 out of around 35,000 genes). 
 
 ## Add TF-enhancer connections
 
@@ -502,7 +524,7 @@ Many results are produces by this convenience function, and we here show only a 
 
 Let's run an enrichment analysis using `GO` (here, only *Biological Process*). We also support enrichment using *Disease Ontology* (abbreviated `DO`) as well as *Reactome* and `KEGG`.
 
-```{r enrichment, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
+```{r enrichment, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}
 GRN = performAllNetworkAnalyses(GRN, ontology = c("GO_BP"), forceRerun = TRUE)
 ```
 

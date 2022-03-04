@@ -118,7 +118,7 @@ initializeGRN <- function(objectMetadata = list(),
 #' meta.df  = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz")
 #' GRN = loadExampleObject()
 #' # We omit sampleMetadata = meta.df here, lines becomes too long otherwise
-#' GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = TRUE)
+#' GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
 
 addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor", idColumn_peaks = "peakID", 
                     counts_rna, normalization_rna = "quantile", idColumn_RNA = "ENSEMBL", sampleMetadata = NULL,
@@ -601,7 +601,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = filterData(GRN, forceRerun = TRUE)
+#' GRN = filterData(GRN, forceRerun = FALSE)
 #' @export
 filterData <- function (GRN, 
                         minNormalizedMean_peaks = 5, maxNormalizedMean_peaks = NULL, 
@@ -968,7 +968,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function. 
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = TRUE)
+#' GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
 #' @export
 overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
 
@@ -1503,7 +1503,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.  TF_classification_densityPlotsForegroundBackground_expression_perm{0,1}.pdf, TF_classification_stringencyThresholds_expression_perm0.pdf, TF_classification_summaryHeatmap_expression_perm0.pdf,
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = AR_classification_wrapper(GRN, forceRerun = TRUE)
+#' GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
 #' @export
 AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05, 
                                       plot_minNoTFBS_heatmap = 100, deleteIntermediateData = TRUE,
@@ -1720,7 +1720,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.  TF_peak.fdrCurves_perm{o,1}.pdf
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = addConnections_TF_peak(GRN, forceRerun = TRUE)
+#' GRN = addConnections_TF_peak(GRN, forceRerun = FALSE)
 #' @export
 addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails = FALSE, outputFolder = NULL, 
                                     corMethod = "pearson", 
@@ -2265,7 +2265,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function in different flavors.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = TRUE)
+#' GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = FALSE)
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
                                      promoterRange = 250000, TADs = NULL,
                                      nCores = 4, 
@@ -3380,7 +3380,7 @@ filterGRNAndConnectGenes <- function(GRN,
 #' @return  The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = add_TF_gene_correlation(GRN, forceRerun = TRUE)
+#' GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
 add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegression = FALSE, nCores = 1, forceRerun = FALSE) {
   
   GRN = .addFunctionLogToObject(GRN)    
@@ -3629,7 +3629,7 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' GRN = loadExampleObject()
-#' GRN = generateStatsSummary(GRN, forceRerun = TRUE)
+#' GRN = generateStatsSummary(GRN, forceRerun = FALSE)
 #' 
 generateStatsSummary <- function(GRN, 
                                  TF_peak.fdr = c(0.001, 0.01, 0.05, 0.1, 0.2),
