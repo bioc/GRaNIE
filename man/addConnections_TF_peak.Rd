@@ -30,7 +30,7 @@ addConnections_TF_peak(
 
 \item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
 
-\item{connectionTypes}{TODO describe}
+\item{connectionTypes}{Character vector. Default \code{expression}. Vector of connection types to include for the TF-peak connections. If an additional connection type is specified here, it has to be available already within the object (EXPERIMENTAL). See the function \code{addData_TFActivity} for details.}
 
 \item{removeNegativeCorrelation}{\code{TRUE} or \code{FALSE} (vector). Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is FALSE, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.}
 
@@ -38,7 +38,7 @@ addConnections_TF_peak(
 
 \item{useGCCorrection}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?}
 
-\item{percBackground_size}{Numeric (0 to 100). Default 75. EXPERIMENTAL. Description will follow TODO. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
+\item{percBackground_size}{Numeric (0 to 100). Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
 
 \item{percBackground_resample}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
 
@@ -51,6 +51,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.  T
 Add TF-peak connections to a \code{\linkS4class{GRN}} object
 }
 \examples{
-GRN = loadExampleObject()
-GRN = addConnections_TF_peak(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = addConnections_TF_peak(GRN, forceRerun = FALSE)
 }

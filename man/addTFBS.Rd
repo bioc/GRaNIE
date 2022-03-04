@@ -36,5 +36,5 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 Add TFBS to a \code{\linkS4class{GRN}} object
 }
 \examples{
-# see workflow vignette for an example on how to add TFBS
+# See the Workflow vignette on the GRaNIE website for examples
 }

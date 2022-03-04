@@ -54,6 +54,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 A convenience function that calls all network-related functions in one-go, using selected default parameters and a set of adjustable ones also. For full adjustment, run the individual functions separately.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
 }

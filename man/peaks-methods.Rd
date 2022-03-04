@@ -13,13 +13,14 @@ nPeaks(GRN, filter = TRUE)
 \item{filter}{TRUE or FALSE. Default TRUE. Should peaks marked as filtered be included in the count?}
 }
 \value{
-Integer. Number of peaks hat are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) peaks that are currently marked as \emph{filtered} (see method TODO)
+Integer. Number of peaks that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) peaks that are currently marked as \emph{filtered}.
 }
 \description{
 Return the number of peaks (all or only non-filtered ones) that are defined in the \code{\linkS4class{GRN}} object.
 }
 \examples{
-GRN = loadExampleObject()
-nPeaks(GRN, filter = TRUE)
-nPeaks(GRN, filter = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# nPeaks(GRN, filter = TRUE)
+# nPeaks(GRN, filter = FALSE)
 }

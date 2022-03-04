@@ -60,6 +60,7 @@ The same \code{\linkS4class{GRN}} object, without modifications. A single PDF fi
 Similarly to \code{\link{plotGeneralEnrichment}}, the results of the community-based enrichment analysis are plotted.. By default, the results for the 10 largest communities are displayed. Additionally, if a general enrichment analysis was previously generated, this function plots an additional heatmap to compare the general enrichment with the community based enrichment. A reduced version of this heatmap is also produced where terms are filtered out to improve visibility and display and highlight the most significant terms.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = plotCommunitiesEnrichment(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = plotCommunitiesEnrichment(GRN, forceRerun = FALSE)
 }

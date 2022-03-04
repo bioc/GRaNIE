@@ -36,8 +36,9 @@ The same \code{\linkS4class{GRN}} object with no changes. The results are output
 This function generates graphical summaries about the structure and connectivity of the TF-peak-gene and TF-gene graphs. These include, distribution of vertex types (TF, peak, gene) and edge types (tf-peak, peak-gene), the distribution of vertex degrees, and the most "important" vertices according to degree centrality and eigenvector centrality scores.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = plotGeneralGraphStats(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = plotGeneralGraphStats(GRN, forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotGeneralEnrichment}}

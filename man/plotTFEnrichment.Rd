@@ -63,8 +63,9 @@ The same \code{\linkS4class{GRN}} object, without modifications. A single PDF fi
 This function plots the enrichment results. The result consist of a dot plot per specified TF, as well as two comparative heatmaps. The first heatmap displays the p value for each GO term across the TFs. Terms that The second heatmap is a subset of the first, where select terms are kept or filtered out for better visibility and display.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5, forceReun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5, forceRerun = FALSE)
 }
 \seealso{
 \code{\link{calculateTFEnrichment}}

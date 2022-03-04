@@ -48,6 +48,7 @@ The same \code{\linkS4class{GRN}} object, without modifications. A single PDF fi
 This function plots the results of the general enrichment analysis for every specified ontology.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, forceRerun = FALSE)
 }

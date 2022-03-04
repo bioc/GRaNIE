@@ -23,6 +23,8 @@ build_eGRN_graph(
 \item{removeMultiple}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Remove loops with the same start and end point? This can happen if multiple TF originate from the same gene, for example.}
 
 \item{directed}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should the network be directed?}
+
+\item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
 The same \code{\linkS4class{GRN}} object.
@@ -31,6 +33,7 @@ The same \code{\linkS4class{GRN}} object.
 Builds a graph out of a set of connections
 }
 \examples{
-GRN = loadExampleObject()
-GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
 }

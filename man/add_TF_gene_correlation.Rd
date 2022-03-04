@@ -30,6 +30,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 Add TF-gene correlations to a \code{\linkS4class{GRN}} object. The information is currently stored in \code{GRN@connections$TF_genes.filtered}. Note that raw p-values are not adjusted.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
 }

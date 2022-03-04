@@ -54,6 +54,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 Filter data from a \code{\linkS4class{GRN}} object
 }
 \examples{
-GRN = loadExampleObject()
-GRN = filterData(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = filterData(GRN, forceRerun = FALSE)
 }

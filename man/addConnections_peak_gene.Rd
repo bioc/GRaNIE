@@ -48,6 +48,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function in 
 Add peak-gene connections to a \code{\linkS4class{GRN}} object
 }
 \examples{
-GRN = loadExampleObject()
-GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = FALSE)
 }

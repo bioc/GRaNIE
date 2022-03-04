@@ -45,11 +45,12 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 Add data to a \code{\linkS4class{GRN}} object
 }
 \examples{
-library(tidyverse)
-rna.df   = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz")
-peaks.df = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz")
-meta.df  = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz")
-GRN = loadExampleObject()
+# See the Workflow vignette on the GRaNIE website for examples
+# library(tidyverse)
+# rna.df   = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz")
+# peaks.df = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz")
+# meta.df  = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz")
+# GRN = loadExampleObject()
 # We omit sampleMetadata = meta.df here, lines becomes too long otherwise
-GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
+# GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
 }

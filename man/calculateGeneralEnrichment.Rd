@@ -36,8 +36,9 @@ The same \code{\linkS4class{GRN}} object, with the enrichment results stored in 
 This function runs an enrichment analysis for the genes in the filtered network.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotGeneralEnrichment}}

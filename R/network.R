@@ -6,10 +6,12 @@
 #' @param allowLoops \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Allow loops in the network (i.e., a TF that regulates itself)
 #' @param removeMultiple \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Remove loops with the same start and end point? This can happen if multiple TF originate from the same gene, for example.
 #' @param directed \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should the network be directed?
+#' @template forceRerun
 #' @export
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
 #' @return The same \code{\linkS4class{GRN}} object.
 build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE, 
                              allowLoops = FALSE, removeMultiple = FALSE, directed = FALSE, forceRerun = FALSE) {
@@ -197,8 +199,9 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 #' @inheritParams calculateCommunitiesStats
 #' @export
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"), 
                                       algorithm = "weight01", statistic = "fisher",
@@ -293,8 +296,9 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' @seealso \code{\link{calculateCommunitiesEnrichment}}
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
 #' @import topGO
 #' @import BiocManager
@@ -722,8 +726,9 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' @return The same \code{\linkS4class{GRN}} object, with a table that consists of the connections clustered into communities stored in the \code{stats$communities} slot.
 #' @import patchwork
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
 #' @export
 calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = FALSE, ...){
     
@@ -781,46 +786,7 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
             futile.logger::flog.info(paste0(" Community ", names(communities_count)[clusterCur], ": ", communities_count[clusterCur], " nodes"))
         }
    
-        # communityVertices = tibble::tibble(vertex    = communities_cluster$names,
-        #                                    community = factor(communities_cluster$membership, levels = names(communities_count))) 
-        # 
-        # # identify the TFs
-        # allTF_genes = GRN@graph$TF_gene$table %>% dplyr::filter(connectionType == "tf-gene") %>% dplyr::pull(V1) %>% unique()
-        # communityVertices$Class[which(communityVertices$vertex %in% allTF_genes)] = "TF"
-        
-        # TODO: All the code is deactivated as it seems redundant
-        # GRN@stats$communityVertices = communityVertices
-        
- 
 
-        # 
-        # communityGraphs = dplyr::tribble(~V1, ~V2, ~V1_name, ~V2_name, ~connectionType, ~community)
-        # #  matrix(ncol=3, nrow =0, dimnames = list(c(), c("V1", "V2", "community")))
-        # 
-        # # Assign a subgraph / GRN per community, consisting of all vertices that belong to the particular community
-        # # If a link is between two communities, it will be shared?
-        # for (communityCur in stats::na.omit(names(communities_count))){ # change this to select communities
-        #     
-        #     community_subgraph.df = 
-        #         igraph::induced_subgraph(graph = GRN@graph$TF_gene$graph, 
-        #                                  vids = communityVertices$vertex[communityVertices$community==communityCur]) %>%
-        #         igraph::as_long_data_frame() %>% 
-        #         dplyr::rename(V1 = `ver[el[, 1], ]`, V2 = `ver2[el[, 2], ]`) %>%
-        #         dplyr::select(V1, V2, V1_name, V2_name, connectionType) %>%
-        #         dplyr::mutate(community = communityCur)
-        #     
-        #     communityGraphs = rbind(communityGraphs, community_subgraph.df[,c("V1", "V2", "V1_name", "V2_name", "connectionType", "community")])
-        #     
-        # }
-        # 
-        # 
-        # GRN@stats$communities = communityGraphs %>% 
-        #     dplyr::mutate(community = as.factor(community),
-        #                   V1 = as.factor(V1),
-        #                   V2 = as.factor(V2),
-        #                   V1_name = as.factor(V1_name),
-        #                   V2_name = as.factor(V2_name),
-        #                   connectionType = as.factor(connectionType))
         
     } else {
         
@@ -843,8 +809,9 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
 #' @seealso \code{\link{plotGeneralEnrichment}}
 #' @seealso \code{\link{calculateGeneralEnrichment}}
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
 #' @export
 calculateCommunitiesEnrichment <- function(GRN, 
                                            ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 
@@ -969,9 +936,10 @@ calculateCommunitiesEnrichment <- function(GRN,
 #' @param use_TF_gene_network \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the TF-gene network be used (\code{TRUE}) or the TF-peak-gene network (\code{FALSE})?
 #' @return A dataframe with the node names and the corresponding scores used to rank them
 #' @examples 
-#' GRN = loadExampleObject()
-#' topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
-#' topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
+#' # topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
 #' @export
 getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = TRUE) { # },
     #        TFConnectionType = "tf-gene", geneConnectionType = "peak-gene"){
@@ -997,9 +965,6 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
     
     graphType = dplyr::if_else(use_TF_gene_network, "TF_gene", "TF_peak_gene")
     
-    #slot = dplyr::if_else(nodeType == "gene", "gene.ENSEMBL", "TF.name")# todo
-    #link = dplyr::if_else(nodeType == "gene", geneConnectionType, TFConnectionType)
-    #graphType = dplyr::if_else(stringr::str_detect(link, ".*peak.*"), "TF_peak_gene", "TF_gene")
     
     if(n<1){
         # Get the total number of distinct nodes and calculate a percentage of that irrespective of ndoe degree
@@ -1057,9 +1022,10 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' @param TF.names Character vector. If the rank type is set to "custom", a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.
 #' @return The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = calculateTFEnrichment(GRN, rankType = "degree", n = 5, ontology = "GO_BP", forceRerun = FALSE)
-#' GRN = calculateTFEnrichment(GRN, rankType = "EV", n = 5, ontology = "GO_BP", forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
+#' # GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
 calculateTFEnrichment <- function(GRN, rankType = "degree", n = 0.1, TF.names = NULL,
                                   ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 

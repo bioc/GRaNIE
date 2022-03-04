@@ -112,13 +112,14 @@ initializeGRN <- function(objectMetadata = list(),
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' library(tidyverse)
-#' rna.df   = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz")
-#' peaks.df = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz")
-#' meta.df  = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz")
-#' GRN = loadExampleObject()
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # library(tidyverse)
+#' # rna.df   = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz")
+#' # peaks.df = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz")
+#' # meta.df  = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz")
+#' # GRN = loadExampleObject()
 #' # We omit sampleMetadata = meta.df here, lines becomes too long otherwise
-#' GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
+#' # GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
 
 addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor", idColumn_peaks = "peakID", 
                     counts_rna, normalization_rna = "quantile", idColumn_RNA = "ENSEMBL", sampleMetadata = NULL,
@@ -600,8 +601,9 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = filterData(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = filterData(GRN, forceRerun = FALSE)
 #' @export
 filterData <- function (GRN, 
                         minNormalizedMean_peaks = 5, maxNormalizedMean_peaks = NULL, 
@@ -850,7 +852,7 @@ filterData <- function (GRN,
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' # see workflow vignette for an example on how to add TFBS
+#' # See the Workflow vignette on the GRaNIE website for examples
 #' @export
 addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPattern = "_TFBS", fileEnding = ".bed", forceRerun = FALSE) {
 
@@ -967,8 +969,9 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function. 
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
 #' @export
 overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
 
@@ -1502,8 +1505,9 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.  TF_classification_densityPlotsForegroundBackground_expression_perm{0,1}.pdf, TF_classification_stringencyThresholds_expression_perm0.pdf, TF_classification_summaryHeatmap_expression_perm0.pdf,
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
 #' @export
 AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05, 
                                       plot_minNoTFBS_heatmap = 100, deleteIntermediateData = TRUE,
@@ -1710,17 +1714,18 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @template plotDetails
 #' @template outputFolder
 #' @template corMethod
-#' @param connectionTypes TODO describe
+#' @param connectionTypes Character vector. Default \code{expression}. Vector of connection types to include for the TF-peak connections. If an additional connection type is specified here, it has to be available already within the object (EXPERIMENTAL). See the function \code{addData_TFActivity} for details.
 #' @param removeNegativeCorrelation  \code{TRUE} or \code{FALSE} (vector). Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is FALSE, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.  
 #' @param maxFDRToStore Numeric. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.
 #' @param useGCCorrection \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?
-#' @param percBackground_size Numeric (0 to 100). Default 75. EXPERIMENTAL. Description will follow TODO. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
+#' @param percBackground_size Numeric (0 to 100). Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @param percBackground_resample \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.  TF_peak.fdrCurves_perm{o,1}.pdf
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = addConnections_TF_peak(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = addConnections_TF_peak(GRN, forceRerun = FALSE)
 #' @export
 addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails = FALSE, outputFolder = NULL, 
                                     corMethod = "pearson", 
@@ -2264,8 +2269,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function in different flavors.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = FALSE)
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
                                      promoterRange = 250000, TADs = NULL,
                                      nCores = 4, 
@@ -2805,8 +2811,9 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @template outputFolder
 #' @return The same \code{\linkS4class{GRN}} object, with the filtered and merged TF-peak and peak-gene connections in the slot connections$all.filtered. The filtered
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = filterGRNAndConnectGenes(GRN)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = filterGRNAndConnectGenes(GRN)
 #' @seealso \code{\link{visualizeGRN}}
 #' @seealso \code{\link{addConnections_TF_peak}} 
 #' @seealso \code{\link{addConnections_peak_gene}} 
@@ -3379,8 +3386,9 @@ filterGRNAndConnectGenes <- function(GRN,
 #' @template forceRerun
 #' @return  The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
 add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegression = FALSE, nCores = 1, forceRerun = FALSE) {
   
   GRN = .addFunctionLogToObject(GRN)    
@@ -3628,8 +3636,9 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = generateStatsSummary(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = generateStatsSummary(GRN, forceRerun = FALSE)
 #' 
 generateStatsSummary <- function(GRN, 
                                  TF_peak.fdr = c(0.001, 0.01, 0.05, 0.1, 0.2),
@@ -3919,9 +3928,10 @@ loadExampleObject <- function() {
 #' @export
 #' @import tibble
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
-#' @return Counts. TODO MORE
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
+#' @return Data frame of counts, with the type as indicated by the function parameters.
 #' getCounts(GRN, type = "peaks", norm = TRUE)
 getCounts <- function(GRN, type, norm, permuted = FALSE) {
   
@@ -4009,8 +4019,9 @@ getCounts <- function(GRN, type, norm, permuted = FALSE) {
 #' @param include_TF_gene_correlations Logical. \code{TRUE} or \code{FALSE}.  Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.
 #' @return A data frame with the connections. Importantly, this function does NOT return a \code{\linkS4class{GRN}} object.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN_con.all = getGRNConnections(GRN, include_TF_gene_correlations = TRUE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN_con.all = getGRNConnections(GRN, include_TF_gene_correlations = TRUE)
 getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, include_TF_gene_correlations = FALSE) {
   
   GRN = .addFunctionLogToObject(GRN)
@@ -4182,41 +4193,42 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
 #' 
 #' @export
 #' @template GRN 
-#' @param name Character. Name of parameter or function name to retrieve. Ignored if \code{type} == \code{all}.
-#' @param type Character. Default \code{function}. Either \code{function}, \code{parameter}, or \code{all}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. \code{parameter} indicates a particular parameter name is returned (as specified in \code{GRN@config})), while \code{all} returns all parameters.
+#' @param name Character. Default \code{all}. Name of parameter or function name to retrieve. Set to the special keyword \code{all} to retrieve all parameters.
+#' @param type Character. Default \code{parameter}. Either \code{function} or \code{parameter}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. When set to \code{parameter}, in combination with \code{name}, returns a specific parameter (as specified in \code{GRN@config})).
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' GRN = loadExampleObject()
-#' getParameters(GRN, type = "function")
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # getParameters(GRN, type = "parameter", name = "all")
 #' 
-getParameters <- function (GRN, type = "function", name = NULL) {
+getParameters <- function (GRN, type = "parameter", name = "all") {
   
   checkmate::assertClass(GRN, "GRN")
-  checkmate::assertCharacter(name, any.missing = FALSE, len = 1)
-  checkmate::assertSubset(type, c("function", "parameter", "all"))
+  checkmate::assertSubset(type, c("function", "parameter"))
   
   if (type == "function") {
     
+    checkmate::assertCharacter(name, any.missing = FALSE, len = 1)
     functionParameters = GRN@config$functionParameters[[name]]
     if (is.null(functionParameters)) {
       checkmate::assertSubset(name, ls(paste0("package:", utils::packageName())))
-    } else {
-      return(functionParameters)
-    }
+    } 
     
-  } else  if (type == "all") {
-    
-    return(GRN@config)
-    
+    return(functionParameters)
+
   } else {
     
-    parameters = GRN@config[[name]]
-    if (is.null(parameters)) {
-      checkmate::assertSubset(name, names(GRN@config$parameters))
-    } else {
-      return(parameters)
-    }
-
+      if (name == "all") {
+          return(GRN@config)
+      } else {
+          parameters = GRN@config[[name]]
+          if (is.null(parameters)) {
+              checkmate::assertSubset(name, names(GRN@config$parameters))
+          } 
+          
+          return(parameters)
+      }
+   
   }
   
 }
@@ -4236,7 +4248,7 @@ getParameters <- function (GRN, type = "function", name = NULL) {
 #' Optional convenience function to delete intermediate data from the function \link{AR_classification_wrapper} and summary statistics that may occupy a lot of space
 #' @export
 #' @template GRN
-#' @return TODO
+#' @return The same \code{\linkS4class{GRN}} object, with some slots being deleted (\code{GRN@data$TFs$classification} as well as \code{GRN@stats$connectionDetails.l})
 deleteIntermediateData <- function(GRN) {
   
   

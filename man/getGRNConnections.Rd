@@ -27,6 +27,7 @@ A data frame with the connections. Importantly, this function does NOT return a 
 Extract connections from a \code{\linkS4class{GRN}} object
 }
 \examples{
-GRN = loadExampleObject()
-GRN_con.all = getGRNConnections(GRN, include_TF_gene_correlations = TRUE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN_con.all = getGRNConnections(GRN, include_TF_gene_correlations = TRUE)
 }

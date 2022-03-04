@@ -48,8 +48,9 @@ The same \code{\linkS4class{GRN}} object, without modifications. A single PDF fi
 Similarly to the statistics produced by \code{\link{plotGeneralGraphStats}}, summaries regarding the vertex degrees and the most important vertices per community are generated. Note that the communities need to first be calculated using the \code{\link{calculateCommunitiesStats}} function
 }
 \examples{
-GRN = loadExampleObject()
-GRN = plotCommunitiesStats(GRN, display = byRank, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = plotCommunitiesStats(GRN, display = "byRank", forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotGeneralGraphStats}}

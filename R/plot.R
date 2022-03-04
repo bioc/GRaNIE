@@ -15,8 +15,9 @@
 #' @template pdf_height
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for each specified \code{type}, a PDF file is produced with a PCA. We refer to the Vignettes for details and further explanations.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = FALSE)
 #' @export
 plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                         type = c("rna", "peaks"), topn = c(500,1000,5000), 
@@ -448,8 +449,9 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotDiagnosticPlots_TFPeaks(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotDiagnosticPlots_TFPeaks(GRN, forceRerun = FALSE)
 #' @export
 plotDiagnosticPlots_TFPeaks <- function(GRN, 
                                         outputFolder = NULL, 
@@ -788,8 +790,9 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
 #' @export
 plotDiagnosticPlots_peakGene <- function(GRN, 
                                          outputFolder = NULL, 
@@ -1560,8 +1563,9 @@ plotDiagnosticPlots_peakGene <- function(GRN,
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for the specified \code{type}, a PDF file (default filename is GRN.connectionSummary_{type}.pdf) is produced with a connection summary. We refer to the Vignettes for details and further explanations.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = FALSE)
 #' @export
 #' @importFrom circlize colorRamp2
 plot_stats_connectionSummary <- function(GRN, type = "heatmap", 
@@ -1888,8 +1892,9 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @seealso \code{\link{plotCommunitiesStats}}
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotGeneralGraphStats(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotGeneralGraphStats(GRN, forceRerun = FALSE)
 #' @export
 plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, 
@@ -2052,8 +2057,9 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @param display_pAdj Boolean. Default FALSE. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, forceRerun = FALSE)
 #' @export
 plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   ontology = NULL, topn_pvalue = 30, p = 0.05, 
@@ -2229,8 +2235,9 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @seealso \code{\link{calculateCommunitiesStats}}
 #' @seealso \code{\link{calculateCommunitiesEnrichment}}
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotCommunitiesStats(GRN, display = byRank, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotCommunitiesStats(GRN, display = "byRank", forceRerun = FALSE)
 #' @export
 plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                  display = "byRank", communities = seq_len(10), 
@@ -2397,8 +2404,9 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @param maxWidth_nchar_plot Integer (>=10). Default 100. Maximum number of characters for a term before it is truncated.
 #' @return  The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotCommunitiesEnrichment(GRN, forceRerun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotCommunitiesEnrichment(GRN, forceRerun = FALSE)
 #' @export
 #' @import ggplot2
 #' @importFrom grid gpar
@@ -2697,8 +2705,9 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @seealso \code{\link{calculateTFEnrichment}}
 #' @examples 
-#' GRN = loadExampleObject()
-#' GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5, forceReun = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # GRN = plotTFEnrichment(GRN, rankType = "degree", n = 5, forceRerun = FALSE)
 #' @export
 #' @importFrom grid gpar
 plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL,

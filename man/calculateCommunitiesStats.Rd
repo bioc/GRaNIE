@@ -22,6 +22,7 @@ The same \code{\linkS4class{GRN}} object, with a table that consists of the conn
 This function generates the TF-gene graph from the filtered GRN object, and clusters its vertices into communities using established community detection algorithms.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
 }

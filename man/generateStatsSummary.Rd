@@ -45,7 +45,8 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 Essentially, this functions calls \code{filterGRNAndConnectGenes} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{filterGRNAndConnectGenes}, see the help for this function for details.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = generateStatsSummary(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = generateStatsSummary(GRN, forceRerun = FALSE)
 
 }

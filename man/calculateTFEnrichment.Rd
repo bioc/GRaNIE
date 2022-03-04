@@ -45,7 +45,8 @@ The same \code{\linkS4class{GRN}} object, with the enrichment results stored in 
 This function calculates the GO enrichment per TF, i.e. for the set of genes a given TF is connected to in the filtered \code{\linkS4class{GRN}}.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = calculateTFEnrichment(GRN, rankType = "degree", n = 5, ontology = "GO_BP", forceRerun = FALSE)
-GRN = calculateTFEnrichment(GRN, rankType = "EV", n = 5, ontology = "GO_BP", forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
+# GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 }

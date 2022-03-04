@@ -79,8 +79,9 @@ This is one of the main integrative functions of the \code{GRN} package. It has 
 Internally, first, the TF-peak are filtered before the peak-gene connections are added for reasons of memory and computational efficacy: It takes a lot of time and particularly space to connect the full GRN with all peak-gene connections - as most of the links have weak support (i.e., high FDR), first filtering out unwanted links dramatically reduces the memory needed for the combined GRN
 }
 \examples{
-GRN = loadExampleObject()
-GRN = filterGRNAndConnectGenes(GRN)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = filterGRNAndConnectGenes(GRN)
 }
 \seealso{
 \code{\link{visualizeGRN}}

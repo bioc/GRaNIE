@@ -42,8 +42,9 @@ The same \code{\linkS4class{GRN}} object, with the enrichment results stored in 
 After the vertices of the filtered GRN are clustered into communities using \code{\link{calculateCommunitiesStats}}, this function will run a per-community enrichment analysis.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotCommunitiesEnrichment}}

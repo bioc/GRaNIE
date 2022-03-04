@@ -24,7 +24,8 @@ A dataframe with the node names and the corresponding scores used to rank them
 Retrieve top Nodes in the filtered \code{\linkS4class{GRN}}
 }
 \examples{
-GRN = loadExampleObject()
-topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
-topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
+# topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
 }

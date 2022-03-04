@@ -13,13 +13,14 @@ nGenes(GRN, filter = TRUE)
 \item{filter}{TRUE or FALSE. Default TRUE. Should genes marked as filtered be included in the count?}
 }
 \value{
-Integer. Number of genes hat are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) genes that are currently marked as \emph{filtered} (see method TODO)
+Integer. Number of genes that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) genes that are currently marked as \emph{filtered}.
 }
 \description{
 Return the number of genes (all or only non-filtered ones) that are defined in the \code{\linkS4class{GRN}} object.
 }
 \examples{
-GRN = loadExampleObject()
-nGenes(GRN, filter = TRUE)
-nGenes(GRN, filter = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# nGenes(GRN, filter = TRUE)
+# nGenes(GRN, filter = FALSE)
 }

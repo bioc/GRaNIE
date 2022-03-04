@@ -39,6 +39,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.  T
 Run the activator-repressor classification for the TFs for a \code{\linkS4class{GRN}} object
 }
 \examples{
-GRN = loadExampleObject()
-GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
 }

@@ -20,6 +20,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 Overlap peaks and TFBS for a \code{\linkS4class{GRN}} object
 }
 \examples{
-GRN = loadExampleObject()
-GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
 }

@@ -48,6 +48,7 @@ The same \code{\linkS4class{GRN}} object, with added data from this function.
 Plot diagnostic plots for peak-gene connections for a \code{\linkS4class{GRN}} object
 }
 \examples{
-GRN = loadExampleObject()
-GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
 }

@@ -245,11 +245,12 @@ setMethod("show",
 #'
 #' @template GRN
 #' @param filter TRUE or FALSE. Default TRUE. Should peaks marked as filtered be included in the count?
-#' @return Integer. Number of peaks hat are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) peaks that are currently marked as \emph{filtered} (see method TODO)
+#' @return Integer. Number of peaks that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) peaks that are currently marked as \emph{filtered}.
 #' @examples
-#' GRN = loadExampleObject()
-#' nPeaks(GRN, filter = TRUE)
-#' nPeaks(GRN, filter = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # nPeaks(GRN, filter = TRUE)
+#' # nPeaks(GRN, filter = FALSE)
 #' @export
 #' @aliases peaks
 #' @rdname peaks-methods
@@ -279,11 +280,12 @@ nPeaks <- function(GRN, filter = TRUE) {
 #'
 #' @template GRN
 #' @param filter TRUE or FALSE. Default TRUE. Should genes marked as filtered be included in the count?
-#' @return Integer. Number of genes hat are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) genes that are currently marked as \emph{filtered} (see method TODO)
+#' @return Integer. Number of genes that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) genes that are currently marked as \emph{filtered}.
 #' @examples
-#' GRN = loadExampleObject()
-#' nGenes(GRN, filter = TRUE)
-#' nGenes(GRN, filter = FALSE)
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' # GRN = loadExampleObject()
+#' # nGenes(GRN, filter = TRUE)
+#' # nGenes(GRN, filter = FALSE)
 #' @export
 #' @aliases genes
 #' @rdname genes-methods

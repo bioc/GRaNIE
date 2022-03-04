@@ -16,13 +16,14 @@ getCounts(GRN, type, norm, permuted = FALSE)
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 }
 \value{
-Counts. TODO MORE
+Data frame of counts, with the type as indicated by the function parameters.
 getCounts(GRN, type = "peaks", norm = TRUE)
 }
 \description{
 Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
 }
 \examples{
-GRN = loadExampleObject()
-GRN = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
+# See the Workflow vignette on the GRaNIE website for examples
+# GRN = loadExampleObject()
+# GRN = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
 }
