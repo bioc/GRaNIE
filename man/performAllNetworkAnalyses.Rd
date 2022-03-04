@@ -55,6 +55,6 @@ A convenience function that calls all network-related functions in one-go, using
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
 }

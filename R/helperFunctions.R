@@ -704,3 +704,10 @@ match.call.defaults <- function(asList = TRUE, ...) {
 is.installed <- function(mypkg){
     is.element(mypkg, installed.packages()[,1])
 } 
+
+# Taken from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
+.get_cache <- function() {
+    # cache <- tools::R_user_dir(utils::packageName(), which="cache")
+    cache <- tools::R_user_dir("GRaNIE", which="cache")
+    BiocFileCache::BiocFileCache(cache, ask = FALSE)
+}

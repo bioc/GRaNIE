@@ -20,7 +20,7 @@ Return the number of peaks (all or only non-filtered ones) that are defined in t
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# nPeaks(GRN, filter = TRUE)
-# nPeaks(GRN, filter = FALSE)
+GRN = loadExampleObject()
+nPeaks(GRN, filter = TRUE)
+nPeaks(GRN, filter = FALSE)
 }

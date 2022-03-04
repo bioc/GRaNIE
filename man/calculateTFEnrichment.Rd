@@ -46,7 +46,7 @@ This function calculates the GO enrichment per TF, i.e. for the set of genes a g
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
-# GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
+GRN =  loadExampleObject()
+GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
+GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 }

@@ -31,6 +31,6 @@ Add TF-gene correlations to a \code{\linkS4class{GRN}} object. The information i
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
 }

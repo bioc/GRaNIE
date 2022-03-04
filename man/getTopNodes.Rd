@@ -25,7 +25,7 @@ Retrieve top Nodes in the filtered \code{\linkS4class{GRN}}
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
-# topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
+GRN = loadExampleObject()
+topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
+topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
 }

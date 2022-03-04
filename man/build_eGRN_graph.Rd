@@ -34,6 +34,6 @@ Builds a graph out of a set of connections
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
 }

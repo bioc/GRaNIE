@@ -20,7 +20,7 @@ Return the number of genes (all or only non-filtered ones) that are defined in t
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# nGenes(GRN, filter = TRUE)
-# nGenes(GRN, filter = FALSE)
+GRN = loadExampleObject()
+nGenes(GRN, filter = TRUE)
+nGenes(GRN, filter = FALSE)
 }

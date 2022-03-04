@@ -4,7 +4,15 @@
 \alias{loadExampleObject}
 \title{Load example GRN dataset}
 \usage{
-loadExampleObject()
+loadExampleObject(
+  forceDownload = FALSE,
+  fileURL = "https://www.embl.de/download/zaugg/GRaNIE/GRN.rds"
+)
+}
+\arguments{
+\item{forceDownload}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the download be enforced even if the local cached file is already present?}
+
+\item{fileURL}{Character. Default https://www.embl.de/download/zaugg/GRaNIE/GRN.rds. URL to the GRN example object in rds format.}
 }
 \value{
 An example \code{\linkS4class{GRN}} object

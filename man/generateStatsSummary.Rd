@@ -46,7 +46,7 @@ Essentially, this functions calls \code{filterGRNAndConnectGenes} repeatedly and
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = generateStatsSummary(GRN, forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = generateStatsSummary(GRN, forceRerun = FALSE)
 
 }

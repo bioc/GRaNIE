@@ -28,6 +28,6 @@ Extract connections from a \code{\linkS4class{GRN}} object
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN_con.all = getGRNConnections(GRN, include_TF_gene_correlations = TRUE)
+GRN = loadExampleObject()
+GRN_con.all.df = getGRNConnections(GRN)
 }

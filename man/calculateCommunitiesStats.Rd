@@ -23,6 +23,6 @@ This function generates the TF-gene graph from the filtered GRN object, and clus
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
 }

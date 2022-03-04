@@ -10,8 +10,8 @@
 #' @export
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
+#' GRN = loadExampleObject()
+#' GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
 #' @return The same \code{\linkS4class{GRN}} object.
 build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE, 
                              allowLoops = FALSE, removeMultiple = FALSE, directed = FALSE, forceRerun = FALSE) {
@@ -200,8 +200,8 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 #' @export
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
+#' GRN = loadExampleObject()
+#' GRN = performAllNetworkAnalyses(GRN, forceRerun = FALSE)
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"), 
                                       algorithm = "weight01", statistic = "fisher",
@@ -297,8 +297,8 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
+#' GRN =  loadExampleObject()
+#' GRN =  calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
 #' @import topGO
 #' @import BiocManager
@@ -727,8 +727,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' @import patchwork
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
+#' GRN = loadExampleObject()
+#' GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
 #' @export
 calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = FALSE, ...){
     
@@ -810,8 +810,8 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
 #' @seealso \code{\link{calculateGeneralEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
+#' GRN = loadExampleObject()
+#' GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
 #' @export
 calculateCommunitiesEnrichment <- function(GRN, 
                                            ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 
@@ -937,9 +937,9 @@ calculateCommunitiesEnrichment <- function(GRN,
 #' @return A dataframe with the node names and the corresponding scores used to rank them
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
-#' # topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
+#' GRN = loadExampleObject()
+#' topGenes = getTopNodes(GRN, nodeType = "gene", rankType = "degree", n = 3)
+#' topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
 #' @export
 getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = TRUE) { # },
     #        TFConnectionType = "tf-gene", geneConnectionType = "peak-gene"){
@@ -1023,9 +1023,9 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' @return The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
-#' # GRN = calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
+#' GRN =  loadExampleObject()
+#' GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
+#' GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
 calculateTFEnrichment <- function(GRN, rankType = "degree", n = 0.1, TF.names = NULL,
                                   ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 

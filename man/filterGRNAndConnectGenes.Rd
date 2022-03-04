@@ -80,8 +80,8 @@ Internally, first, the TF-peak are filtered before the peak-gene connections are
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = filterGRNAndConnectGenes(GRN)
+GRN = loadExampleObject()
+GRN = filterGRNAndConnectGenes(GRN)
 }
 \seealso{
 \code{\link{visualizeGRN}}

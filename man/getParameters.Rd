@@ -21,7 +21,7 @@ Retrieve parameters for previously used function calls and general parameters fo
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
+GRN = loadExampleObject()
 # getParameters(GRN, type = "parameter", name = "all")
 
 }

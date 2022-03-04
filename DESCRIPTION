@@ -60,7 +60,8 @@ Imports:
     graphics,
     magrittr,
     tibble,
-    viridis
+    viridis,
+    BiocFileCache
 Depends:
     R (>= 4.1.0),
     tidyverse,

@@ -15,3 +15,8 @@ The same \code{\linkS4class{GRN}} object, with some slots being deleted (\code{G
 \description{
 Optional convenience function to delete intermediate data from the function \link{AR_classification_wrapper} and summary statistics that may occupy a lot of space
 }
+\examples{
+# See the Workflow vignette on the GRaNIE website for examples
+GRN = loadExampleObject()
+GRN = deleteIntermediateData(GRN)
+}

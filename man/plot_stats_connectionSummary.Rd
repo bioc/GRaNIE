@@ -40,6 +40,6 @@ Plot various network connectivity summaries for a \code{\linkS4class{GRN}} objec
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = FALSE)
 }

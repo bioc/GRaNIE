@@ -24,6 +24,6 @@ Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
+GRN = loadExampleObject()
+GRN = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
 }

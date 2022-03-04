@@ -43,8 +43,8 @@ After the vertices of the filtered GRN are clustered into communities using \cod
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotCommunitiesEnrichment}}

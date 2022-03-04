@@ -43,6 +43,6 @@ Produce a PCA plot of the data from a \code{\linkS4class{GRN}} object
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = FALSE)
+GRN = loadExampleObject()
+GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = FALSE)
 }

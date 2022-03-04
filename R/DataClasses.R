@@ -248,9 +248,9 @@ setMethod("show",
 #' @return Integer. Number of peaks that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) peaks that are currently marked as \emph{filtered}.
 #' @examples
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # nPeaks(GRN, filter = TRUE)
-#' # nPeaks(GRN, filter = FALSE)
+#' GRN = loadExampleObject()
+#' nPeaks(GRN, filter = TRUE)
+#' nPeaks(GRN, filter = FALSE)
 #' @export
 #' @aliases peaks
 #' @rdname peaks-methods
@@ -283,9 +283,9 @@ nPeaks <- function(GRN, filter = TRUE) {
 #' @return Integer. Number of genes that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) genes that are currently marked as \emph{filtered}.
 #' @examples
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # nGenes(GRN, filter = TRUE)
-#' # nGenes(GRN, filter = FALSE)
+#' GRN = loadExampleObject()
+#' nGenes(GRN, filter = TRUE)
+#' nGenes(GRN, filter = FALSE)
 #' @export
 #' @aliases genes
 #' @rdname genes-methods
