@@ -1,0 +1,591 @@
+---
+title: "Workflow example"
+author: "Christian Arnold, Judith Zaugg, Rim Moussa"
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('GRaNIE')`"
+abstract: >
+  This workflow vignette shows how to use the `GRaNIE` package in a real-world example. For this purpose, you will use the `GRaNIEData` package for a more complex analysis to illustrate most of its features. Importantly, you will also learn in detail how to work with a `GRaNIE` object and what its main functions and properties are. The vignette will be continuously updated whenever new functionality becomes available or when we receive user feedback.
+vignette: >
+  %\VignetteIndexEntry{Workflow example}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+      code_folding: hide
+---
+
+
+
+```{css, echo=FALSE}
+pre {
+  max-height: 300px;
+  overflow-y: auto;
+}
+pre[class] {
+  max-height: 100px;
+}
+```
+
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+
+```{css, echo=FALSE}
+.scroll-200 {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+
+```{css, echo=FALSE}
+.scroll-300 {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+# Example Workflow
+<a name="section1"></a>
+
+In the following example, you will use data from the `GRaNIEData` package to construct a eGRN from ATAC-seq, RNA-seq data as well transcription factor data.
+
+
+```{r <knitr, echo=FALSE, message=FALSE, results="hide", class.output="scroll-200"}
+library("knitr")
+opts_chunk$set(
+  tidy = TRUE,
+  cache = FALSE,
+  message = FALSE,
+  fig.align="center",
+  results='hold')
+```
+
+First, let's load the required libraries `GRaNIE` and `GRaNIEData`. The `tidyverse` package is already loaded and attached when loading the `GRaNIE` package, but we nevertheless load it here explicitly to highlight that we'll use various `tidyverse` functions for data import.
+
+For reasons of brevity, we omit the output of this code chunk.
+
+```{r loadLibaries2, echo=TRUE, message=FALSE, results="hide", warning=FALSE, class.output="scroll-200"}
+library(tidyverse)
+library(GRaNIEData)
+library(GRaNIE)
+```
+
+
+## General notes
+
+Each of the `GRaNIE` functions we mention here in this Vignette comes with sensible default parameters that we found to work well for most of the datasets we tested it with so far.  However, **always check the validity and usefulness of the parameters before starting an analysis** to avoid unreasonable results.
+
+## Reading the data required for the `GRaNIE` package
+
+To set up a `GRaNIE` analysis, we first need to read in some data into `R`. The following data can be used for the `GRaNIE` package:
+
+* open chromatin / peak data (from either ATAC-Seq, DNAse-Seq or ChIP-Seq data, for example), hereafter simply referred to as *enhancers*
+* RNA-Seq data (gene expression counts for genes across samples)
+
+The following data can be used optionally but are not required:
+
+* sample metadata (e.g., sex, gender, age, sequencing batch, etc)
+* TAD domains (bed file)
+
+So, let's import the enhancer and RNA-seq data as a data frame as well as some sample metadata. This can be done in any way you want as long as you end up with the right format. 
+
+```{r importData, echo=TRUE, include=TRUE, class.output="scroll-200"}
+require(GRaNIEData)
+(files = list.files(pattern = "*",system.file("extdata", package = "GRaNIEData"),full.names = TRUE))
+file_peaks = files[grep("countsATAC.75k.tsv.gz", files)]
+file_RNA  = files[grep("countsRNA.sampled.tsv.gz", files)]
+file_sampleMetadata = files[grep("metadata.sampled.tsv", files)]
+folder_TFBS_first50 = files[grep("TFBS_selected", files)]
+
+countsRNA.df      = read_tsv(file_RNA, col_types = cols())
+countsPeaks.df    = read_tsv(file_peaks, col_types = cols()) 
+sampleMetadata.df = read_tsv(file_sampleMetadata, col_types = cols())
+
+# Let's check how the data looks like
+countsRNA.df
+countsPeaks.df
+sampleMetadata.df
+
+# Save the name of the respective ID columns
+idColumn_peaks = "peakID"
+idColumn_RNA = "ENSEMBL"
+
+# For the sake of simplicity, we only take a subset of all samples here to speed-up the vignette code
+# countsRNA.df = countsRNA.df[1:10000,1:10]
+# countsPeaks.df = countsPeaks.df[1:20000,1:10]
+
+```
+
+While we recommend raw counts for both enhancers and RNA-Seq as input and offer several normalization choices in the pipeline, it is also possible to provide pre-normalized data. Note that the normalization method may have a large influence on the resulting *eGRN* network, so make sure the choice of normalization is reasonable. For more details, see the next sections.
+
+As you can see, both enhancers and RNA-Seq counts must have exactly one ID column, with all other columns being numeric. For enhancers, this column may be called `peakID`, for example, but the exact name is not important and can be specified as a parameter later when adding the data to the object. The same applies for the RNA-Seq data, whereas a sensible choice here is `ensemblID`, for example. 
+
+For the enhancer ID column, the required format is `chr:start-end`, with `chr` denoting the chromosome, followed by ":", and then `start`, `-`, and `end` for the enhancer start and end, respectively. As the coordinates for the enhancers are needed in the pipeline, the format must be exactly as stated here.
+
+You may notice that the enhancers and RNA-seq data have different samples being included, and not all are overlapping. This is not a problem and as long as *some* samples are found in both of them, the `GRaNIE` pipeline can work with it. Note that only the shared samples between both data modalities are kept, however, so make sure that the sample names match between them and share as many samples as possible.
+
+
+## Initialize a `GRaNIE` object
+
+We got all the data in the right format, we can start with our `GRaNIE` analysis now! We start by specifying some parameters such as the genome assembly version the data have been produced with, as well as some optional object metadata that helps us to distinguish this `GRaNIE` object from others.
+
+```{r initializeObject, echo=TRUE, include=TRUE, class.output="scroll-200"}
+genomeAssembly = "hg38" #Either hg19, hg38 or mm10. Both enhancers and RNA data must have the same genome assembly
+
+# Optional and arbitrary list with information and metadata that is stored within the GRaNIE object
+objectMetadata.l = list(name                = paste0("Macrophages_infected_primed"),
+                        file_peaks          = file_peaks,
+                        file_rna            = file_RNA,
+                        file_sampleMetadata = file_sampleMetadata,
+                        genomeAssembly      = genomeAssembly)
+
+dir_output = "output"
+
+GRN = initializeGRN(objectMetadata = objectMetadata.l,
+                    outputFolder = dir_output,
+                    genomeAssembly = genomeAssembly)
+
+GRN
+```
+Initializing a `GRaNIE` object occurs in the function `initializeGRN()` and is trivial: All we need to specify is an output folder (this is where all the pipeline output is automatically being saved unless specified otherwise) and the genome assembly shortcut of the data. We currently support `hg19`, `hg38`, and `mm10`. Please contact us if you need additional genomes. The `objectMetadata` argument is recommended but optional and may contain an arbitrarily complex named list that is stored as additional metadata for the `GRaNIE` object. Here, we decided to specify a name for the `GRaNIE` object as well as the original paths for all 3 input files and the genome assembly.
+
+For more parameter details, see the R help (`?initializeGRN`). 
+
+At any time point, we can simply "print" a `GRaNIE` object by typing its name and a summary of the content is printed to the console.
+
+## Add data
+
+We are now ready to fill our empty object with data! After preparing the data beforehand, we can now use the data import function `addData()` to import both enhancers and RNA-seq data to the `GRaNIE` object. In addition to the count tables, we explicitly specify the name of the ID columns. As mentioned before, the sample metadata is optional but recommended if available.
+
+An important consideration is data normalization for RNA and ATAC. We currently support three choices of normalization: `quantile`, `DESeq_sizeFactor` and `none` and refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin enhancer data, it is `DESeq_sizeFactor` (i.e., a "regular" `DESeq` size factor normalization). Importantly, `DESeq_sizeFactor` requires raw data, while `quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or "none". 
+
+
+```{r addData, echo=TRUE, include=TRUE, class.output="scroll-200"}
+GRN = addData(GRN,
+              countsPeaks.df, normalization_peaks = "DESeq_sizeFactor", idColumn_peaks = idColumn_peaks,
+              countsRNA.df, normalization_rna = "quantile", idColumn_RNA = idColumn_RNA,
+              sampleMetadata = sampleMetadata.df,
+              forceRerun = TRUE)
+```
+
+We can see from the output the details for the used normalization method, and the number of samples that are kept in the `GRaNIE` object. Here, all 29 samples from the RNA data are kept because they are also found in the enhancer data, while only 29 out of 31 samples from the enhancer data are also found in the RNA data, resulting in 29 shared samples overall. The RNA counts are also permuted, which will be the basis for all analysis and plots in subsequent steps that repeat the analysis for permuted data in addition to the real, non-permuted data.
+
+## Quality control 1: PCA plots
+
+It is time for our first QC plots using the function `plotPCA_all()`! Now that we added enhancer and RNA data to the object, let's check with a *Principal Component Analysis* (PCA) for both enhancer and RNA-seq data as well as the original input and the normalized data (unless normalization has been set to none, in which case they are identical to the original data) where the variation in the data comes from. If sample metadata has been provided in the `addData()` function (something we strongly recommend), they are automatically added to the PCA plots by coloring the PCA results according to the provided metadata, so that potential batch effects can be examined and identified. For more details, see the R help (`?plotPCA_all`). 
+
+Note that while this step is recommended to do, it is fully optional from a workflow point of view.
+
+
+```{r runPCA, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", collapse=FALSE, results="hold"}
+GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = TRUE)
+```
+
+Multiple output plots are produced, with two files for each of the specified `types`. Usually, this is the RNA-Seq counts (as specified with `rna` here) as well as the enhancer counts (`peaks`). For each of them, PCA plots are produced for both `raw` and `normalized` data. With `raw`, we here denote the original counts as given as input with the `addData()` function, irrespective of whether this was already pre-normalized or not. For more details, see the [Package Details Vignette](packageDetails.html). The `topn` argument specifies the number of top variable features to do PCA for - here 500.
+
+Here, let's just take a look at one example page from one of the files that are produced, namely the original counts from the RNA-seq counts:
+
+
+Let's check the screeplot first, which summarizes the PCA:
+```{r, echo=FALSE, fig.cap="<i>Screeplot</i>", out.width = '80%'}
+knitr::include_graphics("figs/PCA_RNA_raw/p-02.png")
+```
+
+Another summary i to correlate all available metadata with the PCs and check fo correlation, which can help to identify potentially confounding variables that explain a large proportion of the observed variability:
+```{r, echo=FALSE, fig.cap="<i>Metadata correlation plot</i>", out.width = '80%'}
+knitr::include_graphics("figs/PCA_RNA_raw/p-03.png")
+```
+
+Lastly, for a selected metadata (here, the gender, labeled as `sex`), let's take a look at PC1 and PC2:
+```{r, echo=FALSE, fig.cap="<i>PCA plots with colored metadata</i>", out.width = '80%'}
+knitr::include_graphics("figs/PCA_RNA_raw/p-17.png")
+```
+
+For all details and further comments on how to understand and interpret the plots, see the [Package Details Vignette](packageDetails.html).
+
+
+## Add TFs and TFBS and overlap with enhancers
+
+Now it is time to add data for TFs and predicted TF binding sites (TFBS)! Our `GRaNIE` package requires pre-computed TFBS that need to be in a specific format (see the [Package Details Vignette](packageDetails.html) for details). In brief, a 6-column bed file must be present for each TF, with a specific file name that starts with the name of the TF, an arbitrary and optional suffix (here: "_TFBS") and a particular file ending (supported are `bed` or `bed.gz`; here, we specify the latter). All these files must be located in a particular folder that the `addTFBS()` functions then searches in order to identify those files that match the specified patterns. We provide example TFBS for the 3 genome assemblies we support, see the comment below and the [Package Details Vignette](packageDetails.html) for details. After setting this up, we are ready to overlap the TFBS and the enhancers by calling the function `overlapPeaksAndTFBS()`.
+
+For more parameter details, see the R help (`?addTFBS` and `?overlapPeaksAndTFBS`). 
+
+```{r addTFBS, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
+GRN = addTFBS(GRN, motifFolder = folder_TFBS_first50, TFs = "all", filesTFBSPattern = "_TFBS", fileEnding = ".bed.gz", forceRerun = TRUE)
+
+GRN = overlapPeaksAndTFBS(GRN, nCores = 1, forceRerun = TRUE)
+```
+
+We see from the output that 75 TFs have been found in the specified input folder, and the number of TFBS that overlap our peaks for each of them. We now successfully added our TFs and TFBS to the `GRaNIE` object.
+
+
+
+## Filter data (optional)
+
+Optionally, we can filter both enhancers and RNA-Seq data according to various criteria using the function `filterData()`. 
+
+For the open chromatin enhancers, we currently support three filters: 
+
+1. Filter by their normalized mean read counts (`minNormalizedMean_peaks`, default 5)
+2. Filter by their size / width (in bp) and discarding enhancers that exceed a particular threshold (`maxSize_peaks`, default: 10000 bp)
+3. Filter by chromosome (only keep chromosomes that are provided as input to the function, `chrToKeep_peaks`)
+
+
+For RNA-seq, we currently support the analogous filter as for open chromatin for normalized mean counts as explained above (`minNormalizedMeanRNA`).
+
+The default values are usually suitable for bulk data and should result in the removal of very few enhancers / genes; however, for single-cell data, lowering them may more reasonable. The output will print clearly how many enhancers and genes have been filtered, so you can rerun the function with different values if needed.
+
+For more parameter details, see the R help (`?filterData`). 
+
+```{r filterData, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
+# Chromosomes to keep for enhancers. This should be a vector of chromosome names
+chrToKeep_peaks = c(paste0("chr", 1:22), "chrX", "chrY")
+GRN = filterData(GRN, minNormalizedMean_peaks = 5, minNormalizedMeanRNA = 1, chrToKeep_peaks = chrToKeep_peaks, maxSize_peaks = 10000, forceRerun = TRUE)
+```
+We can see from the output that no enhancers have been filtered due to their size and almost 11,000 have been filtered due to their small mean read counts, which collectively leaves around 64,000 enhancers out of 75,000 originally. For the RNA data, almost half of the data has been filtered (16,211 out of around 35,000 genes). 
+
+## Add TF-enhancer connections
+
+We now have all necessary data in the object to start constructing our network. As explained in the [Package Details Vignette](packageDetails.html), we currently support two types of links for our `GRaNIE` approach:
+
+1. TF - enhancer
+2. enhancer - gene
+
+
+Let's start with TF-enhancer links! For this, we employ the function `addConnections_TF_peak()`. By default, we use Pearson to calculate the correlations between TF expression and enhancer accessibility, but Spearman may sometimes be a better alternative, especially if the diagnostic plots show that the background is not looking as expected.
+
+In addition to creating TF-enhancer links based on TF expression, we can also correlate enhancer accessibility with other measures. We call this the *connection type*, and `expression` is the default one in our framework. However, we implemented a flexible way of allowing also additional or other connection types. Briefly, this works as follows: Additional data has to be imported beforehand with a particular name (the name of the *connection type*). For example, measures that are related to so-called *TF activity* can be used in addition or as a replacement of TF expression. For each connection type that we want to include, we simply add it to the parameter `connectionTypes` along with the binary vector `removeNegativeCorrelation` that specifies whether or not negatively correlated pairs should be removed or not. For expression, the default is to not remove them, while removal may be more reasonable for measures related to TF activity.
+
+
+Lastly, we offer a so called GC-correction that uses a GC-matching background to compare it with the foreground instead of using the full background as comparison. We are still investigating the plausibility and effects of this and therefore mark this feature as experimental as of now.
+
+This function may run a while, and each time-consuming step has a built-in progress bar so the remaining time can be estimated. Note that the TF-enhancer links are constructed for both the original, non-permuted data (in the corresponding output plots that are produced, this is labeled as `original`) and permuted data (`permuted`). 
+For more parameter options and parameter details, see the R help (`?addConnections_TF_peak`). 
+
+```{r addTFPeakConnections, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
+GRN = addConnections_TF_peak(GRN, plotDiagnosticPlots = TRUE, 
+                                     connectionTypes = c("expression"),
+                                     corMethod = "pearson", forceRerun = TRUE)
+```
+From the output, we see that a total of 65 TFs have RNA-seq data available and consequently will be included and correlated with the enhancer accessibility. The created PDF files are mentioned in the output and these we'll take a look at now!
+
+## Quality control 2: Diagnostic plots for TF-enhancer connections
+
+After adding the TF-enhancer links to our `GRaNIE` object, let's look at some diagnostic plots. The `plots` folder within the specified output folder when initializing the `GRaNIE` object should now contain two new files that are named `TF_peak.fdrCurves_original.pdf` and `TF_peak.fdrCurves_permuted.pdf`. For reasons of brevity and organization, we fully describe their interpretation and meaning in detail in the [Package Details Vignette](packageDetails.html#output_TF_peak) and not here, however.
+
+In summary, TF-enhancer diagnostic plots are available for each TF, and each page summarizes the QC for each TF in two plots:  
+
+
+```{r, echo=FALSE, fig.cap="<i>TF-enhancer diagnostic plots for the TF E2F6.0.A for real data</i>", out.width = '80%'}
+knitr::include_graphics("figs/TFPeak_fdr_orig/p-40.png")
+```
+
+For this example, we can see a quite typical case: the TF-enhancer FDR for the various *E2F7.0.B* - enhancer pairs are above 0.2 for the wide majority correlation bins in both directions (that is, positive and negative), while a few bins towards more extreme correlation bins have a low FDR. The former indicate little statistical signal and confidence, while the latter are those connections we are looking for! Typically, however, only  few connections are in the more extreme bins, as indicated by the color. Here, correlation bin refers to the correlation of a particular *E2F7.0.B* - enhancer pair that has been discretized accordingly (i.e., a correlation of 0.07 would go into (0.05-0.10] correlation bin). Usually, depending on the mode of action of a TF, none or either one of the two directions may show a low FDR in particular areas of the plots, often close to more extreme correlation bins, but rarely both. For a better judgement and interpretation, we can also check how this looks like for permuted data:
+
+```{r, echo=FALSE, fig.cap="<i>TF-enhancer diagnostic plots for the TF E2F6.0.A for permuted data</i>", out.width = '80%'}
+knitr::include_graphics("figs/TFPeak_fdr_perm/p-40.png")
+```
+We see that for permuted data, there is much less significant bins, as expected.
+
+Here, in summary, a few positively correlated *E2F6.0.A* - enhancer pairs (with a correlation of at least 0.5 or so) are statistically significant and may be retained for the final *eGRN* network (if corresponding genes connecting to the respective enhancers are found).
+
+
+## Run the AR classification and QC (optional) {#output_AR}
+
+Transcription factors (TFs) regulate many cellular processes and can therefore serve as readouts of the signaling and regulatory state. Yet for many TFs, the mode of action—repressing or activating transcription of target genes—is unclear. In analogy to our *diffTF* approach that we recently published to calculate differential TF activity,the classification of TFs into putative transcriptional activators or repressors can also be done from within the `GRaNIE` framework in an identical fashion. This can be achieved with the function `AR_classification_wrapper()`.  
+
+**Note that this step is fully optional and can be skipped. The output of the function is not used for subsequent steps.**. To keep the memory footprint of the `GRaNIE` object low, we recommend to set `deleteIntermediateData = TRUE`. 
+
+
+```{r runARClassification, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN = AR_classification_wrapper(GRN, significanceThreshold_Wilcoxon = 0.05,
+                                plot_minNoTFBS_heatmap = 100, plotDiagnosticPlots = TRUE,
+                                deleteIntermediateData = TRUE, forceRerun = TRUE)
+```
+From the output, we see that the classification has been run for both real and permuted data, as before. The contents of these plots are identical to and uses in fact practically the same code as our `diffTF` software. We refer to the following links for more details:
+
+1. [The official `diffTF` paper][1]
+2. In general, the [ReadTheDocs documentaion][2], and in particular [this chapter][3]. In `File {comparisonType}.diagnosticPlotsClassification1.pdf:, pages 1-4`, the content of the files `TF_classification_stringencyThresholds` are explained in detail, while in `File {comparisonType}.diagnosticPlotsClassification2.pdf:, Page 20 - end` the contents of the files `TF_classification_summaryHeatmap` and `TF_classification_densityPlotsForegroundBackground` are elaborated upon.
+
+
+[1]: <https://doi.org/10.1016/j.celrep.2019.10.106> "The original publication explaining the method and motivation in detail"
+[2]: <https://difftf.readthedocs.io> "the *ReadTheDocs* help for *diffTF*"
+[3]: <https://difftf.readthedocs.io/en/latest/chapter2.html#files-comparisontype-diagnosticplotsclassification1-pdf-and-comparisontype-diagnosticplotsclassification2-pdf> "the following part*"
+
+For more parameter details, see the R help (`?AR_classification_wrapper`). 
+
+The function produces different output plots and summaries of the method, but we here focus on only one of them, the summary heatmap, while the other plots are discussed in the [Package Details Vignette](packageDetails.html#output_AR) only.
+
+
+Let's first take a look at the random data:
+
+```{r, echo=FALSE, fig.cap="<i>Summary heatmap for the AR classification for permuted data</i>", out.width = '60%'}
+knitr::include_graphics("figs/AR_heatmap_expr_perm/p-2.png")
+```
+
+For the real, non-permuted data, it looks like this:
+```{r, echo=FALSE, fig.cap="<i>Summary heatmap for the AR classification for real data</i>", out.width = '60%'}
+knitr::include_graphics("figs/AR_heatmap_expr_real/p-2.png")
+```
+
+In summary, we can appreciate that for permuted data, almost all TFs are reassuringly classified as `undetermined` (that is expected, given the random nature of the data), while for the non-permuted one, the majority of TFs is either an `activator` or `repressor`. This is irrespective of the classification stringency. Overall, this indicates we capture real signal.
+
+## Save `GRaNIE` object to disk (optional)
+
+After steps that take up a bit of time, it may make sense to store the `GRaNIE` object to disk in order to be able to restore it at any time point. This can simply be done, for example, by saving it as an `rds` file using the built-in function `saveRDS` from R to save our `GRaNIE` object in a compressed rds format.  
+
+```{r saveObject2, echo=TRUE, include=TRUE, eval=FALSE}
+GRN_file_outputRDS = paste0(dir_output, "/GRN.rds")
+saveRDS(GRN, GRN_file_outputRDS)
+```
+
+You can then, at any time point, read it back into R with the following line:
+
+`GRN = readRDS(GRN_file_outputRDS)`
+
+
+## Add enhancer-gene connections
+
+Let's add now the second type of connections, enhancer-genes, to connect our enhancers to genes! This can be done via the function `addConnections_peak_gene()`. This function has a few parameters, and we only touch upon a few of them here. Most importantly, the `promoterRange` specifies the *neighborhood* size, which denotes the maximum neighborhood size in bp for enhancers (for both upstream and downstream ) to find genes in vicinity and associate/correlate genes with enhancers. While the default is 250,000 bp, we here set it to just 10,000 bp for computational reasons. Also, we support the incorporation of *TADs* if available to replace the default fixed neighborhood-based approach by a more flexible, biologically-driven chromatin domain based approach. Here, we do not have TADs available, so we set it to `NULL`. For more parameter details, see the R help (`?addConnections_peak_gene`). 
+
+```{r addPeakGeneConnections, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN = addConnections_peak_gene(GRN,
+                               overlapTypeGene = "TSS", corMethod = "pearson", promoterRange = 10000, TADs = NULL,
+                               nCores = 1, plotDiagnosticPlots = TRUE, plotGeneTypes = list(c("all")), forceRerun = TRUE)
+```
+
+We see from the output that almost 42,000 enhancer-gene links have been identified that match our parameters. From these 42,000, however, only around 18,804 actually had corresponding RNA-seq data available, while RNA-seq data was missing or has been filtered for the other. This is a rather typical case, as not all known and annotated genes are included in the RNA-seq data in the first place. Similar to before, the correlations have also been performed for the permuted data.
+
+
+## Quality control 3: Diagnostic plots for enhancer-gene connections
+
+Let's now check some diagnostic plots for the enhancer-gene connections. In analogy to the other diagnostic plots that we encountered already before, we describe their interpretation and meaning in more detail in the [Package Details Vignette](packageDetails.html) and here only focus on a few overall details!
+
+
+The following plot summarizes many key QC measures we implemented:
+```{r, echo=FALSE, fig.cap="<i>Diagnostic plots (QC) for the enhancer-gene connections</i>", out.width = '80%'}
+knitr::include_graphics("figs/peakGene_QC_all/p-01.png")
+```
+
+Without explaining the details here, we can see from mainly the upper left plot that the enhancer-gene connections look good indeed!  
+
+## Combine TF-enhancer and enhancer-gene connections and filter
+
+Now that we added both TF-enhancers and enhancer-gene links to our `GRaNIE` object, we are ready to filter and combine them. So far, they are stored separately in the object for various reasons (see the Introductory Vignette for details), but ultimately, we aim for combining them to derive TF-enhancer-gene connections. To do so, we can simply run the `filterGRNAndConnectGenes()` function and filter the individual TF-enhancer and enhancer-gene links to our liking. The function has many more arguments, and we only specify a few in the example below. As before, we get a `GRaNIE` object back that now contains the merged and filtered TF-enhancer-gene connections that we can later extract. Some of the filters apply to the TF-enhancer links, some of them to the enhancer-gene links, the parameter name is intended to indicate that.
+
+```{r combineAndFilter, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN = filterGRNAndConnectGenes(GRN, TF_peak.fdr.threshold = 0.2,
+                               peak_gene.fdr.threshold = 0.2, peak_gene.fdr.method = "BH", 
+                               gene.types = c("protein_coding", "lincRNA"),
+                               allowMissingTFs = FALSE, allowMissingGenes = FALSE
+                               )
+```
+
+The output shows the number of links before and after applying a particular filter that has been set for both real and permuted data. As expected and reassuringly, almost no connections remain for the permuted data, while the real data keeps around 2500 connections. 
+
+Importantly, this filtered set of connections is now also saved in the `GRN` object and the basis for most if not all downstream functions that the package offers and that we explore now! It is important to keep that in mind: Re-running the `filterGRNAndConnectGenes()` method overwrites the `all.filtered` slot in the `GRN` object, and all downstream functions have to be re-run as well.
+
+For more parameter details, see the R help (`?filterGRNAndConnectGenes`). 
+
+## Add TF-gene correlations (optional)
+
+Optionally, we can also include extra columns about the correlation of TF and genes directly. So far, only TF-enhancers and enhancer-genes have been correlated, but not directly TFs and genes. Based on a filtered set of TF-enhancer-gene connections, the function `add_TF_gene_correlation()` calculates the TF-gene correlation for each connection from the filtered set for which the TF is not missing.
+
+```{r, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN = add_TF_gene_correlation(GRN, corMethod = "pearson", nCores = 1, forceRerun = TRUE)
+```
+
+As can be seen from the output, the Pearson correlation for 587 TF-gene pairs has been calculated. From the around 2500 connections we obtained above, since we set the parameter `allowMissingGenes = TRUE`, for the majority of the TF-enhancer-gene connections the gene is actually missing. That is, while a TF-enhancer connection below the specified significance threshold exists, no corresponding gene could be found that connects to the same enhancer, therefore setting the gene to *NA* rather than excluding the row altogether.
+
+For more parameter details, see the R help (`?add_TF_gene_correlation`). 
+
+Time to save our object again!
+```{r saveObject, echo=TRUE, include=TRUE , eval=FALSE}
+GRN = deleteIntermediateData(GRN)
+saveRDS(GRN, GRN_file_outputRDS)
+```
+
+
+        
+## Retrieve filtered connections
+
+We are now ready to retrieve the connections and the additional data we added to them. This can be done with the helper function `getGRNConnections()` that retrieves a data frame from a `GRaNIE` object from a particular slot. Here, we specify `all.filtered`, as we want to retrieve all filtered connections. For more parameter details, see the R help (`getGRNConnections`). Note that the first time, we assign a different variable to the return of the function (i.e., `GRN_connections.all` and NOT `GRN` as before). Importantly, we have to select a new variable as we would otherwise overwrite our `GRN` object altogether! All `get` functions from the `GRaNIE` package return an element from within the object and NOT the object itself, so please keep that in mind and always check what the functions returns before running it. You can simply do so in the R help (`?getGRNConnections`). 
+
+```{r, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN_connections.all = getGRNConnections(GRN, type = "all.filtered", include_TF_gene_correlations = TRUE)
+
+GRN_connections.all
+```
+
+The table contains many columns, and the prefix of each column name indicates the part of the *eGRN* network that the column refers to (e.g., TFs, TF-enhancers, enhancers, enhancer-genes or genes, or TF-gene if the function `add_TF_gene_correlation()` has been run before). Data are stored in a format that minimizes the memory footprint (e.g., each character column is stored as a factor). This table can now be used for any downstream analysis, as it is just a normal data frame.
+
+
+## Visualize the filtered *eGRN* connections
+
+The `GRaNIE` package will soon also offer some rudimentary functions to visualize a filtered *eGRN* network. Stay tuned! Meanwhile, you can use the `igraph` package to construct a graph out of the filtered TF-enhancer-gene connection table (see above).
+
+## Generate a connection summary for filtered connections
+
+It is often useful to get a grasp of the general connectivity of a network and the number of connections that survive the filtering. This makes it possible to make an informed decision about which FDR to choose for TF-enhancer and enhancer-gene links, depending on how many links are retained and how many connections are needed for downstream analysis. To facilitate this and automate it, we offer the convenience function `generateStatsSummary()` that in essence iterates over different combinations of filtering parameters and calls the function `filterGRNAndConnectGenes()` once for each of them, and then records various connectivity statistics, and finally plots it by calling the function `plot_stats_connectionSummary()`. Note that running this function may take a while. Afterwards, we can graphically summarize this result in either a heatmap or a boxplot. For more parameter details, see the R help (`?generateStatsSummary` and `plot_stats_connectionSummary`). 
+
+```{r connectionSummary, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN = generateStatsSummary(GRN,
+                           TF_peak.fdr = c(0.01, 0.05, 0.1, 0.2), 
+                           TF_peak.connectionTypes = "all",
+                           peak_gene.p_raw = NULL,
+                           peak_gene.fdr = c(0.01, 0.05, 0.1, 0.2),
+                           peak_gene.r_range = c(0,1),
+                           allowMissingGenes = c(FALSE, TRUE),
+                           allowMissingTFs = c(FALSE),
+                           gene.types = c("protein_coding", "lincRNA"))
+
+
+GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = TRUE)
+GRN = plot_stats_connectionSummary(GRN, type = "boxplot", forceRerun = TRUE)
+```
+
+Here, the output is less informative and just tells us about the current progress and parameter it iterates over. We can now check the two new PDF files that have been created!
+
+Let's start with a connection summary in form of a heatmap! There are 3 heatmaps, one for TFs, enhancers (labeled peaks) and genes, respectively. All of them compare the number of distinct TFs, enhancers, and genes that end up in the final `eGRN` in dependence of how stringently the connections are filtered (i.e., different FDR thresholds for both TF-enhancers and enhancer-genes). In addition, the same is repeated for the permuted data, which enables you to judge the connectivity of the real data as compared to what you can expect with random data!
+
+For TFs, it looks like this, and we see that the numbers are generally very small because we just run the analysis with few TFs. For the permuted data, depending on the random nature of it, none or almost none connections survive the filtering. You should see much bigger differences for full TF data and not just a few selected ones:
+```{r, echo=FALSE, fig.cap="<i>Filtered eGRN connection summary (heatmap) for TFs</i>", out.width = '75%'}
+knitr::include_graphics("figs/connectionsHeatmap/p-1.png")
+```
+
+The plots for enhancers and genes show more dramatic differences, however. It shows that the TF-enhancer FDR has to be set to at least 0.2; otherwise, almost no connections survive the filtering:
+```{r, echo=FALSE, fig.cap="<i>Filtered eGRN connection summary (heatmap) for enhancers</i>", out.width = '75%'}
+knitr::include_graphics("figs/connectionsHeatmap/p-2.png")
+```
+
+```{r, echo=FALSE, fig.cap="<i>Filtered eGRN connection summary (heatmap) for genes</i>", out.width = '75%'}
+knitr::include_graphics("figs/connectionsHeatmap/p-3.png")
+```
+
+Alternatively, we can also represent the connectivity in form of a boxplot, which shows the connectivity for each node or connection type (i.e. TFs, enhancers, and genes, while enhancers are split between TF-enhancer and enhancer-gene depending on whether they connect with TFs or genes, respectively), and compares this again to the random version of the `eGRN`. The PDF contains many pages, and iterates over different FDR stringency thresholds. We here show two example pages:
+```{r, echo=FALSE, fig.cap="<i>Filtered eGRN connection summary (boxplot)</i>", out.width = '80%'}
+knitr::include_graphics("figs/connectionsBoxplot/p-01.png")
+```
+
+Not all parameter combinations (such as FDR stringencies) result in connections! Sometimes, there is no `eGRN` as no connections survived the filtering:
+
+```{r, echo=FALSE, fig.cap="<i>Filtered eGRN connection summary (boxplot)</i>", out.width = '80%'}
+knitr::include_graphics("figs/connectionsBoxplot/p-11.png")
+```
+
+
+## Network and enrichment analyses for filtered connections
+
+Lastly, our framework also supports various types of network and enrichment analyses that are fully integrated into the package. We offer these for the full filtered `eGRN` network as a whole (as produced by running the function `filterGRNAndConnectGenes()` before) as well as an enrichment per community. 
+
+First, a proper graph (network) structure can be build with the function `build_eGRN_graph()`, which all network and enrichment functions use subsequently.
+
+For both the general and the community statistics and enrichment, the package can:
+
+- calculate and plot general structure and connectivity statistics for a filtered *eGRN* (function `plotGeneralGraphStats()`) and per community (functions `calculateCommunitiesStats()` and `plotCommunitiesStats()`) , 
+- ontology enrichment and visualization for genes for the full network (functions `calculateGeneralEnrichment()` and `plotGeneralEnrichment()`) as well as per community (functions `calculateCommunitiesEnrichment()` and `plotCommunitiesEnrichment()`)
+
+All functions can be called individually, adjusted flexibly and the data is stored in the `GRaNIE` object for ultimate flexibility. In the near future, we plan to expand this set of functionality to additional enrichment analyses such as other databases (specific diseases pathways etc), so stay tuned!
+`calculateCommunitiesStats()`
+For user convenience, all aforementioned functions can be called at once via a designated wrapper function `performAllNetworkAnalyses()`.
+
+Many results are produces by this convenience function, and we here show only a few of them. For a description of all them, we refer to the [Package Details Vignette](packageDetails.html). 
+
+Let's run an enrichment analysis using `GO` (here, only *Biological Process*). We also support enrichment using *Disease Ontology* (abbreviated `DO`) as well as *Reactome* and `KEGG`.
+
+```{r enrichment, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN = performAllNetworkAnalyses(GRN, ontology = c("GO_BP"), forceRerun = TRUE)
+```
+
+Let's start with checking some general network statistics for the full network. First we can check the vertex distribution and gene types for the overall network to get an idea of how the network looks like:
+```{r, echo=FALSE, fig.cap="<i>General network statistics for the filtered network</i>", out.width = '80%'}
+knitr::include_graphics("figs/stats.overall/p-1.png")
+```
+
+We plot the network statistics for both the TF-enhancer-gene as well as TF-gene network, and we here show the results for the TF-gene network only:
+
+First, we see the vertex degree of TF and genes, respectively:
+```{r, echo=FALSE, fig.cap="<i>General network statistics for the filtered network</i>", out.width = '80%'}
+knitr::include_graphics("figs/stats.overall/p-5.png")
+```
+We can also use algorithms for measuring the influence of a node in a network (*centrality*). Here, we show the results for both TFs and genes for two different measures of centrality, *eigenvector centrality* and centrality based on node degree:
+```{r, echo=FALSE, fig.cap="<i>Centrality network statistics for the filtered network</i>", out.width = '80%'}
+knitr::include_graphics("figs/stats.overall/p-6.png")
+```
+
+```{r, echo=FALSE, fig.cap="<i>Centrality network statistics for the filtered network</i>", out.width = '80%'}
+knitr::include_graphics("figs/stats.overall/p-7.png")
+```
+
+
+We can also check these statistics community-specifically, but we omit these plots here and refer to the [Package Details Vignette](packageDetails.html). 
+
+
+Instead, let's take a look at `GO` term enrichment results for the full network:
+
+```{r, echo=FALSE, fig.cap="<i>GO term enrichment results for the full network</i>", out.width = '100%'}
+knitr::include_graphics("figs/enrichment.overall/p-1.png")
+```
+
+Even though this is just example data for only a few TF, we see some interesting enrichments already. The biological plausibility of them and how to continue after is now your challenge!
+
+
+Lastly, and probably often most interestingly, we also offer community-specific enrichment analyses, and we here show some examples:
+
+Excitingly, the two biggest communities (1 and 5) show very different enrichments:
+```{r, echo=FALSE, fig.cap="<i>GO term enrichment results for individual communities</i>", out.width = '100%'}
+knitr::include_graphics("figs/enrichment.community/p-01.png")
+```
+
+```{r, echo=FALSE, fig.cap="<i>GO term enrichment results for individual communities</i>", out.width = '100%'}
+knitr::include_graphics("figs/enrichment.community/p-02.png")
+```
+
+When checking the `KEGG` database, we also find some enriched terms:
+```{r, echo=FALSE, fig.cap="<i>GO term enrichment results for individual communities</i>", out.width = '100%'}
+#knitr::include_graphics("figs/enrichment.community/p-09.png")
+```
+
+We also provide an overview across the whole network and all communities that lists all the enriched terms that appear in at least one enrichment analysis, so a direct comparison of the specificity and commonalities across communities and between the general network and any community is facilitated. This also shows that some terms, here more than with a full dataset, are only identified as being enriched for the full network but not within any of the communities individually:
+```{r, echo=FALSE, fig.cap="<i>Enrichment summary and comparison across communities and the whole network</i>", out.width = '100%'}
+#knitr::include_graphics("figs/enrichment.community/p-07.png")
+```
+
+A filtered version of this only for the top 10 enriched terms is also available:
+```{r, echo=FALSE, fig.cap="<i>Enrichment summary and comparison across communities and the whole network</i>", out.width = '100%'}
+#knitr::include_graphics("figs/enrichment.community/p-08.png")
+```
+
+We do not show it here, but all enrichment analyses (including the summaries) are also available for the GO ontology `Molecular Function` (abbreviated `GO_MF` in the plots) in addition to `Biological Process` (`GO_BP`).
+
+**In addition to `GO`, we also support additional enrichment analyses (`KEGG`, `Disease Ontology`, and `Reactome`), which can selected in the same way as you have seen in the code chunk above! More are coming soon, stay tuned!**
+
+## Wrapping up
+
+We are now finished with the main workflow, all that is left to do is to save our `GRaNIE` object to disk so we can load it at a later time point without having to repeat the analysis. We recommend to run the convenience function `deleteIntermediateData()` beforehand that aims to reduce its size by deleting some intermediate data that may still be stored within the object. For more parameter details, see the R help (`?deleteIntermediateData`).  Finally, as we did already in the middle of the workflow, we save the object finally in rds format.
+
+```{r saveObject3, echo=TRUE, include=TRUE, eval=FALSE}
+GRN = deleteIntermediateData(GRN)
+saveRDS(GRN, GRN_file_outputRDS)
+```
+
+
+# How to continue?
+From here on, possibilities are endless, and you can further investigate patterns and trends in the data! We hope that the `GRaNIE` package is useful for your research and encourage you to contact us if you have any question or feature request!
+
+
+# Session Info
+
+```{r, class.output="scroll-200"}
+ sessionInfo()
+```
+

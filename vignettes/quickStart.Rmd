@@ -1,0 +1,65 @@
+---
+title: "Get Started with the *GRaNIE* packages from the Zaugg Lab"
+author: "Christian Arnold, Judith Zaugg"
+date: "`r doc_date()`"
+package: "`r BiocStyle::pkg_ver('GRaNIE')`"
+vignette: >
+  %\VignetteIndexEntry{Get Started}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output: 
+  BiocStyle::html_document
+---
+
+**This vignette gives you a 1 minute summary of how to install and use our `GRaNIE` and the associated `GRaNIEData` package. For more details, check out the other Vignettes.** 
+
+## Install the packages
+
+We are soon submitting our `GRaNIE` and the associated `GRaNIEData` for being included on `Bioconductor`. Once we are accepted and the package is included in the stable release of `Bioconductor`, we will update the installation guidelines here. 
+
+Until then, you may install the packages as follows:
+
+### Stable version
+Installing our `GRaNIE` package is very easy. Just execute the following line into `R`:
+
+```{r, eval = FALSE}
+library(devtools)
+devtools::install_gitlab("grp-zaugg/GRaNIE", subdir = "src/GRaNIE", host = "git.embl.de", force = TRUE)
+```
+
+
+If you receive an error message, make sure you installed the devtools package. If you don't have it installed yet, just execute the following code into `R`:
+```{r, eval = FALSE}
+install.packages("devtools")
+```
+
+### Development version
+
+At the moment, we do not recommend working with the development version, and only a selected number of people have access to it. If you want to be included, please contact us! We will update the instructions here once we change our policy.
+
+### Data package: `GRaNIEData`
+
+Similarly, to install the `GRaNIEData` package, simply do:
+```{r, eval = FALSE}
+devtools::install_gitlab("grp-zaugg/GRaNIE", subdir = "src/GRaNIEData", host = "git.embl.de", force = TRUE)
+```
+
+
+## What do the different packages do?
+
+The stable package version is the best choice for most users, it contains features that have been tested more thoroughly and that we provide support for.
+
+The development version contains new features that may or may not be tested so far and we can only provide limited support for it. This is the version we actively work on, and every once in a while after finishing a new feature, we integrate it into the stable version in the `GRaNIE` package.
+
+The `GRaNIEData` package provides example data that can be used to test the package and run the Vignettes.
+
+
+## Bug Reports, Feature Requests and Contact Information
+
+Please check out **[the main page](https://grp-zaugg.embl-community.io/GRaNIE)** for how to get in contact with us.
+
+## Session Info
+
+```{r}
+ sessionInfo()
+```
