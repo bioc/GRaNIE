@@ -1,0 +1,787 @@
+start.all = Sys.time()
+par.l = list()
+
+############################################
+# PROGRESS NOTES AND MISSING FUNCTIONALITY #
+############################################
+
+# Filter peaks for SNPs (given a list of SNPs, only retain peaks that overlap with at least one SNP. Can also be achieved principally by filtering the initial ATAC-Seq counts)
+# Network statistics (connectivity, etc) and additional QC plots 
+# network permutations
+
+
+
+###########################
+# PARAMETERS; ADJUST HERE #
+###########################
+
+### 0. SCRIPTS DIRECTORY ###
+
+# Absolute path to the scripts directory in which the R scripts are located
+par.l$dir_scripts = "/g/scb2/zaugg/carnold/Projects/GRN_pipeline/src/"
+
+### 1. INPUT ###
+
+# Raw counts ATAC for the consensus peaks. All rows will be used for the pipeline, so this should constitute your consensus peaks.
+# No row filtering is necessary, 0 rows will be filtered in the pipeline
+# One of the columns must be an ID column called "peakID", in the usual format "chr:start-end". All other columns are the counts for the samples
+par.l$file_input_ATAC  = "/g/scb2/zaugg/carnold/Projects/GRN_pipeline/example/dev/Mathias/ATACcounts.tsv.gz"
+
+# Name of the ID column for the above file
+par.l$idColumn_ATAC = "peakID"
+
+# Raw counts RNA
+# No row filtering is necessary, 0 rows will be filtered in the pipeline
+# One of the columns must be an ID column called "ENSEMBL", denoting ENSEMBL IDs.
+par.l$file_input_RNA   = "/g/scb2/zaugg/carnold/Projects/GRN_pipeline/example/dev/Mathias/RNAcounts.tsv.gz"
+
+# Name of the ID column for the above file
+par.l$idColumn_RNA  = "ENSEMBL"
+
+# Genome assembly shortcut. Either hg19, hg38 or mm10
+par.l$genomeAssembly = "hg19"
+
+# Base directory of the folder with the TFBS predictions. For the genome aseembly that is used (see above), a subfolder with the same name is expected. In each of theses folders (for example, we have 3 subfolders: hg19, hg39, mm10), the TFBS predictions are expected as *.bed files as well as a translation table with the name translationTable_{par.l$genomeAssembly}.csv
+# We provide all files here: https://www.embl.de/download/zaugg/GRN/hg19_hg38_mm10_PWMScan.zip (7.5 GB)
+# Download and adjust the path below
+par.l$dir_HOCOMOCO_base = "/g/scb2/zaugg/zaugg_shared/annotations/TFBS"
+
+
+# Optional: Hi-C integration by providing TAD domains. If provided, this is used as an alternative approach for identifying genes for the peak-gene correlations
+# Then, instead of just correlating a peak with each gene in the user-defined fixed neighborhood size as defined by par.l$promoterRange, all genes in the same
+# TAD domain as the peak are taken. If a peak is outside a TAD domain, it is currently ignored and not correlated with any gene.
+# BED file with TAD coordinates, at least 3 columns (chr, start, end, no column names). TADs can overlap. If a particular peak overlaps with multiple TADs, the union of all overlapping TADs is taken for determining the neighborhood.
+# Must be in the same genome assembly version as the ATAC and RNA counts
+par.l$file_input_TADs = ""
+
+# Number of cores to use. Currently only used for calculating peak-gene correlations
+par.l$nCores = 4
+
+
+# Leave unchanged. Currently, only "HOCOMOCO" is supported. Then, depending on the genome assembly version, the correct HOCOMOCO version is included
+par.l$motifDatabase = "HOCOMOCO"
+
+# Should the pipeline be run for only a subset of TFs or all? The special keyword "all" will use all TF that are found in the HOCOMOCO folder; however, if only a subset should be considered, specify the subset here with c() and the TF names, as shown below
+par.l$TFs = c("CTCF", "HLF")
+par.l$TFs = "all"
+
+# Which gene types to keep for peak-gene correlations when connecting TF-peaks and peak-genes?
+# Set to "all" to keep all gene types, or a subset of gene types as defined by Gencode. Default is c("protein_coding", "lincRNA")
+par.l$geneTypes_keep = c("protein_coding", "lincRNA")
+
+# Should the visualization also be done for raw p-values, in addition to adjusted p-values? This can be useful if the signal is low and too few connections survive the filtering and p-value adjustment
+par.l$alsoVisualizeBasedOnRawPValues = FALSE
+
+
+### 2. OUTPUT ###
+
+# Root output folder (it does not matter whether you put a trailing slash or not)
+par.l$dir_output = "/g/scb2/zaugg/carnold/Projects/GRN_pipeline/example/dev/Mathias/output/"
+
+### 3. GENERAL PARAMETERS ###
+
+# Set to TRUE if you want to rerun and regenerate all plots and data
+par.l$forceRerun = FALSE
+
+# Normalization methods for RNA and ATAC. The default for RNA-Seq is quantile normalization, for ATAC-Seq a "regular" DESeq size factor normalization
+# Possible values are: "quantile", "DESeq_sizeFactor", and "none". If "none" is used, you have to normalize counts beforehand on your own. However, make 
+# sure that the normalization is not sensitive to outliers. The classification can be impacted by RNA-Seq outlier counts, for example, which is why we found quantile normalization to work well for the datasets we worked with so far.
+par.l$normMethodRNA = "quantile"
+par.l$normMethodATAC = "DESeq_sizeFactor"
+
+# Chromosomes to include for ATAC peaks and peak-gene associations. This should be a vector of chromosome names
+# TODO: What to do for other organisms
+par.l$chrToKeep = c(paste0("chr", 1:22), "chrX", "chrY")
+
+# Only relevant when no TAD domains are provided; if TADs are provided, this parameter can be ignored.
+# Specifies the neighborhood size (for both upstream and downstream of the peak) for peaks to find genes in vicinity and associate/correlate genes with peaks
+# Unit: bp
+par.l$promoterRange = 250000
+
+
+### 4. OTHER PARAMETERS (NO NEED TO MODIFY TYPICALLY) ###
+
+# Minimum average of normalized read counts for a peak to survive filtering
+par.l$minMeanATAC = 5
+
+# Correlation method. We recommend pearson since data are normalized appropriately before
+par.l$corMethodRNA_ATAC = "pearson"
+par.l$corMethodPeakGeneCorrelations = "pearson"
+
+# Recommended to leave at 1, more permutations are currently not necessary
+par.l$nPermutations = 1 
+
+# File pattern for the TFBS files. Currently works only for HOCOMOCO.
+par.l$filesTFBSPattern = "_TFBS"
+
+# Step size for the TF-peak FDR calculation
+par.l$stepsFDR = seq(from = -1, to = 1, by = 0.05)
+
+# Stringencies for AR classification
+par.l$allClassificationThresholds = c(0.1, 0.05, 0.01, 0.001)
+
+# Minimum number of TFBS to include a TF in the heatmap
+par.l$threshold_minNoTFBS_heatmap = 100
+
+# Colors for the different classifications
+par.l$colorCategories = c("activator" = "#4daf4a", "undetermined" = "black", "repressor" = "#e41a1c", "not-expressed" = "Snow3") # diverging, modified
+
+# Relative path from par.l$dir_scripts to the genome annotation file
+par.l$file_geneAnnotation =  paste0(par.l$dir_scripts, "/additionalFiles/geneAnnotation_Gencode.l.rds")
+
+#######################
+# AUTOMATED FROM HERE #
+#######################
+
+source(paste0(par.l$dir_scripts, "/functions_dev.R"))
+source(paste0(par.l$dir_scripts, "/functions_diffTF.hardlink.R"))
+
+initFunctionsScript(packagesReq = NULL, minRVersion = "3.5.0", warningsLevel = 1, disableScientificNotation = TRUE)
+checkAndLoadPackages(c("tidyverse", "futile.logger", "checkmate", "reshape2", "data.table", "rlist", "matrixStats",
+                       "bedr", "GenomicRanges", 
+                       "RColorBrewer", "igraph", "colorspace", "pheatmap",
+                       "preprocessCore", "DESeq2", "robust",
+                       checkAndLoadPackagesGenomeAssembly(par.l$genomeAssembly)), verbose = FALSE
+                     )
+
+setwd(par.l$dir_output)
+
+if (!endsWith(par.l$dir_output, "/")) {
+    par.l$dir_output = paste0(par.l$dir_output, "/")
+}
+
+
+dir_output_TFBS  = paste0(par.l$dir_output, "TFBS")
+dir_output_plots = paste0(par.l$dir_output, "plots")
+
+
+# OUTPUT
+file_log                      = paste0(par.l$dir_output, "GRN.log")
+file_peakSet                  = paste0(par.l$dir_output, "peakSet.bed")
+file_processedConsensus       = paste0(par.l$dir_output, "processedConsensus.bed")
+file_processedConsensus2      = paste0(par.l$dir_output, "processedConsensus_minimal.bed")
+file_output_corrTF            = paste0(par.l$dir_output, "sort.cor.m.l.rds")
+file_output_peaksTable        = paste0(par.l$dir_output, "peak_TF_overlap.df.tsv.gz")
+file_class.all                = paste0(par.l$dir_output, "newClass.rds")
+file_intersections.all        = paste0(par.l$dir_output, "allIntersections.rds")
+file_peakGeneCorrelationsReal = paste0(par.l$dir_output, "peakGeneCorrelations.real.rds")
+file_peakGeneCorrelationsRnd  = paste0(par.l$dir_output, "peakGeneCorrelations.random.rds")
+file_countsATAC_processed     = paste0(par.l$dir_output, "countsATAC_processed.tsv.gz")
+file_countsRNA_DESeq          = paste0(par.l$dir_output, "countsRNA_DESeq.rds")
+file_finalTFs_translTable     = paste0(par.l$dir_output, "TF_translationTable.tsv.gz")
+file_countsRNA_processed      = paste0(par.l$dir_output, "countsRNA_processed.list.rds")
+file_GRN_metadata             = paste0(par.l$dir_output, "GRN_metadata.rds")
+file_GRN_withGenes            = paste0(par.l$dir_output, "GRN_withGenes_")
+file_GRN_withGenesSummary     = paste0(par.l$dir_output, "GRN_withGenesSummary_")
+file_output_GRN_outputTable   = paste0(par.l$dir_output, "GRN")
+file_output_GRN_outputWithGenes   = paste0(par.l$dir_output, "GRN_withGenes")
+file_output_classification    = paste0(par.l$dir_output, "classificationSummary")
+file_output_plot_density      = paste0(dir_output_plots, "/densityPlots")
+file_output_plot_fdr          = paste0(dir_output_plots, "/fdrCurves")
+file_output_plot_medianClass  = paste0(dir_output_plots, "/TF_medianClass")
+file_output_plot_densityClass = paste0(dir_output_plots, "/TF_densityClass")
+file_output_plot_GRN_vis      = paste0(dir_output_plots, "/GRN.visualization_")
+file_output_plot_GRN_diag     = paste0(dir_output_plots, "/GRN.summary")
+file_output_plot_peakGene_diag= paste0(dir_output_plots, "/peakGene.diagnosticPlots")
+file_output_plot_network_diag = paste0(dir_output_plots, "/network.diagnosticPlots.pdf")
+
+testExistanceAndCreateDirectoriesRecursively(c(par.l$dir_output, dir_output_TFBS, dir_output_plots))
+
+assertDirectory(par.l$dir_output, access = "w")
+assertFileExists(par.l$file_input_ATAC, access = "r")
+assertFileExists(par.l$file_input_RNA, access = "r")
+
+if (par.l$file_input_TADs != "") {
+    assertFileExists(par.l$file_input_TADs)
+} else {
+    par.l$file_input_TADs = NULL
+}
+
+startLogger(file_log, "INFO",  removeOldLog = FALSE)
+printParametersLog(par.l)
+
+#############
+# READ DATA #
+#############
+
+if (!file.exists(file_countsRNA_processed) | !file.exists(file_countsATAC_processed) | !file.exists(file_countsRNA_DESeq) | par.l$forceRerun) {
+
+    countsRNA.norm.filt.df.l = list()
+    countsRNA.df  = read_tidyverse_wrapper(par.l$file_input_RNA , type = "tsv", col_types = cols())
+    
+    countsRNA.norm.df  = normalizeCounts(countsRNA.df, method = par.l$normMethodRNA, idColumn = par.l$idColumn_RNA)
+    
+    # This is only needed for retrieving the base mean expression of the genes for visualization purposes, which is optional.
+    #TODO: Why the norm method is fixed here?
+    countsRNA.dd       = normalizeCounts(countsRNA.df, method = "DESeq_sizeFactor",  idColumn = par.l$idColumn_RNA, returnDESeqObj = TRUE)
+    saveRDS(countsRNA.dd, file_countsRNA_DESeq)
+    
+    
+    # Rename columns so downstream code is cleaner. For ATAC, this is already done in filterRegions
+    if (par.l$idColumn_RNA != "ENSEMBL") {
+        countsRNA.norm.df = dplyr::rename(countsRNA.norm.df, ENSEMBL = !!(par.l$idColumn_RNA))
+    }
+    
+    # Make sure ENSEMBL is the first column
+    countsRNA.norm.df = dplyr::select(countsRNA.norm.df, ENSEMBL, everything())
+    
+    countsATAC.df = read_tidyverse_wrapper(par.l$file_input_ATAC, type = "tsv", col_types = cols()) 
+    
+    # Clean peaks from alternative contigs etc 
+    countsATAC.clean.df = filterRegions(countsATAC.df, par.l$chrToKeep, idColumn = par.l$idColumn_ATAC)
+    countsATAC.norm.df = normalizeCounts(countsATAC.clean.df, method = par.l$normMethodATAC, idColumn = "peakID")
+    
+    
+    # Subset data to retain only samples that appear in both RNA and ATAC
+    data.l = intersectData(countsRNA.norm.df, countsATAC.norm.df)
+    countsATAC.norm.filt.df = data.l[["ATAC"]] 
+    
+    # Save the processed RNA-Seq counts to disk
+    # Remove genes with rowMeans of 0, now after filtering
+    rowMeans = rowMeans(dplyr::select(data.l[["RNA"]], -ENSEMBL))
+    countsRNA.norm.filt.df = dplyr::filter(data.l[["RNA"]], rowMeans > 0)
+    
+    # Create permutations for RNA
+    countsRNA.norm.filt.df.l = shuffleColumns(countsRNA.norm.filt.df, par.l$nPermutations)
+    
+    saveRDS(countsRNA.norm.filt.df.l, file = file_countsRNA_processed)
+    rm(data.l)
+    
+} else {
+    # ATAC not needed, loaded later
+    countsRNA.norm.filt.df.l = readRDS(file_countsRNA_processed)
+    countsRNA.dd = readRDS(file_countsRNA_DESeq)
+}
+
+
+###########################################
+# Parse TFBS folder and Gene - TF mapping #
+###########################################
+
+if (!file.exists(file_output_peaksTable) | par.l$forceRerun) {
+    
+    folder_input_TFBS = getMotifFolder(par.l$motifDatabase, par.l$dir_HOCOMOCO_base, par.l$genomeAssembly)
+    HOCOMOCO_mapping.df.exp = getFinalListOfTFs(folder_input_TFBS, par.l$genomeAssembly, par.l$filesTFBSPattern, par.l$TFs, countsRNA.norm.filt.df.l[["0"]])
+    
+    write_tsv(HOCOMOCO_mapping.df.exp, file_finalTFs_translTable)
+    
+} else {
+    HOCOMOCO_mapping.df.exp = read_tidyverse_wrapper(file_finalTFs_translTable)
+}
+
+
+output.global.TFs = dplyr::select(HOCOMOCO_mapping.df.exp, c("HOCOID", "ENSEMBL")) %>% dplyr::rename(TF = HOCOID)
+allTF = output.global.TFs$TF
+nTF   = length(allTF)
+
+######################
+# PEAKS TFBS OVERLAP #
+######################
+
+if (!file.exists(file_output_peaksTable) | par.l$forceRerun) {
+    
+    # From the annotation of the ATAC-seq counts, generate a data frame that represent the consensus peaks
+    consensus.df = generatePeaksFromATACData(countsATAC.norm.filt.df)
+    consensus.df = consensus.df[match(countsATAC.norm.filt.df$peakID, consensus.df$peakID), ]
+    
+    if (!file.exists(file_processedConsensus2) | par.l$forceRerun) {
+        stopifnot(c("chr", "start", "end", "peakID") %in% colnames(consensus.df))
+        write_tsv(dplyr::select(consensus.df, "chr", "start", "end", "peakID"), path = file_processedConsensus2, col_names = FALSE)
+    }
+    
+    
+    if (!file.exists(file_intersections.all) | par.l$forceRerun) {
+        
+        res.l = .execInParallelGen(par.l$nCores, returnAsList = TRUE, listNames = allTF, iteration = 1:nTF, verbose = FALSE, 
+                                   functionName = intersectTFBSPeaks, allTF = allTF, par.l = par.l, consensusPeaks = consensus.df, 
+                                   file_processedConsensus2 = file_processedConsensus2, 
+                                   folder_input_TFBS = folder_input_TFBS, dir_output_TFBS = dir_output_TFBS)
+        
+   
+        
+        saveRDS(res.l, file = file_intersections.all )
+        
+    } else {
+        res.l = readRDS(file_intersections.all )
+    }
+    
+    # Sanity check
+    stopifnot(nrow(countsATAC.clean.df) == length(res.l[[1]]))
+    
+    TFBS_bindingMatrix.df = as_tibble(res.l)
+    
+    if (!all(colnames(TFBS_bindingMatrix.df) %in% allTF)) {
+        
+        flog.error(paste0("Mismatch detected between the TF names from the file ", file_intersections.all, " and the TF names derived from the translation file (see log, column HOCOID). This may happen if the genome assembly version has been changed, but intermediate files have not been properly recreated. Set the parameter forceRerun to TRUE and rerun the script."))
+        stop()
+    }
+    
+    # Collect binary 0/1 binding matrix from all TF and concatenate
+    peak_TF_overlap.df = TFBS_bindingMatrix.df %>%
+        dplyr::mutate(peakID = consensus.df$peakID) %>%
+        dplyr::mutate_if(is.logical, as.numeric) %>%
+        dplyr::select(peakID, sort(allTF))
+    
+    # The order of rows is here the sorted version as it originates from the sorted consensus peak file
+    # We resort it to match the countsATAC.norm.filt.df file
+    peak_TF_overlap.df = peak_TF_overlap.df[match(countsATAC.norm.filt.df$peakID, peak_TF_overlap.df$peakID), ]
+    write_tsv(peak_TF_overlap.df, file_output_peaksTable)
+    
+} else {
+    
+    peak_TF_overlap.df = read_tidyverse_wrapper(file_output_peaksTable)
+    
+}
+
+
+####################
+# FILTER ATAC DATA #
+####################
+
+if (!file.exists(file_processedConsensus) | !file.exists(file_countsATAC_processed) | par.l$forceRerun) {
+    
+    # Filter peaks and remove lowly expressed ones
+    stopifnot(identical(countsATAC.norm.filt.df$peakID, peak_TF_overlap.df$peakID))
+    res.l = filterPeaksByRowMeans(countsATAC.norm.filt.df, TF.peakMatrix = peak_TF_overlap.df, minMean = par.l$minMeanATAC) 
+    peak_TF_overlap.filt.df  = res.l[["bindingMatrix"]]  
+    countsATAC.norm.filt2.df = res.l[["peakCounts"]]  
+    consensus.df = dplyr::filter(consensus.df, peakID %in% countsATAC.norm.filt2.df$peakID)
+    
+    stopifnot(identical(countsATAC.norm.filt2.df$peakID, peak_TF_overlap.filt.df$peakID))
+    
+    write_tsv(consensus.df, file_processedConsensus)
+    write_tsv(countsATAC.norm.filt2.df, path = file_countsATAC_processed)
+    
+} else {
+    
+    consensus.df = read_tidyverse_wrapper(file_processedConsensus)
+    countsATAC.norm.filt2.df = read_tidyverse_wrapper(file_countsATAC_processed)
+    peak_TF_overlap.filt.df = dplyr::filter(peak_TF_overlap.df, peakID %in% countsATAC.norm.filt2.df$peakID)
+    stopifnot(identical(countsATAC.norm.filt2.df$peakID, peak_TF_overlap.filt.df$peakID))
+}
+
+
+##########################
+# CORRELATE RNA AND ATAC #
+##########################
+
+if (!file.exists(file_output_corrTF) | par.l$forceRerun) {
+    
+    sort.cor.m.l = list()
+    for (permutationCur in 0:par.l$nPermutations) {
+        
+        permIndex = as.character(permutationCur)
+        flog.info(paste0("Permutation ", permutationCur))
+
+        sort.cor.m.l[[permIndex]] = 
+            correlateATAC_RNA(countsRNA.norm.filt.df.l[[permIndex]], countsATAC.norm.filt2.df, HOCOMOCO_mapping.df.exp, par.l$corMethodRNA_ATAC)
+    }
+    
+    saveRDS(sort.cor.m.l, file_output_corrTF)
+    
+} else {
+    
+    sort.cor.m.l = readRDS(file_output_corrTF)
+}
+
+
+##########################
+# RNA-SEQ CLASSIFICATION # 
+##########################
+
+
+#peak_TF_overlap.df.orig = peak_TF_overlap.df
+grn_TF_peaks.l = list()
+grn_TF_peaks_genes.filt.l = list()
+output.global.TFs.orig = output.global.TFs
+stats.df = initializeStatsDF()
+stats_details.l = list()
+
+for (permutationCur in 0:par.l$nPermutations) {
+    
+    flog.info(paste0("\nPermutation ", permutationCur, "\n"))
+    permIndex = as.character(permutationCur)
+    permSuffix = ifelse(permutationCur == 0, "", ".permuted")
+    stats_details.l[[permIndex]] = list()
+    
+    peak_TF_overlapCur.df = peak_TF_overlap.filt.df
+    
+    peak_TF_overlapCur.df$peakID<-NULL
+    peak_TF_overlapCur.df <- peak_TF_overlapCur.df[,match(colnames(sort.cor.m.l[[permIndex]]), colnames(peak_TF_overlapCur.df))]
+    
+    if (permutationCur > 0) {
+        
+        for (i in 1:ncol(peak_TF_overlapCur.df)) {
+            peak_TF_overlapCur.df[,i] = (dplyr::select(peak_TF_overlapCur.df, i) %>% pull()) [sample(nrow(peak_TF_overlapCur.df))]
+        }
+    }
+    
+    res.l = computeForegroundAndBackgroundMatrices(peak_TF_overlapCur.df, sort.cor.m.l[[permIndex]])
+    median.cor.tfs       = res.l[["median_foreground"]]
+    median.cor.tfs.non   = res.l[["median_background"]]
+    t.cor.sel.matrix     = res.l[["foreground"]]
+    t.cor.sel.matrix.non = res.l[["background"]]
+    rm(res.l)
+    
+    # Final classification: Calculate thresholds by calculating the quantiles of the background and compare the real values to the background
+    act.rep.thres.l = calculate_classificationThresholds(t.cor.sel.matrix.non, par.l)
+    
+    fileCur = paste0(file_output_classification, "_perm", permutationCur, ".tsv.gz")
+    if (!file.exists(fileCur) | par.l$forceRerun) {
+        output.global.TFs = finalizeClassificationAndAppend(output.global.TFs.orig, median.cor.tfs, act.rep.thres.l, par.l, t.cor.sel.matrix, t.cor.sel.matrix.non, significanceThreshold_Wilcoxon = 0.05)
+        write_tsv(output.global.TFs, fileCur)
+    } else {
+        output.global.TFs = read_tidyverse_wrapper(fileCur, type = "tsv", col_types = cols())
+    }
+    
+    
+    #####################################
+    #         RUN GRN FDR calculation   #
+    #####################################
+    skipFDR = FALSE
+    
+    if (!skipFDR) {
+        
+        fileCur = paste0(file_output_GRN_outputTable, "_perm", permutationCur, ".tsv.gz")
+        if (!file.exists(fileCur) | par.l$forceRerun) {
+            
+            resFDR.l       = computeFDR(par.l$stepsFDR, sort.cor.m.l[[permIndex]], peak_TF_overlapCur.df)
+            grn_TF_peaks.l[[permIndex]] = na.omit(rbindlist(resFDR.l[["main"]]))
+            
+            # TODO: Not used anywhere hereafter currently
+            summary.df = resFDR.l[["summary"]] 
+            rm(resFDR.l)
+            
+            write_tsv(grn_TF_peaks.l[[permIndex]], fileCur)
+        } else {
+            grn_TF_peaks.l[[permIndex]] = read_tidyverse_wrapper(fileCur , type = "tsv", col_types = cols())
+        }
+        
+        
+        #############################
+        # PLOTS FOR THE GRN NETWORK #
+        #############################
+        fileCur = paste0(file_output_plot_fdr, "_perm", permutationCur, ".pdf")
+        if (!file.exists(fileCur) | par.l$forceRerun) {
+            plot_fdr(grn_TF_peaks.l[[permIndex]], par.l$stepsFDR, fileCur, width = 7, height = 8) 
+        }
+       
+    }
+    
+    
+    ########################################
+    # PLOTS FOR THE RNA-SEQ CLASSIFICATION #
+    ########################################
+    
+    fileCur = paste0(file_output_plot_density, "_perm", permutationCur, ".pdf")
+    if (!file.exists(fileCur) | par.l$forceRerun) {
+        plot_density(t.cor.sel.matrix, t.cor.sel.matrix.non, fileCur, width = 5, height = 5)
+    }
+    
+    fileCur = paste0(file_output_plot_medianClass, "_perm", permutationCur, ".pdf")
+    if (!file.exists(fileCur) | par.l$forceRerun) {
+        plot_AR_thresholds(median.cor.tfs, median.cor.tfs.non, par.l, act.rep.thres.l, file = fileCur,  width = 4, height = 8)
+    }
+    
+    fileCur = paste0(file_output_plot_densityClass, "_perm", permutationCur, ".pdf")
+    if (!file.exists(fileCur) | par.l$forceRerun) {
+        plot_heatmapAR(peak_TF_overlapCur.df, HOCOMOCO_mapping.df.exp, sort.cor.m.l[[permIndex]], par.l, 
+                       median.cor.tfs, median.cor.tfs.non, act.rep.thres.l, finalClassification = output.global.TFs,
+                       file = fileCur, width = 5, height = 8)
+    }
+
+
+    
+    ###############################
+    # BUILD PEAK GENE CONNECTIONS #
+    ###############################
+    
+    # As this is independent of the underlying GRN, it has to be done only once
+    if (permutationCur == 0) {
+
+        if (!file.exists(file_peakGeneCorrelationsReal) | !file.exists(file_peakGeneCorrelationsReal) | par.l$forceRerun) {
+            
+            # countsRNA.norm.filt.df.l = readRDS(file_countsRNA_processed)
+            # countsATAC.norm.filt2.df = read_tsv(file_countsATAC_processed)
+            
+
+            # Check which gene types are available for the particular genome annotation
+            # Use all of them to collect statistics. Filtering can be done later
+            geneTypes = getAllGeneTypesAndFrequencies(par.l)
+            
+            
+            flog.info(paste0("Calculate real peak-gene correlations for neighborhood size ", par.l$promoterRange))
+        
+            peakGeneCorrelations.real = calculatePeakGeneCorrelations(  countsATAC.norm.filt2.df,
+                                                                        countsRNA.norm.filt.df.l[["0"]],
+                                                                        file_TADs = par.l$file_input_TADs,
+                                                                        par.l,
+                                                                        neighborhoodSize = par.l$promoterRange,
+                                                                        geneTypes = names(geneTypes),
+                                                                        randomizePeakGeneConnections = FALSE,
+                                                                        nCores = par.l$nCores,
+                                                                        debugMode_nPlots = 0)
+            
+            flog.info(paste0("Calculate random peak-gene correlations for neighborhood size ", par.l$promoterRange))
+            peakGeneCorrelations.random = calculatePeakGeneCorrelations(countsATAC.norm.filt2.df,
+                                                                        countsRNA.norm.filt.df.l[["0"]],
+                                                                        file_TADs = par.l$file_input_TADs,
+                                                                        par.l,
+                                                                        neighborhoodSize = par.l$promoterRange,
+                                                                        geneTypes = names(geneTypes),
+                                                                        randomizePeakGeneConnections = TRUE,
+                                                                        nCores = par.l$nCores) 
+        
+            
+            saveRDS(peakGeneCorrelations.real,   file_peakGeneCorrelationsReal)
+            saveRDS(peakGeneCorrelations.random, file_peakGeneCorrelationsRnd)
+            
+        } else {
+            
+            peakGeneCorrelations.real   = readRDS(file_peakGeneCorrelationsReal)
+            peakGeneCorrelations.random = readRDS(file_peakGeneCorrelationsRnd)
+        }
+        
+        # Summarize all data, both real and random
+        for (geneTypesSelected in list(c("protein_coding", "lincRNA"), c("protein_coding"), c("all"))) {
+            
+            filenameCur = paste0(file_output_plot_peakGene_diag, "_", paste0(geneTypesSelected, collapse = "+"), ".pdf")
+            if (!file.exists(filenameCur) | par.l$forceRerun) {
+                plotDiagnosticPlots_peakGene_all(peakGeneCorrelations.real, peakGeneCorrelations.random, gene_types = geneTypesSelected,  
+                                                 file = filenameCur)
+            }
+           
+        }
+        
+    } #end if permutationCur == 0
+    
+    
+    ##############################
+    # Reshape current GRN object #
+    ##############################
+
+    
+    # Read the GRN data back in
+    if (is.null(grn_TF_peaks.l[[permIndex]])) {
+        grn_TF_peaks.l[[permIndex]] = read_tidyverse_wrapper(paste0(file_output_GRN_outputTable, "_perm", permIndex, ".tsv.gz") , type = "tsv", col_types = cols())
+    }
+    
+    #Save some space. 
+    grn_TF_peaks.l[[permIndex]] = optimizeSpaceGRN(grn_TF_peaks.l[[permIndex]])
+    
+    # Merging GRN and peak gene correlations into one data frame
+    # Very memory consuming and redundant, may result in a multiple GB bit data frame. NOT RECOMMENDED to set save to TRUE
+    # If save= FALSE, the function returns NULL and does basically nothing
+    fileCur = paste0(file_output_GRN_outputWithGenes, permSuffix, ".rds")
+    grn_TF_peaks_genes.all = saveFullMergedGRN(grn_TF_peaks.l[[permIndex]], peakGeneCorrelations.real, save = FALSE, file = fileCur) 
+    
+    
+    ################################################################################
+    # Get base mean expression for genes and TFs and mean accessibility from peaks #
+    ################################################################################
+    
+    # TODO: Do we need this for the shuffled one?
+    if (permutationCur == 0) {
+        if (!file.exists(file_GRN_metadata) | par.l$forceRerun) {
+            
+            baseMean = rowMeans(counts(countsRNA.dd, normalized=TRUE, replaced=TRUE))
+            expression.df = tibble(ENSEMBL_ID = names(baseMean), baseMean = baseMean) %>%
+                mutate(ENSEMBL_ID = gsub("\\..+", "", ENSEMBL_ID, perl = TRUE),
+                       baseMean_log = log2(baseMean + 0.01))
+            
+            expression_TF.df = dplyr::filter(expression.df, ENSEMBL_ID %in% HOCOMOCO_mapping.df.exp$ENSEMBL) %>%
+                left_join(HOCOMOCO_mapping.df.exp, by = c("ENSEMBL_ID" = "ENSEMBL"))
+            
+            meanATAC.df = tibble(peakID = countsATAC.norm.filt2.df$peakID, mean = rowMeans(dplyr::select(countsATAC.norm.filt2.df, -peakID))) %>%
+                dplyr::mutate(mean_log = log2(mean + 0.01))
+            
+            metadata_visualization.l = list("RNA_expression_genes" = expression.df,
+                                            "RNA_expression_TF"    = expression_TF.df,
+                                            "ATAC_accessibility"   = meanATAC.df)
+            
+            saveRDS(metadata_visualization.l, file_GRN_metadata)
+            
+        } else {
+            
+            metadata_visualization.l = readRDS(file_GRN_metadata)
+        }
+    }
+    
+    
+    
+    
+    ################################
+    # FILTER GRN AND CONNECT GENES #
+    ################################
+    
+    # Save a filtered GRN with genes with loose thresholds. The user can hen read it back it and filter more stringently.
+    #TODO: Does the filter function also work with a merged GRN as input already?
+    if (permutationCur == 0) {
+        peakGeneCorrelations.data = peakGeneCorrelations.real
+    } else {
+        peakGeneCorrelations.data = peakGeneCorrelations.random
+    }
+    
+    TF_peak_fdr_cur = 0.3
+    peak_gene_fdr_cur = 0.3
+    grn_TF_peaks_genes.filt.l[[permIndex]] = filterGRNAndConnectGenes(grn_TF_peaks.l[[permIndex]], peakGeneCorrelations.data,
+                                              threshold_TF_peak.fdr = TF_peak_fdr_cur, threshold_peak_gene.raw = NULL, 
+                                              threshold_peak_gene.fdr = peak_gene_fdr_cur,
+                                              gene_types = par.l$geneTypes_keep, 
+                                              onlyCompleteCases = FALSE, r_peak_gene_range = c(0,1),
+                                              filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL)
+    
+    
+    filenameCur = paste0(file_GRN_withGenes, "TF-PeakFDR", TF_peak_fdr_cur, "_peakGeneFDR", peak_gene_fdr_cur, permSuffix, ".tsv.gz")
+    if (!file.exists(filenameCur) | par.l$forceRerun) {
+        flog.info(paste0("Writing file ", filenameCur))
+        write_tsv(grn_TF_peaks_genes.filt.l[[permIndex]], filenameCur)
+    }
+    
+    #################
+    # VISUALIZE GRN #
+    #################
+    # Iterate over different stringency thresholds for visualization
+    
+    for (TF_peak_fdr_cur in rev(c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3))) {
+        
+        flog.info(paste0("Calculate network stats for TF-peak FDR of ", TF_peak_fdr_cur))
+        stats_details.l[[permIndex]][[as.character(TF_peak_fdr_cur)]] =list()
+    
+        flog.info(paste0(" Iterating over different peak-gene FDR thresholds..."))
+        for (peak_gene_fdr_cur in c(0.001, 0.01, 0.05, 0.1, 0.2)) {
+            
+            flog.info(paste0("  Peak-gene FDR = ", peak_gene_fdr_cur))
+            stats_details.l[[permIndex]][[as.character(TF_peak_fdr_cur)]][[as.character(peak_gene_fdr_cur)]] =list()
+    
+            filenameCur = paste0(file_output_plot_GRN_vis, "TF-PeakFDR", TF_peak_fdr_cur, 
+                                 "_peakGeneFDR", peak_gene_fdr_cur, permSuffix, ".pdf")
+            
+            visualizeData = FALSE
+            if (!file.exists(filenameCur) | par.l$forceRerun) {
+                flog.info(paste0("Writing file ", filenameCur))
+                pdf(file = filenameCur, width = 15, height = 15)
+                visualizeData = TRUE
+            }
+    
+            
+            for (onlyCompleteCasesCur in c(FALSE, TRUE)) {
+                
+                flog.info(paste0("  onlyCompleteCasesCur = ", onlyCompleteCasesCur))
+                stats_details.l[[permIndex]][[as.character(TF_peak_fdr_cur)]][[as.character(peak_gene_fdr_cur)]][[as.character(onlyCompleteCasesCur)]] = list()
+                
+                grn_TF_peaks_genes.filt.l[[permIndex]] = filterGRNAndConnectGenes(grn_TF_peaks.l[[permIndex]], peakGeneCorrelations.data,
+                                                      threshold_TF_peak.fdr = TF_peak_fdr_cur, threshold_peak_gene.raw = NULL, 
+                                                      threshold_peak_gene.fdr = peak_gene_fdr_cur,
+                                                      gene_types = par.l$geneTypes_keep, 
+                                                      onlyCompleteCases = onlyCompleteCasesCur, r_peak_gene_range = c(0,1),
+                                                      filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL 
+                                                      )
+                                                    
+    
+                if (visualizeData) {
+                    visualizeGRN(grn_TF_peaks_genes.filt.l[[permIndex]], file = NULL, title = if_else(!onlyCompleteCasesCur, "All peaks", "Only peaks with gene connections"), 
+                                 vertice_color_TFs = list(metadata_visualization.l[["RNA_expression_TF"]], "HOCOID", "baseMean_log"),
+                                 vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"),
+                                 vertice_color_peaks = list(metadata_visualization.l[["ATAC_accessibility"]], "peakID", "mean_log"))
+                }
+    
+                
+                # SNPData = readRDS("/g/scb2/zaugg/carnold/Projects/GRN_pipeline/example/Neha/SNPData.rds")
+                # #head(SNPData)
+                # #SNPData = filter(SNPData, !chr %in% c("chr20", "chrX"))
+                # grn_TF_peaks_genes_withSNP = addSNPOverlap(grn_TF_peaks_genes, SNPData, col_chr = "chr", col_pos = "pos", 
+                #                                    genomeAssembly_peaks = par.l$genomeAssembly, genomeAssembly_SNP = "hg19",
+                #                                    addAllColumns = TRUE)
+                
+                # Calculate stats for grn_TF_peaks_genes.filt.l[[permIndex]]
+                results.l = addStats(stats.df, grn_TF_peaks_genes.filt.l[[permIndex]], 
+                                    perm = permutationCur, TF_peak_fdr = TF_peak_fdr_cur, peak_gene_fdr = peak_gene_fdr_cur, onlyCompleteCases = onlyCompleteCasesCur, peak_gene_raw_cur = NA)
+               
+                stats.df  = results.l[["summary"]]
+                stats_details.l[[permIndex]][[as.character(TF_peak_fdr_cur)]][[as.character(peak_gene_fdr_cur)]][[as.character(onlyCompleteCasesCur)]] = results.l[["details"]]
+            }
+            
+            if (visualizeData) {
+                dev.off()
+            }
+     
+        }
+        
+        
+        if (par.l$alsoVisualizeBasedOnRawPValues) {
+            
+            flog.info(paste0(" Iterating over different peak-gene raw p-value thresholds..."))
+            for (peak_gene_raw_cur in c(0.01, 0.05)) {
+                
+                flog.info(paste0("  Peak-gene raw p-value = ", peak_gene_raw_cur))
+                
+                filenameCur = paste0(file_output_plot_GRN_vis, "TF-PeakFDR", TF_peak_fdr_cur, "_peakGene_rawP", peak_gene_raw_cur, permSuffix, ".pdf")
+                
+                visualizeData = FALSE
+                if (!file.exists(filenameCur) | par.l$forceRerun) {
+                    flog.info(paste0("Writing file ", filenameCur))
+                    pdf(file = filenameCur, width = 15, height = 15)
+                    visualizeData = TRUE
+                }
+                
+                for (onlyCompleteCasesCur in c(FALSE, TRUE)) {
+                    
+                    grn_TF_peaks_genes.filt.l[[permIndex]] = filterGRNAndConnectGenes(grn_TF_peaks.l[[permIndex]], peakGeneCorrelations.data,
+                                                                                      threshold_TF_peak.fdr = TF_peak_fdr_cur, threshold_peak_gene.raw = peak_gene_raw_cur, 
+                                                                                      threshold_peak_gene.fdr = NULL,
+                                                                                      gene_types = par.l$geneTypes_keep, 
+                                                                                      onlyCompleteCases = onlyCompleteCasesCur, r_peak_gene_range = c(0,1),
+                                                                                      filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL)
+                    
+                    if (visualizeData) {
+                        visualizeGRN(grn_TF_peaks_genes.filt.l[[permIndex]], file = NULL, title = if_else(!onlyCompleteCasesCur, "All peaks", "Only peaks with gene connections"),
+                                     vertice_color_TFs   = list(expression_TF.df, "HOCOID", "baseMean_log"),
+                                     vertice_color_genes = list(expression.df, "ENSEMBL_ID", "baseMean_log"),
+                                     vertice_color_peaks = list(meanATAC.df, "peakID", "mean_log"))
+                    }
+                    
+                    stats.df = addStats(stats.df, grn_TF_peaks_genes.filt.l[[permIndex]], 
+                                        perm = permutationCur, TF_peak_fdr = TF_peak_fdr_cur, peak_gene_fdr = NA, onlyCompleteCases = onlyCompleteCasesCur, peak_gene_raw_cur = peak_gene_raw_cur)
+            
+                }
+                
+                if (visualizeData) {
+                    dev.off()
+                }
+            }
+        }
+        
+        
+    }
+    
+    #Summary PDF with no. of connections
+    file_out = paste0(file_output_plot_GRN_diag, permSuffix, ".pdf")
+    if (!file.exists(file_out) | par.l$forceRerun) {
+        
+        plot_GRN_connectionSummary(stats = stats.df, file = file_out)
+        
+    }
+    
+    # Save stats.df
+    file_out = paste0(file_output_plot_GRN_diag, permSuffix, ".tsv.gz")
+    if (!file.exists(file_out) | par.l$forceRerun) {
+        write_tsv(stats.df, file_out)
+    }
+
+} # end for each permutation
+
+
+#######################
+# ADDITIONAL QC PLOTS #
+#######################
+
+# Compare real and permuted one
+plot_networkConnectionSummary(stats_details.l, file = file_output_plot_network_diag)
+
+
+
+
+.printExecutionTime(start.all)
+flog.info("Session info: ", sessionInfo(), capture = TRUE)
+

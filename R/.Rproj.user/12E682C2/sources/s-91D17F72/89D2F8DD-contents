@@ -1,0 +1,53 @@
+Package: GRN
+Title: GRN: TODO
+Version: 0.1
+Authors@R: c(person("Christian", "Arnold", email =
+        "christian.arnold@embl.de", role = c("cre","aut")),
+        person("Pooja", "Bhat", email = "pooja.bhat@embl.de", role =
+        "aut"), person("Judith", "Zaugg", email =
+        "judith.zaugg@embl.de", role = "aut"))
+Author: Christian Arnold [aut, cre], Pooja Bhat [aut], Judith Zaugg
+    [aut]
+Maintainer: Christian Arnold <christian.arnold@embl.de>
+Description: TODO
+Imports:
+    DESeq2,
+	  cluster,
+	  ggplot2,
+    lattice,
+    GenomeInfoDb,
+    BiocParallel,
+	  VariantAnnotation,
+	  BiocGenerics,
+	  IRanges,
+	  methods,
+    SummarizedExperiment,
+    RColorBrewer,
+    Biostrings,
+    grDevices,
+    gridExtra,
+    stats,
+    grid,
+    utils,
+    reshape2,
+    scales,
+	  S4Vectors
+Depends:
+    R (>= 3.1),
+	  GenomicRanges,
+    Rsamtools,
+    data.table,
+    checkmate
+Suggests:
+    BiocStyle,
+    knitr,
+	  pryr,
+    rmarkdown,
+    corrplot
+VignetteBuilder: knitr
+biocViews: Software
+License: LGPL (>= 3)
+LazyData: true
+URL: https://bioconductor.org/packages/SNPhood
+BugReports: christian.arnold@embl.de
+RoxygenNote: 5.0.1
