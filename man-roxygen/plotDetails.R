@@ -1,0 +1,1 @@
+#' @param plotDetails \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Print additional plots that may help for debugging and QC purposes? Note that these plots are currently less documented or not at all.

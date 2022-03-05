@@ -1,0 +1,1 @@
+#' @param plotDiagnosticPlots \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Run and plot various diagnostic plots? If set to \code{TRUE}, PDF files will be produced and saved in the output directory (in a subfolder called \code{plots}).
