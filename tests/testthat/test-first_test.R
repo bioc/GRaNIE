@@ -3,7 +3,7 @@ test_that("multiplication works", {
 })
 
 test_that("addConnections_TF_peak", {
-  GRN = readRDS("/g/scb2/zaugg/carnold/Projects/GRN_pipeline/src/GRaNIE/vignettes/output/GRN.rds")
+  GRN = loadExampleObject()
   
   GRN = addConnections_TF_peak(GRN, connectionTypes = c("expression"), forceRerun = TRUE)
   expect_s4_class(GRN, "GRN")
@@ -32,7 +32,7 @@ test_that("addConnections_TF_peak", {
 
 test_that("AR wrapper", {
     
-    GRN = readRDS("/g/scb2/zaugg/carnold/Projects/GRN_pipeline/src/GRaNIE/vignettes/output/GRN.rds")
+    GRN = loadExampleObject()
 
     expect_error(AR_classification_wrapper(GRN, significanceThreshold_Wilcoxon = 1.5), regexp = "Assertion on")
     
