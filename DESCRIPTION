@@ -88,19 +88,7 @@ Suggests:
     BiocStyle
 VignetteBuilder: knitr
 biocViews:
-    Software,
-    GeneExpression,
-    GeneRegulation,
-    NetworkInference,
-    GeneSetEnrichment,
-    BiomedicalInformatics,
-    Genetics,
-    Transcriptomics,
-    ATACSeq,
-    RNASeq,
-    Network,
-    Transcription,
-    ChIPSeq
+   Software, GeneExpression, GeneRegulation, NetworkInference, GeneSetEnrichment, BiomedicalInformatics, Genetics, Transcriptomics, ATACSeq, RNASeq, GraphAndNetwork, Regression, Transcription, ChIPSeq
 License: Artistic-2.0
 LazyData: false
 URL: https://grp-zaugg.embl-community.io/GRaNIE
