@@ -30,9 +30,9 @@ addConnections_TF_peak(
 
 \item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
 
-\item{connectionTypes}{Character vector. Default \code{expression}. Vector of connection types to include for the TF-peak connections. If an additional connection type is specified here, it has to be available already within the object (EXPERIMENTAL). See the function \code{addData_TFActivity} for details.}
+\item{connectionTypes}{Character vector. Default \code{expression}. Vector of connection types to include for the TF-peak connections. If an additional connection type is specified here, it has to be available already within the object (EXPERIMENTAL). See the function \code{\link{addData_TFActivity}} for details.}
 
-\item{removeNegativeCorrelation}{\code{TRUE} or \code{FALSE} (vector). Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is FALSE, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.}
+\item{removeNegativeCorrelation}{Vector of \code{TRUE} or \code{FALSE}. Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is \code{FALSE}, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.}
 
 \item{maxFDRToStore}{Numeric. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.}
 
@@ -45,7 +45,7 @@ addConnections_TF_peak(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.  TF_peak.fdrCurves_perm{o,1}.pdf
+The same \code{\linkS4class{GRN}} object, with added data from this function.
 }
 \description{
 Add TF-peak connections to a \code{\linkS4class{GRN}} object

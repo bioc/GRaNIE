@@ -40,7 +40,7 @@ plotTFEnrichment(
 
 \item{nID}{Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.}
 
-\item{display_pAdj}{Boolean. Default FALSE. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
+\item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
 
 \item{maxWidth_nchar_plot}{Integer (>=10). Default 100. Maximum number of characters for a term before it is truncated.}
 

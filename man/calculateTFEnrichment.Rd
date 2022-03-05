@@ -20,21 +20,21 @@ calculateTFEnrichment(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{rankType}{Character. One of: "degree", "EV", "custom". This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to "EV" it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.names" parameter.}
+\item{rankType}{Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to "EV" it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.names" parameter.}
 
-\item{n}{Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if rankType = "custom".}
+\item{n}{Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.}
 
-\item{TF.names}{Character vector. If the rank type is set to "custom", a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.}
+\item{TF.names}{Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.}
 
-\item{ontology}{Character vector of ontologies. Default c("GO_BP", "GO_MF"). Valid values are "GO_BP", "GO_MF", "GO_CC", "KEGG", "DO", and "Reactome", referring to GO Biological Process, GO Molecular Function, GO Cellular Component, KEGG, Disease Ontology, and Reactome Pathways. The GO enrichments}
+\item{ontology}{Character vector of ontologies. Default \code{c("GO_BP", "GO_MF")}. Valid values are \code{"GO_BP"}, \code{"GO_MF"}, \code{"GO_CC"}, \code{"KEGG"}, \code{"DO"}, and \code{"Reactome"}, referring to GO Biological Process, GO Molecular Function, GO Cellular Component, KEGG, Disease Ontology, and Reactome Pathways.}
 
-\item{algorithm}{Character. Default "weight01". One of: "classic", "elim", "weight", "weight01", "lea", "parentchild." Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the topGO library.}
+\item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library.}
 
-\item{statistic}{Character. Default "fisher". One of: "fisher", "ks", "t", "globaltest", "sum", "ks.ties". Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher.}
+\item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher.}
 
-\item{background}{Character. Default "neighborhood". One of: "all_annotated", "all_RNA", "neighborhood". Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (all_annotated), all differentially expressed genes (all_RNA), or all the genes that are within the neighbourhood of a peak in the GRN (neighbourhood)}
+\item{background}{Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (all_annotated), all differentially expressed genes (all_RNA), or all the genes that are within the neighborhood of a peak in the GRN (neighborhood)}
 
-\item{pAdjustMethod}{Character. Default "BH". One of: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr". This parameter is only relevant for the following ontologies: KEGG, DO, Reactome. For the other ontologies, the algorithm serves as an adjustment.}
+\item{pAdjustMethod}{Character. Default \code{"BH"}. One of: \code{"holm"}, \code{"hochberg"}, \code{"hommel"}, \code{"bonferroni"}, \code{"BH"}, \code{"BY"}, \code{"fdr"}. This parameter is only relevant for the following ontologies: KEGG, DO, Reactome. For the other ontologies, the algorithm serves as an adjustment.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
@@ -47,6 +47,5 @@ This function calculates the GO enrichment per TF, i.e. for the set of genes a g
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN =  loadExampleObject()
-GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 }

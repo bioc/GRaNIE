@@ -2,7 +2,7 @@
 #' Builds a graph out of a set of connections
 #'
 #' @template GRN
-#' @param model_TF_gene_nodes_separately \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. TODO description follows 
+#' @param model_TF_gene_nodes_separately \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should TF and gene nodes be modeled separately? If set to \code{TRUE},this may lead to unwanted effects in case of TF-TF connections (i.e., a TF regulating another TF)
 #' @param allowLoops \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Allow loops in the network (i.e., a TF that regulates itself)
 #' @param removeMultiple \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Remove loops with the same start and end point? This can happen if multiple TF originate from the same gene, for example.
 #' @param directed \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should the network be directed?
@@ -285,11 +285,11 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' 
 #' This function runs an enrichment analysis for the genes in the filtered network.
 #' @template GRN
-#' @param ontology Character vector of ontologies. Default c("GO_BP", "GO_MF"). Valid values are "GO_BP", "GO_MF", "GO_CC", "KEGG", "DO", and "Reactome", referring to GO Biological Process, GO Molecular Function, GO Cellular Component, KEGG, Disease Ontology, and Reactome Pathways. The GO enrichments 
-#' @param algorithm Character. Default "weight01". One of: "classic", "elim", "weight", "weight01", "lea", "parentchild." Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the topGO library.
-#' @param statistic Character. Default "fisher". One of: "fisher", "ks", "t", "globaltest", "sum", "ks.ties". Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher. 
-#' @param background Character. Default "neighborhood". One of: "all_annotated", "all_RNA", "neighborhood". Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (all_annotated), all differentially expressed genes (all_RNA), or all the genes that are within the neighbourhood of a peak in the GRN (neighbourhood)
-#' @param pAdjustMethod Character. Default "BH". One of: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr". This parameter is only relevant for the following ontologies: KEGG, DO, Reactome. For the other ontologies, the algorithm serves as an adjustment.
+#' @param ontology Character vector of ontologies. Default \code{c("GO_BP", "GO_MF")}. Valid values are \code{"GO_BP"}, \code{"GO_MF"}, \code{"GO_CC"}, \code{"KEGG"}, \code{"DO"}, and \code{"Reactome"}, referring to GO Biological Process, GO Molecular Function, GO Cellular Component, KEGG, Disease Ontology, and Reactome Pathways.
+#' @param algorithm Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library.
+#' @param statistic Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher. 
+#' @param background Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (all_annotated), all differentially expressed genes (all_RNA), or all the genes that are within the neighborhood of a peak in the GRN (neighborhood)
+#' @param pAdjustMethod Character. Default \code{"BH"}. One of: \code{"holm"}, \code{"hochberg"}, \code{"hommel"}, \code{"bonferroni"}, \code{"BH"}, \code{"BY"}, \code{"fdr"}. This parameter is only relevant for the following ontologies: KEGG, DO, Reactome. For the other ontologies, the algorithm serves as an adjustment.
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$general} slot.
 #' @seealso \code{\link{plotGeneralEnrichment}}
@@ -802,8 +802,8 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
 #' 
 #' After the vertices of the filtered GRN are clustered into communities using \code{\link{calculateCommunitiesStats}}, this function will run a per-community enrichment analysis.
 #' @inheritParams calculateGeneralEnrichment
-#' @param selection Character. Default "byRank". One of: "byRank", "byLabel". Specify whether the communities enrichment will by calculated based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
-#' @param communities Numeric vector. Default c(1:10). Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities} = c(1,4), if \code{display} = "byRank" the GO enrichment for the first and fourth largest communities will be calculated if \code{display} = "byLabel", the results for the communities labeled "1", and "4" will be plotted.
+#' @param selection Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities enrichment will by calculated based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
+#' @param communities Numeric vector. Default \code{c(1:10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the GO enrichment for the first and fourth largest communities will be calculated if \code{display = "byLabel"}, the results for the communities labeled "1", and "4" will be plotted.
 #' @return The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byCommunity} slot.
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @seealso \code{\link{plotGeneralEnrichment}}
@@ -930,8 +930,8 @@ calculateCommunitiesEnrichment <- function(GRN,
 #' Retrieve top Nodes in the filtered \code{\linkS4class{GRN}}
 #' 
 #' @template GRN
-#' @param nodeType Character. One of: "gene", "TF". 
-#' @param rankType Character. One of: "degree", "EV". This parameter will determine the criterion to be used to identify the "top" nodes. If set to "degree", the function will select top nodes based on the number of connections they have, i.e. based on their degree-centrality. If set to "EV" it will select the top nodes based on their eigenvector-centrality score in the network.
+#' @param nodeType Character. One of: \code{"gene"} or \code{"TF"}. Node type.
+#' @param rankType Character. One of: \code{"degree"}, \code{"EV"}. This parameter will determine the criterion to be used to identify the "top" nodes. If set to "degree", the function will select top nodes based on the number of connections they have, i.e. based on their degree-centrality. If set to "EV" it will select the top nodes based on their eigenvector-centrality score in the network.
 #' @param n Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes.
 #' @param use_TF_gene_network \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the TF-gene network be used (\code{TRUE}) or the TF-peak-gene network (\code{FALSE})?
 #' @return A dataframe with the node names and the corresponding scores used to rank them
@@ -1017,14 +1017,13 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' This function calculates the GO enrichment per TF, i.e. for the set of genes a given TF is connected to in the filtered \code{\linkS4class{GRN}}. 
 #' 
 #' @inheritParams calculateGeneralEnrichment
-#' @param rankType Character. One of: "degree", "EV", "custom". This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to "EV" it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.names" parameter.
-#' @param n Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if rankType = "custom".
-#' @param TF.names Character vector. If the rank type is set to "custom", a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.
+#' @param rankType Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.names" parameter.
+#' @param n Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.
+#' @param TF.names Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.
 #' @return The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN =  loadExampleObject()
-#' GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 #' GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
 calculateTFEnrichment <- function(GRN, rankType = "degree", n = 0.1, TF.names = NULL,

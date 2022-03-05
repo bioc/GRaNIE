@@ -18,7 +18,7 @@ plot_stats_connectionSummary(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{type}{Character. Either "heatmap" or "boxplot". Default "heatmap". Which plot type to produce?}
+\item{type}{Character. Either \code{"heatmap"} or \code{"boxplot"}. Default \code{"heatmap"}. Which plot type to produce?}
 
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 
@@ -33,7 +33,7 @@ plot_stats_connectionSummary(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, without modifications. In addition, for the specified \code{type}, a PDF file (default filename is GRN.connectionSummary_{type}.pdf) is produced with a connection summary. We refer to the Vignettes for details and further explanations.
+The same \code{\linkS4class{GRN}} object, without modifications. In addition, for the specified \code{type}, a PDF file (default filename is \code{GRN.connectionSummary_{type}.pdf}) is produced with a connection summary.
 }
 \description{
 Plot various network connectivity summaries for a \code{\linkS4class{GRN}} object

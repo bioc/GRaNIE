@@ -20,21 +20,21 @@ generateStatsSummary(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{TF_peak.fdr}{Numeric vector. Default c(0.001, 0.01, 0.05, 0.1, 0.2). TF-peak FDR values to iterate over.}
+\item{TF_peak.fdr}{Numeric vector. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. TF-peak FDR values to iterate over.}
 
 \item{TF_peak.connectionTypes}{Character vector. Default \code{all}. TF-peak connection types to consider. The special keyword \code{all} denotes all connection types (e.g., \code{expression} and \code{TFActivity}) that are found in the \code{\linkS4class{GRN}} object. By default, only \code{expression} is present in the object, so \code{all} and \code{expression} are usually equivalent unless calculation of TF-peak links based on TF activity has also been enabled.}
 
-\item{peak_gene.fdr}{Numeric vector. Default c(0.001, 0.01, 0.05, 0.1, 0.2). Peak-gene FDR values to iterate over.}
+\item{peak_gene.fdr}{Numeric vector. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. Peak-gene FDR values to iterate over.}
 
-\item{peak_gene.p_raw}{Numeric vector. Default NULL. Peak-gene raw p-value values to iterate over. Skipepd if set to NULL.}
+\item{peak_gene.p_raw}{Numeric vector. Default \code{NULL}. Peak-gene raw p-value values to iterate over. Skipped if set to NULL.}
 
-\item{peak_gene.r_range}{Numeric vector of length 2 (minimum -1, maximum 1). Default c(0,1). The correlation range of peak-gene connections to keep.}
+\item{peak_gene.r_range}{Numeric vector of length 2 (minimum -1, maximum 1). Default \code{c(0,1)}. The correlation range of peak-gene connections to keep.}
 
 \item{gene.types}{Character vector of supported gene types. Default \code{c("protein_coding", "lincRNA")}. Filter for gene types to retain, genes with other gene types are filtered.}
 
-\item{allowMissingGenes}{Logical vector. Default c(FALSE, TRUE). Allow genes to be missing for peak-gene connections?}
+\item{allowMissingGenes}{Logical vector. Default \code{c(FALSE, TRUE)}. Allow genes to be missing for peak-gene connections?}
 
-\item{allowMissingTFs}{Logical vector. Default c(FALSE). Allow TFs to be missing for TF-peak connections?}
+\item{allowMissingTFs}{Logical vector. Default \code{c(FALSE)}. Allow TFs to be missing for TF-peak connections?}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
@@ -42,7 +42,7 @@ generateStatsSummary(
 The same \code{\linkS4class{GRN}} object, with added data from this function.
 }
 \description{
-Essentially, this functions calls \code{filterGRNAndConnectGenes} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{filterGRNAndConnectGenes}, see the help for this function for details.
+Essentially, this functions calls \code{\link{filterGRNAndConnectGenes}} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{\link{filterGRNAndConnectGenes}}, see the help for this function for details.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

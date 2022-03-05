@@ -19,13 +19,13 @@ addTFBS(
 
 \item{motifFolder}{Character. No default. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details.}
 
-\item{TFs}{Character vector. Default "all". Vector of TF names to include. The special keyword "all" can be used to include all TF found in the folder as specified by motifFolder. If "all" is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.}
+\item{TFs}{Character vector. Default \code{all}. Vector of TF names to include. The special keyword \code{all} can be used to include all TF found in the folder as specified by \code{motifFolder}. If \code{all} is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.}
 
 \item{nTFMax}{\code{NULL} or integer. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.}
 
-\item{filesTFBSPattern}{Character. Default "_TFBS". Suffix for the file names in the TFBS folder that is not part of the TF name. Can be empty. For example, for the TF CTCF, if the file is called CTCF.all.TFBS.bed, set this parameter to ".all.TFBS".}
+\item{filesTFBSPattern}{Character. Default \code{"_TFBS"}. Suffix for the file names in the TFBS folder that is not part of the TF name. Can be empty. For example, for the TF CTCF, if the file is called \code{CTCF.all.TFBS.bed}, set this parameter to \code{".all.TFBS"}.}
 
-\item{fileEnding}{Character. Default ".bed". File ending for the files from the motif folder.}
+\item{fileEnding}{Character. Default \code{".bed"}. File ending for the files from the motif folder.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

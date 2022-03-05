@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{deleteIntermediateData}
 \alias{deleteIntermediateData}
-\title{Optional convenience function to delete intermediate data from the function \link{AR_classification_wrapper} and summary statistics that may occupy a lot of space}
+\title{Optional convenience function to delete intermediate data from the function \code{\link{AR_classification_wrapper}} and summary statistics that may occupy a lot of space}
 \usage{
 deleteIntermediateData(GRN)
 }
@@ -13,7 +13,7 @@ deleteIntermediateData(GRN)
 The same \code{\linkS4class{GRN}} object, with some slots being deleted (\code{GRN@data$TFs$classification} as well as \code{GRN@stats$connectionDetails.l})
 }
 \description{
-Optional convenience function to delete intermediate data from the function \link{AR_classification_wrapper} and summary statistics that may occupy a lot of space
+Optional convenience function to delete intermediate data from the function \code{\link{AR_classification_wrapper}} and summary statistics that may occupy a lot of space
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

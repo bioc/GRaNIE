@@ -12,7 +12,7 @@ loadExampleObject(
 \arguments{
 \item{forceDownload}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the download be enforced even if the local cached file is already present?}
 
-\item{fileURL}{Character. Default https://www.embl.de/download/zaugg/GRaNIE/GRN.rds. URL to the GRN example object in rds format.}
+\item{fileURL}{Character. Default \url{https://www.embl.de/download/zaugg/GRaNIE/GRN.rds}. URL to the GRN example object in rds format.}
 }
 \value{
 An example \code{\linkS4class{GRN}} object

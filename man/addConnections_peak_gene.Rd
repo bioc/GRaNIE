@@ -21,19 +21,19 @@ addConnections_peak_gene(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{overlapTypeGene}{Character. "TSS" or "full". Default "TSS". If set to "TSS", only the TSS of the gene is used as reference for finding genes in the neighborhood of a peak. If set to "full", the whole annotated gene (including all exons and introns) is used instead.}
+\item{overlapTypeGene}{Character. \code{"TSS"} or \code{"full"}. Default \code{"TSS"}. If set to \code{"TSS"}, only the TSS of the gene is used as reference for finding genes in the neighborhood of a peak. If set to \code{"full"}, the whole annotated gene (including all exons and introns) is used instead.}
 
 \item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
 
 \item{promoterRange}{Integer >=0. Default 250000. The size of the neighborhood in bp to correlate peaks and genes in vicinity. Only peak-gene pairs will be correlated if they are within the specified range. Increasing this value leads to higher running times and more peak-gene pairs to be associated, while decreasing results in the opposite.}
 
-\item{TADs}{Data frame with TAD domains. Default NULL. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.}
+\item{TADs}{Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.}
 
 \item{nCores}{Integer >0. Default 1. Number of cores to use.}
 
 \item{plotDiagnosticPlots}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. Run and plot various diagnostic plots? If set to \code{TRUE}, PDF files will be produced and saved in the output directory (in a subfolder called \code{plots}).}
 
-\item{plotGeneTypes}{List of character vectors. Default list(c("all"), c("protein_coding"), c("protein_coding", "lincRNA")). Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword "all" denotes all gene types that are found (be aware: this typically contains 20+ gene types, see https://www.gencodegenes.org/pages/biotypes.html for details).}
+\item{plotGeneTypes}{List of character vectors. Default \code{list(c("all"), c("protein_coding"), c("protein_coding", "lincRNA"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).}
 
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 

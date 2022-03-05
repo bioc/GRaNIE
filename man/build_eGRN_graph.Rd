@@ -16,7 +16,7 @@ build_eGRN_graph(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{model_TF_gene_nodes_separately}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. TODO description follows}
+\item{model_TF_gene_nodes_separately}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should TF and gene nodes be modeled separately? If set to \code{TRUE},this may lead to unwanted effects in case of TF-TF connections (i.e., a TF regulating another TF)}
 
 \item{allowLoops}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Allow loops in the network (i.e., a TF that regulates itself)}
 

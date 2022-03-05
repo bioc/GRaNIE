@@ -9,7 +9,7 @@ getCounts(GRN, type, norm, permuted = FALSE)
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{type}{Character. Either "peaks" or "rna". "peaks" corresponds to the counts for the open chromatin data, while "rna" refers to th RNA-seq counts. If set to "rna", both permuted and non-permuted data can be retrieved, while for "peaks", only the non-permuted one (i.e., 0) can be retrieved.}
+\item{type}{Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.}
 
 \item{norm}{Logical. \code{TRUE} or \code{FALSE}.  Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?}
 
@@ -17,7 +17,6 @@ getCounts(GRN, type, norm, permuted = FALSE)
 }
 \value{
 Data frame of counts, with the type as indicated by the function parameters.
-getCounts(GRN, type = "peaks", norm = TRUE)
 }
 \description{
 Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
@@ -25,5 +24,5 @@ Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
+counts.df = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
 }

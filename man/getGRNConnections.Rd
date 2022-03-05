@@ -14,14 +14,14 @@ getGRNConnections(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{type}{Character. Default "all.filtered". Must be one of "TF_peaks", "peak_genes", "all.filtered". The type of connections to retrieve.}
+\item{type}{Character. Default \code{all.filtered}. Must be one of \code{TF_peaks}, \code{peak_genes}, \code{all.filtered}. The type of connections to retrieve.}
 
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 
-\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}.  Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.}
+\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.}
 }
 \value{
-A data frame with the connections. Importantly, this function does NOT return a \code{\linkS4class{GRN}} object.
+A data frame with the connections. Importantly, this function does **NOT** return a \code{\linkS4class{GRN}} object.
 }
 \description{
 Extract connections from a \code{\linkS4class{GRN}} object

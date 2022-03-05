@@ -18,7 +18,7 @@ AR_classification_wrapper(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{significanceThreshold_Wilcoxon}{Numeric between 0 and 1. Default 0.05. Significance threshold for Wilcoxon test that is run in the end for the final classification. See the Vignette and diffTF paper for details.}
+\item{significanceThreshold_Wilcoxon}{Numeric between 0 and 1. Default 0.05. Significance threshold for Wilcoxon test that is run in the end for the final classification. See the Vignette and *diffTF* paper for details.}
 
 \item{plot_minNoTFBS_heatmap}{Integer. Default 100. Minimum number of TFBS for a TF to be included in the heatmap that is part of the output of this function.}
 
@@ -33,7 +33,7 @@ AR_classification_wrapper(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.  TF_classification_densityPlotsForegroundBackground_expression_perm{0,1}.pdf, TF_classification_stringencyThresholds_expression_perm0.pdf, TF_classification_summaryHeatmap_expression_perm0.pdf,
+The same \code{\linkS4class{GRN}} object, with added data from this function.
 }
 \description{
 Run the activator-repressor classification for the TFs for a \code{\linkS4class{GRN}} object

@@ -51,17 +51,17 @@ filterGRNAndConnectGenes(
 
 \item{allowMissingGenes}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Should connections be returned for which the gene is NA (i.e., connections consisting only of TF-peak links?). If set to \code{TRUE}, this generally increases the number of connections.}
 
-\item{peak_gene.r_range}{Numeric(2) . Default c(0,1). Filter for lower and upper limit for the peak-gene links. Only links will be retained if the correlation coefficient is within the specified interval. This filter is usually used to filter out negatively correlated peak-gene links.}
+\item{peak_gene.r_range}{Numeric(2). Default \code{c(0,1)}. Filter for lower and upper limit for the peak-gene links. Only links will be retained if the correlation coefficient is within the specified interval. This filter is usually used to filter out negatively correlated peak-gene links.}
 
-\item{peak_gene.selection}{"all" or "closest". Default "all". Filter for the selection of genes for each peak. If set to "all", all previously identified peak-gene are used, while "closest" only retains the closest gene for each peak that is retained until the point the filter is applied.}
+\item{peak_gene.selection}{\code{"all"} or \code{"closest"}. Default \code{"all"}. Filter for the selection of genes for each peak. If set to \code{"all"}, all previously identified peak-gene are used, while \code{"closest"} only retains the closest gene for each peak that is retained until the point the filter is applied.}
 
-\item{peak_gene.maxDistance}{Integer >0. Default NULL. Maximum peak-gene distance to retain a peak-gene connection.}
+\item{peak_gene.maxDistance}{Integer >0. Default \code{NULL}. Maximum peak-gene distance to retain a peak-gene connection.}
 
-\item{filterTFs}{Character vector. Default NULL. Vector of TFs (as named in the GRN object) to retain. All TFs not listed will be filtered out.}
+\item{filterTFs}{Character vector. Default \code{NULL}. Vector of TFs (as named in the GRN object) to retain. All TFs not listed will be filtered out.}
 
-\item{filterGenes}{Character vector. Default NULL. Vector of gene IDs (as named in the GRN object) to retain. All genes not listed will be filtered out.}
+\item{filterGenes}{Character vector. Default \code{NULL}. Vector of gene IDs (as named in the GRN object) to retain. All genes not listed will be filtered out.}
 
-\item{filterPeaks}{Character vector. Default NULL. Vector of peak IDs (as named in the GRN object) to retain. All peaks not listed will be filtered out.}
+\item{filterPeaks}{Character vector. Default \code{NULL}. Vector of peak IDs (as named in the GRN object) to retain. All peaks not listed will be filtered out.}
 
 \item{TF_peak_FDR_selectViaCorBins}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Use a modified procedure for selecting TF-peak links that is based on the user-specified FDR but that retains also links that may have a higher FDR but a more extreme correlation.}
 
@@ -72,7 +72,7 @@ filterGRNAndConnectGenes(
 \item{silent}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with the filtered and merged TF-peak and peak-gene connections in the slot connections$all.filtered. The filtered
+The same \code{\linkS4class{GRN}} object, with the filtered and merged TF-peak and peak-gene connections in the slot connections$all.filtered.
 }
 \description{
 This is one of the main integrative functions of the \code{GRN} package. It has two main functions: Filtering the TF-peak and peak-gene connections that have been identified before, and combining the 3 major elements (TFs, peaks, genes) into one data frame, with one row per connection. Here, a connection can either be a TF-peak, peak-gene or TF-peak-gene link, depending on the parameters. 

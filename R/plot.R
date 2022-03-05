@@ -791,9 +791,10 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
+#' # GRN = loadExampleObject()
+#' # GRN = plotDiagnosticPlots_peakGene(GRN, forceRerun = FALSE)
 #' @export
+# TODO: implement forceRerun correctly
 plotDiagnosticPlots_peakGene <- function(GRN, 
                                          outputFolder = NULL, 
                                          basenameOutput = NULL, 
@@ -845,7 +846,8 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                                     useFiltered = useFiltered, 
                                     plotPerTF = plotPerTF,
                                     pdf_width = pdf_width, pdf_height = pdf_height,
-                                    plotDetails = plotDetails)
+                                    plotDetails = plotDetails,
+                                    forceRerun = forceRerun)
   
   # Summarize all data, both real and random
   # filteredStr = dplyr::if_else(useFiltered, "_filtered", "")
@@ -871,564 +873,578 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                                               plotPerTF = FALSE,
                                               fileBase = NULL,
                                               pdf_width = 12,
-                                              pdf_height = 12) {
+                                              pdf_height = 12,
+                                              forceRerun = FALSE) {
   
   start = Sys.time()
-  futile.logger::flog.info(paste0("Plotting diagnostic plots for peak-gene correlations", dplyr::if_else(is.null(fileBase), "", paste0(" to file(s) with basename ", fileBase))))
   
-  cols_keep = c("peak.ID", "gene.ENSEMBL", "peak_gene.r", "peak_gene.p_raw", "peak_gene.distance")
-
-  # Change from 10 to 5 
-  nCategoriesBinning = 5
-  probs = seq(0,1,1/nCategoriesBinning)
-  
-  
-  range = GRN@config$parameters$promoterRange
-  
-  networkType_details = c(paste0("real_",range), paste0("random_",range))
-  
-  colors_vec = c("black", "darkgray")
-  networkType_vec = c("real", "permuted")
-  names(colors_vec) = names(networkType_vec) = networkType_details
-  
-  options(dplyr.summarise.inform = FALSE) 
-  
-  includeRobustCols = FALSE
-  #Either take all or the filtered set of connections
-  if (useFiltered) {
-    
-    # TODO: Robust columns filter
-    peakGeneCorrelations.all = 
-      rbind(dplyr::select(GRN@connections$all.filtered[["0"]], dplyr::everything()) %>%
-              dplyr::mutate(class = paste0("real_",range))) %>%
-      rbind(dplyr::select(GRN@connections$all.filtered[["1"]],  dplyr::everything()) %>% 
-              dplyr::mutate(class = paste0("random_",range)))
-    
-  } else {
-    
-    robustColumns = c("peak_gene.p_raw.robust", "peak_gene.bias_M_p.raw", "peak_gene.bias_LS_p.raw", "peak_gene.r_robust")
-    if (all(robustColumns %in% colnames(GRN@connections$peak_genes[["0"]]))) {
-      includeRobustCols = TRUE
-      cols_keep = c(cols_keep, robustColumns)
-    }
-    
-    class_levels = c(paste0("real_",range), paste0("random_",range))
-    
-    peakGeneCorrelations.all = 
-      rbind(
-          dplyr::select(GRN@connections$peak_genes[["0"]], tidyselect::all_of(cols_keep)) %>%
-                 dplyr::mutate(class = factor(paste0("real_",range), levels = class_levels)),
-          dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
-                 dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
-      dplyr::left_join(dplyr::select(GRN@annotation$genes, gene.ENSEMBL, gene.type, gene.mean, gene.median, gene.CV), by = "gene.ENSEMBL") %>%
-      dplyr::left_join(GRN@annotation$consensusPeaks %>% 
-                             dplyr::select(-dplyr::starts_with("peak.gene."), -peak.GC.perc), by = "peak.ID") %>%
-      dplyr::select(-gene.ENSEMBL)
-    
-  }
-  
-  if (!plotPerTF) {
-      peakGeneCorrelations.all = dplyr::select(peakGeneCorrelations.all, -peak.ID)
-  }
-  
-  nClasses_distance  = 10
-  
-  peakGeneCorrelations.all = peakGeneCorrelations.all %>%
-    dplyr::mutate(r_positive = peak_gene.r > 0,
-                  peak_gene.distance_class = 
-                    forcats::fct_explicit_na(addNA(cut(peak_gene.distance, breaks = nClasses_distance, include.lowest = TRUE)), "random"),
-                  peak_gene.distance_class_abs = forcats::fct_explicit_na(addNA(cut(abs(peak_gene.distance), 
-                                                                                    breaks = nClasses_distance, include.lowest = TRUE, ordered_result = TRUE)), "random"),
-                  peak_gene.p.raw.class = cut(peak_gene.p_raw, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE),
-                  peak_gene.r.class = cut(peak_gene.r, breaks = seq(-1,1,0.05), include.lowest = TRUE, ordered_result = TRUE)) %>%
-    dplyr::filter(!is.na(peak_gene.r)) # Eliminate rows with NA for peak_gene.r. This can happen if the normalized gene counts are identical across ALL samples, and due to the lack of any variation, the correlation cannot be computed
-  
-  
-  # Oddity of cut: When breaks is specified as a single number, the range of the data is divided into breaks pieces of equal length, and then the outer limits are moved away by 0.1% of the range to ensure that the extreme values both fall within the break intervals. 
-  levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1] = 
-      gsub("(-\\d+)", "0", levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1], perl = TRUE)
-  
-
-  if (includeRobustCols) {
-    peakGeneCorrelations.all = peakGeneCorrelations.all %>%
-      dplyr::mutate(peak_gene.p_raw.robust.class = 
-                      cut(peak_gene.p_raw.robust, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE))
-  }
-  
-
-  # Prepare plots #
-
-  colors_class = c("black", "black")
-  names(colors_class)= unique(peakGeneCorrelations.all$class)
-  colors_class[which(grepl("random", names(colors_class)))] = "darkgray"
-  
-  r_pos_class = c("black", "darkgray")
-  names(r_pos_class) =c("TRUE", "FALSE")
-  
-  dist_class = c("dark red", "#fc9c9c")
-  names(dist_class) = class_levels
-  
-  freqs= table(peakGeneCorrelations.all$class)
-  freq_class = paste0(gsub(names(freqs), pattern = "(.+)(_.*)", replacement = "\\1"), " (n=", .prettyNum(freqs) , ")")
-  # Change upstream and go with "permuted" everywhere
-  freq_class = gsub(freq_class, pattern = "random", replacement = "permuted")
-  names(freq_class) <- names(freqs)
-  
+  # get list of all filenames that are going to be created
+  filenames.all = c()
   filteredStr = dplyr::if_else(useFiltered, "_filtered", "")
-  
-  xlabels_peakGene_r.class = levels(peakGeneCorrelations.all$peak_gene.r.class)
-  nCur = length(xlabels_peakGene_r.class)
-  xlabels_peakGene_r.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
-  
-  # For the last plot, which is wider, we label a few more
-  xlabels_peakGene_r.class2 = levels(peakGeneCorrelations.all$peak_gene.r.class)
-  nCur = length(xlabels_peakGene_r.class2)
-  xlabels_peakGene_r.class2[setdiff(seq_len(nCur), c(1, floor(nCur/4), floor(nCur/2), floor(nCur/4*3), nCur))] <- ""
-  
-  xlabels_peakGene_praw.class = levels(peakGeneCorrelations.all$peak_gene.p.raw.class)
-  nCur = length(xlabels_peakGene_praw.class)
-  xlabels_peakGene_praw.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
-  
-  
   for (geneTypesSelected in gene.types) {
-      
-      futile.logger::flog.info(paste0(" Gene type ", paste0(geneTypesSelected, collapse = "+")))
-
-      if ("all" %in% geneTypesSelected) {
-          indexCur = seq_len(nrow(peakGeneCorrelations.all))
-      } else {
-          indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
-      }
-      
-  
-      # START PLOTTING #
-    
-      if (!is.null(fileBase)) {
-          filenameCur = paste0(fileBase, paste0(geneTypesSelected, collapse = "+"), filteredStr, ".pdf")
-           grDevices::pdf(file = filenameCur, width = pdf_width, height = pdf_height)
-      }
-      
-      if (plotPerTF) {
-          
-          TF.nRows = rep(-1, length(GRN@config$allTF))
-          #TF.nRows = rep(-1, 10)
-          TF.peaks = list()
-          names(TF.nRows) = GRN@config$allTF
-          for (TFCur in GRN@config$allTF) {
-              TF.peaks[[TFCur]] = names(which(GRN@data$TFs$TF_peak_overlap[,TFCur] == 1))
-              TF.nRows[TFCur] = peakGeneCorrelations.all[indexCur,] %>% dplyr::filter(peak.ID %in% TF.peaks[[TFCur]]) %>% nrow()
-          }
-          
-          TFs_sorted = names(sort(TF.nRows, decreasing = TRUE))
-          
-          allTF = c("all", TFs_sorted)
-          
-      } else {
-          allTF = "all"
-      }
-      
-      counter = 0
-      for (TFCur in allTF) {
-          
-          counter = counter + 1
-          
-          if (length(allTF) > 1) {
-              futile.logger::flog.info(paste0(" QC plots for TF ", TFCur, " (", counter, " of ", length(allTF), ")"))
-          }
-          
-          
-          if ("all" %in% geneTypesSelected) {
-              indexCur = seq_len(nrow(peakGeneCorrelations.all))
-          } else {
-              indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
-          }
-          
-          
-          if (TFCur != "all") {
-              indexCur = intersect(indexCur, which(peakGeneCorrelations.all$peak.ID %in% TF.peaks[[TFCur]]))
-          }
-          
-          # Get subset also for just the real data
-          indexCurReal = intersect(indexCur, which(peakGeneCorrelations.all$class == names(dist_class)[1]))
-          
-          
-          xlabel = paste0("Correlation raw p-value")
-          
-          # DENSITY PLOTS P VALUE
-          
-          # TODO: Densities as ratio
-          # https://stackoverflow.com/questions/58629959/how-can-i-extract-data-from-a-kernel-density-function-in-r-for-many-samples-at-o#:~:text=To%20compute%20the%20density%20you,can%20use%20the%20package%20spatstat%20.
-          
-          # Produce the labels for the class-specific subtitles
-          customLabel_class = .customLabeler(table(peakGeneCorrelations.all[indexCur,]$class))
-          
-          r_pos_freq = table(peakGeneCorrelations.all[indexCur,]$r_positive)
-          labeler_r_pos = labeller(r_positive = c("TRUE"  = paste0("r positive (", r_pos_freq["TRUE"], ")"), 
-                                                  "FALSE" = paste0("r negative (", r_pos_freq["FALSE"], ")")) )
-          theme_main = theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = rel(0.8)),
-                             axis.text.y = element_text(size=rel(0.8)),
-                             panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-          
-
-
-          ## p-val density curves stratified by real/permuted ##
-          
-          gA2 = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.p_raw, color = r_positive)) + geom_density()  +
-              facet_wrap(~ class, labeller = labeller(class=freq_class) ) +
-              xlab(xlabel) + ylab("Density") +  theme_bw() +
-              scale_color_manual(labels = names(r_pos_class), values = r_pos_class) +
-              theme(legend.position = "none", axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)))
-          
-          # Helper function to retrieve all tables and data aggregation steps for subsequent visualization
-          tbl.l = .createTables_peakGeneQC(peakGeneCorrelations.all[indexCur,], networkType_details, colors_vec, range)
-          
-          
-          xlabel = paste0("Correlation raw\np-value (binned)")
-          
-   
-          xlabels = levels(tbl.l$d_merged$peak_gene.p.raw.class)
-          xlabels[setdiff(seq_len(length(xlabels)), c(1, floor(length(xlabels)/2), length(xlabels)))] <- ""
-          
-          gB3 = ggplot(tbl.l$d_merged, aes(peak_gene.p.raw.class, ratio, fill = classAll)) + 
-              geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.5) + 
-              geom_hline(yintercept = 1, linetype = "dotted") + 
-              xlab(xlabel) + ylab("Ratio") +
-              scale_fill_manual("Class", values = c(dist_class, r_pos_class), 
-                                labels = c("real", "permuted", "r+ (r>0)", "r- (r<=0)"), 
-                                ) + # labels vector can be kind of manually specified here because the levels were previosly defined in a certain order
-              scale_x_discrete(labels = xlabels_peakGene_praw.class) +
-              theme_bw() +  
-              #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
-              # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
-              theme_main +
-              facet_wrap(~ factor(set), nrow = 2, scales = "free_y", strip.position = "left") 
-          
-          #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of permuted / permuted + real)
-          # that could give an indication of whether an FDR based on the permuted or based on the negative correlations would be more stringent
-
-          # R PEAK GENE #
-          
-          xlabel = paste0("Correlation coefficient r")
-          
-          sum_real = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[1]]
-          sum_rnd  = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[2]]
-          binData.r = peakGeneCorrelations.all[indexCur,] %>%
-              dplyr::group_by(class) %>%
-              dplyr::count(peak_gene.r.class) %>%
-              dplyr::mutate(nnorm = dplyr::case_when(class == !! (names(dist_class)[1]) ~ .data$n / (sum_real / sum_rnd), 
-                                              TRUE ~ as.double(.data$n)))
-          
-          xlabel = paste0("Correlation coefficient r (binned)")
-
-          gD = ggplot(binData.r, aes(peak_gene.r.class, nnorm, group = class, fill = class)) + 
-              geom_bar(stat = "identity", position = position_dodge(preserve = "single"), na.rm = FALSE, width = 0.5) +
-              geom_line(aes(peak_gene.r.class, nnorm, group = class, color= class), stat = "identity") +
-              scale_fill_manual("Group", labels = names(dist_class), values = dist_class) +
-              scale_color_manual("Group", labels = names(dist_class), values = dist_class) +
-              scale_x_discrete(labels = xlabels_peakGene_r.class2, drop = FALSE) +
-              theme_bw() + theme(legend.position = "none") +
-              xlab(xlabel) + ylab("Abundance") +
-              theme_main  +
-              scale_y_continuous(labels = scales::scientific)
-          
-          
-          mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ",\n", .prettyNum(range), " bp promoter range)")
-          
-          plots_all = ( ((gA2 | gB3 ) + 
-                             patchwork::plot_layout(widths = c(2.5,1.5))) / ((gD) + 
-                                                                                 patchwork::plot_layout(widths = c(4))) ) + 
-              patchwork::plot_layout(heights = c(2,1), guides = 'collect') +
-              patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
-          
-          plot(plots_all)
-          
-          
-      } # end for each TF
-      
-      
-      
-      if (!is.null(GRN@annotation$consensusPeaks_obj) & is.installed("ChIPseeker")) {
-          #plot(ChIPseeker::plotAnnoBar(GRN@annotation$consensusPeaks_obj))
-          
-          # no plot, as this is somehow just a list and no ggplot object
-          ChIPseeker::plotAnnoPie(GRN@annotation$consensusPeaks_obj, 
-                                  main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$consensusPeaks), ")"))
-          plot(ChIPseeker::plotDistToTSS(GRN@annotation$consensusPeaks_obj))
-      }
-      
-      # PEAK AND GENE PROPERTIES #
-
-      xlabel = paste0("Correlation raw\np-value (binned)")
-      mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ", .prettyNum(range), " bp promoter range)")
-      
-      allVars = c("peak.GC.class",  "peak.width", "peak.mean","peak.median",
-                  "peak.CV", "gene.median",  "gene.mean", "gene.CV", "peak.gene.combined.CV")
-      
-      # If ChIPseeker is not installed, remove peak.annotation from it
-      if ("peak.annotation" %in% colnames(peakGeneCorrelations.all)) {
-          allVars = c(allVars, "peak.annotation")
-      }
-    
-      
-      for (varCur in allVars) {
-          #next
-          # Save memory and prune the table and add only the variable we need here
-          if (varCur != "peak.gene.combined.CV") {
-              dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-                  dplyr::select(peak_gene.p_raw, tidyselect::all_of(varCur), class, r_positive, peak_gene.p.raw.class, peak_gene.distance) 
-          } else {
-              dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-                  dplyr::select(peak_gene.p_raw, class, gene.CV, peak.CV, r_positive, peak_gene.p.raw.class, peak_gene.distance)
-          }
-         
-          
-          # Choose colors depending on type of variable: gradient or not?
-          
-          if (varCur %in% c("peak.annotation","peak.GC.class")) {
-     
-              newColName = varCur
-              
-          } else {
-              
-              newColName = paste0(varCur, ".class")
-              
-              if (varCur == "peak.gene.combined.CV") {
-                  
-                  dataCur = dataCur %>%
-                      dplyr::mutate(!!(newColName) := dplyr::case_when(
-                          gene.CV < 0.5                & peak.CV < 0.5                ~ "gene.CV+peak.CV<0.5", ##
-                          # gene.CV >= 0.5 & gene.CV < 1 & peak.CV < 0.5                ~ "gene.CV<1_peak.CV<0.5",
-                          # gene.CV >= 1                 & peak.CV < 0.5                ~ "gene.CV>1_peak.CV<0.5",
-                          # 
-                          # gene.CV < 0.5                & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<0.5_peak.CV<1",
-                          # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<1_peak.CV<1",
-                          # gene.CV >= 1                 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV>1_peak.CV<1",
-                          # 
-                          # gene.CV < 0.5                & peak.CV >= 1                 ~ "gene.CV<0.5_peak.CV>1",
-                          # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 1                 ~ "gene.CV<1_peak.CV>1",
-                          gene.CV >= 1                 & peak.CV >= 1                 ~ "gene.CV+peak.CV>1", ##
-                          TRUE ~ "other"
-                      )) %>%
-                      dplyr::select(-gene.CV, -peak.CV)
-                  
-              } else {
-                  
-                  dataCur = dataCur %>%
-                      dplyr::mutate(!!(newColName) := cut(.data[[varCur]], breaks = unique(quantile(.data[[varCur]], probs = probs, na.rm = TRUE)), 
-                                                      include.lowest = TRUE, ordered_result = TRUE)) %>%
-                      dplyr::select(-tidyselect::all_of(varCur))
-              }
-              
-                 
-          }
-         
-          # Filter groups with fewer than 100 observations
-          nGroupsMin = 100
-          dataCur = dataCur %>%
-              dplyr::group_by(.data[[newColName]]) %>%  
-              dplyr::filter(dplyr::n() >= nGroupsMin) %>%
-              dplyr::ungroup()
-          
-          var.label = .prettyNum(table(dataCur[, newColName]))
-          var.label = paste0(names(var.label), "\n(n=", var.label , ")\n")
-          
-          # Set colors
-          if (varCur != "peak.annotation") {
-              mycolors <- viridis::viridis(length(var.label))
-          } else {
-              # Only here, we want to have colors that are not a gradient
-              mycolors = var.label
-              downstream  = which(grepl("downstream", var.label, ignore.case = TRUE))
-              promoter    = which(grepl("promoter", var.label, ignore.case = TRUE))
-              
-              # Remove the first, white-like color from the 2 palettes
-              mycolors[downstream] = RColorBrewer::brewer.pal(length(downstream) + 1, "Greens")[-1]
-              mycolors[promoter]   = RColorBrewer::brewer.pal(length(promoter) + 1, "Purples")[-1]
-              mycolors[which(grepl("3' UTR", mycolors))] = "yellow"
-              mycolors[which(grepl("5' UTR", mycolors))] = "orange"
-              mycolors[which(grepl("Distal Intergenic", mycolors))] = "red"
-              mycolors[which(grepl("Exon", mycolors))] = "maroon"
-              mycolors[which(grepl("Intron", mycolors))] = "lightblue"
-              
-          }
-          
-          r_pos_tbl = dataCur %>% dplyr::group_by(r_positive) %>% dplyr::pull(r_positive) %>% table()
-          r_positive_label = c("TRUE"   = paste0("r+(r>0, n=", .prettyNum(r_pos_tbl[["TRUE"]]), ")"), 
-                               "FALSE" = paste0("r-(r<=0, n=" ,.prettyNum(r_pos_tbl[["FALSE"]]), ")"))
-         
-          # Class in the facet_wrap has been removed, as this is only for real data here
-          gA3 = ggplot(dataCur, aes(peak_gene.p_raw, color = .data[[newColName]])) + geom_density(size = 0.2)  +
-              facet_wrap(~r_positive, labeller = labeller(r_positive = r_positive_label), nrow = 2) +
-              geom_density(aes(color = classNew), color = "black",  linetype = "dotted", alpha = 1) + 
-              xlab(xlabel) + ylab("Density (for real data only)") +  theme_bw() +
-              scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
-              theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)), 
-                    legend.text=element_text(size=rel(0.6)), legend.position = "none")
-          
-          # The following causes an error with patchwork
-          # gA3 = ggplot(dataCur, aes(peak_gene.p_raw, color = .data[[newColName]])) + geom_density(size = 0.2)  +
-          #   facet_wrap(~ class + r_positive, labeller = labeller(class=freq_class, r_positive = r_positive_label), nrow = 2) +
-          #   geom_density(aes(color = classNew), color = "black",  linetype = "dotted", alpha = 1) + 
-          #   xlab(xlabel) + ylab("Density") +  theme_bw() +
-          #   scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
-          #   theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)), 
-          #         legend.text=element_text(size=rel(0.6)), legend.position = "none")
-          
-          
-          # Ratios for r+ / r-
-          freq =  dataCur %>%
-              dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class, r_positive) %>%
-              dplyr::summarise(n = dplyr::n()) %>%
-              dplyr::ungroup() %>%
-              tidyr::complete(class, .data[[newColName]], peak_gene.p.raw.class, r_positive, fill = list(n = 0)) %>% # SOme cases might be missing
-              dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class) %>% # dont group by r_positive because we want to calculate the ratio within each group
-              dplyr::mutate(  
-                  n = .data$n + 1, # to allow ratios to be computed even for 0 counts
-                  ratio_pos_raw = .data$n[r_positive] / .data$n[!r_positive]) %>%
-              dplyr::filter(r_positive, class == names(dist_class)[1])# Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
-          
-          # Cap ratios > 10 at 10 to avoid visual artefacts
-          freq$ratio_pos_raw[which(freq$ratio_pos_raw > 10)] = 10
-          
-          # Without proper colors for now, this will be added after the next plot
-          gB3 = ggplot(freq, aes(peak_gene.p.raw.class, ratio_pos_raw, fill = .data[[newColName]])) + 
-              geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.8) + 
-              geom_hline(yintercept = 1, linetype = "dotted") + 
-              xlab(xlabel) + ylab("Ratio r+ / r- (capped at 10)") +
-              scale_x_discrete(labels = xlabels_peakGene_praw.class) +
-              scale_fill_manual (varCur, values = mycolors, labels = var.label, drop = FALSE )  +
-              theme_bw() +  
-              #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
-              # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
-              theme_main +
-              facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", , labeller = labeller(class=freq_class)) 
-          
-          
-          plots_all = ( ((gA3 | gB3 ) + 
-              patchwork::plot_layout(widths = c(2.5,1.5))) ) + 
-              patchwork::plot_layout(guides = 'collect') +
-              patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
-          
-          plot(plots_all)
-          
-          
-          # VERSION JUDITH: simplified peak.gene distance + another variable as histogram, no pemuted data
-
-          datasetName = ""
-          if (!is.null(GRN@config$metadata$name)) {
-              datasetName = GRN@config$metadata$name
-          }
-          
-          mainTitle2 = paste0(datasetName, "\nSummary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ",
-                              .prettyNum(range), " bp promoter range, stratified by distance + ", varCur, ")")
-          
-          # r+ and r-
-          binwidth = 0.1
-          mycolors <- viridis::viridis(2)
-          xlabel = paste0("Correlation raw p-value (", binwidth, " bins)")
-          
-          dataCur = dataCur %>%
-              dplyr::mutate(peak_gene.distance.class250k = factor(dplyr::if_else(peak_gene.distance <= 250000, "<=250k", ">250k"))) %>%
-              dplyr::select(-peak_gene.distance)
-          
-          # closed = "left", boundary = 0, ensure correct numbers. See https://github.com/tidyverse/ggplot2/issues/1739
-          # Without boundary = 0, counts are actually wrong
-          
-          
-          nrows_plot = 2
-          if (length(unique(dataCur[[newColName]])) > 9) {
-              nrows_plot = 3
-          }
-
-          gA5 = ggplot(dataCur, aes(peak_gene.p_raw, fill = r_positive)) + 
-              geom_histogram(binwidth = binwidth, position="dodge", closed = "left", boundary = 0)  +
-              facet_wrap(~ peak_gene.distance.class250k  + .data[[newColName]], nrow = nrows_plot, scales = "free_y") +
-              xlab(xlabel) + ylab(paste0("Abundance for classes with n>=", nGroupsMin)) +  theme_bw() +
-              ggtitle(mainTitle2) + 
-              scale_fill_manual("Class for r", values = mycolors, labels = r_positive_label, drop = FALSE ) +
-              theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.6)), 
-                    legend.text=element_text(size=rel(0.7)))
-    
-          
-          plot(gA5)
-     
-          
-          
-      } #end for each variable
-      
-
-      # DISTANCE FOCUSED #
-
-      
-      # Here, we focus on distance and exclude distance classes with too few points and create a new subset of the data
-      
-      # Filter distance classes with too few points
-      distance_class_abund = table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs)
-      indexFilt = which(peakGeneCorrelations.all$peak_gene.distance_class_abs %in% 
-                            names(distance_class_abund)[which(distance_class_abund > 50)])
-      indexFilt = intersect(indexFilt, indexCur)
-      
-      if (length(indexFilt) > 0) {
-          g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = peak_gene.distance_class_abs)) + geom_density() + 
-              ggtitle(paste0("Density of the raw p-value distributions")) + 
-              facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
-              scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
-              theme_bw()
-          plot(g)
-         
-  
-          if (includeRobustCols) {
-              g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw.robust, color = peak_gene.distance_class_abs)) + geom_density() + 
-                  ggtitle(paste0("Density of the raw p-value distributions\n(stratified by whether r is positive)")) + 
-                  facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
-                  scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
-                  theme_bw()
-              plot(g)
-             
- 
-          }
-          
-      } # end if (length(indexFilt) > 0)
-      
-      
-      
-      
-      if (length(indexFilt) > 0) {
-          g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = r_positive)) + 
-              geom_density() + 
-              ggtitle(paste0("Density of the raw p-value distributions")) + 
-              facet_wrap(~ peak_gene.distance_class_abs,  ncol = 2, labeller = .customLabeler(table(peakGeneCorrelations.all$peak_gene.distance_class_abs))) +
-              scale_color_manual(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$r_positive)), values = r_pos_class) +
-              theme_bw()
-          plot(g)
-  
-          
-      }
-      
-      
-      #
-      # Focus on peak_gene.r
-      #
-      
-      g = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.r, color = peak_gene.distance_class_abs)) + geom_density() + 
-          geom_density(data = peakGeneCorrelations.all[indexCur,], aes(peak_gene.r), color = "black") + 
-          ggtitle(paste0("Density of the correlation coefficients")) + 
-          scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs))) +
-          theme_bw()
-      plot(g)
-      
- 
-      if (!is.null(fileBase)) {
-           grDevices::dev.off()
-      }
-      
-      
-      
+      filenameCur = paste0(fileBase, paste0(geneTypesSelected, collapse = "+"), filteredStr, ".pdf")
+      filenames.all = c(filenames.all, filenameCur)
   }
+ 
+  if (!all(file.exists(filenames.all)) | forceRerun) {
+     
+     futile.logger::flog.info(paste0("Plotting diagnostic plots for peak-gene correlations", dplyr::if_else(is.null(fileBase), "", paste0(" to file(s) with basename ", fileBase))))
+     
+     cols_keep = c("peak.ID", "gene.ENSEMBL", "peak_gene.r", "peak_gene.p_raw", "peak_gene.distance")
+     
+     # Change from 10 to 5 
+     nCategoriesBinning = 5
+     probs = seq(0,1,1/nCategoriesBinning)
+     
+     
+     range = GRN@config$parameters$promoterRange
+     
+     networkType_details = c(paste0("real_",range), paste0("random_",range))
+     
+     colors_vec = c("black", "darkgray")
+     networkType_vec = c("real", "permuted")
+     names(colors_vec) = names(networkType_vec) = networkType_details
+     
+     options(dplyr.summarise.inform = FALSE) 
+     
+     includeRobustCols = FALSE
+     #Either take all or the filtered set of connections
+     if (useFiltered) {
+         
+         # TODO: Robust columns filter
+         peakGeneCorrelations.all = 
+             rbind(dplyr::select(GRN@connections$all.filtered[["0"]], dplyr::everything()) %>%
+                       dplyr::mutate(class = paste0("real_",range))) %>%
+             rbind(dplyr::select(GRN@connections$all.filtered[["1"]],  dplyr::everything()) %>% 
+                       dplyr::mutate(class = paste0("random_",range)))
+         
+     } else {
+         
+         robustColumns = c("peak_gene.p_raw.robust", "peak_gene.bias_M_p.raw", "peak_gene.bias_LS_p.raw", "peak_gene.r_robust")
+         if (all(robustColumns %in% colnames(GRN@connections$peak_genes[["0"]]))) {
+             includeRobustCols = TRUE
+             cols_keep = c(cols_keep, robustColumns)
+         }
+         
+         class_levels = c(paste0("real_",range), paste0("random_",range))
+         
+         peakGeneCorrelations.all = 
+             rbind(
+                 dplyr::select(GRN@connections$peak_genes[["0"]], tidyselect::all_of(cols_keep)) %>%
+                     dplyr::mutate(class = factor(paste0("real_",range), levels = class_levels)),
+                 dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
+                     dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
+             dplyr::left_join(dplyr::select(GRN@annotation$genes, gene.ENSEMBL, gene.type, gene.mean, gene.median, gene.CV), by = "gene.ENSEMBL") %>%
+             dplyr::left_join(GRN@annotation$consensusPeaks %>% 
+                                  dplyr::select(-dplyr::starts_with("peak.gene."), -peak.GC.perc), by = "peak.ID") %>%
+             dplyr::select(-gene.ENSEMBL)
+         
+     }
+     
+     if (!plotPerTF) {
+         peakGeneCorrelations.all = dplyr::select(peakGeneCorrelations.all, -peak.ID)
+     }
+     
+     nClasses_distance  = 10
+     
+     peakGeneCorrelations.all = peakGeneCorrelations.all %>%
+         dplyr::mutate(r_positive = peak_gene.r > 0,
+                       peak_gene.distance_class = 
+                           forcats::fct_explicit_na(addNA(cut(peak_gene.distance, breaks = nClasses_distance, include.lowest = TRUE)), "random"),
+                       peak_gene.distance_class_abs = forcats::fct_explicit_na(addNA(cut(abs(peak_gene.distance), 
+                                                                                         breaks = nClasses_distance, include.lowest = TRUE, ordered_result = TRUE)), "random"),
+                       peak_gene.p.raw.class = cut(peak_gene.p_raw, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE),
+                       peak_gene.r.class = cut(peak_gene.r, breaks = seq(-1,1,0.05), include.lowest = TRUE, ordered_result = TRUE)) %>%
+         dplyr::filter(!is.na(peak_gene.r)) # Eliminate rows with NA for peak_gene.r. This can happen if the normalized gene counts are identical across ALL samples, and due to the lack of any variation, the correlation cannot be computed
+     
+     
+     # Oddity of cut: When breaks is specified as a single number, the range of the data is divided into breaks pieces of equal length, and then the outer limits are moved away by 0.1% of the range to ensure that the extreme values both fall within the break intervals. 
+     levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1] = 
+         gsub("(-\\d+)", "0", levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1], perl = TRUE)
+     
+     
+     if (includeRobustCols) {
+         peakGeneCorrelations.all = peakGeneCorrelations.all %>%
+             dplyr::mutate(peak_gene.p_raw.robust.class = 
+                               cut(peak_gene.p_raw.robust, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE))
+     }
+     
+     
+     # Prepare plots #
+     
+     colors_class = c("black", "black")
+     names(colors_class)= unique(peakGeneCorrelations.all$class)
+     colors_class[which(grepl("random", names(colors_class)))] = "darkgray"
+     
+     r_pos_class = c("black", "darkgray")
+     names(r_pos_class) =c("TRUE", "FALSE")
+     
+     dist_class = c("dark red", "#fc9c9c")
+     names(dist_class) = class_levels
+     
+     freqs= table(peakGeneCorrelations.all$class)
+     freq_class = paste0(gsub(names(freqs), pattern = "(.+)(_.*)", replacement = "\\1"), " (n=", .prettyNum(freqs) , ")")
+     # Change upstream and go with "permuted" everywhere
+     freq_class = gsub(freq_class, pattern = "random", replacement = "permuted")
+     names(freq_class) <- names(freqs)
+     
+     
+     
+     xlabels_peakGene_r.class = levels(peakGeneCorrelations.all$peak_gene.r.class)
+     nCur = length(xlabels_peakGene_r.class)
+     xlabels_peakGene_r.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
+     
+     # For the last plot, which is wider, we label a few more
+     xlabels_peakGene_r.class2 = levels(peakGeneCorrelations.all$peak_gene.r.class)
+     nCur = length(xlabels_peakGene_r.class2)
+     xlabels_peakGene_r.class2[setdiff(seq_len(nCur), c(1, floor(nCur/4), floor(nCur/2), floor(nCur/4*3), nCur))] <- ""
+     
+     xlabels_peakGene_praw.class = levels(peakGeneCorrelations.all$peak_gene.p.raw.class)
+     nCur = length(xlabels_peakGene_praw.class)
+     xlabels_peakGene_praw.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
+     
+     
+     for (geneTypesSelected in gene.types) {
+         
+         futile.logger::flog.info(paste0(" Gene type ", paste0(geneTypesSelected, collapse = "+")))
+         
+         if ("all" %in% geneTypesSelected) {
+             indexCur = seq_len(nrow(peakGeneCorrelations.all))
+         } else {
+             indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
+         }
+         
+         
+         # START PLOTTING #
+         
+         if (!is.null(fileBase)) {
+             filenameCur = paste0(fileBase, paste0(geneTypesSelected, collapse = "+"), filteredStr, ".pdf")
+             grDevices::pdf(file = filenameCur, width = pdf_width, height = pdf_height)
+         }
+         
+         if (plotPerTF) {
+             
+             TF.nRows = rep(-1, length(GRN@config$allTF))
+             #TF.nRows = rep(-1, 10)
+             TF.peaks = list()
+             names(TF.nRows) = GRN@config$allTF
+             for (TFCur in GRN@config$allTF) {
+                 TF.peaks[[TFCur]] = names(which(GRN@data$TFs$TF_peak_overlap[,TFCur] == 1))
+                 TF.nRows[TFCur] = peakGeneCorrelations.all[indexCur,] %>% dplyr::filter(peak.ID %in% TF.peaks[[TFCur]]) %>% nrow()
+             }
+             
+             TFs_sorted = names(sort(TF.nRows, decreasing = TRUE))
+             
+             allTF = c("all", TFs_sorted)
+             
+         } else {
+             allTF = "all"
+         }
+         
+         counter = 0
+         for (TFCur in allTF) {
+             
+             counter = counter + 1
+             
+             if (length(allTF) > 1) {
+                 futile.logger::flog.info(paste0(" QC plots for TF ", TFCur, " (", counter, " of ", length(allTF), ")"))
+             }
+             
+             
+             if ("all" %in% geneTypesSelected) {
+                 indexCur = seq_len(nrow(peakGeneCorrelations.all))
+             } else {
+                 indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
+             }
+             
+             
+             if (TFCur != "all") {
+                 indexCur = intersect(indexCur, which(peakGeneCorrelations.all$peak.ID %in% TF.peaks[[TFCur]]))
+             }
+             
+             # Get subset also for just the real data
+             indexCurReal = intersect(indexCur, which(peakGeneCorrelations.all$class == names(dist_class)[1]))
+             
+             
+             xlabel = paste0("Correlation raw p-value")
+             
+             # DENSITY PLOTS P VALUE
+             
+             # TODO: Densities as ratio
+             # https://stackoverflow.com/questions/58629959/how-can-i-extract-data-from-a-kernel-density-function-in-r-for-many-samples-at-o#:~:text=To%20compute%20the%20density%20you,can%20use%20the%20package%20spatstat%20.
+             
+             # Produce the labels for the class-specific subtitles
+             customLabel_class = .customLabeler(table(peakGeneCorrelations.all[indexCur,]$class))
+             
+             r_pos_freq = table(peakGeneCorrelations.all[indexCur,]$r_positive)
+             labeler_r_pos = labeller(r_positive = c("TRUE"  = paste0("r positive (", r_pos_freq["TRUE"], ")"), 
+                                                     "FALSE" = paste0("r negative (", r_pos_freq["FALSE"], ")")) )
+             theme_main = theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = rel(0.8)),
+                                axis.text.y = element_text(size=rel(0.8)),
+                                panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+             
+             
+             
+             ## p-val density curves stratified by real/permuted ##
+             
+             gA2 = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.p_raw, color = r_positive)) + geom_density()  +
+                 facet_wrap(~ class, labeller = labeller(class=freq_class) ) +
+                 xlab(xlabel) + ylab("Density") +  theme_bw() +
+                 scale_color_manual(labels = names(r_pos_class), values = r_pos_class) +
+                 theme(legend.position = "none", axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)))
+             
+             # Helper function to retrieve all tables and data aggregation steps for subsequent visualization
+             tbl.l = .createTables_peakGeneQC(peakGeneCorrelations.all[indexCur,], networkType_details, colors_vec, range)
+             
+             
+             xlabel = paste0("Correlation raw\np-value (binned)")
+             
+             
+             xlabels = levels(tbl.l$d_merged$peak_gene.p.raw.class)
+             xlabels[setdiff(seq_len(length(xlabels)), c(1, floor(length(xlabels)/2), length(xlabels)))] <- ""
+             
+             gB3 = ggplot(tbl.l$d_merged, aes(peak_gene.p.raw.class, ratio, fill = classAll)) + 
+                 geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.5) + 
+                 geom_hline(yintercept = 1, linetype = "dotted") + 
+                 xlab(xlabel) + ylab("Ratio") +
+                 scale_fill_manual("Class", values = c(dist_class, r_pos_class), 
+                                   labels = c("real", "permuted", "r+ (r>0)", "r- (r<=0)"), 
+                 ) + # labels vector can be kind of manually specified here because the levels were previosly defined in a certain order
+                 scale_x_discrete(labels = xlabels_peakGene_praw.class) +
+                 theme_bw() +  
+                 #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
+                 # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
+                 theme_main +
+                 facet_wrap(~ factor(set), nrow = 2, scales = "free_y", strip.position = "left") 
+             
+             #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of permuted / permuted + real)
+             # that could give an indication of whether an FDR based on the permuted or based on the negative correlations would be more stringent
+             
+             # R PEAK GENE #
+             
+             xlabel = paste0("Correlation coefficient r")
+             
+             sum_real = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[1]]
+             sum_rnd  = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[2]]
+             binData.r = peakGeneCorrelations.all[indexCur,] %>%
+                 dplyr::group_by(class) %>%
+                 dplyr::count(peak_gene.r.class) %>%
+                 dplyr::mutate(nnorm = dplyr::case_when(class == !! (names(dist_class)[1]) ~ .data$n / (sum_real / sum_rnd), 
+                                                        TRUE ~ as.double(.data$n)))
+             
+             xlabel = paste0("Correlation coefficient r (binned)")
+             
+             gD = ggplot(binData.r, aes(peak_gene.r.class, nnorm, group = class, fill = class)) + 
+                 geom_bar(stat = "identity", position = position_dodge(preserve = "single"), na.rm = FALSE, width = 0.5) +
+                 geom_line(aes(peak_gene.r.class, nnorm, group = class, color= class), stat = "identity") +
+                 scale_fill_manual("Group", labels = names(dist_class), values = dist_class) +
+                 scale_color_manual("Group", labels = names(dist_class), values = dist_class) +
+                 scale_x_discrete(labels = xlabels_peakGene_r.class2, drop = FALSE) +
+                 theme_bw() + theme(legend.position = "none") +
+                 xlab(xlabel) + ylab("Abundance") +
+                 theme_main  +
+                 scale_y_continuous(labels = scales::scientific)
+             
+             
+             mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ",\n", .prettyNum(range), " bp promoter range)")
+             
+             plots_all = ( ((gA2 | gB3 ) + 
+                                patchwork::plot_layout(widths = c(2.5,1.5))) / ((gD) + 
+                                                                                    patchwork::plot_layout(widths = c(4))) ) + 
+                 patchwork::plot_layout(heights = c(2,1), guides = 'collect') +
+                 patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
+             
+             plot(plots_all)
+             
+             
+         } # end for each TF
+         
+         
+         
+         if (!is.null(GRN@annotation$consensusPeaks_obj) & is.installed("ChIPseeker")) {
+             #plot(ChIPseeker::plotAnnoBar(GRN@annotation$consensusPeaks_obj))
+             
+             # no plot, as this is somehow just a list and no ggplot object
+             ChIPseeker::plotAnnoPie(GRN@annotation$consensusPeaks_obj, 
+                                     main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$consensusPeaks), ")"))
+             plot(ChIPseeker::plotDistToTSS(GRN@annotation$consensusPeaks_obj))
+         }
+         
+         # PEAK AND GENE PROPERTIES #
+         
+         xlabel = paste0("Correlation raw\np-value (binned)")
+         mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ", .prettyNum(range), " bp promoter range)")
+         
+         allVars = c("peak.GC.class",  "peak.width", "peak.mean","peak.median",
+                     "peak.CV", "gene.median",  "gene.mean", "gene.CV", "peak.gene.combined.CV")
+         
+         # If ChIPseeker is not installed, remove peak.annotation from it
+         if ("peak.annotation" %in% colnames(peakGeneCorrelations.all)) {
+             allVars = c(allVars, "peak.annotation")
+         }
+         
+         
+         for (varCur in allVars) {
+             #next
+             # Save memory and prune the table and add only the variable we need here
+             if (varCur != "peak.gene.combined.CV") {
+                 dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
+                     dplyr::select(peak_gene.p_raw, tidyselect::all_of(varCur), class, r_positive, peak_gene.p.raw.class, peak_gene.distance) 
+             } else {
+                 dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
+                     dplyr::select(peak_gene.p_raw, class, gene.CV, peak.CV, r_positive, peak_gene.p.raw.class, peak_gene.distance)
+             }
+             
+             
+             # Choose colors depending on type of variable: gradient or not?
+             
+             if (varCur %in% c("peak.annotation","peak.GC.class")) {
+                 
+                 newColName = varCur
+                 
+             } else {
+                 
+                 newColName = paste0(varCur, ".class")
+                 
+                 if (varCur == "peak.gene.combined.CV") {
+                     
+                     dataCur = dataCur %>%
+                         dplyr::mutate(!!(newColName) := dplyr::case_when(
+                             gene.CV < 0.5                & peak.CV < 0.5                ~ "gene.CV+peak.CV<0.5", ##
+                             # gene.CV >= 0.5 & gene.CV < 1 & peak.CV < 0.5                ~ "gene.CV<1_peak.CV<0.5",
+                             # gene.CV >= 1                 & peak.CV < 0.5                ~ "gene.CV>1_peak.CV<0.5",
+                             # 
+                             # gene.CV < 0.5                & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<0.5_peak.CV<1",
+                             # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<1_peak.CV<1",
+                             # gene.CV >= 1                 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV>1_peak.CV<1",
+                             # 
+                             # gene.CV < 0.5                & peak.CV >= 1                 ~ "gene.CV<0.5_peak.CV>1",
+                             # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 1                 ~ "gene.CV<1_peak.CV>1",
+                             gene.CV >= 1                 & peak.CV >= 1                 ~ "gene.CV+peak.CV>1", ##
+                             TRUE ~ "other"
+                         )) %>%
+                         dplyr::select(-gene.CV, -peak.CV)
+                     
+                 } else {
+                     
+                     dataCur = dataCur %>%
+                         dplyr::mutate(!!(newColName) := cut(.data[[varCur]], breaks = unique(quantile(.data[[varCur]], probs = probs, na.rm = TRUE)), 
+                                                             include.lowest = TRUE, ordered_result = TRUE)) %>%
+                         dplyr::select(-tidyselect::all_of(varCur))
+                 }
+                 
+                 
+             }
+             
+             # Filter groups with fewer than 100 observations
+             nGroupsMin = 100
+             dataCur = dataCur %>%
+                 dplyr::group_by(.data[[newColName]]) %>%  
+                 dplyr::filter(dplyr::n() >= nGroupsMin) %>%
+                 dplyr::ungroup()
+             
+             var.label = .prettyNum(table(dataCur[, newColName]))
+             var.label = paste0(names(var.label), "\n(n=", var.label , ")\n")
+             
+             # Set colors
+             if (varCur != "peak.annotation") {
+                 mycolors <- viridis::viridis(length(var.label))
+             } else {
+                 # Only here, we want to have colors that are not a gradient
+                 mycolors = var.label
+                 downstream  = which(grepl("downstream", var.label, ignore.case = TRUE))
+                 promoter    = which(grepl("promoter", var.label, ignore.case = TRUE))
+                 
+                 # Remove the first, white-like color from the 2 palettes
+                 mycolors[downstream] = RColorBrewer::brewer.pal(length(downstream) + 1, "Greens")[-1]
+                 mycolors[promoter]   = RColorBrewer::brewer.pal(length(promoter) + 1, "Purples")[-1]
+                 mycolors[which(grepl("3' UTR", mycolors))] = "yellow"
+                 mycolors[which(grepl("5' UTR", mycolors))] = "orange"
+                 mycolors[which(grepl("Distal Intergenic", mycolors))] = "red"
+                 mycolors[which(grepl("Exon", mycolors))] = "maroon"
+                 mycolors[which(grepl("Intron", mycolors))] = "lightblue"
+                 
+             }
+             
+             r_pos_tbl = dataCur %>% dplyr::group_by(r_positive) %>% dplyr::pull(r_positive) %>% table()
+             r_positive_label = c("TRUE"   = paste0("r+(r>0, n=", .prettyNum(r_pos_tbl[["TRUE"]]), ")"), 
+                                  "FALSE" = paste0("r-(r<=0, n=" ,.prettyNum(r_pos_tbl[["FALSE"]]), ")"))
+             
+             # Class in the facet_wrap has been removed, as this is only for real data here
+             gA3 = ggplot(dataCur, aes(peak_gene.p_raw, color = .data[[newColName]])) + geom_density(size = 0.2)  +
+                 facet_wrap(~r_positive, labeller = labeller(r_positive = r_positive_label), nrow = 2) +
+                 geom_density(aes(color = classNew), color = "black",  linetype = "dotted", alpha = 1) + 
+                 xlab(xlabel) + ylab("Density (for real data only)") +  theme_bw() +
+                 scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
+                 theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)), 
+                       legend.text=element_text(size=rel(0.6)), legend.position = "none")
+             
+             # The following causes an error with patchwork
+             # gA3 = ggplot(dataCur, aes(peak_gene.p_raw, color = .data[[newColName]])) + geom_density(size = 0.2)  +
+             #   facet_wrap(~ class + r_positive, labeller = labeller(class=freq_class, r_positive = r_positive_label), nrow = 2) +
+             #   geom_density(aes(color = classNew), color = "black",  linetype = "dotted", alpha = 1) + 
+             #   xlab(xlabel) + ylab("Density") +  theme_bw() +
+             #   scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
+             #   theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)), 
+             #         legend.text=element_text(size=rel(0.6)), legend.position = "none")
+             
+             
+             # Ratios for r+ / r-
+             freq =  dataCur %>%
+                 dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class, r_positive) %>%
+                 dplyr::summarise(n = dplyr::n()) %>%
+                 dplyr::ungroup() %>%
+                 tidyr::complete(class, .data[[newColName]], peak_gene.p.raw.class, r_positive, fill = list(n = 0)) %>% # SOme cases might be missing
+                 dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class) %>% # dont group by r_positive because we want to calculate the ratio within each group
+                 dplyr::mutate(  
+                     n = .data$n + 1, # to allow ratios to be computed even for 0 counts
+                     ratio_pos_raw = .data$n[r_positive] / .data$n[!r_positive]) %>%
+                 dplyr::filter(r_positive, class == names(dist_class)[1])# Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
+             
+             # Cap ratios > 10 at 10 to avoid visual artefacts
+             freq$ratio_pos_raw[which(freq$ratio_pos_raw > 10)] = 10
+             
+             # Without proper colors for now, this will be added after the next plot
+             gB3 = ggplot(freq, aes(peak_gene.p.raw.class, ratio_pos_raw, fill = .data[[newColName]])) + 
+                 geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.8) + 
+                 geom_hline(yintercept = 1, linetype = "dotted") + 
+                 xlab(xlabel) + ylab("Ratio r+ / r- (capped at 10)") +
+                 scale_x_discrete(labels = xlabels_peakGene_praw.class) +
+                 scale_fill_manual (varCur, values = mycolors, labels = var.label, drop = FALSE )  +
+                 theme_bw() +  
+                 #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
+                 # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
+                 theme_main +
+                 facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", , labeller = labeller(class=freq_class)) 
+             
+             
+             plots_all = ( ((gA3 | gB3 ) + 
+                                patchwork::plot_layout(widths = c(2.5,1.5))) ) + 
+                 patchwork::plot_layout(guides = 'collect') +
+                 patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
+             
+             plot(plots_all)
+             
+             
+             # VERSION JUDITH: simplified peak.gene distance + another variable as histogram, no pemuted data
+             
+             datasetName = ""
+             if (!is.null(GRN@config$metadata$name)) {
+                 datasetName = GRN@config$metadata$name
+             }
+             
+             mainTitle2 = paste0(datasetName, "\nSummary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ",
+                                 .prettyNum(range), " bp promoter range, stratified by distance + ", varCur, ")")
+             
+             # r+ and r-
+             binwidth = 0.1
+             mycolors <- viridis::viridis(2)
+             xlabel = paste0("Correlation raw p-value (", binwidth, " bins)")
+             
+             dataCur = dataCur %>%
+                 dplyr::mutate(peak_gene.distance.class250k = factor(dplyr::if_else(peak_gene.distance <= 250000, "<=250k", ">250k"))) %>%
+                 dplyr::select(-peak_gene.distance)
+             
+             # closed = "left", boundary = 0, ensure correct numbers. See https://github.com/tidyverse/ggplot2/issues/1739
+             # Without boundary = 0, counts are actually wrong
+             
+             
+             nrows_plot = 2
+             if (length(unique(dataCur[[newColName]])) > 9) {
+                 nrows_plot = 3
+             }
+             
+             gA5 = ggplot(dataCur, aes(peak_gene.p_raw, fill = r_positive)) + 
+                 geom_histogram(binwidth = binwidth, position="dodge", closed = "left", boundary = 0)  +
+                 facet_wrap(~ peak_gene.distance.class250k  + .data[[newColName]], nrow = nrows_plot, scales = "free_y") +
+                 xlab(xlabel) + ylab(paste0("Abundance for classes with n>=", nGroupsMin)) +  theme_bw() +
+                 ggtitle(mainTitle2) + 
+                 scale_fill_manual("Class for r", values = mycolors, labels = r_positive_label, drop = FALSE ) +
+                 theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.6)), 
+                       legend.text=element_text(size=rel(0.7)))
+             
+             
+             plot(gA5)
+             
+             
+             
+         } #end for each variable
+         
+         
+         # DISTANCE FOCUSED #
+         
+         
+         # Here, we focus on distance and exclude distance classes with too few points and create a new subset of the data
+         
+         # Filter distance classes with too few points
+         distance_class_abund = table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs)
+         indexFilt = which(peakGeneCorrelations.all$peak_gene.distance_class_abs %in% 
+                               names(distance_class_abund)[which(distance_class_abund > 50)])
+         indexFilt = intersect(indexFilt, indexCur)
+         
+         if (length(indexFilt) > 0) {
+             g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = peak_gene.distance_class_abs)) + geom_density() + 
+                 ggtitle(paste0("Density of the raw p-value distributions")) + 
+                 facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
+                 scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
+                 theme_bw()
+             plot(g)
+             
+             
+             if (includeRobustCols) {
+                 g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw.robust, color = peak_gene.distance_class_abs)) + geom_density() + 
+                     ggtitle(paste0("Density of the raw p-value distributions\n(stratified by whether r is positive)")) + 
+                     facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
+                     scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
+                     theme_bw()
+                 plot(g)
+                 
+                 
+             }
+             
+         } # end if (length(indexFilt) > 0)
+         
+         
+         
+         
+         if (length(indexFilt) > 0) {
+             g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = r_positive)) + 
+                 geom_density() + 
+                 ggtitle(paste0("Density of the raw p-value distributions")) + 
+                 facet_wrap(~ peak_gene.distance_class_abs,  ncol = 2, labeller = .customLabeler(table(peakGeneCorrelations.all$peak_gene.distance_class_abs))) +
+                 scale_color_manual(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$r_positive)), values = r_pos_class) +
+                 theme_bw()
+             plot(g)
+             
+             
+         }
+         
+         
+         #
+         # Focus on peak_gene.r
+         #
+         
+         g = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.r, color = peak_gene.distance_class_abs)) + geom_density() + 
+             geom_density(data = peakGeneCorrelations.all[indexCur,], aes(peak_gene.r), color = "black") + 
+             ggtitle(paste0("Density of the correlation coefficients")) + 
+             scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs))) +
+             theme_bw()
+         plot(g)
+         
+         
+         if (!is.null(fileBase)) {
+             grDevices::dev.off()
+         }
+         
+         
+     }
+     
+ } else {
+     futile.logger::flog.info(paste0("All output files already exist. Set forceRerun = TRUE to regenerate and overwrite."))
+     
+ }
   
-  
-  
-  
+
   
   .printExecutionTime(start)
   
@@ -1554,14 +1570,14 @@ plotDiagnosticPlots_peakGene <- function(GRN,
 #' Plot various network connectivity summaries for a \code{\linkS4class{GRN}} object
 #'
 #' @template GRN 
-#' @param type Character. Either "heatmap" or "boxplot". Default "heatmap". Which plot type to produce?
+#' @param type Character. Either \code{"heatmap"} or \code{"boxplot"}. Default \code{"heatmap"}. Which plot type to produce?
 #' @template outputFolder
 #' @template basenameOutput
 #' @template plotAsPDF
 #' @template pdf_width
 #' @template pdf_height
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for the specified \code{type}, a PDF file (default filename is GRN.connectionSummary_{type}.pdf) is produced with a connection summary. We refer to the Vignettes for details and further explanations.
+#' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for the specified \code{type}, a PDF file (default filename is \code{GRN.connectionSummary_{type}.pdf}) is produced with a connection summary.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2051,10 +2067,10 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @template pdf_width
 #' @template pdf_height
 #' @template forceRerun
-#' @param ontology Character. NULL or vector of ontology names. Default NULL. Vector of ontologies to plot. The results must have been previously calculated otherwise an error is thrown.
+#' @param ontology Character. \code{NULL} or vector of ontology names. Default \code{NULL}. Vector of ontologies to plot. The results must have been previously calculated otherwise an error is thrown.
 #' @param p Numeric. Default 0.05. p-value threshold to determine significance.
 #' @param topn_pvalue Numeric. Default 30. Maximum number of ontology terms that meet the p-value significance threshold to display in the enrichment dot plot
-#' @param display_pAdj Boolean. Default FALSE. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.
+#' @param display_pAdj \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
@@ -2225,8 +2241,8 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @template pdf_width
 #' @template pdf_height
 #' @template basenameOutput
-#' @param display Character. Default "byRank". One of: "byRank", "byLabel". Specify whether the communities will by displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
-#' @param communities Numeric vector. Default c(1:10). Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities} = c(1,4), if \code{display} = "byRank" the results for the first and fourth largest communities will be plotted. if \code{display} = "byLabel", the results for the communities labeled "1", and "4" will be plotted. If set to NULL, all communities will be plotted
+#' @inheritParams plotCommunitiesEnrichment
+#' @param communities Numeric vector. Default \code{seq_len(10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities will be plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} will be plotted. If set to \code{NULL}, all communities will be plotted
 #' @template forceRerun
 #' @param topnGenes Integer. Default 20. Number of genes to plot, sorted by their rank or label.
 #' @param topnTFs Integer. Default 20. Number of TFs to plot, sorted by their rank or label.
@@ -2397,8 +2413,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' Similarly to \code{\link{plotGeneralEnrichment}}, the results of the community-based enrichment analysis are plotted.. By default, the results for the 10 largest communities are displayed. Additionally, if a general enrichment analysis was previously generated, this function plots an additional heatmap to compare the general enrichment with the community based enrichment. A reduced version of this heatmap is also produced where terms are filtered out to improve visibility and display and highlight the most significant terms.
 #' 
 #' @inheritParams plotGeneralEnrichment
-#' @param display Character. Default "byRank". One of: "byRank", "byLabel". Specify whether the communities will by displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
-#' @param communities NULL or Numeric vector. Default NULL. If set to NULL, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities} = c(1,4), if \code{display} = "byRank" the results for the first and fourth largest communities are plotted. if \code{display} = "byLabel", the results for the communities labeled "1", and "4" are plotted. 
+#' @param display Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will by displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
+#' @param communities \code{NULL} or numeric vector. Default \code{NULL}. If set to \code{NULL}, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities are plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} are plotted. 
 #' @param nSignificant Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
 #' @param nID Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.
 #' @param maxWidth_nchar_plot Integer (>=10). Default 100. Maximum number of characters for a term before it is truncated.

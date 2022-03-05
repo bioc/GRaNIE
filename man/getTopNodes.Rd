@@ -9,9 +9,9 @@ getTopNodes(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = TRUE)
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{nodeType}{Character. One of: "gene", "TF".}
+\item{nodeType}{Character. One of: \code{"gene"} or \code{"TF"}. Node type.}
 
-\item{rankType}{Character. One of: "degree", "EV". This parameter will determine the criterion to be used to identify the "top" nodes. If set to "degree", the function will select top nodes based on the number of connections they have, i.e. based on their degree-centrality. If set to "EV" it will select the top nodes based on their eigenvector-centrality score in the network.}
+\item{rankType}{Character. One of: \code{"degree"}, \code{"EV"}. This parameter will determine the criterion to be used to identify the "top" nodes. If set to "degree", the function will select top nodes based on the number of connections they have, i.e. based on their degree-centrality. If set to "EV" it will select the top nodes based on their eigenvector-centrality score in the network.}
 
 \item{n}{Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes.}
 
