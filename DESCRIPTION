@@ -87,8 +87,7 @@ Suggests:
     testthat (>= 3.0.0),
     BiocStyle
 VignetteBuilder: knitr
-biocViews:
-   Software, GeneExpression, GeneRegulation, NetworkInference, GeneSetEnrichment, BiomedicalInformatics, Genetics, Transcriptomics, ATACSeq, RNASeq, GraphAndNetwork, Regression, Transcription, ChIPSeq
+biocViews: Software, GeneExpression, GeneRegulation, NetworkInference, GeneSetEnrichment, BiomedicalInformatics, Genetics, Transcriptomics, ATACSeq, RNASeq, GraphAndNetwork, Regression, Transcription, ChIPSeq
 License: Artistic-2.0
 LazyData: false
 URL: https://grp-zaugg.embl-community.io/GRaNIE
