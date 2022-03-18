@@ -32,5 +32,5 @@ Plot diagnostic plots for TF-peak connections for a \code{\linkS4class{GRN}} obj
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotDiagnosticPlots_TFPeaks(GRN, forceRerun = FALSE)
+GRN = plotDiagnosticPlots_TFPeaks(GRN, outputFolder = ".", forceRerun = FALSE)
 }

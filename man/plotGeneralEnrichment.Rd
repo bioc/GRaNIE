@@ -50,5 +50,5 @@ This function plots the results of the general enrichment analysis for every spe
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotGeneralEnrichment(GRN, topn_pvalue = 30, forceRerun = FALSE)
+GRN = plotGeneralEnrichment(GRN, outputFolder = ".", forceRerun = FALSE)
 }

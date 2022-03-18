@@ -16,10 +16,10 @@
 initializeGRN <- function(objectMetadata = list(),
                           outputFolder, 
                           genomeAssembly) {
-
+  
   checkmate::assert(checkmate::checkNull(objectMetadata), checkmate::checkList(objectMetadata))
   checkmate::assertSubset(genomeAssembly, c("hg19","hg38", "mm10"))
-
+  
   # Create the folder first if not yet existing
   if (!dir.exists(outputFolder)) {
     dir.create(outputFolder)
@@ -44,7 +44,7 @@ initializeGRN <- function(objectMetadata = list(),
   GRN = .addFunctionLogToObject(GRN)
   
   GRN@config$isFiltered = FALSE
-
+  
   par.l = list()
   
   packageName = utils::packageName()
@@ -80,7 +80,7 @@ initializeGRN <- function(objectMetadata = list(),
   GRN@config$directories$outputRoot         = outputFolder
   GRN@config$directories$output_plots       = dir_output_plots 
   GRN@config$files$output_log               = paste0(outputFolder, "GRN.log")
-
+  
   .testExistanceAndCreateDirectoriesRecursively(c(outputFolder, dir_output_plots))
   
   checkmate::assertDirectory(outputFolder, access = "w")
@@ -125,7 +125,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
                     counts_rna, normalization_rna = "quantile", idColumn_RNA = "ENSEMBL", sampleMetadata = NULL,
                     allowOverlappingPeaks= FALSE,
                     forceRerun = FALSE) {
-
+  
   GRN = .addFunctionLogToObject(GRN)      
   
   checkmate::assertClass(GRN, "GRN")
@@ -142,7 +142,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
       forceRerun) {
     
     # Store raw peaks counts as DESeq object
-
+    
     #GRN@data$peaks$counts_raw = counts_peaks %>% dplyr::mutate(isFiltered = FALSE)
     
     # Normalize ID column names
@@ -152,31 +152,31 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     if (idColumn_RNA != "ENSEMBL") {
       counts_rna = dplyr::rename(counts_rna, ENSEMBL = !!(idColumn_RNA))
     }
-      
+    
     # Check ID columns for missing values and remove
     rna_missing_ID =  which(is.na(counts_rna$ENSEMBL))
     if (length(rna_missing_ID) > 0) {
-        message = paste0(" Found ", length(rna_missing_ID), " missing IDs in the ID column of the RNA counts. These rows will be removed.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        counts_rna = dplyr::slice(counts_rna, -rna_missing_ID)
+      message = paste0(" Found ", length(rna_missing_ID), " missing IDs in the ID column of the RNA counts. These rows will be removed.")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      counts_rna = dplyr::slice(counts_rna, -rna_missing_ID)
     }
     
     peaks_missing_ID =  which(is.na(counts_peaks$peakID))
     if (length(peaks_missing_ID) > 0) {
-        message = paste0(" Found ", length(peaks_missing_ID), " missing IDs in the ID column of the peaks counts. These rows will be removed.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        counts_peaks = dplyr::slice(counts_peaks, -peaks_missing_ID)
+      message = paste0(" Found ", length(peaks_missing_ID), " missing IDs in the ID column of the peaks counts. These rows will be removed.")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      counts_peaks = dplyr::slice(counts_peaks, -peaks_missing_ID)
     }
     
-      
+    
     # Remove potential scientific notation from peak IDs
     peaks_eNotation = which(grepl("e+", counts_peaks$peakID))
     if (length(peaks_eNotation) > 0) {
-        message = paste0("Found at least one peak (", paste0(counts_peaks$peakID[peaks_eNotation], collapse = ",") , ") for which the position contains the scientific notation, attempting to fix.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        counts_peaks$peakID[peaks_eNotation] = .removeScientificNotation_positions(counts_peaks$peakID[peaks_eNotation])
-   
-        
+      message = paste0("Found at least one peak (", paste0(counts_peaks$peakID[peaks_eNotation], collapse = ",") , ") for which the position contains the scientific notation, attempting to fix.")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      counts_peaks$peakID[peaks_eNotation] = .removeScientificNotation_positions(counts_peaks$peakID[peaks_eNotation])
+      
+      
     }
     
     # Clean Ensembl IDs
@@ -189,10 +189,10 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
       counts_rna = counts_rna %>%
         dplyr::group_by(ENSEMBL) %>%
         dplyr::summarise_if(is.numeric, sum) 
-        # dplyr::summarise_if(is.numeric, sum, .groups = 'drop') # the .drop caused an error with dplyr 1.0.5
+      # dplyr::summarise_if(is.numeric, sum, .groups = 'drop') # the .drop caused an error with dplyr 1.0.5
     }
     
-
+    
     # Normalize counts
     countsPeaks.norm.df  = .normalizeCounts(counts_peaks, method = normalization_peaks, idColumn = "peakID")
     countsRNA.norm.df  = .normalizeCounts(counts_rna, method = normalization_rna, idColumn = "ENSEMBL")
@@ -219,20 +219,20 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     # Create permutations for RNA
     futile.logger::flog.info(paste0( "Produce ", .getMaxPermutation(GRN), " permutations of RNA-counts"))
     GRN@data$RNA$counts_norm.l = .shuffleColumns(countsRNA.norm.df, .getMaxPermutation(GRN), returnUnshuffled = TRUE, returnAsList = TRUE)
-
+    
     if (!is.null(sampleMetadata)) {
-        
+      
       futile.logger::flog.info("Parsing provided metadata...")
       GRN@data$metadata = sampleMetadata %>% dplyr::distinct() %>% tibble::set_tidy_names(syntactic = TRUE, quiet = TRUE)
       
       # Force the first column to be the ID column
       if ("sampleID" %in% colnames(GRN@data$metadata)) {
-          futile.logger::flog.warn("Renaming the first column to sampleID. However, this column already exists, it will be renamed accordingly.")
-          colnames(GRN@data$metadata)[which(colnames(GRN@data$metadata) == "sampleID")] = "sampleID_original"
-          
+        futile.logger::flog.warn("Renaming the first column to sampleID. However, this column already exists, it will be renamed accordingly.")
+        colnames(GRN@data$metadata)[which(colnames(GRN@data$metadata) == "sampleID")] = "sampleID_original"
+        
       } 
       colnames(GRN@data$metadata)[1] = "sampleID"
-
+      
       # Assume the ID is in column 1, has to be unique
       if (nrow(GRN@data$metadata) > length(unique(GRN@data$metadata$sampleID))) {
         message = paste0("The first column in the sample metadata table must contain only unique values, as it is used as sample ID. Make sure the values are unique.")
@@ -252,8 +252,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
       dplyr::mutate(has_RNA = sampleID  %in% samples_rna,
                     has_peaks = sampleID %in% samples_peaks,
                     has_both = has_RNA & has_peaks
-                    )
-
+      )
+    
     GRN@config$sharedSamples = dplyr::filter(GRN@data$metadata, has_both) %>% dplyr::pull(sampleID) %>% as.character()
     
     counts_peaks = as.data.frame(counts_peaks)
@@ -264,11 +264,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     
     
     # Store the raw peaks data efficiently as DESeq object only if it contains only integers, otherwise store as normal matrix
-
+    
     if (isIntegerMatrix(counts_peaks[, GRN@config$sharedSamples])) {
       GRN@data$peaks$counts_orig = DESeq2::DESeqDataSetFromMatrix(counts_peaks[, GRN@config$sharedSamples], 
-                                                           colData = dplyr::filter(GRN@data$metadata, has_both) %>% tibble::column_to_rownames("sampleID"),
-                                                           design = ~1)
+                                                                  colData = dplyr::filter(GRN@data$metadata, has_both) %>% tibble::column_to_rownames("sampleID"),
+                                                                  design = ~1)
     } else {
       
       GRN@data$peaks$counts_orig = as.matrix(counts_peaks[, GRN@config$sharedSamples])
@@ -276,14 +276,14 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     
     if (isIntegerMatrix(counts_rna[, GRN@config$sharedSamples])) {
       GRN@data$RNA$counts_orig = DESeq2::DESeqDataSetFromMatrix(counts_rna[, GRN@config$sharedSamples], 
-                                                          colData = dplyr::filter(GRN@data$metadata, has_both) %>% tibble::column_to_rownames("sampleID"),
-                                                          design = ~1)   
+                                                                colData = dplyr::filter(GRN@data$metadata, has_both) %>% tibble::column_to_rownames("sampleID"),
+                                                                design = ~1)   
     } else {
-        GRN@data$RNA$counts_orig = as.matrix(counts_rna[, GRN@config$sharedSamples])
+      GRN@data$RNA$counts_orig = as.matrix(counts_rna[, GRN@config$sharedSamples])
     }
     
-
-  
+    
+    
     # Consensus peaks
     GRN@data$peaks$consensusPeaks = .createConsensusPeaksDF(getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)) 
     GRN@data$peaks$consensusPeaks = GRN@data$peaks$consensusPeaks[match(getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)$peakID, GRN@data$peaks$consensusPeaks$peakID), ]
@@ -294,29 +294,29 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     # Assume 0-based exclusive format, see https://arnaudceol.wordpress.com/2014/09/18/chromosome-coordinate-systems-0-based-1-based/ and http://genome.ucsc.edu/FAQ/FAQformat.html#format1 for details
     consensus.gr   = .constructGRanges(GRN@data$peaks$consensusPeaks, seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), GRN@config$parameters$genomeAssembly, zeroBased = TRUE)
     
-
+    
     
     overlappingPeaks = which(GenomicRanges::countOverlaps(consensus.gr ,consensus.gr) >1)
     
     if (length(overlappingPeaks) > 0){
+      
+      ids = (consensus.gr[overlappingPeaks] %>% as.data.frame())$peakID
+      
+      messageAll = paste0(" ", length(overlappingPeaks), 
+                          " overlapping peaks have been identified. The first ten are: ", paste0(ids[seq_len(min(10, length(ids)))], collapse = ","),
+                          ". This may not be what you want, since overlapping peaks may have a heigher weight in the network. "
+      )
+      
+      
+      if (allowOverlappingPeaks) {
         
-        ids = (consensus.gr[overlappingPeaks] %>% as.data.frame())$peakID
-        
-        messageAll = paste0(" ", length(overlappingPeaks), 
-                            " overlapping peaks have been identified. The first ten are: ", paste0(ids[seq_len(min(10, length(ids)))], collapse = ","),
-                            ". This may not be what you want, since overlapping peaks may have a heigher weight in the network. "
-        )
-        
-        
-        if (allowOverlappingPeaks) {
-            
-            message = paste0(messageAll, "As allowOverlappingPeaks has been set to TRUE, this is only a warning and not an error.")
-            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        } else {
-            message = paste0(messageAll, "As allowOverlappingPeaks = FALSE (the default), this is an error and not a warning. You may want to regenerate the peak file, eliminate peak overlaps, and rerun this function")
-            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-        }
-        
+        message = paste0(messageAll, "As allowOverlappingPeaks has been set to TRUE, this is only a warning and not an error.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      } else {
+        message = paste0(messageAll, "As allowOverlappingPeaks = FALSE (the default), this is an error and not a warning. You may want to regenerate the peak file, eliminate peak overlaps, and rerun this function")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      }
+      
     }
     
   }
@@ -326,7 +326,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   
   # Add gene annotation once
   GRN = .populateGeneAnnotation(GRN)
-
+  
   GRN
   
 }
@@ -358,14 +358,14 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 }
 
 .removeScientificNotation_positions <- function(peakIDs.vec) {
-    ids = strsplit(peakIDs.vec, split = ":", fixed = TRUE)
-    ids_chr = sapply(ids, "[[", 1)
-    ids_pos = sapply(ids, "[[", 2)
-    ids_pos = strsplit(ids_pos, split = "-", fixed = TRUE)
-    start = sapply(ids_pos, "[[", 1)
-    end   = sapply(ids_pos, "[[", 2)
-    
-    paste0(ids_chr, ":", format(as.integer(start), scientific = FALSE), "-", format(as.integer(end), scientific= FALSE))
+  ids = strsplit(peakIDs.vec, split = ":", fixed = TRUE)
+  ids_chr = sapply(ids, "[[", 1)
+  ids_pos = sapply(ids, "[[", 2)
+  ids_pos = strsplit(ids_pos, split = "-", fixed = TRUE)
+  start = sapply(ids_pos, "[[", 1)
+  end   = sapply(ids_pos, "[[", 2)
+  
+  paste0(ids_chr, ":", format(as.integer(start), scientific = FALSE), "-", format(as.integer(end), scientific= FALSE))
 }
 
 
@@ -412,90 +412,90 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 }
 
 .populatePeakAnnotation <- function (GRN) {
+  
+  countsPeaks.clean = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
+  
+  futile.logger::flog.info(paste0(" Calculate statistics for each peak (mean and CV)"))
+  
+  countsPeaks.m = as.matrix(dplyr::select(countsPeaks.clean, -peakID))
+  
+  rowMeans_peaks   = rowMeans(countsPeaks.m)
+  rowMedians_peaks = matrixStats::rowMedians(countsPeaks.m)
+  CV_peaks = matrixStats::rowSds(countsPeaks.m) /  rowMeans_peaks
+  
+  metadata_peaks = tibble::tibble(peak.ID = countsPeaks.clean$peakID, 
+                                  peak.mean = rowMeans_peaks, 
+                                  peak.median = rowMedians_peaks, 
+                                  peak.CV = CV_peaks)
+  
+  GRN@annotation$consensusPeaks = metadata_peaks
+  
+  if (!is.installed("ChIPseeker")) {
+    message = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
+                     " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+  } else {
     
-    countsPeaks.clean = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
+    futile.logger::flog.info(paste0(" Retrieve peak annotation using ChipSeeker. This may take a while"))
+    genomeAssembly = GRN@config$parameters$genomeAssembly
+    consensusPeaks     = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!isFiltered)
+    consensusPeaks.gr  = .constructGRanges(consensusPeaks, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
     
-    futile.logger::flog.info(paste0(" Calculate statistics for each peak (mean and CV)"))
+    # Add ChIPSeeker anotation
+    peaks.annotated = suppressMessages(ChIPseeker::annotatePeak(
+      consensusPeaks.gr,
+      tssRegion = c(-5000, 5000), # extended from 3kb to 5
+      TxDb = .getGenomeObject(genomeAssembly, type = "txbd"),
+      level = "gene", 
+      assignGenomicAnnotation = TRUE,  # the default
+      genomicAnnotationPriority = c("Promoter", "5UTR", "3UTR", "Exon", "Intron",
+                                    "Downstream", "Intergenic"),  # the default
+      annoDb = .getGenomeObject(genomeAssembly, type = "packageName"), # optional, if provided, extra columns including SYMBOL, GENENAME, ENSEMBL/ENTREZID will be added
+      sameStrand = FALSE, # the default
+      ignoreOverlap = FALSE, # the default
+      ignoreUpstream = FALSE, # the default
+      ignoreDownstream = FALSE, # the default
+      overlap = "TSS", # the default
+      verbose = TRUE # the default
+    ))
     
-    countsPeaks.m = as.matrix(dplyr::select(countsPeaks.clean, -peakID))
+    GRN@annotation$consensusPeaks_obj = peaks.annotated
     
-    rowMeans_peaks   = rowMeans(countsPeaks.m)
-    rowMedians_peaks = matrixStats::rowMedians(countsPeaks.m)
-    CV_peaks = matrixStats::rowSds(countsPeaks.m) /  rowMeans_peaks
+    peaks.annotated.df = as.data.frame(peaks.annotated)
+    peaks.annotated.df$annotation[grepl("Exon", peaks.annotated.df$annotation)] = "Exon"
+    peaks.annotated.df$annotation[grepl("Intron", peaks.annotated.df$annotation)] = "Intron"
     
-    metadata_peaks = tibble::tibble(peak.ID = countsPeaks.clean$peakID, 
-                                    peak.mean = rowMeans_peaks, 
-                                    peak.median = rowMedians_peaks, 
-                                    peak.CV = CV_peaks)
-    
-    GRN@annotation$consensusPeaks = metadata_peaks
-    
-    if (!is.installed("ChIPseeker")) {
-        message = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
-                         " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-    } else {
-        
-        futile.logger::flog.info(paste0(" Retrieve peak annotation using ChipSeeker. This may take a while"))
-        genomeAssembly = GRN@config$parameters$genomeAssembly
-        consensusPeaks     = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!isFiltered)
-        consensusPeaks.gr  = .constructGRanges(consensusPeaks, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
-        
-        # Add ChIPSeeker anotation
-        peaks.annotated = suppressMessages(ChIPseeker::annotatePeak(
-            consensusPeaks.gr,
-            tssRegion = c(-5000, 5000), # extended from 3kb to 5
-            TxDb = .getGenomeObject(genomeAssembly, type = "txbd"),
-            level = "gene", 
-            assignGenomicAnnotation = TRUE,  # the default
-            genomicAnnotationPriority = c("Promoter", "5UTR", "3UTR", "Exon", "Intron",
-                                          "Downstream", "Intergenic"),  # the default
-            annoDb = .getGenomeObject(genomeAssembly, type = "packageName"), # optional, if provided, extra columns including SYMBOL, GENENAME, ENSEMBL/ENTREZID will be added
-            sameStrand = FALSE, # the default
-            ignoreOverlap = FALSE, # the default
-            ignoreUpstream = FALSE, # the default
-            ignoreDownstream = FALSE, # the default
-            overlap = "TSS", # the default
-            verbose = TRUE # the default
-        ))
-        
-        GRN@annotation$consensusPeaks_obj = peaks.annotated
-        
-        peaks.annotated.df = as.data.frame(peaks.annotated)
-        peaks.annotated.df$annotation[grepl("Exon", peaks.annotated.df$annotation)] = "Exon"
-        peaks.annotated.df$annotation[grepl("Intron", peaks.annotated.df$annotation)] = "Intron"
-        
-        GRN@annotation$consensusPeaks = dplyr::left_join(GRN@annotation$consensusPeaks, 
-                                                         peaks.annotated.df  %>% 
-                                                             dplyr::select(peakID, annotation, tidyselect::starts_with("gene"), -geneId, distanceToTSS, ENSEMBL, SYMBOL, GENENAME) %>%
-                                                             dplyr::mutate(annotation  = as.factor(annotation), 
-                                                                           ENSEMBL = as.factor(ENSEMBL), 
-                                                                           GENENAME = as.factor(GENENAME),
-                                                                           SYMBOL = as.factor(SYMBOL)),
-                                                         by = c("peak.ID" = "peakID")) %>%
-            dplyr::rename(peak.gene.chr = geneChr,
-                          peak.gene.start = geneStart, 
-                          peak.gene.end = geneEnd, 
-                          peak.gene.length = geneLength, 
-                          peak.gene.strand = geneStrand, 
-                          peak.gene.name = GENENAME,
-                          peak.gene.distanceToTSS = distanceToTSS,
-                          peak.gene.ENSEMBL = ENSEMBL,
-                          peak.gene.symbol = SYMBOL,
-                          peak.annotation = annotation
-            )
-        
-        
-    }
+    GRN@annotation$consensusPeaks = dplyr::left_join(GRN@annotation$consensusPeaks, 
+                                                     peaks.annotated.df  %>% 
+                                                       dplyr::select(peakID, annotation, tidyselect::starts_with("gene"), -geneId, distanceToTSS, ENSEMBL, SYMBOL, GENENAME) %>%
+                                                       dplyr::mutate(annotation  = as.factor(annotation), 
+                                                                     ENSEMBL = as.factor(ENSEMBL), 
+                                                                     GENENAME = as.factor(GENENAME),
+                                                                     SYMBOL = as.factor(SYMBOL)),
+                                                     by = c("peak.ID" = "peakID")) %>%
+      dplyr::rename(peak.gene.chr = geneChr,
+                    peak.gene.start = geneStart, 
+                    peak.gene.end = geneEnd, 
+                    peak.gene.length = geneLength, 
+                    peak.gene.strand = geneStrand, 
+                    peak.gene.name = GENENAME,
+                    peak.gene.distanceToTSS = distanceToTSS,
+                    peak.gene.ENSEMBL = ENSEMBL,
+                    peak.gene.symbol = SYMBOL,
+                    peak.annotation = annotation
+      )
     
     
-    
-    
-    # Also add GC content as annotation columns
-    GRN = .calcGCContentPeaks(GRN)
-    
-    GRN
-    
+  }
+  
+  
+  
+  
+  # Also add GC content as annotation columns
+  GRN = .calcGCContentPeaks(GRN)
+  
+  GRN
+  
 }
 
 .populateGeneAnnotation <- function (GRN) {
@@ -536,52 +536,52 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 #' @importFrom IRanges width
 #' @importFrom rlang .data `:=`
 .calcGCContentPeaks <- function(GRN) {
-    
-    futile.logger::flog.info(paste0("Calculate GC-content for peaks... "))
-    start = Sys.time()
-    genomeAssembly = GRN@config$parameters$genomeAssembly
-    #TODO: GC content for all peaks
-    genome = .getGenomeObject(genomeAssembly, type = "BSgenome")
-    
-    # Get peaks as GRanges object
-    query   = .constructGRanges(GRN@data$peaks$consensusPeaks, 
-                                seqlengths = .getChrLengths(genomeAssembly), 
-                                genomeAssembly)
-    
-    # Get DNAStringSet object
-    seqs_peaks = Biostrings::getSeq(genome, query)
-    
-    GC_content.df = Biostrings::letterFrequency(seqs_peaks, "GC") / Biostrings::letterFrequency(seqs_peaks, "ACGT")
-    
-    GC_content.df = GC_content.df %>%
-        tibble::as_tibble() %>%
-        dplyr::mutate(length = IRanges::width(query),
-                      peak.ID = query$peakID,
-                      GC_class = cut(`G|C`, breaks = seq(0,1,0.1), include.lowest = TRUE, ordered_result = TRUE))
-    
-    GC_classes.df = GC_content.df %>%
-        dplyr::group_by(GC_class) %>%
-        dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(length), peak_width_sd = sd(length)) %>%
-        dplyr::ungroup() %>% 
-        tidyr::complete(GC_class, fill = list(n = 0)) %>%
-        dplyr::mutate(n_rel = .data$n / length(query))
-    
-    # TODO: Put where
-    #ggplot(GC_content.df, aes(GC.class)) + geom_histogram(stat = "count") + theme_bw()
-    
-    #ggplot(GC_classes.df , aes(GC.class, n_rel)) + geom_bar(stat = "identity") + theme_bw()
-    
-    GRN@annotation$consensusPeaks = dplyr::left_join(GRN@annotation$consensusPeaks, GC_content.df, by = "peak.ID") %>%
-        dplyr::rename( peak.GC.perc    = `G|C`,
-                       peak.width      = length,
-                       peak.GC.class   = GC_class)
-    
-    GRN@stats$peaks = list()
-    GRN@stats$peaks$GC = GC_classes.df
-    
-    .printExecutionTime(start)
-    
-    GRN
+  
+  futile.logger::flog.info(paste0("Calculate GC-content for peaks... "))
+  start = Sys.time()
+  genomeAssembly = GRN@config$parameters$genomeAssembly
+  #TODO: GC content for all peaks
+  genome = .getGenomeObject(genomeAssembly, type = "BSgenome")
+  
+  # Get peaks as GRanges object
+  query   = .constructGRanges(GRN@data$peaks$consensusPeaks, 
+                              seqlengths = .getChrLengths(genomeAssembly), 
+                              genomeAssembly)
+  
+  # Get DNAStringSet object
+  seqs_peaks = Biostrings::getSeq(genome, query)
+  
+  GC_content.df = Biostrings::letterFrequency(seqs_peaks, "GC") / Biostrings::letterFrequency(seqs_peaks, "ACGT")
+  
+  GC_content.df = GC_content.df %>%
+    tibble::as_tibble() %>%
+    dplyr::mutate(length = IRanges::width(query),
+                  peak.ID = query$peakID,
+                  GC_class = cut(`G|C`, breaks = seq(0,1,0.1), include.lowest = TRUE, ordered_result = TRUE))
+  
+  GC_classes.df = GC_content.df %>%
+    dplyr::group_by(GC_class) %>%
+    dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(length), peak_width_sd = sd(length)) %>%
+    dplyr::ungroup() %>% 
+    tidyr::complete(GC_class, fill = list(n = 0)) %>%
+    dplyr::mutate(n_rel = .data$n / length(query))
+  
+  # TODO: Put where
+  #ggplot(GC_content.df, aes(GC.class)) + geom_histogram(stat = "count") + theme_bw()
+  
+  #ggplot(GC_classes.df , aes(GC.class, n_rel)) + geom_bar(stat = "identity") + theme_bw()
+  
+  GRN@annotation$consensusPeaks = dplyr::left_join(GRN@annotation$consensusPeaks, GC_content.df, by = "peak.ID") %>%
+    dplyr::rename( peak.GC.perc    = `G|C`,
+                   peak.width      = length,
+                   peak.GC.class   = GC_class)
+  
+  GRN@stats$peaks = list()
+  GRN@stats$peaks$GC = GC_classes.df
+  
+  .printExecutionTime(start)
+  
+  GRN
 }
 
 #' Filter data from a \code{\linkS4class{GRN}} object
@@ -637,8 +637,8 @@ filterData <- function (GRN,
     if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
       GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = 0
     }
-  
-
+    
+    
     # Filter peaks
     futile.logger::flog.info("FILTER PEAKS")
     peakIDs.CV = .filterPeaksByMeanCV(GRN, 
@@ -660,7 +660,7 @@ filterData <- function (GRN,
     #GRN@data$peaks$counts_raw$isFiltered = ! GRN@data$peaks$counts_raw$peakID  %in% peaks_toKeep
     GRN@data$peaks$counts_norm$isFiltered = ! GRN@data$peaks$counts_norm$peakID  %in% peaks_toKeep
     
-
+    
     if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
       GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = as.integer (! rownames(GRN@data$TFs$TF_peak_overlap) %in% peaks_toKeep)
     }
@@ -671,9 +671,9 @@ filterData <- function (GRN,
     # Filter peaks
     futile.logger::flog.info("FILTER RNA-seq")
     genes.CV = .filterGenesByMeanCV(GRN, 
-                                      minMean = minNormalizedMeanRNA, maxMean = maxNormalizedMeanRNA, 
-                                      minCV = minCV_genes, maxCV = maxCV_genes) 
- 
+                                    minMean = minNormalizedMeanRNA, maxMean = maxNormalizedMeanRNA, 
+                                    minCV = minCV_genes, maxCV = maxCV_genes) 
+    
     futile.logger::flog.info(paste0(" Number of rows in total: ", nrow(GRN@data$RNA$counts_norm.l[["0"]])))
     for (permutationCur in c(0)) {
       permIndex = as.character(permutationCur)
@@ -681,7 +681,7 @@ filterData <- function (GRN,
       GRN@data$RNA$counts_norm.l[[permIndex]]$isFiltered = rowMeans < minNormalizedMeanRNA 
     }
     nRowsFlagged = length(which(GRN@data$RNA$counts_norm.l[["0"]]$isFiltered))
-
+    
     # Raw counts are left untouched and filtered where needed only
     futile.logger::flog.info(paste0(" Flagged ", nRowsFlagged, " rows because the row mean was smaller than ", minNormalizedMeanRNA))
     
@@ -699,7 +699,7 @@ filterData <- function (GRN,
   startTime = Sys.time()
   
   if (is.null(minSize_peaks)) {
-      minSize_peaks = 1
+    minSize_peaks = 1
   }
   
   futile.logger::flog.info(paste0("Filter and sort peaks and remain only those on the following chromosomes: ", paste0(chrToKeep, collapse = ",")))
@@ -730,111 +730,111 @@ filterData <- function (GRN,
 }
 
 .filterPeaksByCV <- function (GRN, minCV = 0, maxCV = 1e7) {
+  
+  startTime = Sys.time()
+  
+  if (is.null(maxCV)) {
+    futile.logger::flog.info(paste0("Filter peaks by CV: Min CV = ", minCV))
     
-    startTime = Sys.time()
+    peaksFiltered = dplyr::filter(GRN@annotation$consensusPeaks, peak.CV >= minCV)
     
-    if (is.null(maxCV)) {
-        futile.logger::flog.info(paste0("Filter peaks by CV: Min CV = ", minCV))
-        
-        peaksFiltered = dplyr::filter(GRN@annotation$consensusPeaks, peak.CV >= minCV)
-        
-    } else {
-        futile.logger::flog.info(paste0("Filter peaks by CV: Min CV = ", minCV, ", max CV = ", maxCV))
-        
-        peaksFiltered = dplyr::filter(GRN@annotation$consensusPeaks, peak.CV >= minCV, peak.CV <= maxCV)
-    }
+  } else {
+    futile.logger::flog.info(paste0("Filter peaks by CV: Min CV = ", minCV, ", max CV = ", maxCV))
     
-    futile.logger::flog.info(paste0(" Number of peaks after filtering : ", nrow(peaksFiltered)))
-    
-    .printExecutionTime(startTime)
-    
-    peaksFiltered$peak.ID
+    peaksFiltered = dplyr::filter(GRN@annotation$consensusPeaks, peak.CV >= minCV, peak.CV <= maxCV)
+  }
+  
+  futile.logger::flog.info(paste0(" Number of peaks after filtering : ", nrow(peaksFiltered)))
+  
+  .printExecutionTime(startTime)
+  
+  peaksFiltered$peak.ID
 }
 
 .filterPeaksByMeanCV <- function (GRN, minMean = 0, maxMean = NULL, minCV = 0, maxCV = NULL) {
+  
+  startTime = Sys.time()
+  
+  futile.logger::flog.info(paste0(" Number of peaks before filtering : ", nrow(GRN@annotation$consensusPeaks)))
+  
+  if (is.null(minCV)) {
+    minCV = 0
+  }
+  
+  if (is.null(maxCV)) {
+    futile.logger::flog.info(paste0("  Filter peaks by CV: Min = ", minCV))
+    maxCV = 9e+99
     
-    startTime = Sys.time()
-    
-    futile.logger::flog.info(paste0(" Number of peaks before filtering : ", nrow(GRN@annotation$consensusPeaks)))
-    
-    if (is.null(minCV)) {
-        minCV = 0
-    }
-    
-    if (is.null(maxCV)) {
-        futile.logger::flog.info(paste0("  Filter peaks by CV: Min = ", minCV))
-        maxCV = 9e+99
-        
-    } else {
-        futile.logger::flog.info(paste0("  Filter peaks by CV: Min = ", minCV, ", Max = ", maxCV))
-    }
-    
-    
-    if (is.null(minMean)) {
-        minMean = 0
-    }
-    
-    if (is.null(maxMean)) {
-        futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", minMean))
-        maxMean = 9e+99
-    } else {
-        futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", minMean, ", Max = ", maxMean))  
-    }   
-    
-    
-    peaksFiltered = dplyr::filter(GRN@annotation$consensusPeaks, 
-                                  peak.CV >= minCV, peak.CV <= maxCV, 
-                                  peak.mean >= minMean, peak.mean <= maxMean)
-    
-    futile.logger::flog.info(paste0(" Number of peaks after filtering : ", nrow(peaksFiltered)))
-    
-    .printExecutionTime(startTime)
-    
-    peaksFiltered$peak.ID
+  } else {
+    futile.logger::flog.info(paste0("  Filter peaks by CV: Min = ", minCV, ", Max = ", maxCV))
+  }
+  
+  
+  if (is.null(minMean)) {
+    minMean = 0
+  }
+  
+  if (is.null(maxMean)) {
+    futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", minMean))
+    maxMean = 9e+99
+  } else {
+    futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", minMean, ", Max = ", maxMean))  
+  }   
+  
+  
+  peaksFiltered = dplyr::filter(GRN@annotation$consensusPeaks, 
+                                peak.CV >= minCV, peak.CV <= maxCV, 
+                                peak.mean >= minMean, peak.mean <= maxMean)
+  
+  futile.logger::flog.info(paste0(" Number of peaks after filtering : ", nrow(peaksFiltered)))
+  
+  .printExecutionTime(startTime)
+  
+  peaksFiltered$peak.ID
 }
 
 .filterGenesByMeanCV <- function (GRN, minMean = 0, maxMean = NULL, minCV = 0, maxCV = NULL) {
+  
+  startTime = Sys.time()
+  
+  futile.logger::flog.info(paste0(" Number of genes before filtering : ", nrow(GRN@annotation$genes)))
+  
+  if (is.null(minCV)) {
+    minCV = 0
+  }
+  
+  if (is.null(maxCV)) {
+    futile.logger::flog.info(paste0("  Filter genes by CV: Min = ", minCV))
+    maxCV = 9e+99
     
-    startTime = Sys.time()
-    
-    futile.logger::flog.info(paste0(" Number of genes before filtering : ", nrow(GRN@annotation$genes)))
-    
-    if (is.null(minCV)) {
-        minCV = 0
-    }
-    
-    if (is.null(maxCV)) {
-        futile.logger::flog.info(paste0("  Filter genes by CV: Min = ", minCV))
-        maxCV = 9e+99
-        
-    } else {
-        futile.logger::flog.info(paste0("  Filter genes by CV: Min = ", minCV, ", Max = ", maxCV))
-    }
-    
-    
-    if (is.null(minMean)) {
-        minMean = 0
-    }
-    
-    
-    if (is.null(maxMean)) {
-        futile.logger::flog.info(paste0("  Filter genes by mean: Min = ", minMean))
-        maxMean = 9e+99
-    } else {
-        futile.logger::flog.info(paste0("  Filter genes by mean: Min = ", minMean, ", Max = ", maxMean))  
-    }   
-    
-    
-    genesFiltered = dplyr::filter(GRN@annotation$genes, 
-                                  gene.CV >= minCV, gene.CV <= maxCV, 
-                                  gene.mean >= minMean, gene.mean <= maxMean)
-
-    
-    futile.logger::flog.info(paste0(" Number of genes after filtering : ", nrow(genesFiltered)))
-    
-    .printExecutionTime(startTime)
-    
-    genesFiltered$gene.ENSEMBL 
+  } else {
+    futile.logger::flog.info(paste0("  Filter genes by CV: Min = ", minCV, ", Max = ", maxCV))
+  }
+  
+  
+  if (is.null(minMean)) {
+    minMean = 0
+  }
+  
+  
+  if (is.null(maxMean)) {
+    futile.logger::flog.info(paste0("  Filter genes by mean: Min = ", minMean))
+    maxMean = 9e+99
+  } else {
+    futile.logger::flog.info(paste0("  Filter genes by mean: Min = ", minMean, ", Max = ", maxMean))  
+  }   
+  
+  
+  genesFiltered = dplyr::filter(GRN@annotation$genes, 
+                                gene.CV >= minCV, gene.CV <= maxCV, 
+                                gene.mean >= minMean, gene.mean <= maxMean)
+  
+  
+  futile.logger::flog.info(paste0(" Number of genes after filtering : ", nrow(genesFiltered)))
+  
+  .printExecutionTime(startTime)
+  
+  genesFiltered$gene.ENSEMBL 
 }
 
 
@@ -855,9 +855,9 @@ filterData <- function (GRN,
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' @export
 addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPattern = "_TFBS", fileEnding = ".bed", forceRerun = FALSE) {
-
+  
   GRN = .addFunctionLogToObject(GRN)
-    
+  
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertDirectoryExists(motifFolder)
   checkmate::assertCharacter(TFs, min.len = 1)
@@ -867,12 +867,12 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
   checkmate::assertFlag(forceRerun)
   
   if (is.null(GRN@data$TFs$translationTable) | is.null(GRN@data$TFs$translationTable) | is.null(GRN@config$allTF)  | is.null(GRN@config$directories$motifFolder) | forceRerun) {
-
+    
     GRN@config$TFBS_fileEnding  = fileEnding
     GRN@config$TFBS_filePattern = filesTFBSPattern
     GRN@data$TFs$translationTable = .getFinalListOfTFs(motifFolder, filesTFBSPattern, fileEnding, TFs, nTFMax, getCounts(GRN, type = "rna", norm = TRUE, permuted = FALSE))
     
-
+    
     GRN@data$TFs$translationTable = GRN@data$TFs$translationTable %>%
       dplyr::select(c("HOCOID", "ENSEMBL")) %>%
       dplyr::mutate(TF.name = HOCOID, TF.ENSEMBL = ENSEMBL) 
@@ -884,8 +884,8 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
     # GRN@config$TF_list = list()
     # GRN@config$TF_list[["all_TFBS"]] =GRN@config$allTF
     GRN@config$directories$motifFolder = motifFolder
-  
-  
+    
+    
   } 
   
   GRN
@@ -899,9 +899,9 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
   files = .createFileList(folder_input_TFBS, "*.bed*", recursive = FALSE, ignoreCase = FALSE, verbose = FALSE)
   TFsWithTFBSPredictions = gsub(pattern = filesTFBSPattern, "", tools::file_path_sans_ext(basename(files), compression = TRUE))
   TFsWithTFBSPredictions = gsub(pattern = fileEnding, "", TFsWithTFBSPredictions)
-
+  
   futile.logger::flog.info(paste0("Found ", length(TFsWithTFBSPredictions), " matching TFs: ", paste0(TFsWithTFBSPredictions, collapse = ", ")))
-
+  
   
   # Filter TFs
   if (length(TFs) == 1 && TFs == "all") {
@@ -946,7 +946,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
       allTF = allTF[seq_len(nTFMax)]
       futile.logger::flog.info(paste0("Updated list of TFs: ", paste0(allTF, collapse = ", ")))
     } 
-
+    
   }
   
   nTF = length(allTF)
@@ -974,18 +974,18 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
 #' GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
 #' @export
 overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
-
+  
   GRN = .addFunctionLogToObject(GRN)
-    
+  
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertIntegerish(nCores, lower = 1)
   checkmate::assertFlag(forceRerun)
   
   if (is.null(GRN@data$TFs$TF_peak_overlap) | forceRerun) {
     
-
+    
     futile.logger::flog.info(paste0("Overlap peaks and TFBS using ", nCores, " cores. This may take a few minutes..."))
-
+    
     genomeAssembly = GRN@config$parameters$genomeAssembly
     seqlengths = .getChrLengths(genomeAssembly)
     
@@ -995,7 +995,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
       message = "Could not retrieve value from GRN@config$TFBS_filePattern. Please rerun the function addTFBS, as this was added in a recent version of the package."
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
-   
+    
     
     # Check whether we have peaks on chromosomes not part of the sequence length reference. If yes, discard them
     annotation_discared = dplyr::filter(GRN@data$peaks$consensusPeaks, ! .data$chr %in% names(seqlengths))
@@ -1006,8 +1006,8 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
       tbl_discarded = tbl_discarded[which(tbl_discarded > 0)]
       
       futile.logger::flog.warn(paste0("Found ", sum(tbl_discarded), " regions from chromosomes without a reference length. ", 
-                       "Typically, these are random fragments from known or unknown chromosomes. The following regions will be discarded: \n",
-                       paste0(names(tbl_discarded), " (", tbl_discarded, ")", collapse = ",")))
+                                      "Typically, these are random fragments from known or unknown chromosomes. The following regions will be discarded: \n",
+                                      paste0(names(tbl_discarded), " (", tbl_discarded, ")", collapse = ",")))
       
       GRN@data$peaks$consensusPeaks = dplyr::filter(GRN@data$peaks$consensusPeaks, .data$chr %in% names(seqlengths))
     }
@@ -1027,9 +1027,9 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     if (!all(colnames(TFBS_bindingMatrix.df) %in% GRN@config$allTF)) {
       
       message = paste0("Internal mismatch detected between the TF names and the TF names derived from the translation file (see log, column HOCOID).", 
-                        "This may happen if the genome assembly version has been changed, but intermediate files have not been properly recreated. ",
-                        "Set the parameter forceRerun to TRUE and rerun the script.")
-
+                       "This may happen if the genome assembly version has been changed, but intermediate files have not been properly recreated. ",
+                       "Set the parameter forceRerun to TRUE and rerun the script.")
+      
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
@@ -1037,11 +1037,11 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     filteredPeaks = dplyr::filter(GRN@data$peaks$counts_norm, isFiltered) %>% dplyr::pull(peakID)
     # Collect binary 0/1 binding matrix from all TF and concatenate
     GRN@data$TFs$TF_peak_overlap = TFBS_bindingMatrix.df %>%
-        dplyr::mutate(peakID = GRN@data$peaks$consensusPeaks$peakID,
-                      isFiltered = peakID %in% filteredPeaks) %>%
-        dplyr::mutate_if(is.logical, as.numeric) %>%
-        dplyr::select(tidyselect::all_of(sort(GRN@config$allTF)), isFiltered)
-        
+      dplyr::mutate(peakID = GRN@data$peaks$consensusPeaks$peakID,
+                    isFiltered = peakID %in% filteredPeaks) %>%
+      dplyr::mutate_if(is.logical, as.numeric) %>%
+      dplyr::select(tidyselect::all_of(sort(GRN@config$allTF)), isFiltered)
+    
     GRN@data$TFs$TF_peak_overlap = .asSparseMatrix(as.matrix(GRN@data$TFs$TF_peak_overlap), 
                                                    convertNA_to_zero = FALSE, 
                                                    dimnames = list(GRN@data$peaks$consensusPeaks$peakID, colnames(GRN@data$TFs$TF_peak_overlap)))
@@ -1050,7 +1050,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     # We resort it to match the countsPeaks.norm
     # TODO: Here could be an error due to differences in sorting. Also, whether or not all or the filtered version shall be used
     stopifnot(identical(rownames(GRN@data$TFs$TF_peak_overlap), GRN@data$peaks$counts_norm$peakID))
-
+    
   } 
   
   GRN
@@ -1233,7 +1233,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
   checkmate::assertChoice(normalization, c("cyclicLoess", "sizeFactors", "quantile", "none"))
   checkmate::assertCharacter(name, min.chars = 1, len = 1)
   checkmate::assertFlag(forceRerun)
-
+  
   forbiddenNames = "expression"
   .checkForbiddenNames(name, forbiddenNames)
   
@@ -1247,7 +1247,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
       tibble::as_tibble()
     
     countsPeaks = .normalizeNewDataWrapper(GRN@data$peaks$counts_orig, normalization = normalization)
-
+    
     stopifnot(identical(nrow(countsPeaks), nrow(GRN@data$TFs$TF_peak_overlap)))
     
     #Select a maximum set of TFs to run this for
@@ -1258,10 +1258,10 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     # Calculating TF activity is done for all TF that are available
     TF.activity.m = matrix(NA, nrow = length(allTF), ncol = length(GRN@config$sharedSamples), 
                            dimnames = list(allTF, GRN@config$sharedSamples))
-  
+    
     
     pb <- progress::progress_bar$new(total = length(allTF))
-
+    
     for (TFCur in allTF) {
       
       pb$tick()
@@ -1297,7 +1297,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     
     futile.logger::flog.info(paste0("Data already exists in object (slot ", name, "), nothing to do. Set forceRerun = TRUE to regenerate and overwrite."))
   }
- 
+  
   
   .printExecutionTime(start)
   
@@ -1416,7 +1416,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     
     forbiddenNames = c("TF_activity", "expression")
     .checkForbiddenNames(name, forbiddenNames)
-
+    
     idColumns = idColumn
     data = dplyr::rename(data, TF.name = !!(nameColumn))
     idColumns = c(idColumns, "TF.name")
@@ -1481,7 +1481,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     
     
   } else {
-      
+    
     futile.logger::flog.info(paste0("Data already exists in object, nothing to do. Set forceRerun = TRUE to regenerate and overwrite."))
     
   }
@@ -1507,7 +1507,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
+#' GRN = AR_classification_wrapper(GRN, outputFolder = ".", forceRerun = FALSE)
 #' @export
 AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05, 
                                       plot_minNoTFBS_heatmap = 100, deleteIntermediateData = TRUE,
@@ -1516,7 +1516,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
                                       forceRerun = FALSE) {
   
   GRN = .addFunctionLogToObject(GRN)
-    
+  
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertNumber(significanceThreshold_Wilcoxon, lower = 0, upper = 1)
   checkmate::assertNumber(plot_minNoTFBS_heatmap, lower = 1)
@@ -1544,7 +1544,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
   for (connectionTypeCur in connectionTypes) {
     
     futile.logger::flog.info(paste0(" Connection type ", connectionTypeCur, "\n"))
-
+    
     for (permutationCur in allPermutations) {
       
       futile.logger::flog.info(paste0(" ", .getPermStr(permutationCur), "\n"))
@@ -1562,6 +1562,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
           is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_cor_median_background) |
           is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_foreground) |
           is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_background) |
+          is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor) |
           forceRerun
       ) {
         
@@ -1569,17 +1570,17 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
         
         if (connectionTypeCur == "expression") {
           counts1 = getCounts(GRN, type = "rna", norm = TRUE, permuted = as.logical(permutationCur))
-
+          
         } else {
           
           # TF activity data
           counts1 = GRN@data$TFs[[connectionTypeCur]] %>% 
             dplyr::select(-TF.name)
-
+          
         } 
         
         futile.logger::flog.info(paste0(" Correlate ", connectionTypeCur, " and peak counts"))
-
+        
         counts_peaks = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
         
         TF_peak_cor = .correlateMatrices(matrix1      = counts1, 
@@ -1592,13 +1593,15 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
         GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_cor_median_background = res.l[["median_background"]]
         GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_foreground   = res.l[["foreground"]]
         GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_background   = res.l[["background"]]
+        
+        GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor = TF_peak_cor
       }
       
       # Final classification: Calculate thresholds by calculating the quantiles of the background and compare the real values to the background
       if (is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$act.rep.thres.l) | forceRerun) {
         GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$act.rep.thres.l = 
           .calculate_classificationThresholds(.asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_background), 
-                                             GRN@config$parameters)
+                                              GRN@config$parameters)
       }
       
       if (is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF.classification) | forceRerun) {
@@ -1627,9 +1630,9 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
         fileCur = paste0(outputFolder, .getOutputFileName("plot_class_density"), "_", connectionTypeCur, suffixFile)
         if (!file.exists(fileCur) | forceRerun) {
           .plot_density(.asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_foreground),
-                       .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_background), 
-                       corMethod,
-                       fileCur, width = 5, height = 5)
+                        .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_background), 
+                        corMethod,
+                        fileCur, width = 5, height = 5)
         } else {
           futile.logger::flog.info(paste0("  File ", fileCur, " already exists, not overwriting since forceRerun = FALSE"))
         }
@@ -1649,17 +1652,19 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
         
         fileCur = paste0(outputFolder, .getOutputFileName("plot_class_densityClass"), "_", connectionTypeCur, suffixFile)
         if (!file.exists(fileCur) | forceRerun) {
+          
+          TF_peak_cor = GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor
           peak_TF_overlapCur.df = .filterSortAndShuffle_peakTF_overlapTable(GRN, permutationCur, TF_peak_cor)
           .plot_heatmapAR(TF.peakMatrix.df = peak_TF_overlapCur.df, 
-                         HOCOMOCO_mapping.df.exp = GRN@data$TFs$translationTable %>% dplyr::mutate(TF = TF.name), 
-                         sort.cor.m = TF_peak_cor, 
-                         par.l = GRN@config$parameters, 
-                         corMethod = corMethod,
-                         median.cor.tfs = .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_cor_median_foreground), 
-                         median.cor.tfs.non = .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_cor_median_background), 
-                         act.rep.thres.l = GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$act.rep.thres.l, 
-                         finalClassification = GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF.classification,
-                         file = fileCur, width = 8, height = 15)
+                          HOCOMOCO_mapping.df.exp = GRN@data$TFs$translationTable %>% dplyr::mutate(TF = TF.name), 
+                          sort.cor.m = TF_peak_cor, 
+                          par.l = GRN@config$parameters, 
+                          corMethod = corMethod,
+                          median.cor.tfs = .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_cor_median_foreground), 
+                          median.cor.tfs.non = .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_cor_median_background), 
+                          act.rep.thres.l = GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$act.rep.thres.l, 
+                          finalClassification = GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF.classification,
+                          file = fileCur, width = 8, height = 15)
         } else {
           futile.logger::flog.info(paste0("  File ", fileCur, " already exists, not overwriting since forceRerun = FALSE"))
         }
@@ -1725,7 +1730,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = addConnections_TF_peak(GRN, forceRerun = FALSE)
+#' GRN = addConnections_TF_peak(GRN, outputFolder = ".", forceRerun = FALSE)
 #' @export
 addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails = FALSE, outputFolder = NULL, 
                                     corMethod = "pearson", 
@@ -1734,9 +1739,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                                     maxFDRToStore = 0.3, 
                                     useGCCorrection = FALSE, percBackground_size = 75, percBackground_resample = TRUE,
                                     forceRerun = FALSE) {
-    
+  
   GRN = .addFunctionLogToObject(GRN)
-
+  
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertFlag(plotDiagnosticPlots)
   checkmate::assertFlag(plotDetails)
@@ -1744,18 +1749,18 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
   
   GRN = .checkAndUpdateConnectionTypes(GRN) # For compatibility with older versions
   checkmate::assertSubset(connectionTypes, GRN@config$TF_peak_connectionTypes)
-
+  
   checkmate::assertLogical(removeNegativeCorrelation, any.missing = FALSE, len = length(connectionTypes))
   
   
   #checkmate::assert(checkmate::checkSubset(add_TFActivity, c("none", "calculate", names(slot(GRN, "data")[["TFs"]]))))
-
+  
   checkmate::assertNumber(maxFDRToStore, lower = 0, upper = 1)
   checkmate::assertFlag(useGCCorrection)
   checkmate::assertNumber(percBackground_size, lower = 0, upper = 100)
   checkmate::assertFlag(percBackground_resample)
   checkmate::assertFlag(forceRerun)
-
+  
   
   if (is.null(GRN@connections$TF_peaks) | forceRerun) {
     
@@ -1763,12 +1768,12 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     GRN@config$parameters$corMethod_TF_Peak = corMethod
     GRN@config$parameters$useGCCorrection = useGCCorrection 
-
+    
     if (is.null(GRN@data$TFs$TF_peak_overlap)) {
-        message = paste0("Could not find peak - TF matrix. Run the function overlapPeaksAndTFBS first / again")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      message = paste0("Could not find peak - TF matrix. Run the function overlapPeaksAndTFBS first / again")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
-
+    
     for (permutationCur in 0:.getMaxPermutation(GRN)) {
       
       futile.logger::flog.info(paste0("\n", .getPermStr(permutationCur), "\n"))
@@ -1792,11 +1797,11 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       
     } #end for each permutation
     
-
+    
     if (plotDiagnosticPlots) {
-        
-        plotDiagnosticPlots_TFPeaks(GRN, outputFolder = outputFolder, plotDetails = FALSE, forceRerun = forceRerun)
-        
+      
+      plotDiagnosticPlots_TFPeaks(GRN, outputFolder = outputFolder, plotDetails = FALSE, forceRerun = forceRerun)
+      
     }
     
   }
@@ -1810,10 +1815,10 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                                 removeNegativeCorrelation, maxFDRToStore = 0.3 , percBackground_size = 75, percBackground_resample = TRUE, plotDetails = FALSE) {
   
   start = Sys.time()
-
+  
   if (plotDetails) {
-      message = "Plotting details is not supported currently. Set plotDetails = FALSE."
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    message = "Plotting details is not supported currently. Set plotDetails = FALSE."
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
   peak_TF_overlap.df= .filterSortAndShuffle_peakTF_overlapTable(GRN, perm)
@@ -1831,17 +1836,17 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     futile.logger::flog.info(paste0("Calculate TF-peak links for connection type ", connectionTypeCur))
     start2 = Sys.time()
-
+    
     if (connectionTypeCur == "expression") {
       
       counts_connectionTypeCur = getCounts(GRN, type = "rna", norm = TRUE, permuted = as.logical(perm))
-
+      
     } else {
       
       # Keep only Ensembl ID here
       counts_connectionTypeCur = GRN@data$TFs[[connectionTypeCur]] %>% 
         dplyr::select(-TF.name)
-
+      
     } 
     
     futile.logger::flog.info(paste0(" Correlate ", connectionTypeCur, " and peak counts"))
@@ -1872,7 +1877,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     sort.cor.m.sort<-peaksCor.m[,colnames(peak_TF_overlap.df)]
     
     stopifnot(identical(colnames(sort.cor.m.sort), colnames(peak_TF_overlap.df)))
-
+    
     futile.logger::flog.info(paste0("  Compute FDR for each TF. This may take a while..."))
     
     pb <- progress::progress_bar$new(total = length(allTF))
@@ -1880,9 +1885,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     peaksFiltered = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!isFiltered) 
     
     if (!useGCCorrection) {
-        minPerc = 100
-        # Since we do not control for this, we set it to NA
-        background_match_success = NA
+      minPerc = 100
+      # Since we do not control for this, we set it to NA
+      background_match_success = NA
     }
     
     for (TFCur in allTF) {
@@ -1895,7 +1900,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       
       tp <- sort.cor.m.sort[overlapYes, TFCur]
       n_tp       = length(tp)
-
+      
       peaksForeground =                     peaksFiltered %>% dplyr::slice(overlapYes)
       peaksBackground = peaksBackgroundGC = peaksFiltered %>% dplyr::slice(overlapNo)
       
@@ -1906,138 +1911,138 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       #start = Sys.time()
       # GC-adjust background and select background regions according to foreground
       if (useGCCorrection) {
+        
+        fp_orig <- sort.cor.m.sort[overlapNo, TFCur]
+        n_fp_orig  = length(fp_orig)
+        
+        # Get GC info from those peaks from the foreground
+        GC_classes_foreground.df = peaksForeground %>%
+          dplyr::group_by(GC_class) %>%
+          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(peak_width), peak_width_sd = sd(peak_width)) %>%
+          dplyr::ungroup() %>% 
+          tidyr::complete(GC_class, fill = list(n = 0)) %>%
+          dplyr::mutate(n_rel = .data$n / nPeaksForeground, type = "foreground") %>%
+          dplyr::arrange(dplyr::desc(n_rel))
+        
+        GC_classes_background.df = peaksBackground %>%
+          dplyr::group_by(GC_class) %>%
+          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(peak_width), peak_width_sd = sd(peak_width)) %>%
+          dplyr::ungroup() %>% 
+          tidyr::complete(GC_class, fill = list(n = 0)) %>%
+          dplyr::mutate(n_rel = .data$n / nPeaksBackground, type = "background_orig")
+        
+        
+        
+        background_match_success = TRUE
+        
+        if (!is.null(percBackground_size)) {
+          minPerc = percBackground_size
+        } else {
           
-          fp_orig <- sort.cor.m.sort[overlapNo, TFCur]
-          n_fp_orig  = length(fp_orig)
+          # Find a matching background of maximal size
+          minPerc= min(GC_class.all$maxSizeBackground) / nPeaksBackground
           
-          # Get GC info from those peaks from the foreground
-          GC_classes_foreground.df = peaksForeground %>%
-              dplyr::group_by(GC_class) %>%
-              dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(peak_width), peak_width_sd = sd(peak_width)) %>%
-              dplyr::ungroup() %>% 
-              tidyr::complete(GC_class, fill = list(n = 0)) %>%
-              dplyr::mutate(n_rel = .data$n / nPeaksForeground, type = "foreground") %>%
-              dplyr::arrange(dplyr::desc(n_rel))
+          threshold_percentage = 0.05
+          minPerc = .findMaxBackgroundSize(GC_classes_foreground.df, GC_classes_background.df, peaksBackground, threshold_percentage =  threshold_percentage)
           
-          GC_classes_background.df = peaksBackground %>%
-              dplyr::group_by(GC_class) %>%
-              dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(peak_width), peak_width_sd = sd(peak_width)) %>%
-              dplyr::ungroup() %>% 
-              tidyr::complete(GC_class, fill = list(n = 0)) %>%
-              dplyr::mutate(n_rel = .data$n / nPeaksBackground, type = "background_orig")
-          
-          
-          
-          background_match_success = TRUE
+          if (minPerc == 0) {
+            #futile.logger::flog.warn(paste0(" Mimicking the foreground failed for TF ", TFCur, ". The background will only be approximated as good as possible using 5% of the peaks."))
+            minPerc = 5
+            background_match_success = FALSE
+          }
+        }
+        
+        targetNoPeaks = minPerc/100 * nPeaksBackground
+        
+        # TODO: Make 1000 a parameter stored somewhere
+        # Ensure a minimum no of points in background, even if this sacrifices the mimicking of the distributions
+        if (targetNoPeaks < 1000) {
           
           if (!is.null(percBackground_size)) {
-              minPerc = percBackground_size
+            #futile.logger::flog.warn(paste0("Number of peaks in background is smaller than 1000 for TF ", TFCur, ". Increasing in steps of 5% until a value > 1000 is found.This warning results from a too low value for the parameter percBackground_size"))
           } else {
-              
-              # Find a matching background of maximal size
-              minPerc= min(GC_class.all$maxSizeBackground) / nPeaksBackground
-              
-              threshold_percentage = 0.05
-              minPerc = .findMaxBackgroundSize(GC_classes_foreground.df, GC_classes_background.df, peaksBackground, threshold_percentage =  threshold_percentage)
-              
-              if (minPerc == 0) {
-                  #futile.logger::flog.warn(paste0(" Mimicking the foreground failed for TF ", TFCur, ". The background will only be approximated as good as possible using 5% of the peaks."))
-                  minPerc = 5
-                  background_match_success = FALSE
-              }
+            background_match_success = FALSE
           }
           
-          targetNoPeaks = minPerc/100 * nPeaksBackground
-          
-          # TODO: Make 1000 a parameter stored somewhere
-          # Ensure a minimum no of points in background, even if this sacrifices the mimicking of the distributions
-          if (targetNoPeaks < 1000) {
-              
-              if (!is.null(percBackground_size)) {
-                  #futile.logger::flog.warn(paste0("Number of peaks in background is smaller than 1000 for TF ", TFCur, ". Increasing in steps of 5% until a value > 1000 is found.This warning results from a too low value for the parameter percBackground_size"))
-              } else {
-                  background_match_success = FALSE
-              }
-              
-              targetNoPeaksNew = targetNoPeaks
-              while(targetNoPeaksNew < 1000) {
-                  minPerc = minPerc + 5
-                  targetNoPeaksNew = minPerc/100 * nPeaksBackground
-              }
-              
-              
+          targetNoPeaksNew = targetNoPeaks
+          while(targetNoPeaksNew < 1000) {
+            minPerc = minPerc + 5
+            targetNoPeaksNew = minPerc/100 * nPeaksBackground
           }
           
-          # Add sel. minPerc to table and calculate required frequencies
           
-          GC_classes_all.df = dplyr::full_join(GC_classes_foreground.df, GC_classes_background.df, suffix = c(".fg",".bg"), by = "GC_class") %>%
-              dplyr::mutate(maxSizeBackground = n.bg / n_rel.fg,
-                            n.bg.needed = floor(n_rel.fg * targetNoPeaks), 
-                            n.bg.needed.perc = n.bg / n.bg.needed) 
+        }
+        
+        # Add sel. minPerc to table and calculate required frequencies
+        
+        GC_classes_all.df = dplyr::full_join(GC_classes_foreground.df, GC_classes_background.df, suffix = c(".fg",".bg"), by = "GC_class") %>%
+          dplyr::mutate(maxSizeBackground = n.bg / n_rel.fg,
+                        n.bg.needed = floor(n_rel.fg * targetNoPeaks), 
+                        n.bg.needed.perc = n.bg / n.bg.needed) 
+        
+        
+        #futile.logger::flog.info(paste0( " GC-adjustment: Randomly select a total of ", round(targetNoPeaks,0), 
+        #                  " peaks (", minPerc, " %) from the background (out of ", nrow(peaksBackground), 
+        #                  " overall) in a GC-binwise fashion to mimick the foreground distribution"))
+        
+        # Now we know the percentage, lets select an appropriate background
+        # Sample peaks from background for each GC-bin specifically
+        peakIDsSel = c()
+        for (i in seq_len(nrow(GC_classes_foreground.df))) {
           
+          peaksBackgroundGCCur =  peaksBackground %>% dplyr::filter(GC_class == GC_classes_foreground.df$GC_class[i])
           
-          #futile.logger::flog.info(paste0( " GC-adjustment: Randomly select a total of ", round(targetNoPeaks,0), 
-          #                  " peaks (", minPerc, " %) from the background (out of ", nrow(peaksBackground), 
-          #                  " overall) in a GC-binwise fashion to mimick the foreground distribution"))
-          
-          # Now we know the percentage, lets select an appropriate background
-          # Sample peaks from background for each GC-bin specifically
-          peakIDsSel = c()
-          for (i in seq_len(nrow(GC_classes_foreground.df))) {
-              
-              peaksBackgroundGCCur =  peaksBackground %>% dplyr::filter(GC_class == GC_classes_foreground.df$GC_class[i])
-              
-              if (nrow( peaksBackgroundGCCur) == 0) {
-                  next
-              }
-              
-              #Select the minimum, which for low % classes is smaller than the required number to mimic the foreground 100%
-              if (percBackground_resample) {
-                  nPeaksCur = GC_classes_all.df$n.bg.needed[i]    
-              } else {
-                  nPeaksCur = min(GC_classes_all.df$n.bg.needed[i], nrow(peaksBackgroundGCCur))
-              }
-              
-              if (GC_classes_all.df$n.bg.needed[i] > nrow(peaksBackgroundGCCur)) {
-                  peakIDsSel = c(peakIDsSel, peaksBackgroundGCCur %>% dplyr::sample_n(nPeaksCur, replace = percBackground_resample) %>% dplyr::pull(peakID))  
-              } else {
-                  peakIDsSel = c(peakIDsSel, peaksBackgroundGCCur %>% dplyr::sample_n(nPeaksCur, replace = FALSE) %>% dplyr::pull(peakID))
-              }
-              # Take a sample from the background, and record the row numbers
-              
+          if (nrow( peaksBackgroundGCCur) == 0) {
+            next
           }
           
-          # We cannot simply select now the peakIDs, as some peaks may be present multiple times
-          #peaksBackgroundGC = peaksBackground %>% dplyr::filter(peakID %in% peakIDsSel) 
-          peaksBackgroundGC = peaksBackground[match(peakIDsSel, peaksBackground$peakID),] 
-          
-          
-          if (is.null(plots_GC.l[[TFCur]])) {
-              plots_GC.l[[TFCur]] = .generateTF_GC_diagnosticPlots(TFCur, GC_classes_foreground.df, GC_classes_background.df, GC_classes_all.df, peaksForeground, peaksBackground, peaksBackgroundGC)
+          #Select the minimum, which for low % classes is smaller than the required number to mimic the foreground 100%
+          if (percBackground_resample) {
+            nPeaksCur = GC_classes_all.df$n.bg.needed[i]    
+          } else {
+            nPeaksCur = min(GC_classes_all.df$n.bg.needed[i], nrow(peaksBackgroundGCCur))
           }
           
-
-          # Select the rows by their peak IDs
-          fp    = sort.cor.m.sort[peakIDsSel, TFCur]
+          if (GC_classes_all.df$n.bg.needed[i] > nrow(peaksBackgroundGCCur)) {
+            peakIDsSel = c(peakIDsSel, peaksBackgroundGCCur %>% dplyr::sample_n(nPeaksCur, replace = percBackground_resample) %>% dplyr::pull(peakID))  
+          } else {
+            peakIDsSel = c(peakIDsSel, peaksBackgroundGCCur %>% dplyr::sample_n(nPeaksCur, replace = FALSE) %>% dplyr::pull(peakID))
+          }
+          # Take a sample from the background, and record the row numbers
           
-          fp_orig = sort.cor.m.sort[overlapNo, TFCur]
-          n_fp_orig  = length(fp_orig)
-      
+        }
+        
+        # We cannot simply select now the peakIDs, as some peaks may be present multiple times
+        #peaksBackgroundGC = peaksBackground %>% dplyr::filter(peakID %in% peakIDsSel) 
+        peaksBackgroundGC = peaksBackground[match(peakIDsSel, peaksBackground$peakID),] 
+        
+        
+        if (is.null(plots_GC.l[[TFCur]])) {
+          plots_GC.l[[TFCur]] = .generateTF_GC_diagnosticPlots(TFCur, GC_classes_foreground.df, GC_classes_background.df, GC_classes_all.df, peaksForeground, peaksBackground, peaksBackgroundGC)
+        }
+        
+        
+        # Select the rows by their peak IDs
+        fp    = sort.cor.m.sort[peakIDsSel, TFCur]
+        
+        fp_orig = sort.cor.m.sort[overlapNo, TFCur]
+        n_fp_orig  = length(fp_orig)
+        
       } else {
-          # TODO: Redudnant so far in this case
-          fp    =  fp_orig = sort.cor.m.sort[overlapNo, TFCur]
-          n_fp_orig  = length(fp_orig)
+        # TODO: Redudnant so far in this case
+        fp    =  fp_orig = sort.cor.m.sort[overlapNo, TFCur]
+        n_fp_orig  = length(fp_orig)
       }
       
       n_fp = length(fp)
-
+      
       cor.peak.tf = tibble::tibble(peak.ID    = rownames(sort.cor.m.sort)[overlapYes], 
-                           TF_peak.r  = sort.cor.m.sort[overlapYes, TFCur],
-                           TF.name    = as.factor(TFCur),
-                           TF_peak.connectionType = as.factor(connectionTypeCur))
+                                   TF_peak.r  = sort.cor.m.sort[overlapYes, TFCur],
+                                   TF.name    = as.factor(TFCur),
+                                   TF_peak.connectionType = as.factor(connectionTypeCur))
       
       #val.sign      = (median(tp) - median(fp))
-     # val.sign_orig = (median(tp) - median(fp_orig))
+      # val.sign_orig = (median(tp) - median(fp_orig))
       
       #.printExecutionTime(start, "Interval 2: ")
       
@@ -2068,26 +2073,26 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         cor.peak.tf$TF_peak.r_bin <- as.character(cut(cor.peak.tf$TF_peak.r, breaks = stepsCur, right = rightOpen, include.lowest = TRUE))
         #.printExecutionTime(start, "Interval 3a: ")
         #start = Sys.time()
-    
+        
         
         i = 0
         for (thres in stepsCur) {
-            i = i + 1
+          i = i + 1
+          
+          # na.rm = TRUE for all sums here to make sure NAs will not cause a problem
+          if (directionCur == "pos") {
             
-            # na.rm = TRUE for all sums here to make sure NAs will not cause a problem
-            if (directionCur == "pos") {
-                
-                n_tp2.vec[i]      = sum(tp>=thres, na.rm = TRUE)
-                n_fp2.vec[i]      = sum(fp>=thres, na.rm = TRUE)
-                n_fp2_orig.vec[i] = sum(fp_orig>=thres, na.rm = TRUE)
-                
-            } else {
-                
-                n_tp2.vec[i]      = sum(tp<thres, na.rm = TRUE)
-                n_fp2.vec[i]      = sum(fp<thres, na.rm = TRUE)
-                n_fp2_orig.vec[i] = sum(fp_orig<thres, na.rm = TRUE)
-            }
+            n_tp2.vec[i]      = sum(tp>=thres, na.rm = TRUE)
+            n_fp2.vec[i]      = sum(fp>=thres, na.rm = TRUE)
+            n_fp2_orig.vec[i] = sum(fp_orig>=thres, na.rm = TRUE)
             
+          } else {
+            
+            n_tp2.vec[i]      = sum(tp<thres, na.rm = TRUE)
+            n_fp2.vec[i]      = sum(fp<thres, na.rm = TRUE)
+            n_fp2_orig.vec[i] = sum(fp_orig<thres, na.rm = TRUE)
+          }
+          
         }
         
         #.printExecutionTime(start, "Interval 3b_new: ")
@@ -2097,30 +2102,30 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         # The maximum number is then identical to the maximum for the true positives
         n_fp2_norm.vec   = (n_fp2.vec/(n_fp/n_tp))
         n_fp2_orig_norm.vec = (n_fp2_orig.vec/(n_fp_orig/n_tp))
-
+        
         #TODO: Decide for a variant.  +1 for raw or unnormalized values?
-
+        
         
         fdr.curve = tibble::tibble( 
-                            TF_peak.r_bin2  = stepsCur,
-                            tpvalue = n_tp2.vec, 
-
-                            fpvalue = n_fp2.vec,
-                            fpvalue_orig = n_fp2_orig.vec,
-                            
-                            fpvalue_norm = n_fp2_norm.vec,
-                            fpvalue_norm_orig = n_fp2_orig_norm.vec,
-                            
-                            TF_peak.fdr_orig   = (n_fp2_orig_norm.vec) / (n_fp2_orig_norm.vec + n_tp2.vec),
-                            TF_peak.fdr     = (n_fp2_norm.vec) / (n_fp2_norm.vec + n_tp2.vec),
-                            # TF_peak.fdr_orig   = (n_fp2_orig_norm.vec + 1) / (n_fp2_orig_norm.vec + n_tp2.vec + 1),
-                            # TF_peak.fdr     = (n_fp2_norm.vec +1) / (n_fp2_norm.vec + n_tp2.vec + 1),
-                            # 
-                            TF_peak.fdr_direction     = directionCur,
-                            TF_peak.r_bin      = 
-                              as.character(cut(TF_peak.r_bin2, breaks = stepsCur, right = rightOpen, include.lowest = TRUE))
+          TF_peak.r_bin2  = stepsCur,
+          tpvalue = n_tp2.vec, 
+          
+          fpvalue = n_fp2.vec,
+          fpvalue_orig = n_fp2_orig.vec,
+          
+          fpvalue_norm = n_fp2_norm.vec,
+          fpvalue_norm_orig = n_fp2_orig_norm.vec,
+          
+          TF_peak.fdr_orig   = (n_fp2_orig_norm.vec) / (n_fp2_orig_norm.vec + n_tp2.vec),
+          TF_peak.fdr     = (n_fp2_norm.vec) / (n_fp2_norm.vec + n_tp2.vec),
+          # TF_peak.fdr_orig   = (n_fp2_orig_norm.vec + 1) / (n_fp2_orig_norm.vec + n_tp2.vec + 1),
+          # TF_peak.fdr     = (n_fp2_norm.vec +1) / (n_fp2_norm.vec + n_tp2.vec + 1),
+          # 
+          TF_peak.fdr_direction     = directionCur,
+          TF_peak.r_bin      = 
+            as.character(cut(TF_peak.r_bin2, breaks = stepsCur, right = rightOpen, include.lowest = TRUE))
         ) 
-
+        
         # Derive connection summaries for all TF for both directions
         # Get no. of connections per bin, here make sure to also include that have n = 0
         
@@ -2159,10 +2164,10 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
           dplyr::rename(n_tp = tpvalue, n_fp = fpvalue, n_fp_norm = fpvalue_norm) %>%
           dplyr::distinct() %>%
           dplyr::arrange(TF_peak.r_bin)
-
-      
+        
+        
         # Collect data for additional QC plots before they are filtered
-            
+        
         # Filter now high FDR connections to save space and time
         # DISCARD other rows altogether
         # Left join here is what we want, as we need this df only for "real" data
@@ -2171,81 +2176,81 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
           dplyr::select(TF.name, TF_peak.r_bin, TF_peak.r, TF_peak.fdr, 
                         TF_peak.fdr_orig, peak.ID, TF_peak.fdr_direction, 
                         TF_peak.connectionType, tidyselect::contains("value"))
-
-
+        
+        
         if (!plotDetails) {
-            tblFilt.df = dplyr::select(tblFilt.df, -tidyselect::contains("value"))
+          tblFilt.df = dplyr::select(tblFilt.df, -tidyselect::contains("value"))
         }
         
         connections_all.l[[indexStr]] = tblFilt.df
         
         #.printExecutionTime(start, "Interval 4: ")
         #start = Sys.time()
-
+        
       } # end for directionCur in c("pos", "neg")
-
+      
     } # end for each TF
-
+    
     .printExecutionTime(start2, prefix = "  ")
     
   } # end for each connectionType
   
-
+  
   .printExecutionTime(start)
   list(main            = data.table::rbindlist(connections_all.l), 
        connectionStats = data.table::rbindlist(connectionStats_all.l), 
        plots_GC        = plots_GC.l
-       )
+  )
 }
 
 .findMaxBackgroundSize <- function (GC_classes_foreground.df, GC_classes_background.df, peaksBackground, threshold_percentage = 0.05) {
+  
+  # Iterate over different background sizes
+  minPerc = 0
+  for (percCur in c(seq(100,10,-5),5)) {
     
-    # Iterate over different background sizes
-    minPerc = 0
-    for (percCur in c(seq(100,10,-5),5)) {
-        
-        if (minPerc > 0) next
-        targetNoPeaks = percCur/100 * nrow(peaksBackground)
-        
-        #futile.logger::flog.info(paste0("Percentage of background: ", percCur))
-        
-        #Check for each GC bin in the foreground, starting with the most abundant, whether we have enough background peaks to sample from
-        
-        # threshold_percentage: From which percentage of GC bin frequency from the foreground should the mimicking fail?
-        #The motivation is that very small bins that have no weight in the foreground will not cause a failure of the mimicking
-
-
-        for (i in seq_len(nrow(GC_classes_foreground.df))) {
-            
-            n_rel    = GC_classes_foreground.df$n_rel[i]
-            GC_class.cur = GC_classes_foreground.df$GC_class[i]
-            
-            requiredNoPeaks = round(n_rel * targetNoPeaks, 0)
-            # Check in background
-            availableNoPeaks = GC_classes_background.df %>% 
-                dplyr::filter(GC_class == GC_class.cur) %>%
-                dplyr::pull(.data$n)
-            #futile.logger::flog.info(paste0(" GC.class ", GC.class.cur, ": Required: ", requiredNoPeaks, ", available: ", availableNoPeaks))
-            if ( availableNoPeaks < requiredNoPeaks) {
-                #futile.logger::flog.info(paste0("  Not enough"))
-            }
-            if (availableNoPeaks < requiredNoPeaks & n_rel > threshold_percentage) {
-                #futile.logger::flog.info(paste0(" Mimicking distribution FAILED (GC class ", GC.class.cur, " could not be mimicked"))
-                break
-            }
-            
-            if (i == nrow(GC_classes_foreground.df)) {
-                minPerc = percCur
-                #futile.logger::flog.info(paste0("Found max. percentage of background that is able to mimick the foreground: ", percCur))
-                
-            }
-            
-        }  # end of  for (i in 1:nrow(GC_classes_foreground.df)) {
-        
-        
-    } # end for all percentages
+    if (minPerc > 0) next
+    targetNoPeaks = percCur/100 * nrow(peaksBackground)
     
-    minPerc
+    #futile.logger::flog.info(paste0("Percentage of background: ", percCur))
+    
+    #Check for each GC bin in the foreground, starting with the most abundant, whether we have enough background peaks to sample from
+    
+    # threshold_percentage: From which percentage of GC bin frequency from the foreground should the mimicking fail?
+    #The motivation is that very small bins that have no weight in the foreground will not cause a failure of the mimicking
+    
+    
+    for (i in seq_len(nrow(GC_classes_foreground.df))) {
+      
+      n_rel    = GC_classes_foreground.df$n_rel[i]
+      GC_class.cur = GC_classes_foreground.df$GC_class[i]
+      
+      requiredNoPeaks = round(n_rel * targetNoPeaks, 0)
+      # Check in background
+      availableNoPeaks = GC_classes_background.df %>% 
+        dplyr::filter(GC_class == GC_class.cur) %>%
+        dplyr::pull(.data$n)
+      #futile.logger::flog.info(paste0(" GC.class ", GC.class.cur, ": Required: ", requiredNoPeaks, ", available: ", availableNoPeaks))
+      if ( availableNoPeaks < requiredNoPeaks) {
+        #futile.logger::flog.info(paste0("  Not enough"))
+      }
+      if (availableNoPeaks < requiredNoPeaks & n_rel > threshold_percentage) {
+        #futile.logger::flog.info(paste0(" Mimicking distribution FAILED (GC class ", GC.class.cur, " could not be mimicked"))
+        break
+      }
+      
+      if (i == nrow(GC_classes_foreground.df)) {
+        minPerc = percCur
+        #futile.logger::flog.info(paste0("Found max. percentage of background that is able to mimick the foreground: ", percCur))
+        
+      }
+      
+    }  # end of  for (i in 1:nrow(GC_classes_foreground.df)) {
+    
+    
+  } # end for all percentages
+  
+  minPerc
 }
 
 
@@ -2271,7 +2276,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = addConnections_peak_gene(GRN, promoterRange = 10000, nCores = 2, forceRerun = FALSE)
+#' GRN = addConnections_peak_gene(GRN, promoterRange = 10000, outputFolder = ".")
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
                                      promoterRange = 250000, TADs = NULL,
                                      nCores = 4, 
@@ -2282,7 +2287,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                      forceRerun = FALSE) {
   
   GRN = .addFunctionLogToObject(GRN)
-    
+  
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertChoice(overlapTypeGene, c("TSS", "full"))
   checkmate::assertChoice(corMethod, c("pearson", "spearman"))
@@ -2297,58 +2302,58 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   
   # As this is independent of the underlying GRN, it has to be done only once
   
-    if (is.null(GRN@connections$peak_genes[["0"]]) | forceRerun) {
+  if (is.null(GRN@connections$peak_genes[["0"]]) | forceRerun) {
+    
+    GRN@config$parameters$promoterRange = promoterRange
+    GRN@config$parameters$corMethod_peak_gene = corMethod
+    
+    
+    GRN@connections$peak_genes = list()
+    
+    
+    # Check which gene types are available for the particular genome annotation
+    # Use all of them to collect statistics. Filtering can be done later
+    gene.types = unique(GRN@annotation$genes$gene.type)
+    
+    
+    for (permutationCur in 0:.getMaxPermutation(GRN)) {
       
-      GRN@config$parameters$promoterRange = promoterRange
-      GRN@config$parameters$corMethod_peak_gene = corMethod
+      futile.logger::flog.info(paste0("\n", .getPermStr(permutationCur), "\n"))
       
-
-      GRN@connections$peak_genes = list()
-
-      
-      # Check which gene types are available for the particular genome annotation
-      # Use all of them to collect statistics. Filtering can be done later
-      gene.types = unique(GRN@annotation$genes$gene.type)
-      
-
-      for (permutationCur in 0:.getMaxPermutation(GRN)) {
-        
-        futile.logger::flog.info(paste0("\n", .getPermStr(permutationCur), "\n"))
-        
-        if (permutationCur == 0) {
-          futile.logger::flog.info(paste0("Calculate peak-gene correlations for neighborhood size ", promoterRange))
-          randomizePeakGeneConnections = FALSE
-        } else {
-          futile.logger::flog.info(paste0("Calculate random peak-gene correlations for neighborhood size ", promoterRange))
-          randomizePeakGeneConnections = TRUE
-        }
-
-        GRN@connections$peak_genes[[as.character(permutationCur)]] = 
-          .calculatePeakGeneCorrelations(GRN, permutationCur,
-                                        TADs = TADs,
-                                        neighborhoodSize = promoterRange,
-                                        gene.types = names(gene.types),
-                                        corMethod = corMethod,
-                                        randomizePeakGeneConnections = randomizePeakGeneConnections,
-                                        overlapTypeGene,
-                                        nCores = nCores,
-                                        debugMode_nPlots = 0,
-                                        addRobustRegression = addRobustRegression
-          )
-        
+      if (permutationCur == 0) {
+        futile.logger::flog.info(paste0("Calculate peak-gene correlations for neighborhood size ", promoterRange))
+        randomizePeakGeneConnections = FALSE
+      } else {
+        futile.logger::flog.info(paste0("Calculate random peak-gene correlations for neighborhood size ", promoterRange))
+        randomizePeakGeneConnections = TRUE
       }
-
-    } 
+      
+      GRN@connections$peak_genes[[as.character(permutationCur)]] = 
+        .calculatePeakGeneCorrelations(GRN, permutationCur,
+                                       TADs = TADs,
+                                       neighborhoodSize = promoterRange,
+                                       gene.types = names(gene.types),
+                                       corMethod = corMethod,
+                                       randomizePeakGeneConnections = randomizePeakGeneConnections,
+                                       overlapTypeGene,
+                                       nCores = nCores,
+                                       debugMode_nPlots = 0,
+                                       addRobustRegression = addRobustRegression
+        )
+      
+    }
+    
+  } 
   
   if (plotDiagnosticPlots) {
     
     plotDiagnosticPlots_peakGene(GRN, outputFolder, gene.types = plotGeneTypes, useFiltered = FALSE, forceRerun= forceRerun)
-
+    
   }
   
   GRN
-   
-
+  
+  
   
 }
 
@@ -2497,7 +2502,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     nCores = 1
   }
   
-
+  
   #consensusPeaks = .createDF_fromCoordinates(getCounts(GRN, type = "peaks", norm = TRUE, 0)$peakID, "peakID")
   
   consensusPeaks = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!isFiltered)
@@ -2505,7 +2510,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   if (!is.null(TADs)) {
     
     futile.logger::flog.info(paste0("Integrate Hi-C data and overlap peaks and HI-C domains"))  
-
+    
     # Check format
     checkmate::assertCharacter(TADs$X1)
     checkmate::assertIntegerish(TADs$X2, lower = 1)
@@ -2518,7 +2523,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     } else {
       colnames(TADs)[4] = "ID"
     }
-
+    
     
     # Construct GRanges
     query   = .constructGRanges(consensusPeaks, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
@@ -2549,10 +2554,10 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     # Finally, do the actual overlaps
     overlapsAll = GenomicRanges::findOverlaps(query, subject, 
-                               minoverlap = 1,
-                               type = "any",
-                               select = "all",
-                               ignore.strand = TRUE)
+                                              minoverlap = 1,
+                                              type = "any",
+                                              select = "all",
+                                              ignore.strand = TRUE)
     
     
     query_row_ids  = S4Vectors::queryHits(overlapsAll)
@@ -2613,7 +2618,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
   
   # ITERATE THROUGH ALL PEAK_GENE PAIRS
-
+  
   permIndex = as.character(perm)
   
   countsPeaks.clean = dplyr::select(getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE), -peakID)
@@ -2641,7 +2646,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     nCores = 1
   }
   
-
+  
   res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, functionName = .correlateData, 
                              chunksize = chunksize, maxRow = maxRow, 
                              counts1 = countsPeaks.clean, counts2 = countsRNA.clean, map1 = map_peaks, map2 = map_rna, 
@@ -2671,20 +2676,20 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                               dplyr::left_join(overlaps.sub.filt.df, by = c("gene.ENSEMBL", "peak.ID")) %>%
                               # Integrate TAD IDs also
                               dplyr::left_join(dplyr::select(peak.TADs.df, peak.ID, tad.ID), by = c("peak.ID")) %>%
-
+                              
                               dplyr::select(tidyselect::all_of(selectColumns))) %>%
     dplyr::mutate(peak.ID = as.factor(peak.ID),
                   gene.ENSEMBL = as.factor(gene.ENSEMBL), 
                   tad.ID = as.factor(tad.ID)) %>%
     dplyr::rename(peak_gene.r = r, 
                   peak_gene.p_raw = p.raw)
-    
+  
   if (addRobustRegression) {
     res.df = dplyr::rename(res.df, 
-                  peak_gene.p_raw.robust = p_raw.robust, 
-                  peak_gene.r_robust = r_robust,
-                  peak_gene.bias_M_p.raw = bias_M_p.raw,
-                  peak_gene.bias_LS_p.raw = bias_LS_p.raw)
+                           peak_gene.p_raw.robust = p_raw.robust, 
+                           peak_gene.r_robust = r_robust,
+                           peak_gene.bias_M_p.raw = bias_M_p.raw,
+                           peak_gene.bias_LS_p.raw = bias_LS_p.raw)
   }
   
   if (is.null(TADs)) {
@@ -2756,7 +2761,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     if (nPlotted < debugMode_nPlots & res$p.value < 0.02) {
       dataCur.df = tibble::tibble(data_Peaks =unlist(counts1 [map1[i],]), 
-                          data_RNA = unlist(counts2 [map2[i],]) )
+                                  data_RNA = unlist(counts2 [map2[i],]) )
       
       # TODO: perm not known here
       stop("Not implemeneted yet")
@@ -2839,7 +2844,7 @@ filterGRNAndConnectGenes <- function(GRN,
                                      outputFolder = NULL,
                                      silent = FALSE) {
   
-    
+  
   GRN = .addFunctionLogToObject(GRN)
   
   checkmate::assertClass(GRN, "GRN")
@@ -2859,10 +2864,10 @@ filterGRNAndConnectGenes <- function(GRN,
   checkmate::assertFlag(filterLoops)
   
   if (peak_gene.fdr.method == "IHW" & !is.installed("IHW")) {
-      message = "IHW has been selected for p-value adjustment, but IHW is currently not installed. Please install it and re-run the function or choose a different method."
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    message = "IHW has been selected for p-value adjustment, but IHW is currently not installed. Please install it and re-run the function or choose a different method."
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
-
+  
   start = Sys.time()
   if (silent) {
     futile.logger::flog.threshold(futile.logger::WARN)
@@ -2880,36 +2885,36 @@ filterGRNAndConnectGenes <- function(GRN,
     permIndex = as.character(permutationCur)
     
     if (is.null(GRN@connections$peak_genes[[permIndex]])) {
-        message = "No peak-gene connections found. Run the function addConnections_peak_gene first"
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      message = "No peak-gene connections found. Run the function addConnections_peak_gene first"
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
-
+    
     peakGeneCorrelations = GRN@connections$peak_genes[[permIndex]] %>%
       dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
       dplyr::left_join(dplyr::mutate(GRN@annotation$genes, gene.ENSEMBL = as.character(.data$gene.ENSEMBL)), by = "gene.ENSEMBL")
     
     
-   # Add TF Ensembl IDs
+    # Add TF Ensembl IDs
     grn.filt = GRN@connections$TF_peaks[[permIndex]]$main  %>% 
-        tibble::as_tibble() %>%
-        dplyr::left_join(GRN@data$TFs$translationTable, by = c("TF.name")) %>%
-        dplyr::select(-HOCOID, -ENSEMBL) %>%
-        dplyr::mutate(TF.ENSEMBL = as.factor(TF.ENSEMBL))
+      tibble::as_tibble() %>%
+      dplyr::left_join(GRN@data$TFs$translationTable, by = c("TF.name")) %>%
+      dplyr::select(-HOCOID, -ENSEMBL) %>%
+      dplyr::mutate(TF.ENSEMBL = as.factor(TF.ENSEMBL))
     
     if (is.null(grn.filt)) {
-        message = "No TF-peak connections found. Run the function addConnections_TF_peak first"
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      message = "No TF-peak connections found. Run the function addConnections_TF_peak first"
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
     # Filter network #
     futile.logger::flog.info(paste0("Inital number of rows left before all filtering steps: ", nrow(grn.filt)))
     
     if (! "all" %in% TF_peak.connectionTypes) {
-        checkmate::assertSubset(TF_peak.connectionTypes, .getAll_TF_peak_connectionTypes(GRN))
-        futile.logger::flog.info(paste0(" Filter network and retain only rows with one of the following TF-peak connection types: ", paste0(TF_peak.connectionTypes, collapse = ", ")))
-        futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering connection types: ", nrow(grn.filt)))
-        grn.filt = dplyr::filter(grn.filt, .data$TF_peak.connectionType %in% TF_peak.connectionTypes)
-        futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering connection types: ", nrow(grn.filt)))
+      checkmate::assertSubset(TF_peak.connectionTypes, .getAll_TF_peak_connectionTypes(GRN))
+      futile.logger::flog.info(paste0(" Filter network and retain only rows with one of the following TF-peak connection types: ", paste0(TF_peak.connectionTypes, collapse = ", ")))
+      futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering connection types: ", nrow(grn.filt)))
+      grn.filt = dplyr::filter(grn.filt, .data$TF_peak.connectionType %in% TF_peak.connectionTypes)
+      futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering connection types: ", nrow(grn.filt)))
     }
     
     if (!is.null(TF_peak.fdr.threshold)) {
@@ -2917,81 +2922,81 @@ filterGRNAndConnectGenes <- function(GRN,
       futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering TFs: ", nrow(grn.filt)))
       
       if (!TF_peak_FDR_selectViaCorBins) {
-          grn.filt = dplyr::filter(grn.filt, .data$TF_peak.fdr < TF_peak.fdr.threshold)
-          futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
+        grn.filt = dplyr::filter(grn.filt, .data$TF_peak.fdr < TF_peak.fdr.threshold)
+        futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
       } else {
-
-          # Add a new ID column
-          grn.filt$row.ID = seq_len(nrow(grn.filt))
+        
+        # Add a new ID column
+        grn.filt$row.ID = seq_len(nrow(grn.filt))
+        
+        # For each TF, identify those TF-peak correlation bins that are more extreme than the first correlation bin that is beyond the user-specified bin
+        # Add one additional column to the table, and filter later by this column
+        idsRowsKeep = c()
+        for (TFCur in unique( grn.filt$TF.name)) {
           
-          # For each TF, identify those TF-peak correlation bins that are more extreme than the first correlation bin that is beyond the user-specified bin
-          # Add one additional column to the table, and filter later by this column
-          idsRowsKeep = c()
-          for (TFCur in unique( grn.filt$TF.name)) {
+          for (connectionTypeCur in TF_peak.connectionTypes) {
+            
+            grn.filt.TF = dplyr::filter(grn.filt, .data$TF.name == TFCur, .data$TF_peak.connectionType == connectionTypeCur)
+            
+            for (dirCur in c("pos", "neg")) {
               
-              for (connectionTypeCur in TF_peak.connectionTypes) {
-                  
-                  grn.filt.TF = dplyr::filter(grn.filt, .data$TF.name == TFCur, .data$TF_peak.connectionType == connectionTypeCur)
-                  
-                  for (dirCur in c("pos", "neg")) {
-                      
-                      if (dirCur == "pos") {
-                          
-                          grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "pos")
-                          stepsCur = GRN@config$parameters$internal$stepsFDR
-                          rightOpen = FALSE
-                          grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
-                                                              right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
-                          
-                          binThresholdNeg = grn.filt.TF.dir  %>% 
-                            dplyr::select(.data$TF_peak.r_bin, .data$TF_peak.fdr) %>% 
-                            dplyr::distinct() %>% 
-                            dplyr::arrange(.data$TF_peak.r_bin)
-                          
-                          relBins =which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
-                          if (length(relBins) > 0) {
-                              relBins = binThresholdNeg$TF_peak.r_bin[min(relBins):nrow(binThresholdNeg)]
-                              idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
-                                                  dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
-                                                  dplyr::pull(.data$row.ID))
-                          }
-
-                          
-                      } else {
-                          
-                          grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "neg")
-                          
-                          stepsCur = rev(GRN@config$parameters$internal$stepsFDR)  
-                          rightOpen = TRUE
-                          
-                          grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
-                                                              right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
-                          
-                          binThresholdNeg = grn.filt.TF.dir  %>% 
-                            dplyr::select(.data$TF_peak.r_bin, .data$TF_peak.fdr) %>% 
-                            dplyr::distinct() %>% 
-                            dplyr::arrange(.data$TF_peak.r_bin)
-                          
-                          relBins =which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
-                          if (length(relBins) > 0) {
-                              relBins = binThresholdNeg$TF_peak.r_bin[seq_len(max(relBins))]
-                              idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
-                                                  dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
-                                                  dplyr::pull(.data$row.ID))
-                          }
-                      }
-                      
-                  } # end for both directions
-              } # end for all TF-peak link types
-          } # end for all TF
-          
-          
-          grn.filt = grn.filt %>%
-              dplyr::filter(.data$row.ID %in% idsRowsKeep) %>%
-              dplyr::select(-.data$row.ID)
-          
-          futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
-     
+              if (dirCur == "pos") {
+                
+                grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "pos")
+                stepsCur = GRN@config$parameters$internal$stepsFDR
+                rightOpen = FALSE
+                grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
+                                                    right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
+                
+                binThresholdNeg = grn.filt.TF.dir  %>% 
+                  dplyr::select(.data$TF_peak.r_bin, .data$TF_peak.fdr) %>% 
+                  dplyr::distinct() %>% 
+                  dplyr::arrange(.data$TF_peak.r_bin)
+                
+                relBins =which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
+                if (length(relBins) > 0) {
+                  relBins = binThresholdNeg$TF_peak.r_bin[min(relBins):nrow(binThresholdNeg)]
+                  idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
+                                    dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
+                                    dplyr::pull(.data$row.ID))
+                }
+                
+                
+              } else {
+                
+                grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "neg")
+                
+                stepsCur = rev(GRN@config$parameters$internal$stepsFDR)  
+                rightOpen = TRUE
+                
+                grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
+                                                    right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
+                
+                binThresholdNeg = grn.filt.TF.dir  %>% 
+                  dplyr::select(.data$TF_peak.r_bin, .data$TF_peak.fdr) %>% 
+                  dplyr::distinct() %>% 
+                  dplyr::arrange(.data$TF_peak.r_bin)
+                
+                relBins =which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
+                if (length(relBins) > 0) {
+                  relBins = binThresholdNeg$TF_peak.r_bin[seq_len(max(relBins))]
+                  idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
+                                    dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
+                                    dplyr::pull(.data$row.ID))
+                }
+              }
+              
+            } # end for both directions
+          } # end for all TF-peak link types
+        } # end for all TF
+        
+        
+        grn.filt = grn.filt %>%
+          dplyr::filter(.data$row.ID %in% idsRowsKeep) %>%
+          dplyr::select(-.data$row.ID)
+        
+        futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
+        
       }
       
     }
@@ -3015,11 +3020,11 @@ filterGRNAndConnectGenes <- function(GRN,
     
     futile.logger::flog.info("2. Filter peak-gene connections")
     if (!is.null(peak_gene.maxDistance)) {
-        checkmate::assertIntegerish(peak_gene.maxDistance, lower = 0)
-        futile.logger::flog.info(paste0(" Filter peak-gene connections for their distance and keep only connections with a maximum distance of  ", peak_gene.maxDistance))
-        futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering connection types: ", nrow(peakGeneCorrelations)))
-        peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, peak_gene.distance < peak_gene.maxDistance)
-        futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering connection types: ", nrow(peakGeneCorrelations)))
+      checkmate::assertIntegerish(peak_gene.maxDistance, lower = 0)
+      futile.logger::flog.info(paste0(" Filter peak-gene connections for their distance and keep only connections with a maximum distance of  ", peak_gene.maxDistance))
+      futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering connection types: ", nrow(peakGeneCorrelations)))
+      peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, peak_gene.distance < peak_gene.maxDistance)
+      futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering connection types: ", nrow(peakGeneCorrelations)))
     }
     
     if (! "all" %in% gene.types) {
@@ -3040,14 +3045,14 @@ filterGRNAndConnectGenes <- function(GRN,
       grn.filt = suppressWarnings(dplyr::left_join(grn.filt, peakGeneCorrelations, by = "peak.ID"))
     }
     
-
+    
     futile.logger::flog.info(paste0("Inital number of rows left before all filtering steps: ", nrow(grn.filt)))
     
     if (filterLoops) {
-        futile.logger::flog.info(paste0(" Filter TF-TF self-loops"))
-        futile.logger::flog.info(paste0("  Number of rows before filtering genes: ", nrow(grn.filt)))
-        grn.filt = dplyr::filter(grn.filt, as.character(.data$gene.ENSEMBL) != as.character(.data$TF.ENSEMBL))
-        futile.logger::flog.info(paste0("  Number of rows after filtering genes: ", nrow(grn.filt)))
+      futile.logger::flog.info(paste0(" Filter TF-TF self-loops"))
+      futile.logger::flog.info(paste0("  Number of rows before filtering genes: ", nrow(grn.filt)))
+      grn.filt = dplyr::filter(grn.filt, as.character(.data$gene.ENSEMBL) != as.character(.data$TF.ENSEMBL))
+      futile.logger::flog.info(paste0("  Number of rows after filtering genes: ", nrow(grn.filt)))
     }
     
     if (!is.null(filterGenes)) {
@@ -3073,7 +3078,7 @@ filterGRNAndConnectGenes <- function(GRN,
     if (!is.null(peak_gene.r_range)) {
       
       futile.logger::flog.info(paste0(" Filter network and retain only rows with peak_gene.r in the following interval: (", 
-                       peak_gene.r_range[1], " - ", peak_gene.r_range[2], "]"))
+                                      peak_gene.r_range[1], " - ", peak_gene.r_range[2], "]"))
       
       futile.logger::flog.info(paste0("  Number of rows before filtering: ", nrow(grn.filt)))
       grn.filt = dplyr::filter(grn.filt, 
@@ -3098,7 +3103,7 @@ filterGRNAndConnectGenes <- function(GRN,
       futile.logger::flog.info(paste0(" Calculate FDR based on remaining rows, filter network and retain only rows with peak-gene connections with an FDR < ",  peak_gene.fdr.threshold))
       
       futile.logger::flog.info(paste0("  Number of rows before filtering genes (including/excluding NA): ", nrow(grn.filt), "/", nrow(grn.filt %>% dplyr::filter(!is.na(.data$peak_gene.p_raw)))))
-
+      
       
       # Adjusted p-value is calculated dynamically here and therefore, for different filters, the numbers may vary
       # After a discussion in the group, this procedure was agreed upon even though it can sometimes yield confusing results when compared among each other
@@ -3109,12 +3114,12 @@ filterGRNAndConnectGenes <- function(GRN,
         
         covariate_val = grn.filt %>% dplyr::pull(!!(peak_gene.IHW.covariate))
         indexes = which(!is.na(grn.filt$peak_gene.p_raw) & !is.na(covariate_val))
-       
+        
         if (length(indexes) < nrow(grn.filt)) {
           message = paste0("Could only take ", length(indexes), " rows out of ", nrow(grn.filt), " because some entries for either p-value or covariate were NA. The remaining ", nrow(grn.filt) - length(indexes), " rows will be ignored for p-value adjustment and set to NA.")
           .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         }
-      
+        
         
         if (peak_gene.fdr.method == "IHW" && length(indexes) < 1000) {
           message = paste0("IHW should only be performed with at least 1000 p-values, but only ", length(indexes), " are available. Switching to BH adjustment as fallback. This is to be expected for the permuted data but not for the non-permuted one.")
@@ -3140,23 +3145,23 @@ filterGRNAndConnectGenes <- function(GRN,
         
         outputFolder = .checkOutputFolder(GRN, outputFolder)
         outputFile = paste0(outputFolder, .getOutputFileName("plot_peakGene_IHW_diag"), suffixFile)
-
+        
         IHW.res = .performIHW(grn.filt$peak_gene.p_raw[indexes], 
                               covariate_val[indexes] %>% unlist() %>% unname(), 
-                             alpha = peak_gene.fdr.threshold, nbins = peak_gene.IHW.nbins, pdfFile = outputFile)
+                              alpha = peak_gene.fdr.threshold, nbins = peak_gene.IHW.nbins, pdfFile = outputFile)
         
-
+        
         grn.filt$peak_gene.p_adj  = NA
         grn.filt$peak_gene.p_adj[indexes] = IHW::adj_pvalues(IHW.res$ihwResults)
         
       }
       
       if (allowMissingGenes) {
-          grn.filt = dplyr::filter(grn.filt, is.na(.data$peak_gene.p_adj) | .data$peak_gene.p_adj <  peak_gene.fdr.threshold) # keep NA here due to completeCases variable 
+        grn.filt = dplyr::filter(grn.filt, is.na(.data$peak_gene.p_adj) | .data$peak_gene.p_adj <  peak_gene.fdr.threshold) # keep NA here due to completeCases variable 
       } else {
-          grn.filt = dplyr::filter(grn.filt, .data$peak_gene.p_adj <  peak_gene.fdr.threshold) 
+        grn.filt = dplyr::filter(grn.filt, .data$peak_gene.p_adj <  peak_gene.fdr.threshold) 
       }
-    
+      
       futile.logger::flog.info(paste0("  Number of rows after filtering genes (including/excluding NA): ", nrow(grn.filt), "/", nrow(grn.filt %>% dplyr::filter(!is.na(.data$peak_gene.p_adj)))))
     }
     
@@ -3168,7 +3173,7 @@ filterGRNAndConnectGenes <- function(GRN,
       futile.logger::flog.info(paste0(" Filter network and retain only the closest genes for each peak. Note that previous filters may already have eliminated the overall closest gene for a particular peak. To make sure to always use the closest gene in the network, set the other peak_gene filters to NULL."))
       
       # NA distances should be kept, only genes with non NA-values should be filtered
-
+      
       grn.filt = grn.filt %>%
         dplyr::filter(!is.na(.data$peak_gene.distance)) %>%
         dplyr::group_by(.data$peak.ID) %>%
@@ -3179,8 +3184,8 @@ filterGRNAndConnectGenes <- function(GRN,
       futile.logger::flog.info(paste0("  Number of rows after filtering: ", nrow(grn.filt)))
       
     }
-
-   
+    
+    
     grn.filt = grn.filt %>%
       dplyr::left_join(GRN@annotation$consensusPeaks, by = "peak.ID") %>%
       dplyr::select(dplyr::starts_with("TF."), 
@@ -3192,15 +3197,15 @@ filterGRNAndConnectGenes <- function(GRN,
       dplyr::mutate(peak.ID      = as.factor(peak.ID),
                     gene.ENSEMBL = as.factor(gene.ENSEMBL),
                     TF.name      = as.factor(TF.name))
-
+    
     
     GRN@connections$all.filtered[[permIndex]] = grn.filt
     
     futile.logger::flog.info(paste0("Final number of rows left after all filtering steps: ", nrow(grn.filt)))
     
     if (nrow(grn.filt) == 0 & permutationCur == 0 & !silent) {
-        message = "No connections passed the filter steps. Rerun the function and be less stringent."
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      message = "No connections passed the filter steps. Rerun the function and be less stringent."
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
     .printExecutionTime(start)
@@ -3208,7 +3213,7 @@ filterGRNAndConnectGenes <- function(GRN,
     
   } #end for all permutations
   
-
+  
   if (silent) futile.logger::flog.threshold(futile.logger::INFO)
   
   GRN
@@ -3392,7 +3397,7 @@ filterGRNAndConnectGenes <- function(GRN,
 add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegression = FALSE, nCores = 1, forceRerun = FALSE) {
   
   GRN = .addFunctionLogToObject(GRN)    
-    
+  
   if (is.null(GRN@connections$TF_genes.filtered) | forceRerun) {
     
     GRN@connections$TF_genes.filtered = list()
@@ -3415,7 +3420,7 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
         dplyr::select(TF.name, gene.ENSEMBL) %>%
         dplyr::distinct() %>%
         dplyr::left_join(GRN@data$TFs$translationTable, by = c("TF.name"), suffix = c("", ".transl")) # %>%
-       # dplyr::distinct(ENSEMBL, ENSEMBL.transl)
+      # dplyr::distinct(ENSEMBL, ENSEMBL.transl)
       # TODO: Improve: Only loop over distinct ENSMBL_TF and ENSEMBL_gene pairs
       
       maxRow = nrow(TF_genePairs)
@@ -3443,7 +3448,7 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
         res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, functionName = .correlateData, 
                                    chunksize = chunksize, maxRow = maxRow, counts1 = countsRNA.clean, counts2 = countsRNA.clean, 
                                    map1 = map_TF, map2 = map_gene, corMethod = corMethod, debugMode_nPlots = debugMode_nPlots, addRobustRegression = addRobustRegression)
-
+        
         res.m  = do.call(rbind, res.l)
         
         
@@ -3484,13 +3489,13 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
         
         if (addRobustRegression) {
           res.df = tibble::tribble(~TF.name, ~TF.ENSEMBL, ~gene.ENSEMBL, ~TF_gene.r, ~TF_gene.p_raw, ~TF_gene.p_raw.robust, 
-                           ~TF_gene.r_robust, ~TF_gene.bias_M_p.raw, ~TF_gene.bias_LS_p.raw)
+                                   ~TF_gene.r_robust, ~TF_gene.bias_M_p.raw, ~TF_gene.bias_LS_p.raw)
         } else {
           res.df = tibble::tribble(~TF.name, ~TF.ENSEMBL, ~gene.ENSEMBL, ~TF_gene.r, ~TF_gene.p_raw)
         }
-       
+        
       }
-     
+      
       
       
       GRN@connections$TF_genes.filtered[[permIndex]] = res.df
@@ -3520,7 +3525,7 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
   checkmate::assertSubset(c(col_peakID), colnames(grn))
   
   if (genomeAssembly_peaks != genomeAssembly_SNP) {
-      
+    
     message = "Genome assemblies of peaks and SNPs must be identical"
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
@@ -3559,10 +3564,10 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
   
   # Overlap
   overlapsAll = GenomicRanges::findOverlaps(peaks.gr, SNPs.gr, 
-                             minoverlap = 1,
-                             type = "any",
-                             select = "all",
-                             ignore.strand = TRUE)
+                                            minoverlap = 1,
+                                            type = "any",
+                                            select = "all",
+                                            ignore.strand = TRUE)
   
   futile.logger::flog.info(paste0(" Summarizing overlap"))
   
@@ -3653,7 +3658,7 @@ generateStatsSummary <- function(GRN,
 ) {
   
   GRN = .addFunctionLogToObject(GRN)
-    
+  
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertNumeric(TF_peak.fdr, lower = 0, upper = 1, min.len = 1)
   checkmate::assertSubset(TF_peak.connectionTypes, c("all", GRN@config$TF_peak_connectionTypes))
@@ -3663,136 +3668,136 @@ generateStatsSummary <- function(GRN,
   checkmate::assertCharacter(gene.types, min.len = 1)
   checkmate::assertSubset(allowMissingGenes, c(TRUE, FALSE))
   checkmate::assertSubset(allowMissingTFs, c(TRUE, FALSE))
-
+  
   checkmate::assertFlag(forceRerun)
   
   if (is.null(GRN@stats$connections) | is.null(GRN@stats$connectionDetails.l) | forceRerun) {
+    
+    GRN@stats$connections = .initializeStatsDF()
+    
+    if (TF_peak.connectionTypes == "all") {
+      TF_peak.connectionTypesAllComb =.getAll_TF_peak_connectionTypes(GRN)
+    } else {
+      TF_peak.connectionTypesAllComb = unique(TF_peak.connectionTypes)
+    }
+    
+    
+    futile.logger::flog.info(paste0("Generating summary. This may take a while..."))
+    
+    
+    for (permutationCur in 0:.getMaxPermutation(GRN)) {
       
-      GRN@stats$connections = .initializeStatsDF()
+      futile.logger::flog.info(paste0("\n", .getPermStr(permutationCur), "...\n"))
       
-      if (TF_peak.connectionTypes == "all") {
-          TF_peak.connectionTypesAllComb =.getAll_TF_peak_connectionTypes(GRN)
-      } else {
-          TF_peak.connectionTypesAllComb = unique(TF_peak.connectionTypes)
+      permIndex = as.character(permutationCur)
+      GRN@stats$connectionDetails.l[[permIndex]] = list()
+      
+      # Iterate over different stringency thresholds and collect statistics
+      
+      for (TF_peak.fdr_cur in TF_peak.fdr) {
+        
+        TF_peak.fdr_cur.str = as.character(TF_peak.fdr_cur)
+        
+        futile.logger::flog.info(paste0("Calculate network stats for TF-peak FDR of ", TF_peak.fdr_cur))
+        GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] =list()
+        
+        futile.logger::flog.debug(paste0("Iterating over different peak-gene FDR thresholds..."))
+        for (peak_gene.fdr_cur in peak_gene.fdr) {
+          
+          futile.logger::flog.debug(paste0("Peak-gene FDR = ", peak_gene.fdr_cur))
+          peak_gene.fdr_cur.str = as.character(peak_gene.fdr_cur)
+          GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] =list()
+          
+          for (allowMissingTFsCur in allowMissingTFs) {
+            
+            futile.logger::flog.debug(paste0("  allowMissingTFs = ", allowMissingTFsCur))
+            allowMissingTFsCur.str = as.character(allowMissingTFsCur)
+            GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] = list()
+            
+            for (allowMissingGenesCur in allowMissingGenes) {
+              
+              futile.logger::flog.debug(paste0("  allowMissingGenes = ", allowMissingGenesCur))
+              allowMissingGenesCur.str = as.character(allowMissingGenesCur)
+              GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] [[allowMissingGenesCur.str]] = list()
+              
+              for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAllComb) {
+                
+                GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] [[allowMissingGenesCur.str]] [[TF_peak.connectionTypeCur]] = list()
+                
+                futile.logger::flog.debug(paste0("    TF_peak.connectionType = ", TF_peak.connectionTypeCur))
+                
+                GRN = filterGRNAndConnectGenes(GRN, 
+                                               TF_peak.fdr.threshold = TF_peak.fdr_cur, 
+                                               TF_peak.connectionTypes = TF_peak.connectionTypeCur, 
+                                               peak_gene.p_raw.threshold = NULL, 
+                                               peak_gene.fdr.threshold= peak_gene.fdr_cur,
+                                               gene.types = gene.types, 
+                                               allowMissingGenes = allowMissingGenesCur, 
+                                               allowMissingTFs = allowMissingTFsCur,
+                                               peak_gene.r_range = peak_gene.r_range,
+                                               filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL,
+                                               silent = TRUE)
+                
+                results.l = .addStats(GRN@stats$connections, GRN@connections$all.filtered[[permIndex]], 
+                                      perm = permutationCur, 
+                                      TF_peak.fdr = TF_peak.fdr_cur, TF_peak.connectionType = TF_peak.connectionTypeCur,
+                                      peak_gene.p_raw = NA,
+                                      peak_gene.fdr = peak_gene.fdr_cur, 
+                                      peak_gene.r_range = paste0(peak_gene.r_range, collapse = ","),
+                                      gene.types = paste0(gene.types, collapse = ","),
+                                      allowMissingGenes = allowMissingGenesCur, 
+                                      allowMissingTFs   = allowMissingTFsCur)
+                
+                GRN@stats$connections  = results.l[["summary"]]
+                
+                GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] [[allowMissingGenesCur.str]] [[TF_peak.connectionTypeCur]] = 
+                  results.l[["details"]]
+                
+              } # end of  for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAllComb)
+              
+            } # end of  for (allowMissingGenesCur in allowMissingGenes) 
+            
+          } # end of  for (allowMissingTFsCur in allowMissingTFs)
+          
+        } # end of for (peak_gene.fdr_cur in peak_gene.fdr)
+        
+        
+        if (!is.null(peak_gene.p_raw)) {
+          
+          futile.logger::flog.info(paste0(" Iterating over different peak-gene raw p-value thresholds..."))
+          for (peak_gene.p_raw_cur in peak_gene.p_raw) {
+            
+            futile.logger::flog.info(paste0("  Peak-gene raw p-value = ", peak_gene.p_raw_cur))
+            
+            # TODO: Add the other ones here also
+            for (allowMissingGenesCur in allowMissingGenes) {
+              
+              GRN = filterGRNAndConnectGenes(GRN, 
+                                             TF_peak.fdr.threshold = TF_peak.fdr_cur, peak_gene.p_raw.threshold = peak_gene.p_raw_cur, 
+                                             peak_gene.fdr.threshold= NULL,
+                                             gene.types = gene.types, 
+                                             allowMissingGenes = allowMissingGenesCur, peak_gene.r_range = peak_gene.r_range,
+                                             filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL,
+                                             silent = TRUE)
+              
+              
+              GRN@stats$connections = .addStats(GRN@stats$connections, GRN@connections$all.filtered[[permIndex]], 
+                                                perm = permutationCur, TF_peak.fdr = TF_peak.fdr_cur, peak_gene.fdr = NA, 
+                                                allowMissingGenes = allowMissingGenesCur, peak_gene.p_raw = peak_gene.p_raw_cur,
+                                                peak_gene.r_range = paste0(peak_gene.r_range, collapse = ","),
+                                                gene.types = paste0(gene.types, collapse = ","))
+              
+            } # end of for (allowMissingGenesCur in allowMissingGenes)
+            
+          } # end of   for (peak_gene.p_raw_cur in peak_gene.p_raw) 
+        } # end of  if (!is.null(peak_gene.p_raw))
+        
+        
       }
-      
-      
-      futile.logger::flog.info(paste0("Generating summary. This may take a while..."))
-      
-      
-      for (permutationCur in 0:.getMaxPermutation(GRN)) {
-          
-          futile.logger::flog.info(paste0("\n", .getPermStr(permutationCur), "...\n"))
-          
-          permIndex = as.character(permutationCur)
-          GRN@stats$connectionDetails.l[[permIndex]] = list()
-          
-          # Iterate over different stringency thresholds and collect statistics
-          
-          for (TF_peak.fdr_cur in TF_peak.fdr) {
-              
-              TF_peak.fdr_cur.str = as.character(TF_peak.fdr_cur)
-              
-              futile.logger::flog.info(paste0("Calculate network stats for TF-peak FDR of ", TF_peak.fdr_cur))
-              GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] =list()
-              
-              futile.logger::flog.debug(paste0("Iterating over different peak-gene FDR thresholds..."))
-              for (peak_gene.fdr_cur in peak_gene.fdr) {
-                  
-                  futile.logger::flog.debug(paste0("Peak-gene FDR = ", peak_gene.fdr_cur))
-                  peak_gene.fdr_cur.str = as.character(peak_gene.fdr_cur)
-                  GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] =list()
-                  
-                  for (allowMissingTFsCur in allowMissingTFs) {
-                      
-                      futile.logger::flog.debug(paste0("  allowMissingTFs = ", allowMissingTFsCur))
-                      allowMissingTFsCur.str = as.character(allowMissingTFsCur)
-                      GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] = list()
-                      
-                      for (allowMissingGenesCur in allowMissingGenes) {
-                          
-                          futile.logger::flog.debug(paste0("  allowMissingGenes = ", allowMissingGenesCur))
-                          allowMissingGenesCur.str = as.character(allowMissingGenesCur)
-                          GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] [[allowMissingGenesCur.str]] = list()
-                          
-                          for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAllComb) {
-                              
-                              GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] [[allowMissingGenesCur.str]] [[TF_peak.connectionTypeCur]] = list()
-                              
-                              futile.logger::flog.debug(paste0("    TF_peak.connectionType = ", TF_peak.connectionTypeCur))
-                              
-                              GRN = filterGRNAndConnectGenes(GRN, 
-                                                             TF_peak.fdr.threshold = TF_peak.fdr_cur, 
-                                                             TF_peak.connectionTypes = TF_peak.connectionTypeCur, 
-                                                             peak_gene.p_raw.threshold = NULL, 
-                                                             peak_gene.fdr.threshold= peak_gene.fdr_cur,
-                                                             gene.types = gene.types, 
-                                                             allowMissingGenes = allowMissingGenesCur, 
-                                                             allowMissingTFs = allowMissingTFsCur,
-                                                             peak_gene.r_range = peak_gene.r_range,
-                                                             filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL,
-                                                             silent = TRUE)
-                              
-                              results.l = .addStats(GRN@stats$connections, GRN@connections$all.filtered[[permIndex]], 
-                                                    perm = permutationCur, 
-                                                    TF_peak.fdr = TF_peak.fdr_cur, TF_peak.connectionType = TF_peak.connectionTypeCur,
-                                                    peak_gene.p_raw = NA,
-                                                    peak_gene.fdr = peak_gene.fdr_cur, 
-                                                    peak_gene.r_range = paste0(peak_gene.r_range, collapse = ","),
-                                                    gene.types = paste0(gene.types, collapse = ","),
-                                                    allowMissingGenes = allowMissingGenesCur, 
-                                                    allowMissingTFs   = allowMissingTFsCur)
-                              
-                              GRN@stats$connections  = results.l[["summary"]]
-                              
-                              GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] [[allowMissingTFsCur.str]] [[allowMissingGenesCur.str]] [[TF_peak.connectionTypeCur]] = 
-                                  results.l[["details"]]
-                              
-                          } # end of  for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAllComb)
-                          
-                      } # end of  for (allowMissingGenesCur in allowMissingGenes) 
-                      
-                  } # end of  for (allowMissingTFsCur in allowMissingTFs)
-                  
-              } # end of for (peak_gene.fdr_cur in peak_gene.fdr)
-              
-              
-              if (!is.null(peak_gene.p_raw)) {
-                  
-                  futile.logger::flog.info(paste0(" Iterating over different peak-gene raw p-value thresholds..."))
-                  for (peak_gene.p_raw_cur in peak_gene.p_raw) {
-                      
-                      futile.logger::flog.info(paste0("  Peak-gene raw p-value = ", peak_gene.p_raw_cur))
-                      
-                      # TODO: Add the other ones here also
-                      for (allowMissingGenesCur in allowMissingGenes) {
-                          
-                          GRN = filterGRNAndConnectGenes(GRN, 
-                                                         TF_peak.fdr.threshold = TF_peak.fdr_cur, peak_gene.p_raw.threshold = peak_gene.p_raw_cur, 
-                                                         peak_gene.fdr.threshold= NULL,
-                                                         gene.types = gene.types, 
-                                                         allowMissingGenes = allowMissingGenesCur, peak_gene.r_range = peak_gene.r_range,
-                                                         filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL,
-                                                         silent = TRUE)
-                          
-                          
-                          GRN@stats$connections = .addStats(GRN@stats$connections, GRN@connections$all.filtered[[permIndex]], 
-                                                            perm = permutationCur, TF_peak.fdr = TF_peak.fdr_cur, peak_gene.fdr = NA, 
-                                                            allowMissingGenes = allowMissingGenesCur, peak_gene.p_raw = peak_gene.p_raw_cur,
-                                                            peak_gene.r_range = paste0(peak_gene.r_range, collapse = ","),
-                                                            gene.types = paste0(gene.types, collapse = ","))
-                          
-                      } # end of for (allowMissingGenesCur in allowMissingGenes)
-                      
-                  } # end of   for (peak_gene.p_raw_cur in peak_gene.p_raw) 
-              } # end of  if (!is.null(peak_gene.p_raw))
-              
-              
-          }
-      } # end for each permutation
-      
+    } # end for each permutation
+    
   } else {
-      futile.logger::flog.info(paste0("Data already exists in object. Set forceRerun = TRUE to regenerate and overwrite."))
+    futile.logger::flog.info(paste0("Data already exists in object. Set forceRerun = TRUE to regenerate and overwrite."))
   }
   
   
@@ -3893,15 +3898,15 @@ generateStatsSummary <- function(GRN,
 .initializeStatsDF <- function(){
   
   tibble::tribble(~perm, 
-          ~TF_peak.fdr, ~TF_peak.connectionType,
-          ~peak_gene.p_raw, ~peak_gene.fdr, ~peak_gene.r_range, 
-          ~gene.types,
-          ~allowMissingGenes, ~allowMissingTFs,
-          ~nGenes, ~nPeaks, ~nTFs,
-          ~TF.connections_min, ~TF.connections_mean, ~TF.connections_median, ~TF.connections_max,
-          ~peak_TF.connections_min, ~peak_TF.connections_mean, ~peak_TF.connections_median,  ~peak_TF.connections_max,
-          ~peak_gene.connections_min, ~peak_gene.connections_mean, ~peak_gene.connections_median, ~peak_gene.connections_max,
-          ~gene.connections_min, ~gene.connections_mean, ~gene.connections_median,  ~gene.connections_max)
+                  ~TF_peak.fdr, ~TF_peak.connectionType,
+                  ~peak_gene.p_raw, ~peak_gene.fdr, ~peak_gene.r_range, 
+                  ~gene.types,
+                  ~allowMissingGenes, ~allowMissingTFs,
+                  ~nGenes, ~nPeaks, ~nTFs,
+                  ~TF.connections_min, ~TF.connections_mean, ~TF.connections_median, ~TF.connections_max,
+                  ~peak_TF.connections_min, ~peak_TF.connections_mean, ~peak_TF.connections_median,  ~peak_TF.connections_max,
+                  ~peak_gene.connections_min, ~peak_gene.connections_mean, ~peak_gene.connections_median, ~peak_gene.connections_max,
+                  ~gene.connections_min, ~gene.connections_mean, ~gene.connections_median,  ~gene.connections_max)
   
 }
 
@@ -3920,28 +3925,28 @@ generateStatsSummary <- function(GRN,
 #' An example \code{\linkS4class{GRN}} object
 #' @import BiocFileCache
 loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl.de/download/zaugg/GRaNIE/GRN.rds") {
-    
-    checkmate::assertFlag(forceDownload)
-    # Taken and modified from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
-    
-    bfc <- .get_cache()
-    
-    rid <- BiocFileCache::bfcquery(bfc, "geneFileV2", "rname")$rid
-    if (!length(rid)) {
-        rid <- names(BiocFileCache::bfcadd(bfc, "geneFileV2", fileURL))
-    }
-    if (isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
-        messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
-        message(messageStr)
-        filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
-    }
-        
-    
-    filePath = BiocFileCache::bfcrpath(bfc, rids = rid)
-
-    # Now we can read in the locally stored file
-    readRDS(filePath)
-    
+  
+  checkmate::assertFlag(forceDownload)
+  # Taken and modified from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
+  
+  bfc <- .get_cache()
+  
+  rid <- BiocFileCache::bfcquery(bfc, "geneFileV2", "rname")$rid
+  if (!length(rid)) {
+    rid <- names(BiocFileCache::bfcadd(bfc, "geneFileV2", fileURL))
+  }
+  if (isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
+    messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
+    message(messageStr)
+    filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
+  }
+  
+  
+  filePath = BiocFileCache::bfcrpath(bfc, rids = rid)
+  
+  # Now we can read in the locally stored file
+  readRDS(filePath)
+  
 }
 
 
@@ -4064,7 +4069,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
   
   if (type == "all.filtered") {
     
-  
+    
     if (include_TF_gene_correlations) {
       
       if (is.null(GRN@connections$TF_genes.filtered)) {
@@ -4124,6 +4129,11 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
     if (!dir.exists(outputFolder)) {
       dir.create(outputFolder)
     }
+  } else {
+    
+    if (!dir.exists(GRN@config$directories$output_plots)) {
+      dir.create(GRN@config$directories$output_plots, recursive = TRUE)
+    }
   }
   
   dplyr::if_else(is.null(outputFolder), GRN@config$directories$output_plots, outputFolder)
@@ -4151,7 +4161,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
   
   # List of all output file names
   allNames = list(
- 
+    
     "plot_pca"                       = "PCA_sharedSamples",
     "plot_TFPeak_fdr"                = "TF_peak.fdrCurves",
     "plot_TFPeak_fdr_GC"             = "TF_peak.GCCorrection",
@@ -4168,7 +4178,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
     "plot_communityEnrichment"       = "GRN.community_enrichment",
     "plot_generalNetworkStats"       = "GRN.overall_stats",
     "plot_TFEnrichment"              = "GRN.TF_enrichment"
-
+    
   )
   
   if (is.null(allNames[[name]])) {
@@ -4182,38 +4192,38 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
 }
 
 .getPermutationSuffixStr <- function(permutation) {
-    
-    if (permutation == 0) {
-        suffixFile = "_original"
-    } else {
-        suffixFile = "_permuted"
-    }
-    
-    suffixFile
+  
+  if (permutation == 0) {
+    suffixFile = "_original"
+  } else {
+    suffixFile = "_permuted"
+  }
+  
+  suffixFile
 }
 
 
 # Helper function to automatically record the function calls to keep a better record
 .addFunctionLogToObject <- function(GRN) {
-    
-    #listName = gsub("\\(|\\)", "", match.call()[1], perl = TRUE)
-    functionName = evalq(match.call(), parent.frame(1))[1]
-    listName = gsub("\\(|\\)", "", functionName, perl = TRUE)
-    listName = gsub("GRNdev::", "", listName, fixed = TRUE)
-    listName = gsub("GRN::", "", listName, fixed = TRUE)
-    
-    # Compatibility with old objects
-    if (is.null(GRN@config$functionParameters)) {
-      GRN@config$functionParameters = list()
-    }
-    
-    GRN@config$functionParameters[[listName]] = list()
-    GRN@config$functionParameters[[listName]]$date = Sys.time()
-    
-    GRN@config$functionParameters[[listName]]$call = match.call.defaults(asList = FALSE)
-    GRN@config$functionParameters[[listName]]$parameters = match.call.defaults()
-    
-    GRN
+  
+  #listName = gsub("\\(|\\)", "", match.call()[1], perl = TRUE)
+  functionName = evalq(match.call(), parent.frame(1))[1]
+  listName = gsub("\\(|\\)", "", functionName, perl = TRUE)
+  listName = gsub("GRNdev::", "", listName, fixed = TRUE)
+  listName = gsub("GRN::", "", listName, fixed = TRUE)
+  
+  # Compatibility with old objects
+  if (is.null(GRN@config$functionParameters)) {
+    GRN@config$functionParameters = list()
+  }
+  
+  GRN@config$functionParameters[[listName]] = list()
+  GRN@config$functionParameters[[listName]]$date = Sys.time()
+  
+  GRN@config$functionParameters[[listName]]$call = match.call.defaults(asList = FALSE)
+  GRN@config$functionParameters[[listName]]$parameters = match.call.defaults()
+  
+  GRN
 }
 
 
@@ -4242,20 +4252,20 @@ getParameters <- function (GRN, type = "parameter", name = "all") {
     } 
     
     return(functionParameters)
-
+    
   } else {
     
-      if (name == "all") {
-          return(GRN@config)
-      } else {
-          parameters = GRN@config[[name]]
-          if (is.null(parameters)) {
-              checkmate::assertSubset(name, names(GRN@config$parameters))
-          } 
-          
-          return(parameters)
-      }
-   
+    if (name == "all") {
+      return(GRN@config)
+    } else {
+      parameters = GRN@config[[name]]
+      if (is.null(parameters)) {
+        checkmate::assertSubset(name, names(GRN@config$parameters))
+      } 
+      
+      return(parameters)
+    }
+    
   }
   
 }
@@ -4278,8 +4288,8 @@ getParameters <- function (GRN, type = "parameter", name = "all") {
 #' @return The same \code{\linkS4class{GRN}} object, with some slots being deleted (\code{GRN@data$TFs$classification} as well as \code{GRN@stats$connectionDetails.l})
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' GRN = deleteIntermediateData(GRN)
+#' # GRN = loadExampleObject()
+#' # GRN = deleteIntermediateData(GRN)
 deleteIntermediateData <- function(GRN) {
   
   
@@ -4348,4 +4358,25 @@ getBasic_metadata_visualization <- function(GRN, forceRerun = FALSE) {
   
 }
 
+#' Change the output directory of a GRN object
+#' 
+#' @export
+#' @template GRN
+#' @param outputDirectory 
+#' @return The same \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
+#' @examples 
+#' # GRN = loadExampleObject()
+#' # GRN = changeOutputDirectory(GRN, ".")
+changeOutputDirectory <- function(GRN, outputDirectory) {
+  
+  GRN@config$directories$outputRoot   =  outputDirectory
+  GRN@config$directories$output_plots = paste0(outputDirectory, "/plots/")
+  GRN@config$files$output_log         = paste0(outputDirectory, "GRN.log")
+    
+  futile.logger::flog.info(paste0("Output directory changed in the object to " , outputDirectory))
+  
+  
+  GRN
+  
+}
 

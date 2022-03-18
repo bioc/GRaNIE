@@ -17,6 +17,6 @@ Optional convenience function to delete intermediate data from the function \cod
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-GRN = loadExampleObject()
-GRN = deleteIntermediateData(GRN)
+# GRN = loadExampleObject()
+# GRN = deleteIntermediateData(GRN)
 }

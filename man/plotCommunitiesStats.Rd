@@ -50,7 +50,7 @@ Similarly to the statistics produced by \code{\link{plotGeneralGraphStats}}, sum
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotCommunitiesStats(GRN, display = "byRank", forceRerun = FALSE)
+GRN = plotCommunitiesStats(GRN, outputFolder = ".", forceRerun = FALSE)
 }
 \seealso{
 \code{\link{plotGeneralGraphStats}}

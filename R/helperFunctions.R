@@ -711,3 +711,11 @@ is.installed <- function(mypkg){
     cache <- tools::R_user_dir("GRaNIE", which="cache")
     BiocFileCache::BiocFileCache(cache, ask = FALSE)
 }
+
+.checkOutputFile <- function(fileCur) {
+  
+  if (!checkmate::testDirectory(dirname(fileCur), access = "w")) {
+    message = paste0("The specified output file or directory (", fileCur, ") is not writable or does not exist. Please adjust the output folder and rerun the function or change the output folder globally using the function changeOutputDirectory.")
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+  }
+}

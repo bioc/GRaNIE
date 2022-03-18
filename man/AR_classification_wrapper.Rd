@@ -41,5 +41,5 @@ Run the activator-repressor classification for the TFs for a \code{\linkS4class{
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = AR_classification_wrapper(GRN, forceRerun = FALSE)
+GRN = AR_classification_wrapper(GRN, outputFolder = ".", forceRerun = FALSE)
 }

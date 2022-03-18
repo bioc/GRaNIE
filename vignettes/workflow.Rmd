@@ -195,6 +195,7 @@ GRN = addData(GRN,
 ```
 
 ```{r loadObject, echo=FALSE, results = FALSE, eval = TRUE}
+options(timeout=200)
 GRN = readRDS(url("https://www.embl.de/download/zaugg/GRaNIE/GRN.rds"))
 ```
 
@@ -209,7 +210,7 @@ Note that while this step is recommended to do, it is fully optional from a work
 
 
 ```{r runPCA, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", collapse=FALSE, results="hold"}
-GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, forceRerun = TRUE)
+GRN = plotPCA_all(GRN, type = c("rna", "peaks"), topn = 500, outputFolder = "output/plots", forceRerun = TRUE)
 ```
 
 Multiple output plots are produced, with two files for each of the specified `types`. Usually, this is the RNA-Seq counts (as specified with `rna` here) as well as the peak counts (`peaks`). For each of them, PCA plots are produced for both `raw` and `normalized` data. With `raw`, we here denote the original counts as given as input with the `addData()` function, irrespective of whether this was already pre-normalized or not. For more details, see the [Package Details Vignette](packageDetails.html). The `topn` argument specifies the number of top variable features to do PCA for - here 500.
@@ -295,6 +296,7 @@ For more parameter options and parameter details, see the R help (`?addConnectio
 
 ```{r addTFPeakConnections, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
 GRN = addConnections_TF_peak(GRN, plotDiagnosticPlots = TRUE, 
+                                     outputFolder = "output/plots", 
                                      connectionTypes = c("expression"),
                                      corMethod = "pearson", forceRerun = TRUE)
 ```
@@ -330,6 +332,7 @@ Transcription factors (TFs) regulate many cellular processes and can therefore s
 
 ```{r runARClassification, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
 GRN = AR_classification_wrapper(GRN, significanceThreshold_Wilcoxon = 0.05,
+                                outputFolder = "output/plots", 
                                 plot_minNoTFBS_heatmap = 100, plotDiagnosticPlots = TRUE,
                                 deleteIntermediateData = TRUE, forceRerun = TRUE)
 ```
@@ -382,6 +385,7 @@ Let's add now the second type of connections, enhancer-genes, to connect our enh
 ```{r addPeakGeneConnections, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
 GRN = addConnections_peak_gene(GRN,
                                overlapTypeGene = "TSS", corMethod = "pearson", promoterRange = 10000, TADs = NULL,
+                               outputFolder = "output/plots", 
                                nCores = 1, plotDiagnosticPlots = TRUE, plotGeneTypes = list(c("all")), forceRerun = TRUE)
 ```
 
@@ -471,8 +475,8 @@ GRN = generateStatsSummary(GRN,
                            gene.types = c("protein_coding", "lincRNA"))
 
 
-GRN = plot_stats_connectionSummary(GRN, type = "heatmap", forceRerun = TRUE)
-GRN = plot_stats_connectionSummary(GRN, type = "boxplot", forceRerun = TRUE)
+GRN = plot_stats_connectionSummary(GRN, type = "heatmap", outputFolder = "output/plots", forceRerun = TRUE)
+GRN = plot_stats_connectionSummary(GRN, type = "boxplot", outputFolder = "output/plots", forceRerun = TRUE)
 ```
 
 Here, the output is less informative and just tells us about the current progress and parameter it iterates over. We can now check the two new PDF files that have been created!
@@ -525,7 +529,7 @@ Many results are produces by this convenience function, and we here show only a 
 Let's run an enrichment analysis using `GO` (here, only *Biological Process*). We also support enrichment using *Disease Ontology* (abbreviated `DO`) as well as *Reactome* and `KEGG`.
 
 ```{r enrichment, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}
-GRN = performAllNetworkAnalyses(GRN, ontology = c("GO_BP"), forceRerun = TRUE)
+GRN = performAllNetworkAnalyses(GRN, ontology = c("GO_BP"), outputFolder = "output/plots", forceRerun = TRUE)
 ```
 
 Let's start with checking some general network statistics for the full network. First we can check the vertex distribution and gene types for the overall network to get an idea of how the network looks like:
