@@ -65,7 +65,7 @@ This function plots the enrichment results. The result consist of a dot plot per
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotTFEnrichment(GRN, n = 5, outputFolder = ".", forceRerun = FALSE)
+GRN = plotTFEnrichment(GRN, n = 5, outputFolder = ".", plotAsPDF=FALSE)
 }
 \seealso{
 \code{\link{calculateTFEnrichment}}

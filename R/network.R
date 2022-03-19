@@ -200,8 +200,8 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 #' @export
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' GRN = performAllNetworkAnalyses(GRN, outputFolder = ".", forceRerun = FALSE)
+#' # GRN = loadExampleObject()
+#' # GRN = performAllNetworkAnalyses(GRN, outputFolder = ".", forceRerun = FALSE)
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"), 
                                       algorithm = "weight01", statistic = "fisher",

@@ -1506,8 +1506,8 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.  
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' GRN = AR_classification_wrapper(GRN, outputFolder = ".", forceRerun = FALSE)
+#' # GRN = loadExampleObject()
+#' # GRN = AR_classification_wrapper(GRN, outputFolder = ".", forceRerun = FALSE)
 #' @export
 AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05, 
                                       plot_minNoTFBS_heatmap = 100, deleteIntermediateData = TRUE,
@@ -2276,7 +2276,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = addConnections_peak_gene(GRN, promoterRange = 10000, outputFolder = ".")
+#' types =  list(c("protein_coding"))
+#' GRN = addConnections_peak_gene(GRN, promoterRange=10000, outputFolder=".", plotGeneTypes=types)
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
                                      promoterRange = 250000, TADs = NULL,
                                      nCores = 4, 
@@ -3465,23 +3466,23 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
         res.df = suppressMessages(tibble::as_tibble(res.m) %>%
                                     dplyr::mutate(TF.ENSEMBL   = getCounts(GRN, type = "rna", norm = TRUE, permuted = as.logical(permutationCur))$ENSEMBL[map_TF],
                                                   gene.ENSEMBL = getCounts(GRN, type = "rna", norm = TRUE, permuted = as.logical(permutationCur))$ENSEMBL[map_gene]) %>%
-                                    dplyr::filter(!is.na(gene.ENSEMBL), !is.na(TF.ENSEMBL)) %>%  # For some peak-gene combinations, no RNA-Seq data was available, these NAs are filtered
+                                    dplyr::filter(!is.na(.data$gene.ENSEMBL), !is.na(.data$TF.ENSEMBL)) %>%  # For some peak-gene combinations, no RNA-Seq data was available, these NAs are filtered
                                     dplyr::left_join(GRN@data$TFs$translationTable, by = c("TF.ENSEMBL")) %>%
                                     dplyr::select(tidyselect::all_of(selectColumns))) %>%
-          dplyr::mutate(gene.ENSEMBL = as.factor(gene.ENSEMBL), 
-                        TF.ENSEMBL   = as.factor(TF.ENSEMBL),
-                        TF.name           = as.factor(TF.name)) %>%
-          dplyr::rename(TF_gene.r     = r, 
-                        TF_gene.p_raw = p.raw) %>%
+          dplyr::mutate(gene.ENSEMBL = as.factor(.data$gene.ENSEMBL), 
+                        TF.ENSEMBL   = as.factor(.data$TF.ENSEMBL),
+                        TF.name           = as.factor(.data$TF.name)) %>%
+          dplyr::rename(TF_gene.r     = .data$r, 
+                        TF_gene.p_raw = .data$p.raw) %>%
           dplyr::select(TF.name, TF.ENSEMBL, gene.ENSEMBL, tidyselect::everything())
         
         
         if (addRobustRegression) {
           res.df = dplyr::rename(res.df, 
-                                 TF_gene.p_raw.robust = p_raw.robust, 
-                                 TF_gene.r_robust = r_robust,
-                                 TF_gene.bias_M_p.raw = bias_M_p.raw,
-                                 TF_gene.bias_LS_p.raw = bias_LS_p.raw)
+                                 TF_gene.p_raw.robust = .data$p_raw.robust, 
+                                 TF_gene.r_robust = .data$r_robust,
+                                 TF_gene.bias_M_p.raw = .data$bias_M_p.raw,
+                                 TF_gene.bias_LS_p.raw = .data$bias_LS_p.raw)
         }
         
       } else {
@@ -3643,7 +3644,7 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = generateStatsSummary(GRN, forceRerun = FALSE)
+#' GRN = generateStatsSummary(GRN, TF_peak.fdr = c(0.01, 0.1), peak_gene.fdr = c(0.01, 0.1))
 #' 
 generateStatsSummary <- function(GRN, 
                                  TF_peak.fdr = c(0.001, 0.01, 0.05, 0.1, 0.2),
@@ -3931,9 +3932,9 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
   
   bfc <- .get_cache()
   
-  rid <- BiocFileCache::bfcquery(bfc, "geneFileV2", "rname")$rid
+  rid <- BiocFileCache::bfcquery(bfc, "GRaNIE_object_example")$rid
   if (!length(rid)) {
-    rid <- names(BiocFileCache::bfcadd(bfc, "geneFileV2", fileURL))
+    rid <- names(BiocFileCache::bfcadd(bfc, "GRaNIE_object_example", fileURL))
   }
   if (isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
     messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
@@ -4237,7 +4238,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' getParameters(GRN, type = "parameter", name = "all")
+#' params.l = getParameters(GRN, type = "parameter", name = "all")
 getParameters <- function (GRN, type = "parameter", name = "all") {
   
   checkmate::assertClass(GRN, "GRN")
@@ -4362,12 +4363,12 @@ getBasic_metadata_visualization <- function(GRN, forceRerun = FALSE) {
 #' 
 #' @export
 #' @template GRN
-#' @param outputDirectory 
+#' @param outputDirectory Character. Default \code{.}. New output directory for all output files unless overwritten via the parameter \code{outputFolder}.
 #' @return The same \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
 #' @examples 
-#' # GRN = loadExampleObject()
-#' # GRN = changeOutputDirectory(GRN, ".")
-changeOutputDirectory <- function(GRN, outputDirectory) {
+#' GRN = loadExampleObject()
+#' GRN = changeOutputDirectory(GRN, outputDirectory = ".")
+changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   
   GRN@config$directories$outputRoot   =  outputDirectory
   GRN@config$directories$output_plots = paste0(outputDirectory, "/plots/")

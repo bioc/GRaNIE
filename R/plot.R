@@ -17,7 +17,7 @@
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotPCA_all(GRN, topn = 500, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plotPCA_all(GRN, topn = 500, outputFolder = ".", type = "rna", plotAsPDF=FALSE)
 #' @export
 plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                         type = c("rna", "peaks"), topn = c(500,1000,5000), 
@@ -443,22 +443,28 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 
 
 #' Plot diagnostic plots for TF-peak connections for a \code{\linkS4class{GRN}} object
+#' 
+#' Due to the number of plots that this functions produces, we currently provide only the option to plot as PDF. This may change in the future.
 #'
 #' @template GRN 
 #' @template outputFolder
 #' @template basenameOutput
 #' @template plotDetails
+#' @param plotPermuted \code{TRUE} or \code{FALSE}. Default  \code{TRUE}. Also produce the diagnostic plots for permuted data?
+#' @param nTFMax \code{NULL} or Integer. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)
 #' @template forceRerun
 #' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotDiagnosticPlots_TFPeaks(GRN, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plotDiagnosticPlots_TFPeaks(GRN, outputFolder = ".", plotPermuted = FALSE, nTFMax = 2)
 #' @export
 plotDiagnosticPlots_TFPeaks <- function(GRN, 
                                         outputFolder = NULL, 
                                         basenameOutput = NULL, 
                                         plotDetails = FALSE,
+                                        plotPermuted = TRUE,
+                                        nTFMax = NULL,
                                         forceRerun = FALSE) {
   
   GRN = .addFunctionLogToObject(GRN)
@@ -467,6 +473,8 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertFlag(plotDetails)
+  checkmate::assertFlag(plotPermuted)
+  checkmate::assert(checkmate::checkNull(nTFMax), checkmate::checkIntegerish(nTFMax))
   checkmate::assertFlag(forceRerun)
   
   useGCCorrection = GRN@config$parameters$useGCCorrection
@@ -475,6 +483,10 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   
   for (permutationCur in 0:.getMaxPermutation(GRN)) {
+    
+    if (!plotPermuted & permutationCur != 0) {
+      next
+    }
     
     suffixFile = .getPermutationSuffixStr(permutationCur)
     
@@ -485,7 +497,9 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     if (!file.exists(fileCur) | forceRerun) {
       
       heightCur = 8* length(GRN@config$TF_peak_connectionTypes)
-      .plot_TF_peak_fdr(GRN, perm = permutationCur, useGCCorrection = useGCCorrection, plotDetails = plotDetails, fileCur, width = 7, height = heightCur) 
+      .plot_TF_peak_fdr(GRN, perm = permutationCur, useGCCorrection = useGCCorrection, 
+                        plotDetails = plotDetails, fileCur, width = 7, height = heightCur,
+                        nPagesMax = nTFMax) 
     }
     
     fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_fdr_GC"), suffixFile)
@@ -623,20 +637,24 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     index = 1
   } 
   
+  # Dont take all TF, some might be missing.
   connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
+  allTF = unique(connections_TF_peak$TF.name)
+  nTF = ifelse(is.null(nPagesMax), length(allTF), nPagesMax)
+  futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
+  
   
   # TODO: Check difference between TFActivity TFs and expression TFs
   
-  # Dont take all TF, some might be missing.
-  allTF = unique(connections_TF_peak$TF.name)
-  futile.logger::flog.info(paste0(" Including a total of ", length(allTF),  " TF. Preparing plots..."))
-  
-  pb <- progress::progress_bar$new(total = length(allTF))
+
+  pb <- progress::progress_bar$new(total = nTF)
   
   levels_pos<-unique(as.character(cut(GRN@config$parameters$internal$stepsFDR, breaks = GRN@config$parameters$internal$stepsFDR, right = FALSE, include.lowest = TRUE )))
   levels_neg<-unique(as.character(cut(GRN@config$parameters$internal$stepsFDR, breaks = rev(GRN@config$parameters$internal$stepsFDR), right = TRUE,  include.lowest = TRUE )))
   
-  for (i in seq_len(length(allTF))) {
+
+  
+  for (i in seq_len(nTF)) {
     pb$tick()
     TFCur = allTF[i]
     
@@ -758,11 +776,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   
   if (!is.null(file)) {
     futile.logger::flog.info(paste0(" Finished generating plots, start plotting to file ",file, ". This may take a few minutes."))
-    if (!is.null(nPagesMax)) {
-      .printMultipleGraphsPerPage(plots.l[c(seq_len(nPagesMax))], nCol = 1, nRow = 2, pdfFile = file, height = height, width = width)
-    } else {
-      .printMultipleGraphsPerPage(plots.l, nCol = 1, nRow = 2, pdfFile = file, height = height, width = width)
-    }
+    .printMultipleGraphsPerPage(plots.l, nCol = 1, nRow = 2, pdfFile = file, height = height, width = width)
     
   }
   
@@ -794,7 +808,8 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' # GRN = loadExampleObject()
-#' # GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder = ".", forceRerun = FALSE)
+#' # types = list(c("protein_coding"))
+#' # GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder=".", gene.types=types, plotAsPDF=FALSE)
 #' @export
 # TODO: implement forceRerun correctly
 plotDiagnosticPlots_peakGene <- function(GRN, 
@@ -1318,7 +1333,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
           # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
           theme_main +
-          facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", , labeller = labeller(class=freq_class)) 
+          facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", labeller = labeller(class=freq_class)) 
         
         
         plots_all = ( ((gA3 | gB3 ) + 
@@ -1584,7 +1599,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plot_stats_connectionSummary(GRN, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plot_stats_connectionSummary(GRN, outputFolder = ".", forceRerun = FALSE, plotAsPDF=FALSE)
 #' @export
 #' @importFrom circlize colorRamp2
 plot_stats_connectionSummary <- function(GRN, type = "heatmap", 
@@ -1613,6 +1628,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
     }
     
     .plot_stats_connectionSummaryHeatmap(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, forceRerun = forceRerun) 
+  
   } else if (type ==  "boxplot") {
     
     if (plotAsPDF) {
@@ -1645,7 +1661,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   
   futile.logger::flog.info(paste0("Plotting connection summary", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
   
-  if ((!is.null(file) & !file.exists(file))| forceRerun) {
+  if ((!is.null(file) && !file.exists(file))| forceRerun) {
     
     if (nrow(GRN@stats$connections) == 0) {
       message = paste0("Statistics summary missing from object, please run the function generateStatsSummary first")
@@ -1776,7 +1792,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   
   start = Sys.time()
   
-  if ((!is.null(file) & !file.exists(file))| forceRerun) {
+  if ((!is.null(file) && !file.exists(file))| forceRerun) {
     
     
     futile.logger::flog.info(paste0("Plotting diagnostic plots for network connections", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
@@ -1915,7 +1931,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotGeneralGraphStats(GRN, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plotGeneralGraphStats(GRN, outputFolder = ".", plotAsPDF=FALSE)
 #' @export
 plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, 
@@ -2081,7 +2097,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotGeneralEnrichment(GRN, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plotGeneralEnrichment(GRN, outputFolder = ".", plotAsPDF=FALSE)
 #' @export
 plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   ontology = NULL, topn_pvalue = 30, p = 0.05, 
@@ -2260,7 +2276,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotCommunitiesStats(GRN, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plotCommunitiesStats(GRN, outputFolder = ".", plotAsPDF=FALSE)
 #' @export
 plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                  display = "byRank", communities = seq_len(10), 
@@ -2430,7 +2446,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotCommunitiesEnrichment(GRN, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plotCommunitiesEnrichment(GRN, outputFolder = ".", plotAsPDF=FALSE)
 #' @export
 #' @import ggplot2
 #' @importFrom grid gpar
@@ -2520,9 +2536,9 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
     vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
     # Get the number of vertexes per community as additional annotation column for the heatmap
     geneCounts = vertexMetadata %>%
-      dplyr::select(name, community) %>%
+      dplyr::select(.data$name, .data$community) %>%
       dplyr::distinct() %>%
-      dplyr::count(community)
+      dplyr::count(.data$community)
     
     
     allOntologies = .checkEnrichmentCongruence_general_community(GRN, type = "community")
@@ -2604,16 +2620,19 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
         tibble::column_to_rownames("Term") %>%
         as.matrix()
       
-      # Common heatmap parameters for both p1 and p2
+ 
       geneCounts_communities = geneCounts %>%
-        dplyr::filter(community %in% as.character(colnames(matrix.m))) %>%
-        dplyr::slice(match(communities.order[-1], geneCounts$community)) %>%
-        dplyr::pull(n)
-        
+        dplyr::filter(community %in% as.character(colnames(matrix.m)),
+                      community %in% geneCounts$community) %>%
+        dplyr::arrange(dplyr::desc(.data$n))
       
+      # Sanity check
+      stopifnot(identical(as.character(geneCounts_communities$community), colnames(matrix.m)[-1]))
+        
+      # Common heatmap parameters for both p1 and p2
       top_annotation = ComplexHeatmap::HeatmapAnnotation(
         nGenes = ComplexHeatmap::anno_barplot(
-          x = c(sum(geneCounts$n), geneCounts_communities), 
+          x = c(sum(geneCounts$n), geneCounts_communities$n), 
           border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
         annotation_name_gp = grid::gpar(fontsize=9), annotation_name_side = "left", annotation_name_rot = 90)
       
@@ -2634,7 +2653,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
       # Now focus on the top X only per community
       ID_subset =  GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
         dplyr::group_by(community) %>% 
-        dplyr::arrange(pval) %>% 
+        dplyr::arrange(.data$pval) %>% 
         dplyr::slice(seq_len(nID)) %>%
         dplyr::pull(ID) %>% as.character()
       
@@ -2741,7 +2760,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotTFEnrichment(GRN, n = 5, outputFolder = ".", forceRerun = FALSE)
+#' GRN = plotTFEnrichment(GRN, n = 5, outputFolder = ".", plotAsPDF=FALSE)
 #' @export
 #' @importFrom grid gpar
 plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL,
@@ -2904,7 +2923,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
       # Make sure the top annotation has the same dimensionality as the resulting matrix
       nodeDegree_TFset_numbers =  nodeDegree_TFset %>%
         dplyr::filter(TF.name %in% colnames(matrix.m)) %>%
-        dplyr::arrange(desc(nodeDegree)) %>%
+        dplyr::arrange(dplyr::desc(nodeDegree)) %>%
         dplyr::pull(nodeDegree)
       
       top_annotation = ComplexHeatmap::HeatmapAnnotation(

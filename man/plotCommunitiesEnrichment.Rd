@@ -62,5 +62,5 @@ Similarly to \code{\link{plotGeneralEnrichment}}, the results of the community-b
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotCommunitiesEnrichment(GRN, outputFolder = ".", forceRerun = FALSE)
+GRN = plotCommunitiesEnrichment(GRN, outputFolder = ".", plotAsPDF=FALSE)
 }

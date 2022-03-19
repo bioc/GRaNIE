@@ -4,12 +4,12 @@
 \alias{changeOutputDirectory}
 \title{Change the output directory of a GRN object}
 \usage{
-changeOutputDirectory(GRN, outputDirectory)
+changeOutputDirectory(GRN, outputDirectory = ".")
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{outputDirectory}{}
+\item{outputDirectory}{Character. Default \code{.}. New output directory for all output files unless overwritten via the parameter \code{outputFolder}.}
 }
 \value{
 The same \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
@@ -18,6 +18,6 @@ The same \code{\linkS4class{GRN}} object, with the output directory being adjust
 Change the output directory of a GRN object
 }
 \examples{
-# GRN = loadExampleObject()
-# GRN = changeOutputDirectory(GRN, ".")
+GRN = loadExampleObject()
+GRN = changeOutputDirectory(GRN, outputDirectory = ".")
 }

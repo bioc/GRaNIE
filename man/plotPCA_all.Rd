@@ -44,5 +44,5 @@ Produce a PCA plot of the data from a \code{\linkS4class{GRN}} object
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotPCA_all(GRN, topn = 500, outputFolder = ".", forceRerun = FALSE)
+GRN = plotPCA_all(GRN, topn = 500, outputFolder = ".", type = "rna", plotAsPDF=FALSE)
 }

@@ -47,6 +47,6 @@ Essentially, this functions calls \code{\link{filterGRNAndConnectGenes}} repeate
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = generateStatsSummary(GRN, forceRerun = FALSE)
+GRN = generateStatsSummary(GRN, TF_peak.fdr = c(0.01, 0.1), peak_gene.fdr = c(0.01, 0.1))
 
 }

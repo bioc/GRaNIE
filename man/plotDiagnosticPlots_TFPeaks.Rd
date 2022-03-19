@@ -9,6 +9,8 @@ plotDiagnosticPlots_TFPeaks(
   outputFolder = NULL,
   basenameOutput = NULL,
   plotDetails = FALSE,
+  plotPermuted = TRUE,
+  nTFMax = NULL,
   forceRerun = FALSE
 )
 }
@@ -21,16 +23,20 @@ plotDiagnosticPlots_TFPeaks(
 
 \item{plotDetails}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Print additional plots that may help for debugging and QC purposes? Note that these plots are currently less documented or not at all.}
 
+\item{plotPermuted}{\code{TRUE} or \code{FALSE}. Default  \code{TRUE}. Also produce the diagnostic plots for permuted data?}
+
+\item{nTFMax}{\code{NULL} or Integer. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)}
+
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
 The same \code{\linkS4class{GRN}} object, with added data from this function.
 }
 \description{
-Plot diagnostic plots for TF-peak connections for a \code{\linkS4class{GRN}} object
+Due to the number of plots that this functions produces, we currently provide only the option to plot as PDF. This may change in the future.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotDiagnosticPlots_TFPeaks(GRN, outputFolder = ".", forceRerun = FALSE)
+GRN = plotDiagnosticPlots_TFPeaks(GRN, outputFolder = ".", plotPermuted = FALSE, nTFMax = 2)
 }

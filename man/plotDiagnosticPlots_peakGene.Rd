@@ -50,5 +50,6 @@ Plot diagnostic plots for peak-gene connections for a \code{\linkS4class{GRN}} o
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 # GRN = loadExampleObject()
-# GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder = ".", forceRerun = FALSE)
+# types = list(c("protein_coding"))
+# GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder=".", gene.types=types, plotAsPDF=FALSE)
 }
