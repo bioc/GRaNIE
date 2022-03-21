@@ -24,6 +24,7 @@ initializeGRN <- function(objectMetadata = list(),
   if (!dir.exists(outputFolder)) {
     dir.create(outputFolder)
   }
+  
   # Create an absolute path out of the given outputFolder now that it exists
   outputFolder = tools::file_path_as_absolute(outputFolder)
   checkmate::assertDirectory(outputFolder, access = "w")
@@ -4132,6 +4133,13 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
     }
   } else {
     
+    # TODO: Re-create the output folder here nd adjust to the OS-specific path separator, do not rely on what is stored in the object
+    if (.Platform$OS.type == "windows") {
+      GRN@config$directories$output_plots = gsub('/', ('\\'), GRN@config$directories$output_plots, fixed = TRUE)
+    } else {
+      GRN@config$directories$output_plots = gsub("\\", "/", GRN@config$directories$output_plots, fixed = TRUE)
+    }
+    
     if (!dir.exists(GRN@config$directories$output_plots)) {
       dir.create(GRN@config$directories$output_plots, recursive = TRUE)
     }
@@ -4371,8 +4379,8 @@ getBasic_metadata_visualization <- function(GRN, forceRerun = FALSE) {
 changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   
   GRN@config$directories$outputRoot   =  outputDirectory
-  GRN@config$directories$output_plots = paste0(outputDirectory, "/plots/")
-  GRN@config$files$output_log         = paste0(outputDirectory, "GRN.log")
+  GRN@config$directories$output_plots = paste0(outputDirectory, .Platform$file.sep, "plots", .Platform$file.sep)
+  GRN@config$files$output_log         = paste0(outputDirectory, .Platform$file.sep, "GRN.log")
     
   futile.logger::flog.info(paste0("Output directory changed in the object to " , outputDirectory))
   
