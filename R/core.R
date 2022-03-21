@@ -1731,7 +1731,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = addConnections_TF_peak(GRN, outputFolder = ".", forceRerun = FALSE)
+#' GRN = addConnections_TF_peak(GRN, plotDiagnosticPlots = FALSE, forceRerun = FALSE)
 #' @export
 addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails = FALSE, outputFolder = NULL, 
                                     corMethod = "pearson", 
@@ -2277,8 +2277,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' types =  list(c("protein_coding"))
-#' GRN = addConnections_peak_gene(GRN, promoterRange=10000, outputFolder=".", plotGeneTypes=types)
+#' GRN = addConnections_peak_gene(GRN, promoterRange=10000, plotDiagnosticPlots = FALSE)
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
                                      promoterRange = 250000, TADs = NULL,
                                      nCores = 4, 
@@ -3937,7 +3936,7 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
   if (!length(rid)) {
     rid <- names(BiocFileCache::bfcadd(bfc, "GRaNIE_object_example", fileURL))
   }
-  if (isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
+  if (!isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
     messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
     message(messageStr)
     filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)

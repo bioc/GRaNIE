@@ -16,8 +16,8 @@
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for each specified \code{type}, a PDF file is produced with a PCA. We refer to the Vignettes for details and further explanations.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' GRN = plotPCA_all(GRN, topn = 500, outputFolder = ".", type = "rna", plotAsPDF=FALSE)
+#' # GRN = loadExampleObject()
+#' # GRN = plotPCA_all(GRN, topn = 500, type = "rna", plotAsPDF = FALSE)
 #' @export
 plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                         type = c("rna", "peaks"), topn = c(500,1000,5000), 
@@ -809,7 +809,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' # GRN = loadExampleObject()
 #' # types = list(c("protein_coding"))
-#' # GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder=".", gene.types=types, plotAsPDF=FALSE)
+#' # GRN = plotDiagnosticPlots_peakGene(GRN, gene.types=types, plotAsPDF = FALSE)
 #' @export
 # TODO: implement forceRerun correctly
 plotDiagnosticPlots_peakGene <- function(GRN, 
@@ -1599,7 +1599,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plot_stats_connectionSummary(GRN, outputFolder = ".", forceRerun = FALSE, plotAsPDF=FALSE)
+#' GRN = plot_stats_connectionSummary(GRN, forceRerun = FALSE, plotAsPDF = FALSE)
 #' @export
 #' @importFrom circlize colorRamp2
 plot_stats_connectionSummary <- function(GRN, type = "heatmap", 
@@ -1931,7 +1931,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotGeneralGraphStats(GRN, outputFolder = ".", plotAsPDF=FALSE)
+#' GRN = plotGeneralGraphStats(GRN, plotAsPDF = FALSE)
 #' @export
 plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, 
@@ -2097,7 +2097,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotGeneralEnrichment(GRN, outputFolder = ".", plotAsPDF=FALSE)
+#' GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE)
 #' @export
 plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   ontology = NULL, topn_pvalue = 30, p = 0.05, 
@@ -2276,7 +2276,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotCommunitiesStats(GRN, outputFolder = ".", plotAsPDF=FALSE)
+#' GRN = plotCommunitiesStats(GRN, plotAsPDF = FALSE)
 #' @export
 plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                  display = "byRank", communities = seq_len(10), 
@@ -2446,7 +2446,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotCommunitiesEnrichment(GRN, outputFolder = ".", plotAsPDF=FALSE)
+#' GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE)
 #' @export
 #' @import ggplot2
 #' @importFrom grid gpar
@@ -2760,7 +2760,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotTFEnrichment(GRN, n = 5, outputFolder = ".", plotAsPDF=FALSE)
+#' GRN = plotTFEnrichment(GRN, n = 5, plotAsPDF = FALSE)
 #' @export
 #' @importFrom grid gpar
 plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL,
