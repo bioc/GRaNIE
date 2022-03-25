@@ -15,6 +15,7 @@ plotGeneralEnrichment(
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
+  pages = NULL,
   forceRerun = FALSE
 )
 }
@@ -39,6 +40,8 @@ plotGeneralEnrichment(
 
 \item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
 
+\item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
+
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
@@ -50,5 +53,5 @@ This function plots the results of the general enrichment analysis for every spe
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotGeneralEnrichment(GRN, outputFolder = ".", plotAsPDF=FALSE)
+GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE)
 }

@@ -483,17 +483,13 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     
     .checkOntologyPackageInstallation("biomaRt")
     
-    if (grep(x = GRN@config$parameters$genomeAssembly, pattern = "^hg\\d\\d" )){
-      dataset = "hsapiens_gene_ensembl"
-    } else if (grep(x = GRN@config$parameters$genomeAssembly, pattern = "^mm\\d\\d")){
-      dataset = "mmusculus_gene_ensembl"
-    }
+    params.l = .getBiomartParameters(GRN@config$parameters$genomeAssembly)
     
     errorOcured = FALSE
     
     ensembl = tryCatch({ 
-      biomaRt::useEnsembl(biomart = "genes", dataset = dataset)
-      
+        biomaRt::useEnsembl(biomart = "genes", host = params.l[["host"]], dataset = params.l[["dataset"]])
+        
     }, error = function(e) {
       errorOcured = TRUE 
     }
@@ -1019,7 +1015,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' 
 #' @inheritParams calculateGeneralEnrichment
 #' @param rankType Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.names" parameter.
-#' @param n Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.
+#' @param n Numeric. Default 3. If this parameter is passed as a value between 0 and 1, it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.
 #' @param TF.names Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.
 #' @return The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
 #' @examples 
@@ -1027,7 +1023,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' GRN =  loadExampleObject()
 #' GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
-calculateTFEnrichment <- function(GRN, rankType = "degree", n = 0.1, TF.names = NULL,
+calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NULL,
                                   ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 
                                   statistic = "fisher", background = "neighborhood",
                                   pAdjustMethod = "BH",

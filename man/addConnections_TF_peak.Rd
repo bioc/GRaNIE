@@ -53,5 +53,5 @@ Add TF-peak connections to a \code{\linkS4class{GRN}} object
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = addConnections_TF_peak(GRN, outputFolder = ".", forceRerun = FALSE)
+GRN = addConnections_TF_peak(GRN, plotDiagnosticPlots = FALSE, forceRerun = FALSE)
 }

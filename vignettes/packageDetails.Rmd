@@ -255,7 +255,7 @@ knitr::include_graphics("figs/PCA_peaks_raw/p-01.png")
 knitr::include_graphics("figs/PCA_peaks_raw/p-02.png")
 ```
 
-3. Metadata correlation plot
+3. Metadata correlation plot (correlate all available metadata with the PCs and check fo correlation, which can help to identify potentially confounding variables that explain a large proportion of the observed variability):
 
 ```{r, echo=FALSE, fig.cap="<i>Metadata correlation plot for PCA</i>", out.width = '80%'}
 knitr::include_graphics("figs/PCA_peaks_raw/p-03.png")
@@ -334,6 +334,8 @@ In the following, the 3 plot types are briefly explained:
 It is also possible to extract the results from the AR classification out of a `GRN` object. Currently, this can only be done manually, extractor functions are in the works that will further enhance the user experience. The results are stored in the slot 
 `GRN@data$TFs$classification[[permIndex]] [[connectionType]]$TF.classification`. Here, `permIndex` refers to the original, non-permuted ("0") or permuted ("1") data, while `connectionType` here is either `expression` or `TFActivity`, depending on whether the pipeline has also be run for TF Activity in addition to expression (see function `addConnections_TF_peak()`). Thus, typically, the results for the original data are stored in `GRN@data$TFs$classification[["0"]] [["expression"]]$TF.classification`. If intermediate results from the classification have not been deleted (the default is to delete them as they can occupy a large amount of memory in the object, see the parameters of `AR_classification_wrapper` for details), they can be accessed similarly within `GRN@data$TFs$classification[[permIndex]] [[connectionType]]`: `TF_cor_median_foreground`, `TF_cor_median_background`, `TF_peak_cor_foreground`, `TF_peak_cor_background`, and `act.rep.thres.l`.
 
+
+In summary, we can appreciate that for permuted data, almost all TFs are reassuringly classified as `undetermined` (that is expected, given the random nature of the data), while for the non-permuted one, the majority of TFs is either an `activator` or `repressor`. This is irrespective of the classification stringency. Overall, this indicates we capture real signal.
 
 ## Peak-gene diagnostic plots  {#output_peak_gene}
 

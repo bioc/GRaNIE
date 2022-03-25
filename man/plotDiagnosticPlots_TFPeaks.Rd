@@ -9,8 +9,12 @@ plotDiagnosticPlots_TFPeaks(
   outputFolder = NULL,
   basenameOutput = NULL,
   plotDetails = FALSE,
-  plotPermuted = TRUE,
+  dataType = c("real", "permuted"),
   nTFMax = NULL,
+  plotAsPDF = TRUE,
+  pdf_width = 12,
+  pdf_height_base = 8,
+  pages = NULL,
   forceRerun = FALSE
 )
 }
@@ -23,9 +27,17 @@ plotDiagnosticPlots_TFPeaks(
 
 \item{plotDetails}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Print additional plots that may help for debugging and QC purposes? Note that these plots are currently less documented or not at all.}
 
-\item{plotPermuted}{\code{TRUE} or \code{FALSE}. Default  \code{TRUE}. Also produce the diagnostic plots for permuted data?}
+\item{dataType}{Character vector. One of, or both of, \code{"real"} or \code{"permuted"}. For which data type, real or permuted data, to produce the diagnostic plots?}
 
 \item{nTFMax}{\code{NULL} or Integer. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)}
+
+\item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
+
+\item{pdf_width}{Number. Default 12. Width of the PDF, in cm.}
+
+\item{pdf_height_base}{Number. Default 8. Base height of the PDF, in cm, per connection type. The total height is automatically determined based on the number of connection types that are found in the object (e.g., expression or TF activity). For example, when two connection types are found, the base height is multiplied by 2.}
+
+\item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

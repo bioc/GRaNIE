@@ -370,23 +370,51 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 }
 
 
-.loadPrecompiledAnnotationData <- function(genomeAssembly) {
-  
-  futile.logger::flog.info(paste0("Reading pre-compiled genome annotation data "))
-  
-  if (is.null(geneAnnotation[[genomeAssembly]])) {
+.retrieveAnnotationData <- function(genomeAssembly) {
     
-    message = "The genome version you specified is not contained in the pre-compiled genome annotation list. Currently, only hg19, hg38 and mm10 are supported. Contact us."
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt... This may take a while"))
     
-  } 
-  
-  geneAnnotation[[genomeAssembly]]
+    params.l = .getBiomartParameters(genomeAssembly)
+    
+    columnsToRetrieve = c("chromosome_name", "start_position", "end_position",
+                          "strand", "ensembl_gene_id", "gene_biotype", "external_gene_name")
+    
+    geneAnnotation <- NULL
+    attempt <- 0
+    mirrors = c('www', 'uswest', 'useast', 'asia')
+    while(!is.data.frame(geneAnnotation) && attempt <= 3 ) {
+        attempt <- attempt + 1
+        geneAnnotation = tryCatch({ 
+            ensembl = biomaRt::useEnsembl(biomart = "genes", host = params.l[["host"]], dataset = params.l[["dataset"]], mirror = mirrors[attempt])
+            biomaRt::getBM(attributes = columnsToRetrieve, mart = ensembl)
+            
+        }
+        )
+    } 
+    
+    
+    if (!is.data.frame(geneAnnotation)) {
+        
+        error_Biomart = "A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl. This is often caused by an unresponsive Ensembl site. Try again at a later time. Note that this error is not caused by GRaNIE but external services."
+        .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
+        return(NULL)
+        
+    }
+    
+    geneAnnotation %>%
+        as_tibble() %>%
+        dplyr::filter(stringr::str_length(chromosome_name) <= 5) %>%
+        dplyr::mutate(chromosome_name = paste0("chr", chromosome_name)) %>%
+        dplyr::rename(gene.chr = chromosome_name, gene.start = start_position, gene.end = end_position, 
+                      gene.strand = strand, gene.ENSEMBL = ensembl_gene_id, gene.type = gene_biotype, gene.name = external_gene_name) %>%
+        dplyr::mutate_if(is.character, as.factor) %>%
+        dplyr::mutate(gene.strand = factor(gene.strand, levels = c(1,-1), labels = c("+", "-")))
+    
 }
 
 .getAllGeneTypesAndFrequencies <- function(genomeAssembly, verbose = TRUE) {
   
-  geneAnnotation.df = .loadPrecompiledAnnotationData(genomeAssembly)
+  geneAnnotation.df = .retrieveAnnotationData(genomeAssembly)
   return(table(geneAnnotation.df$gene.type))
   
 }
@@ -399,7 +427,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     stop("Not yet implemented")
   }
   
-  genes.filt.df = .loadPrecompiledAnnotationData(GRN@config$parameters$genomeAssembly)
+  genes.filt.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly)
   
   if (!is.null(gene.types)) {
     if (! "all" %in% gene.types) {
@@ -511,9 +539,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   rowMedians_rna = matrixStats::rowMedians(countsRNA.m)
   CV_rna = matrixStats::rowSds(countsRNA.m) /  rowMeans_rna
   
-  # This object is internally loaded and lives inside the R directory within sysdata.rda
-  # load("R/sysdata.rda")
-  genomeAnnotation.df = geneAnnotation[[GRN@config$parameters$genomeAssembly]]
+  genomeAnnotation.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly)
   
   metadata_rna = tibble::tibble(gene.ENSEMBL = countsRNA.clean$ENSEMBL, 
                                 gene.mean = rowMeans_rna, 
@@ -2431,11 +2457,11 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     end(subject.gr) = start(subject.gr)
   } 
   
-  overlapsAll = GenomicRanges::findOverlaps(query, subject.gr, 
+  overlapsAll = suppressWarnings(GenomicRanges::findOverlaps(query, subject.gr, 
                                             minoverlap=1,
                                             type="any",
                                             select="all",
-                                            ignore.strand=TRUE)
+                                            ignore.strand=TRUE))
   
   query_row_ids  = S4Vectors::queryHits(overlapsAll)
   subject_rowids = S4Vectors::subjectHits(overlapsAll)
@@ -2596,7 +2622,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   # if a peak overlaps with a gene, should the same gene be reported as the connection?
   
   # OVERLAP OF PEAKS AND EXTENDED GENES
-  overlaps.sub.df = .calculatePeakGeneOverlaps(GRN, consensusPeaks, peak.TADs.df, neighborhoodSize = neighborhoodSize, 
+  overlaps.sub.df = .calculatePeakGeneOverlaps(GRN, allPeaks = consensusPeaks, peak.TADs.df, neighborhoodSize = neighborhoodSize, 
                                                genomeAssembly = genomeAssembly, gene.types = gene.types, overlapTypeGene = overlapTypeGene) 
   
   
@@ -4386,5 +4412,112 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   
   GRN
   
+}
+
+
+.createTables_peakGeneQC <- function(peakGeneCorrelations.all.cur, networkType_details, colors_vec, range) {
+    
+    d = peakGeneCorrelations.all.cur %>% 
+        dplyr::group_by(r_positive, class, peak_gene.p.raw.class) %>%
+        dplyr::summarise(n = dplyr::n()) %>%
+        dplyr::ungroup()
+    
+    # Some classes might be missing, add them here with explicit zeros
+    for (r_pos in c(TRUE, FALSE)) {
+        for (classCur in networkType_details){
+            for (pclassCur in levels(peakGeneCorrelations.all.cur$peak_gene.p.raw.class)) {
+                
+                row = which(d$r_positive == r_pos & d$class == classCur & as.character(d$peak_gene.p.raw.class) == as.character(pclassCur))
+                if (length(row) == 0) {
+                    d = tibble::add_row(d, r_positive = r_pos, class = classCur, peak_gene.p.raw.class = pclassCur, n = 0)
+                }
+            }
+        }
+    }
+    
+    # Restore the "ordered" factor for class
+    d$peak_gene.p.raw.class = factor(d$peak_gene.p.raw.class, ordered = TRUE, levels =  levels(peakGeneCorrelations.all.cur$peak_gene.p.raw.class))
+    
+    
+    # Normalization factors
+    dsum = d %>%
+        dplyr::group_by(r_positive, class) %>%
+        dplyr::summarise(sum_n = sum(.data$n))
+    
+    
+    # Summarize per bin
+    d2 = d %>%
+        dplyr::group_by(class, peak_gene.p.raw.class)%>%
+        dplyr::summarise(sum_pos = .data$n[r_positive],
+                         sum_neg = .data$n[!r_positive]) %>%
+        dplyr::mutate(ratio_pos_raw = sum_pos / sum_neg,
+                      enrichment_pos = sum_pos / (sum_pos + sum_neg),
+                      ratio_neg = 1 - enrichment_pos) %>%
+        dplyr::ungroup()
+    
+    # Compare between real and permuted
+    normFactor_real = dplyr::filter(dsum, class ==  !! (networkType_details[1])) %>%  dplyr::pull(sum_n) %>% sum() /
+        dplyr::filter(dsum, class ==  !! (networkType_details[2])) %>%  dplyr::pull(sum_n) %>% sum()
+    
+    # ratio_norm not used currently, no normalization necessary here or not even useful because we dont want to normalize the r_pos and r_neg ratios: These are signal in a way. Only when comparing between real and permuted, we have to account for sample size for corrections
+    d3 = d %>%
+        dplyr::group_by(peak_gene.p.raw.class, r_positive) %>%
+        dplyr::summarise(n_real     = .data$n[class == !! (names(colors_vec)[1]) ],
+                         n_permuted = .data$n[class == !! (names(colors_vec)[2]) ]) %>%
+        dplyr::ungroup() %>%
+        dplyr::mutate(ratio_real_raw = n_real / n_permuted,
+                      ratio_real_norm = ratio_real_raw / normFactor_real,
+                      enrichment_real      = n_real / (n_real + n_permuted),
+                      enrichment_real_norm = (n_real / normFactor_real) / ((n_real / normFactor_real) + n_permuted)) 
+    
+    
+    stopifnot(identical(levels(d2$peak_gene.p.raw.class), levels(d3$peak_gene.p.raw.class)))
+    # 2 enrichment bar plots but combined using facet_wrap
+    d2$set = "r+ / r-"; d3$set = "real / permuted" 
+    d_merged <- tibble::tibble(peak_gene.p.raw.class = c(as.character(d2$peak_gene.p.raw.class), 
+                                                         as.character(d3$peak_gene.p.raw.class)),
+                               ratio = c(d2$ratio_pos_raw, d3$ratio_real_norm),
+                               classAll = c(as.character(d2$class), d3$r_positive),
+                               set = c(d2$set, d3$set)) %>%
+        dplyr::mutate(classAll = factor(classAll, levels=c(paste0("real_",range), paste0("random_",range), "TRUE", "FALSE")),
+                      peak_gene.p.raw.class = factor(peak_gene.p.raw.class, levels = levels(d2$peak_gene.p.raw.class)))
+    
+    d4 = tibble::tibble(peak_gene.p.raw.class = unique(d$peak_gene.p.raw.class), 
+                        n_rpos_real = NA_integer_, n_rpos_random = NA_integer_,
+                        n_rneg_real = NA_integer_, n_rneg_random = NA_integer_,
+                        ratio_permuted_real_rpos_norm = NA_real_,
+                        ratio_permuted_real_rneg_norm = NA_real_)
+    
+    for (i in seq_len(nrow(d4))) {
+        row_d2 = which(d2$class == networkType_details[1] & d2$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
+        stopifnot(length(row_d2) == 1)
+        d4[i, "n_rpos_real"] = d2[row_d2, "sum_pos"] %>% unlist()
+        d4[i, "n_rneg_real"] = d2[row_d2, "sum_neg"] %>% unlist()
+        row_d2 = which(d2$class == paste0("random_",range) & d2$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
+        d4[i, "n_rpos_random"] = d2[row_d2, "sum_pos"] %>% unlist()
+        d4[i, "n_rneg_random"] = d2[row_d2, "sum_neg"] %>% unlist()
+        
+        row_d3 = which(d3$r_positive == TRUE & d3$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
+        d4[i, "ratio_permuted_real_rpos_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
+        row_d3 = which(d3$r_positive == FALSE & d3$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
+        d4[i, "ratio_permuted_real_rneg_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
+    }
+    
+    d4 = d4 %>%
+        dplyr::mutate(ratio_rneg_rpos_real = n_rneg_real / (n_rneg_real + n_rpos_real),
+                      ratio_rneg_rpos_random = n_rneg_random / (n_rneg_random + n_rpos_random),
+                      peak_gene.p.raw.class.bin = as.numeric(peak_gene.p.raw.class)) %>%
+        dplyr::arrange(peak_gene.p.raw.class.bin)
+    
+    d4_melt = reshape2::melt(d4, id  = c("peak_gene.p.raw.class.bin", "peak_gene.p.raw.class")) %>%
+        dplyr::filter(grepl("ratio", variable))
+    
+    
+    list(d = d, d2 = d2, d3 = d3, d4 = d4, d4_melt = d4_melt, d_merged = d_merged)
+    
+}
+
+.classFreq_label <- function(tbl_freq) {
+    paste0(names(tbl_freq), " (", tbl_freq, ")")
 }
 

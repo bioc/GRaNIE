@@ -20,6 +20,7 @@ plotTFEnrichment(
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
+  pages = NULL,
   forceRerun = FALSE
 )
 }
@@ -54,6 +55,8 @@ plotTFEnrichment(
 
 \item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
 
+\item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
+
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
@@ -65,7 +68,7 @@ This function plots the enrichment results. The result consist of a dot plot per
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotTFEnrichment(GRN, n = 5, outputFolder = ".", plotAsPDF=FALSE)
+GRN = plotTFEnrichment(GRN, n = 5, plotAsPDF = FALSE)
 }
 \seealso{
 \code{\link{calculateTFEnrichment}}

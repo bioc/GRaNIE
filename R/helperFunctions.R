@@ -58,7 +58,7 @@
     if (!checkmate::testNull(pdfFile)) 
       grDevices::dev.off()
     
-    futile.logger::flog.info(paste0("Finished writing plots to file ", pdfFile))
+    futile.logger::flog.info(paste0(" Finished writing plots"))
 }
 
 .startLogger <- function(logfile, level, removeOldLog = TRUE, appenderName = "consoleAndFile", verbose = TRUE) {
@@ -718,4 +718,24 @@ is.installed <- function(mypkg){
     message = paste0("The specified output file or directory (", fileCur, ") is not writable or does not exist. Please adjust the output folder and rerun the function or change the output folder globally using the function changeOutputDirectory.")
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
+}
+
+
+.getBiomartParameters <- function(genomeAssembly) {
+    
+    .checkOntologyPackageInstallation("biomaRt")
+    
+    if (grepl(x = genomeAssembly, pattern = "^hg\\d\\d")){
+        dataset = "hsapiens_gene_ensembl"
+        if (genomeAssembly == "hg38") {
+            host = "https://www.ensembl.org"
+        } else if (genomeAssembly == "hg19") {
+            host ="https://grch37.ensembl.org"
+        }
+    } else if (grep(x = genomeAssembly, pattern = "^mm\\d\\d")){
+        dataset = "mmusculus_gene_ensembl"
+        host = "https://www.ensembl.org"
+    }
+    
+    list(dataset = dataset, host = host)
 }

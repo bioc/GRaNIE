@@ -7,7 +7,7 @@
 calculateTFEnrichment(
   GRN,
   rankType = "degree",
-  n = 0.1,
+  n = 3,
   TF.names = NULL,
   ontology = c("GO_BP", "GO_MF"),
   algorithm = "weight01",
@@ -22,7 +22,7 @@ calculateTFEnrichment(
 
 \item{rankType}{Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.names" parameter.}
 
-\item{n}{Numeric. Default 0.1. If this parameter is passed as a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.}
+\item{n}{Numeric. Default 3. If this parameter is passed as a value between 0 and 1, it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.}
 
 \item{TF.names}{Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.}
 

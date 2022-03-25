@@ -6,11 +6,13 @@
 \usage{
 visualizeGRN(
   GRN,
-  permuted,
   file,
   title = NULL,
   maxRowsToPlot = 500,
   useDefaultMetadata = TRUE,
+  graph = "TF-gene",
+  colorby = "type",
+  layered = FALSE,
   vertice_color_TFs = NULL,
   vertice_color_peaks = NULL,
   vertice_color_genes = NULL,
@@ -22,8 +24,6 @@ visualizeGRN(
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
-
-\item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 
 \item{file}{TODO}
 
@@ -46,6 +46,8 @@ visualizeGRN(
 \item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
+
+\item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 }
 \value{
 TODO

@@ -15,6 +15,7 @@ plotDiagnosticPlots_peakGene(
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
+  pages = NULL,
   forceRerun = FALSE
 )
 }
@@ -39,6 +40,8 @@ plotDiagnosticPlots_peakGene(
 
 \item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
 
+\item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
+
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
@@ -51,5 +54,5 @@ Plot diagnostic plots for peak-gene connections for a \code{\linkS4class{GRN}} o
 # See the Workflow vignette on the GRaNIE website for examples
 # GRN = loadExampleObject()
 # types = list(c("protein_coding"))
-# GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder=".", gene.types=types, plotAsPDF=FALSE)
+# GRN = plotDiagnosticPlots_peakGene(GRN, gene.types=types, plotAsPDF = FALSE)
 }

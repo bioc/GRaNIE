@@ -12,6 +12,7 @@ plot_stats_connectionSummary(
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
+  pages = NULL,
   forceRerun = FALSE
 )
 }
@@ -30,6 +31,8 @@ plot_stats_connectionSummary(
 
 \item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
 
+\item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
+
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
@@ -41,5 +44,5 @@ Plot various network connectivity summaries for a \code{\linkS4class{GRN}} objec
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plot_stats_connectionSummary(GRN, outputFolder = ".", forceRerun = FALSE, plotAsPDF=FALSE)
+GRN = plot_stats_connectionSummary(GRN, forceRerun = FALSE, plotAsPDF = FALSE)
 }

@@ -50,6 +50,5 @@ Add peak-gene connections to a \code{\linkS4class{GRN}} object
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-types =  list(c("protein_coding"))
-GRN = addConnections_peak_gene(GRN, promoterRange=10000, outputFolder=".", plotGeneTypes=types)
+GRN = addConnections_peak_gene(GRN, promoterRange=10000, plotDiagnosticPlots = FALSE)
 }

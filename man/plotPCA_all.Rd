@@ -8,11 +8,13 @@ plotPCA_all(
   GRN,
   outputFolder = NULL,
   basenameOutput = NULL,
-  type = c("rna", "peaks"),
+  data = c("rna", "peaks"),
   topn = c(500, 1000, 5000),
+  type = c("raw", "normalized"),
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
+  pages = NULL,
   forceRerun = FALSE
 )
 }
@@ -23,15 +25,19 @@ plotPCA_all(
 
 \item{basenameOutput}{\code{NULL} or character. Default \code{NULL}. Basename of the output files that are produced. If set to \code{NULL}, a default basename is chosen. If a custom basename is specified, all output files will have the chosen basename as file prefix, be careful with not overwriting already existing files (if \code{forceRerun} is set to \code{TRUE})}
 
-\item{type}{Character. Either "peaks" or "rna" or "all". Type of data to plot a PCA for. "peaks" corresponds to the the open chromatin data, while "rna" refers to the RNA-seq counts. If set to "all", PCA will be done for both data modalities. In any case, PCA will be based on the original provided data before any additional normalization has been run (i.e., usually the raw data).}
+\item{data}{Character. Either \code{"peaks"} or \code{"rna"} or \code{"all"}. Type of data to plot a PCA for. \code{"peaks"} corresponds to the the open chromatin data, while \code{"rna"} refers to the RNA-seq counts. If set to \code{"all"}, PCA will be done for both data modalities. In any case, PCA will be based on the original provided data before any additional normalization has been run (i.e., usually the raw data).}
 
-\item{topn}{Integer vector. Default c(500,1000,5000). Number of top variable features to do PCA for. Can be a vector of different numbers (see default).}
+\item{topn}{Integer vector. Default \code{c(500,1000,5000)}. Number of top variable features to do PCA for. Can be a vector of different numbers (see default).}
+
+\item{type}{Character. One of or a combination of \code{"raw"}, \code{"normalized"}, \code{"all"}. Default \code{c("raw", "normalized")}. Should the PCA plots be done based on the raw or normalized data, respectively?}
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
 \item{pdf_width}{Number. Default 12. Width of the PDF, in cm.}
 
 \item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
+
+\item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
@@ -43,6 +49,6 @@ Produce a PCA plot of the data from a \code{\linkS4class{GRN}} object
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-GRN = loadExampleObject()
-GRN = plotPCA_all(GRN, topn = 500, outputFolder = ".", type = "rna", plotAsPDF=FALSE)
+# GRN = loadExampleObject()
+# GRN = plotPCA_all(GRN, topn = 500, type = "rna", plotAsPDF = FALSE)
 }
