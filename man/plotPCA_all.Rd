@@ -25,7 +25,7 @@ plotPCA_all(
 
 \item{basenameOutput}{\code{NULL} or character. Default \code{NULL}. Basename of the output files that are produced. If set to \code{NULL}, a default basename is chosen. If a custom basename is specified, all output files will have the chosen basename as file prefix, be careful with not overwriting already existing files (if \code{forceRerun} is set to \code{TRUE})}
 
-\item{data}{Character. Either \code{"peaks"} or \code{"rna"} or \code{"all"}. Type of data to plot a PCA for. \code{"peaks"} corresponds to the the open chromatin data, while \code{"rna"} refers to the RNA-seq counts. If set to \code{"all"}, PCA will be done for both data modalities. In any case, PCA will be based on the original provided data before any additional normalization has been run (i.e., usually the raw data).}
+\item{data}{Character. Either \code{"peaks"} or \code{"rna"} or \code{"all"}. Default \code{c("rna", "peaks")}. Type of data to plot a PCA for. \code{"peaks"} corresponds to the the open chromatin data, while \code{"rna"} refers to the RNA-seq counts. If set to \code{"all"}, PCA will be done for both data modalities. In any case, PCA will be based on the original provided data before any additional normalization has been run (i.e., usually the raw data).}
 
 \item{topn}{Integer vector. Default \code{c(500,1000,5000)}. Number of top variable features to do PCA for. Can be a vector of different numbers (see default).}
 

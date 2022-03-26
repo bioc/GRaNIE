@@ -2580,11 +2580,11 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     
     # Finally, do the actual overlaps
-    overlapsAll = GenomicRanges::findOverlaps(query, subject, 
+    overlapsAll = suppressWarnings(GenomicRanges::findOverlaps(query, subject, 
                                               minoverlap = 1,
                                               type = "any",
                                               select = "all",
-                                              ignore.strand = TRUE)
+                                              ignore.strand = TRUE))
     
     
     query_row_ids  = S4Vectors::queryHits(overlapsAll)
@@ -4211,7 +4211,8 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
     "plot_communityStats"            = "GRN.community_stats",
     "plot_communityEnrichment"       = "GRN.community_enrichment",
     "plot_generalNetworkStats"       = "GRN.overall_stats",
-    "plot_TFEnrichment"              = "GRN.TF_enrichment"
+    "plot_TFEnrichment"              = "GRN.TF_enrichment",
+    "plot_network"                   = "GRN.network_visualisation"
     
   )
   

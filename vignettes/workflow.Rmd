@@ -4,7 +4,7 @@ author: "Christian Arnold, Judith Zaugg, Rim Moussa"
 date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('GRaNIE')`"
 abstract: >
-  This workflow vignette shows how to use the `GRaNIE` package in a real-world example. For this purpose, you will use real data that is soon available in the `GRaNIEData` package for a more complex analysis to illustrate most of its features. Importantly, you will also learn in detail how to work with a `GRaNIE` object and what its main functions and properties are. The vignette will be continuously updated whenever new functionality becomes available or when we receive user feedback.
+  This workflow vignette shows how to use the `GRaNIE` package in a real-world example. For this purpose, you will use real data for a more complex analysis to illustrate most of its features. Importantly, you will also learn in detail how to work with a `GRaNIE` object and what its main functions and properties are. The vignette will be continuously updated whenever new functionality becomes available or when we receive user feedback.
 vignette: >
   %\VignetteIndexEntry{Workflow example}
   %\VignetteEngine{knitr::rmarkdown}
@@ -53,10 +53,25 @@ pre[class] {
 }
 ```
 
+# Example data
+
+The data is taken from [here](https://zenodo.org/record/1188300#.X370PXUzaSN) [1], has been processed to meet the requirements of the `GRaNIE` package and consists of the following files:
+
+* ATAC-seq peaks, raw counts (originally around 75,000, genome-wide, here filtered to around 60,500)
+* RNA-Seq data, raw counts (originally for around 35,000 genes, here filtered to around 19,000)
+* sample metadata with additional sample-specific information
+
+In general, the dataset is from human macrophages (both naive and IFNg primed) of healthy individuals and various stimulations / infections (naive vs primed and infected with SL1344 vs not), with 4 groups in total: control/infected(SL1344) and naive/primed(IFNg)
+
+
+Furthermore, the example dataset is accompanied by the following files:
+
+* genome-wide transcription factor binding site predictions for 75 selected TFs, along with a translation table to link TF names to their corresponding Ensembl IDs. For each TF, a gzipped BED file has been created with predicted TF binding sites. The files have been generated with `PWMScan` and the `HOCOMOCO` database, see [2] for details.
+
 # Example Workflow
 <a name="section1"></a>
 
-In the following example, you will use data from the `GRaNIEData` package (soon available) to construct a *eGRN* from ATAC-seq, RNA-seq data as well transcription factor data.
+In the following example, you will use the example data to construct a *eGRN* from ATAC-seq, RNA-seq data as well transcription factor data.
 
 
 ```{r <knitr, echo=FALSE, message=FALSE, results="hide", class.output="scroll-200"}
@@ -75,14 +90,13 @@ For reasons of brevity, we omit the output of this code chunk.
 
 ```{r loadLibaries2, echo=TRUE, message=FALSE, results="hide", warning=FALSE, class.output="scroll-200"}
 library(tidyverse)
-#library(GRaNIEData)
 library(GRaNIE)
 ```
 
 
 ## General notes
 
-Each of the `GRaNIE` functions we mention here in this Vignette comes with sensible default parameters that we found to work well for most of the datasets we tested it with so far.  However, **always check the validity and usefulness of the parameters before starting an analysis** to avoid unreasonable results.
+Each of the `GRaNIE` functions we mention here in this Vignette comes with sensible default parameters that we found to work well for most of the datasets we tested it with so far. For the purpose of this Vignette, however, and the resulting running times, we here try to provide a good compromise between biological necessity and computational efficiacy.  However, **always check the validity and usefulness of the parameters before starting an analysis** to avoid unreasonable results.
 
 ## Reading the data required for the `GRaNIE` package
 
@@ -101,8 +115,8 @@ So, let's import the enhancer and RNA-seq data as a data frame as well as some s
 ```{r importData, echo=TRUE, include=TRUE, class.output="scroll-200"}
 
 # We load the example data directly from the web:
-file_peaks = "https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz"
-file_RNA   = "https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz"
+file_peaks = "https://www.embl.de/download/zaugg/GRaNIE/countsATAC.filtered.tsv.gz"
+file_RNA   = "https://www.embl.de/download/zaugg/GRaNIE/countsRNA.filtered.tsv.gz"
 file_sampleMetadata = "https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz"
 
 countsRNA.df      = read_tsv(file_RNA, col_types = cols())
@@ -118,7 +132,6 @@ sampleMetadata.df
 # Save the name of the respective ID columns
 idColumn_peaks = "peakID"
 idColumn_RNA = "ENSEMBL"
-
 
 ```
 
@@ -145,7 +158,7 @@ objectMetadata.l = list(name                = paste0("Macrophages_infected_prime
                         file_sampleMetadata = file_sampleMetadata,
                         genomeAssembly      = genomeAssembly)
 
-dir_output = "output"
+dir_output = "."
 
 GRN = initializeGRN(objectMetadata = objectMetadata.l,
                     outputFolder = dir_output,
@@ -190,34 +203,34 @@ Note that while this step is recommended to do, it is fully optional from a work
 
 
 ```{r runPCA, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200", collapse=FALSE, results="hold"}
-GRN = plotPCA_all(GRN, data = c("rna"), topn = 500, type = "raw", plotAsPDF = FALSE, pages = c(3,4), forceRerun = TRUE)
+GRN = plotPCA_all(GRN, data = c("rna"), topn = 500, type = "raw", plotAsPDF = FALSE, pages = c(2,3,14), forceRerun = TRUE)
 ```
 
-Depending on the parameters, multiple output plots may be produced, with up to two files for each of the specified `data` modalities (that is, RNA-Seq counts, as specified with `rna` here, as well as the peak counts, `peaks`, not done here for reasons of brevity). For each of them, PCA plots can be produced for both `raw` and `normalized` data (here: only `raw`). With `raw`, we here denote the original counts as given as input with the `addData()` function, irrespective of whether this was already pre-normalized or not. For more details, see the [Package Details Vignette](packageDetails.html). The `topn` argument specifies the number of top variable features to do PCA for - here 500.
+Depending on the parameters, multiple output files (and plots) may be produced, with up to two files for each of the specified `data` modalities (that is, RNA-Seq counts, as specified with `rna` here, as well as the peak counts, `peaks`, not done here for reasons of brevity). For each of them, PCA plots can be produced for both `raw` and `normalized` data (here: only `raw`). With `raw`, we here denote the original counts as given as input with the `addData()` function, irrespective of whether this was already pre-normalized or not. The `topn` argument specifies the number of top variable features to do PCA for - here 500.
 
-We do not show any of the PCA plots here for reasons of brevity, but make sure to examine these plots closely! For all details, which plota are produced and further comments on how to understand and interpret them, see the [Package Details Vignette](packageDetails.html).
+There are more plots that are generated, make sure to examine these plots closely! For all details, which plots are produced and further comments on how to understand and interpret them, see the [Package Website](https://grp-zaugg.embl-community.io/GRaNIE/).
 
 
 ## Add TFs and TFBS and overlap with peak
 
-Now it is time to add data for TFs and predicted TF binding sites (TFBS)! Our `GRaNIE` package requires pre-computed TFBS that need to be in a specific format (see the [Package Details Vignette](packageDetails.html) for details). In brief, a 6-column bed file must be present for each TF, with a specific file name that starts with the name of the TF, an arbitrary and optional suffix (here: "_TFBS") and a particular file ending (supported are `bed` or `bed.gz`; here, we specify the latter). All these files must be located in a particular folder that the `addTFBS()` functions then searches in order to identify those files that match the specified patterns. We provide example TFBS for the 3 genome assemblies we support, see the comment below and the [Package Details Vignette](packageDetails.html) for details. After setting this up, we are ready to overlap the TFBS and the peaks by calling the function `overlapPeaksAndTFBS()`.
+Now it is time to add data for TFs and predicted TF binding sites (TFBS)! Our `GRaNIE` package requires pre-computed TFBS that need to be in a specific format. In brief, a 6-column bed file must be present for each TF, with a specific file name that starts with the name of the TF, an arbitrary and optional suffix (here: `_TFBS`) and a particular file ending (supported are `bed` or `bed.gz`; here, we specify the latter). All these files must be located in a particular folder that the `addTFBS()` functions then searches in order to identify those files that match the specified patterns. We provide example TFBS for the 3 genome assemblies we support. After setting this up, we are ready to overlap the TFBS and the peaks by calling the function `overlapPeaksAndTFBS()`.
 
 For more parameter details, see the R help (`?addTFBS` and `?overlapPeaksAndTFBS`). 
 
 ```{r addTFBS, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200", results='hold'}
 
-folder_TFBS_first50 = "TFBS_selected"
+folder_TFBS_first50 = "https://www.embl.de/download/zaugg/GRaNIE/TFBS_selected.zip"
 # Download the zip of all TFBS files. Takes too long here, not executed therefore
-# filename <- "TFBS_selected.zip"
-# download.file("https://www.embl.de/download/zaugg/GRaNIE/TFBS_selected.zip", file.path(filename), quiet = FALSE)
-# unzip(file.path(filename), overwrite = TRUE, exdir = file.path("TFBS_selected"))
+# download.file(folder_TFBS_first50, file.path("TFBS_selected.zip"), quiet = FALSE)
+# unzip(file.path("TFBS_selected.zip"), overwrite = TRUE)
+# motifFolder = tools::file_path_as_absolute("TFBS_selected")
 
-GRN = addTFBS(GRN, motifFolder = folder_TFBS_first50, TFs = "all", filesTFBSPattern = "_TFBS", fileEnding = ".bed.gz", forceRerun = TRUE)
+GRN = addTFBS(GRN, motifFolder = motifFolder, TFs = "all", filesTFBSPattern = "_TFBS", fileEnding = ".bed.gz", forceRerun = TRUE)
 
 GRN = overlapPeaksAndTFBS(GRN, nCores = 1, forceRerun = TRUE)
 ```
 
-We see from the output (omitted here for brevity) that 75 TFs have been found in the specified input folder, and the number of TFBS that overlap our peaks for each of them. We now successfully added our TFs and TFBS to the `GRaNIE` object.
+We see from the output (omitted here for brevity) that 6 TFs have been found in the specified input folder, and the number of TFBS that overlap our peaks for each of them. We successfully added our TFs and TFBS to the `GRaNIE` object"
 
 
 
@@ -247,7 +260,7 @@ We can see from the output that no peaks have been filtered due to their size an
 
 ## Add TF-enhancer connections
 
-We now have all necessary data in the object to start constructing our network. As explained in the [Package Details Vignette](packageDetails.html), we currently support two types of links for our `GRaNIE` approach:
+We now have all necessary data in the object to start constructing our network. As explained elsewhere, we currently support two types of links for our `GRaNIE` approach:
 
 1. TF - enhancer
 2. enhancer - gene
@@ -260,7 +273,7 @@ In addition to creating TF-enhancer links based on TF expression, we can also co
 
 Lastly, we offer a so called GC-correction that uses a GC-matching background to compare it with the foreground instead of using the full background as comparison. We are still investigating the plausibility and effects of this and therefore mark this feature as experimental as of now.
 
-This function may run a while, and each time-consuming step has a built-in progress bar so the remaining time can be estimated. Note that the TF-enhancer links are constructed for both the original, non-permuted data (in the corresponding output plots that are produced, this is labeled as `original`) and permuted data (`permuted`). 
+Note that the TF-enhancer links are constructed for both the original, non-permuted data (in the corresponding output plots that are produced, this is labeled as `original`) and permuted data (`permuted`). 
 For more parameter options and parameter details, see the R help (`?addConnections_TF_peak`). 
 
 ```{r addTFPeakConnections, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
@@ -268,40 +281,41 @@ GRN = addConnections_TF_peak(GRN, plotDiagnosticPlots = FALSE,
                                      connectionTypes = c("expression"),
                                      corMethod = "pearson", forceRerun = TRUE)
 ```
-From the output, we see that a total of 65 TFs have RNA-seq data available and consequently will be included and correlated with the enhancer accessibility.
+From the output, we see that all of the 6 TFs also have RNA-seq data available and consequently will be included and correlated with the enhancer accessibility.
 
 ## Quality control 2: Diagnostic plots for TF-enhancer connections
 
-After adding the TF-enhancer links to our `GRaNIE` object, let's look at some diagnostic plots. Depending on the user parameters, the plots are either directly plotted to the currently active graphics device or to PDF files as specified in the object or via the function parameters. If plotted to a PDF, within the specified or default output folder (when initializing the `GRaNIE` object) should contain two new files that are named `TF_peak.fdrCurves_original.pdf` and `TF_peak.fdrCurves_permuted.pdf`, for example. For reasons of brevity and organization, we fully describe their interpretation and meaning in detail in the [Package Details Vignette](packageDetails.html#output_TF_peak) and not here, however.
+After adding the TF-enhancer links to our `GRaNIE` object, let's look at some diagnostic plots. Depending on the user parameters, the plots are either directly plotted to the currently active graphics device or to PDF files as specified in the object or via the function parameters. If plotted to a PDF, within the specified or default output folder (when initializing the `GRaNIE` object) should contain two new files that are named `TF_peak.fdrCurves_original.pdf` and `TF_peak.fdrCurves_permuted.pdf`, for example. 
 
-In summary, TF-enhancer diagnostic plots are available for each TF, and each page summarizes the QC for each TF in two plots:  
+This function may run a while, and each time-consuming step has a built-in progress bar for the plot-related parts so the remaining time can be estimated. 
+
+For reasons of brevity and organization, we fully describe their interpretation and meaning in detail elsewhere, however. In summary, TF-enhancer diagnostic plots are available for each TF, and each page summarizes the QC for each TF in two plots:  
 
 
 ```{r, echo=FALSE}
-GRN = plotDiagnosticPlots_TFPeaks(GRN, dataType = c("real", "permuted"), plotAsPDF = FALSE, pages = c(6))
+GRN = plotDiagnosticPlots_TFPeaks(GRN, dataType = c("real", "permuted"), plotAsPDF = FALSE, pages = 4)
 ```
 
-TODO: correct
-For this example, we can see a quite typical case: the TF-enhancer FDR for the various *ETV5.0.C* - enhancer pairs are above 0.2 for the wide majority correlation bins in both directions (that is, positive and negative), while a few bins towards more extreme correlation bins have a low FDR. The former indicate little statistical signal and confidence, while the latter are those connections we are looking for! Typically, however, only  few connections are in the more extreme bins, as indicated by the color. Here, correlation bin refers to the correlation of a particular *ETV5.0.C* - enhancer pair that has been discretized accordingly (i.e., a correlation of 0.07 would go into (0.05-0.10] correlation bin). Usually, depending on the mode of action of a TF, none or either one of the two directions may show a low FDR in particular areas of the plots, often close to more extreme correlation bins, but rarely both. For a better judgement and interpretation, we can also check how this looks like for permuted data:
+For this example, we can see a quite typical case: the TF-enhancer FDR for the various *EGR1.0.A* - enhancer pairs are above 0.2 for the wide majority correlation bins in both directions (that is, positive and negative), while a few bins towards more extreme correlation bins have a low FDR. The former indicate little statistical signal and confidence, while the latter are those connections we are looking for! Typically, however, only  few connections are in the more extreme bins, as indicated by the color. Here, correlation bin refers to the correlation of a particular *EGR1.0.A* - enhancer pair that has been discretized accordingly (i.e., a correlation of 0.07 would go into (0.05-0.10] correlation bin). Usually, depending on the mode of action of a TF, none or either one of the two directions may show a low FDR in particular areas of the plots, often close to more extreme correlation bins, but rarely both. For a better judgement and interpretation, we can also check how this looks like for permuted data:
 
 
 We see that for permuted data, there is much less significant bins, as expected.
 
-Here, in summary, a few positively correlated *ETV5.0.C* - enhancer pairs (with a correlation of at least 0.65 or so) are statistically significant and may be retained for the final *eGRN* network (if corresponding genes connecting to the respective enhancers are found).
+Here, in summary, a few positively correlated *EGR1.0.A* - enhancer pairs (with a correlation of above 0.5 or so) are statistically significant and may be retained for the final *eGRN* network (if corresponding genes connecting to the respective enhancers are found).
 
 
 ## Run the AR classification and QC (optional) {#output_AR}
 
 Transcription factors (TFs) regulate many cellular processes and can therefore serve as readouts of the signaling and regulatory state. Yet for many TFs, the mode of action—repressing or activating transcription of target genes—is unclear. In analogy to our *diffTF* approach that we recently published to calculate differential TF activity,the classification of TFs into putative transcriptional activators or repressors can also be done from within the `GRaNIE` framework in an identical fashion. This can be achieved with the function `AR_classification_wrapper()`.  
 
-**Note that this step is fully optional and can be skipped. The output of the function is not used for subsequent steps.**. To keep the memory footprint of the `GRaNIE` object low, we recommend to keep the function parameter default `deleteIntermediateData = TRUE`. Here, we specify to put all plots within `output/plots`. However, we do not actually run the code here.
+**Note that this step is fully optional and can be skipped. The output of the function is not used for subsequent steps.**. To keep the memory footprint of the `GRaNIE` object low, we recommend to keep the function parameter default `deleteIntermediateData = TRUE`. Here, we specify to put all plots within `output/plots`. However, for reasons of brevity, we do not actually run the code here.
 
 
 ```{r runARClassification, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}
 GRN = AR_classification_wrapper(GRN, significanceThreshold_Wilcoxon = 0.05,
                                 outputFolder = "output/plots", 
                                 plot_minNoTFBS_heatmap = 100, plotDiagnosticPlots = TRUE,
-                                deleteIntermediateData = TRUE, forceRerun = TRUE)
+                                forceRerun = TRUE)
 ```
 The classification runs for both real and permuted data, as before. The contents of these plots are identical to and uses in fact practically the same code as our `diffTF` software, and we therefore do not include them here. We refer to the following links for more details as well as the [Package Details Vignette](packageDetails.html#output_AR):
 
@@ -340,7 +354,7 @@ GRN = addConnections_peak_gene(GRN,
                                nCores = 1, plotDiagnosticPlots = FALSE, plotGeneTypes = list(c("all")), forceRerun = TRUE)
 ```
 
-We see from the output that almost 38,000 enhancer-gene links have been identified that match our parameters. From these 38,000, however, only around 16,351 actually had corresponding RNA-seq data available, while RNA-seq data was missing or has been filtered for the other. This is a rather typical case, as not all known and annotated genes are included in the RNA-seq data in the first place. Similar to before, the correlations have also been performed for the permuted data.
+We see from the output that almost 38,000 enhancer-gene links have been identified that match our parameters. However, only around 16,351 actually had corresponding RNA-seq data available, while RNA-seq data was missing or has been filtered for the other. This is a rather typical case, as not all known and annotated genes are included in the RNA-seq data in the first place. Similar to before, the correlations have also been performed for the permuted data.
 
 
 ## Quality control 3: Diagnostic plots for enhancer-gene connections
@@ -406,9 +420,15 @@ GRN_connections.all
 The table contains many columns, and the prefix of each column name indicates the part of the *eGRN* network that the column refers to (e.g., TFs, TF-enhancers, enhancers, enhancer-genes or genes, or TF-gene if the function `add_TF_gene_correlation()` has been run before). Data are stored in a format that minimizes the memory footprint (e.g., each character column is stored as a factor). This table can now be used for any downstream analysis, as it is just a normal data frame.
 
 
-## Visualize the filtered *eGRN* connections
+## Visualize the filtered *eGRN*
 
-The `GRaNIE` package will soon also offer some rudimentary functions to visualize a filtered *eGRN* network. Stay tuned! Meanwhile, you can use the `igraph` package to construct a graph out of the filtered TF-enhancer-gene connection table (see above).
+The `GRaNIE` package also offers a function to visualize a filtered *eGRN* network! It is very easy to invoke, but provides many options to customize the output and the way the graph is drawn. We recommend to explore the options in the R help (`?getGRNConnections`).
+
+
+```{r visualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
+GRN = visualizeGRN(GRN)
+```
+
 
 ## Generate a connection summary for filtered connections
 
@@ -416,10 +436,10 @@ It is often useful to get a grasp of the general connectivity of a network and t
 
 ```{r connectionSummary, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
 GRN = generateStatsSummary(GRN,
-                           TF_peak.fdr = c(0.01, 0.05, 0.1, 0.2), 
+                           TF_peak.fdr = c(0.05, 0.1, 0.2), 
                            TF_peak.connectionTypes = "all",
                            peak_gene.p_raw = NULL,
-                           peak_gene.fdr = c(0.01, 0.05, 0.1, 0.2),
+                           peak_gene.fdr = c(0.1, 0.2),
                            peak_gene.r_range = c(0,1),
                            allowMissingGenes = c(FALSE, TRUE),
                            allowMissingTFs = c(FALSE),

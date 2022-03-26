@@ -2,42 +2,34 @@
 % Please edit documentation in R/plot.R
 \name{visualizeGRN}
 \alias{visualizeGRN}
-\title{Visualize a filtered GRN (in development)}
+\title{Visualize a filtered GRN.}
 \usage{
 visualizeGRN(
   GRN,
-  file,
-  title = NULL,
-  maxRowsToPlot = 500,
-  useDefaultMetadata = TRUE,
-  graph = "TF-gene",
-  colorby = "type",
-  layered = FALSE,
-  vertice_color_TFs = NULL,
-  vertice_color_peaks = NULL,
-  vertice_color_genes = NULL,
+  outputFolder = NULL,
+  basenameOutput = NULL,
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
+  title = NULL,
+  maxRowsToPlot = 500,
+  graph = "TF-gene",
+  colorby = "type",
+  layered = FALSE,
+  vertice_color_TFs = list(h = 10, c = 85, l = c(25, 95)),
+  vertice_color_peaks = list(h = 135, c = 45, l = c(35, 95)),
+  vertice_color_genes = list(h = 260, c = 80, l = c(30, 90)),
+  vertexLabel_cex = 0.4,
+  vertexLabel_dist = 0,
   forceRerun = FALSE
 )
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{file}{TODO}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 
-\item{title}{TODO}
-
-\item{maxRowsToPlot}{TODO}
-
-\item{useDefaultMetadata}{TODO}
-
-\item{vertice_color_TFs}{TODO}
-
-\item{vertice_color_peaks}{TODO}
-
-\item{vertice_color_genes}{TODO}
+\item{basenameOutput}{\code{NULL} or character. Default \code{NULL}. Basename of the output files that are produced. If set to \code{NULL}, a default basename is chosen. If a custom basename is specified, all output files will have the chosen basename as file prefix, be careful with not overwriting already existing files (if \code{forceRerun} is set to \code{TRUE})}
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
@@ -45,13 +37,33 @@ visualizeGRN(
 
 \item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
 
+\item{title}{NULL or Character. Default NULL. Title to be assigned to the plot.}
+
+\item{maxRowsToPlot}{Numeric. Default 500. Refers to the maximum number of connections to be plotted.}
+
+\item{graph}{Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.}
+
+\item{colorby}{Character. Default \code{type}. One of \code{type}, code \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}}
+
+\item{layered}{Boolean. Default \code{FALSE}. Display the network in a layered format where each layer corresponds to a node type (TF/peak/gene).}
+
+\item{vertice_color_TFs}{Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{\link[colorspace]} package for more details and examples}
+
+\item{vertice_color_peaks}{Named list. Default \code{list(h = 135, c = 45, l = c(35, 95))}.}
+
+\item{vertice_color_genes}{Named list. Default \code{list(h = 260, c = 80, l = c(30, 90))}.}
+
+\item{vertexLabel_cex}{Numeric. Default \code{0.4}. Font size (multiplication factor, device-dependent)}
+
+\item{vertexLabel_dist}{Numeric. Default \code{0} vertex. Distance between the label and the vertex.}
+
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 }
 \value{
-TODO
+the GRN object
 }
 \description{
-Visualize a filtered GRN (in development)
+Visualize a filtered GRN.
 }

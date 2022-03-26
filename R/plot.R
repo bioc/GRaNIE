@@ -6,7 +6,7 @@
 #'
 #' @template GRN 
 #' @template outputFolder
-#' @param data Character. Either \code{"peaks"} or \code{"rna"} or \code{"all"}. Type of data to plot a PCA for. \code{"peaks"} corresponds to the the open chromatin data, while \code{"rna"} refers to the RNA-seq counts. If set to \code{"all"}, PCA will be done for both data modalities. In any case, PCA will be based on the original provided data before any additional normalization has been run (i.e., usually the raw data).
+#' @param data Character. Either \code{"peaks"} or \code{"rna"} or \code{"all"}. Default \code{c("rna", "peaks")}. Type of data to plot a PCA for. \code{"peaks"} corresponds to the the open chromatin data, while \code{"rna"} refers to the RNA-seq counts. If set to \code{"all"}, PCA will be done for both data modalities. In any case, PCA will be based on the original provided data before any additional normalization has been run (i.e., usually the raw data).
 #' @param topn Integer vector. Default \code{c(500,1000,5000)}. Number of top variable features to do PCA for. Can be a vector of different numbers (see default).
 #' @param type Character. One of or a combination of \code{"raw"}, \code{"normalized"}, \code{"all"}. Default \code{c("raw", "normalized")}. Should the PCA plots be done based on the raw or normalized data, respectively?
 #' @template forceRerun
@@ -525,6 +525,9 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     if (!permutationCur %in% dataType2) {
       next
     }
+      
+    futile.logger::flog.info(paste0("\n Plotting for permutation ", permutationCur))
+      
     
     suffixFile = .getPermutationSuffixStr(permutationCur)
     
@@ -677,8 +680,15 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   
   pageCounter = 1  
   
-  plots.l = list()
-  index = 1
+  if (!is.null(file)) {
+      .checkOutputFile(file)
+      grDevices::pdf(file, width = width, height = height)
+      futile.logger::flog.info(paste0("Plotting to file ", file))
+  } else {
+      futile.logger::flog.info(paste0("Plotting directly"))   
+  }
+  
+ 
   
   # Dont take all TF, some might be missing.
   connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
@@ -692,10 +702,10 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 
   pb <- progress::progress_bar$new(total = nTF)
   
-  levels_pos<-unique(as.character(cut(GRN@config$parameters$internal$stepsFDR, breaks = GRN@config$parameters$internal$stepsFDR, right = FALSE, include.lowest = TRUE )))
-  levels_neg<-unique(as.character(cut(GRN@config$parameters$internal$stepsFDR, breaks = rev(GRN@config$parameters$internal$stepsFDR), right = TRUE,  include.lowest = TRUE )))
+  steps = GRN@config$parameters$internal$stepsFDR
   
-
+  levels_pos<-unique(as.character(cut(steps, breaks = steps, right = FALSE, include.lowest = TRUE )))
+  levels_neg<-unique(as.character(cut(steps, breaks = rev(steps), right = TRUE, include.lowest = TRUE )))
   
   for (i in seq_len(nTF)) {
     pb$tick()
@@ -704,6 +714,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     connections_TF_peakCur = dplyr::filter(connections_TF_peak, TF.name == TFCur)
     
     # Produce two FDR plots, coming from both directions
+    plotsCur.l = list()
     for (typeCur in c("pos","neg")) {
       
       if (typeCur == "pos") {
@@ -718,6 +729,8 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
         dplyr::mutate(TF_peak.r_bin = factor(TF_peak.r_bin, levels = levelsCur))  %>%
         reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
       
+      plotTitle = paste0(TFCur, ": Direction ", typeCur, ifelse(perm == 0, "", "(permuted)"))
+      
       if (!useGCCorrection) {
         
         g = suppressWarnings(connections_TF_peak.filt %>% 
@@ -725,7 +738,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                ggplot(aes(TF_peak.r_bin, value, color = .data$n, shape = variable)) +
                                geom_point(na.rm = TRUE) +
                                facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                               labs(x="Correlation bin", y="FDR TF-peak", title= paste0(TFCur, ": Direction ", typeCur)) +
+                               labs(x="Correlation bin", y="FDR TF-peak", title= plotTitle) +
                                theme_bw() +
                                theme(axis.text.x=element_text(angle=60, hjust=1, size= 8)) +
                                scale_x_discrete(drop=FALSE) + 
@@ -735,6 +748,8 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                                   values = c("TF_peak.fdr" = 1)) +
                                scale_color_viridis_c("No. of connections") 
         )
+        plotsCur.l[[typeCur]] = g
+        
         
         if (plotDetails) {
           
@@ -742,7 +757,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
             ggplot(aes(TF_peak.r_bin, log10(value+1), color = variable)) + 
             geom_point(size = 1) +
             facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-            labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= paste0(TFCur, ": Direction ", typeCur)) +
+            labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= plotTitle) +
             theme_bw() +
             theme(axis.text.x=element_text(angle=60, hjust=1, size= 8)) +
             scale_x_discrete(drop=FALSE) + 
@@ -753,6 +768,8 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                labels = c("tpvalue" = "True positives\n(foreground, scaling ref.)\n", 
                                           "fpvalue" = "False positives\n(background, unscaled)\n", 
                                           "fpvalue_norm" = "False positives\n(background, scaled to ref.)"))
+          
+          plotsCur.l[[paste0(typeCur, "_details")]] = g
         }
         
         
@@ -764,7 +781,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                ggplot(aes(TF_peak.r_bin, value, color = .data$n, shape = variable, alpha = variable)) + 
                                geom_point(na.rm = TRUE) +
                                facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                               labs(x="Correlation bin", y="FDR TF-peak", title= paste0(TFCur, ": Direction ", typeCur)) +
+                               labs(x="Correlation bin", y="FDR TF-peak", title= plotTitle) +
                                theme_bw() +
                                theme(axis.text.x=element_text(angle=60, hjust=1, size= 8)) +
                                scale_x_discrete(drop=FALSE) + 
@@ -774,13 +791,15 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                                   values = c("TF_peak.fdr" = 3,"TF_peak.fdr_orig" = 1)) +
                                scale_color_viridis_c("No. of connections") + 
                                scale_alpha_discrete(range = c("TF_peak.fdr" = 0.5,"TF_peak.fdr_orig" = 1))  +
-                               guides(alpha = FALSE))
+                               guides(alpha = FALSE)
+        )
+        plotsCur.l[[typeCur]] = g
         
         if (plotDetails) {
           g2 = ggplot(connections_TF_peak.filt %>% dplyr::filter(grepl("value", variable)), aes(TF_peak.r_bin, log10(value+1), color = variable)) + 
             geom_point(size = 1) +
             facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-            labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= paste0(TFCur, ": Direction ", typeCur)) +
+            labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= plotTitle) +
             theme_bw() +
             theme(axis.text.x=element_text(angle=60, hjust=1, size= 8)) +
             scale_x_discrete(drop=FALSE) + 
@@ -794,41 +813,36 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                           "fpvalue_norm_orig" = "False positives without GC\n(background, scaled to ref.)\n",
                                           "fpvalue" = "False positives with GC\n(background, unscaled)\n", 
                                           "fpvalue_norm" = "False positives with GC\n(background, scaled to ref.)"))
+          
+          plotsCur.l[[paste0(typeCur, "_details")]] = g
         }
         
       }
       
-      # We now created either just one plot g or g + g2 for "one" direction
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          plots.l[[index]] = g
-          index = index + 1
-      }
-
-      
-      if (plotDetails) {
-          
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-              plots.l[[index]] = g2
-              index = index + 1
-          }
-
-          # Only here we already have a new page, as we produced 2 plots in this iteration alone
-          pageCounter = pageCounter + 1 
-       }
-
-      
     } # end for both directions
     
-    if (!plotDetails) {
+    # Lets create the plots
+    if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+        plots_all = plotsCur.l$pos / plotsCur.l$neg
+        plot(plots_all)
+    }
+    pageCounter = pageCounter + 1 
+    
+    if (plotDetails) {
+        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+            plots_all = plotsCur.l$pos_details / plotsCur.l$neg_details
+            plot(plots_all)
+        }
         pageCounter = pageCounter + 1 
     }
-
+    
+  
     
   } # end allTF
   
   .printWarningPageNumber(pages, pageCounter)
-  
-  .printMultipleGraphsPerPage(plots.l, nCol = 1, nRow = 2, pdfFile = file, height = height, width = width)
+ 
+  if (!is.null(file)) dev.off()
   
   .printExecutionTime(start)
 }
@@ -1712,7 +1726,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                       column_names_gp = grid::gpar(fontsize = 10),
                       row_title = "TF-peak FDR",
                       cell_fun = function(j, i, x, y, width, height, fill) {
-                          grid::grid.text(sprintf("%.0f", plotData.l[[permIndex]][i, j]), x, y, gp = grid::gpar(fontsize = 30))
+                          grid::grid.text(sprintf("%.0f", plotData.l[[permIndex]][i, j]), x, y, gp = grid::gpar(fontsize = 20))
                       }
                   ) %>% plot()
                   
@@ -3240,55 +3254,69 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 
 ############### GRN visualization ###############
 
-#' Visualize a filtered GRN (in development)
+#' Visualize a filtered GRN. 
 #'
 #' @template GRN 
 #' @template permuted
-#' @param file TODO
-#' @param title TODO
-#' @param maxRowsToPlot TODO
-#' @param useDefaultMetadata TODO
-#' @param vertice_color_TFs TODO
-#' @param vertice_color_peaks TODO
-#' @param vertice_color_genes TODO
+#' @template outputFolder
+#' @template basenameOutput
 #' @template plotAsPDF
 #' @template pdf_width
 #' @template pdf_height
+#' @param title NULL or Character. Default NULL. Title to be assigned to the plot.
+#' @param maxRowsToPlot Numeric. Default 500. Refers to the maximum number of connections to be plotted.
+#' @param graph Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.
+#' @param colorby Character. Default \code{type}. One of \code{type}, code \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}
+#' @param layered Boolean. Default \code{FALSE}. Display the network in a layered format where each layer corresponds to a node type (TF/peak/gene).
+#' @param vertice_color_TFs Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{\link[colorspace]} package for more details and examples
+#' @param vertice_color_peaks Named list. Default \code{list(h = 135, c = 45, l = c(35, 95))}.
+#' @param vertice_color_genes Named list. Default \code{list(h = 260, c = 80, l = c(30, 90))}.
+#' @param vertexLabel_cex Numeric. Default \code{0.4}. Font size (multiplication factor, device-dependent)
+#' @param vertexLabel_dist Numeric. Default \code{0} vertex. Distance between the label and the vertex.
 #' @template forceRerun
-
-#' @return TODO
-# #' @export
-visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaultMetadata = TRUE,
-                         graph = "TF-gene" , colorby = "type", layered = FALSE,
-                         vertice_color_TFs = NULL, vertice_color_peaks = NULL, vertice_color_genes = NULL,
-                         plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12,
+#' @example 
+#' GRN = visualizeGRN(GRN, maxRowsToPlot = 700, graph = "TF-peak-gene", colorby = "type")
+#' @return the GRN object
+#' @export
+visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12,
+                         title = NULL, maxRowsToPlot = 500, graph = "TF-gene" , colorby = "type", layered = FALSE,
+                         vertice_color_TFs = list(h = 10, c = 85, l = c(25, 95)), vertice_color_peaks = list(h = 135, c = 45, l = c(35, 95)), vertice_color_genes = list(h = 260, c = 80, l = c(30, 90)),
+                         vertexLabel_cex = 0.4, vertexLabel_dist = 0,
+                         
                          forceRerun = FALSE
 ) {
+    
     
     start = Sys.time()
     GRN = .addFunctionLogToObject(GRN)
     
-    #checkmate::assertFlag(plotAsPDF)
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
     checkmate::assertNumeric(maxRowsToPlot)
-    checkmate::assertFlag(useDefaultMetadata)
     checkmate::assertSubset(graph, c("TF-gene", "TF-peak-gene"))
     checkmate::assertSubset(colorby, c("type", "community"))
     checkmate::assertFlag(layered)
-    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assertList(vertice_color_TFs)
+    checkmate::assertNames(names(vertice_color_TFs), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertList(vertice_color_peaks)
+    checkmate::assertNames(names(vertice_color_peaks), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertList(vertice_color_genes)
+    checkmate::assertNames(names(vertice_color_genes), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertNumeric(vertexLabel_cex)
+    checkmate::assertNumeric(vertexLabel_dist)
+    checkmate::assertFlag(forceRerun)
     
     
-    futile.logger::flog.info(paste0("Plotting GRN network", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
     
-    if (useDefaultMetadata) {
-        metadata_visualization.l = getBasic_metadata_visualization(GRN)
-        vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
-        vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
-        vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
-    }
-    
-    
-    
+    # if (useDefaultMetadata) {
+    #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
+    #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
+    #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
+    #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
+    # }
+    # 
     #grn.merged = getGRNConnections(GRN, permuted = permuted, type = "all.filtered")
     # check that it's in sync with the @ graph
     if (graph == "TF-gene"){
@@ -3335,10 +3363,10 @@ visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaul
     
     
     if (plotAsPDF) {
-        grDevices::pdf(file = file, width = pdf_width, height = pdf_height)
-        futile.logger::flog.info(paste0("Plotting to file ", file))
+        futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
+        grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"),width = pdf_width, height = pdf_height )
     } else {
-        futile.logger::flog.info(paste0("Plotting directly"))
+        futile.logger::flog.info(paste0("Plotting GRN network"))
     }
     
     if (nRows > maxRowsToPlot) { 
@@ -3347,7 +3375,7 @@ visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaul
         message = paste0(title, "\n\nPlotting omitted.\n\nThe number of rows in the GRN (", nRows, ") exceeds the maximum of ", maxRowsToPlot, ".\nSee the maxRowsToPlot parameter to increase the limit")
         text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
         
-        if (!is.null(file)) {
+        if (plotAsPDF) {
             grDevices::dev.off()
         }
         
@@ -3394,30 +3422,31 @@ visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaul
         nBins_discard = 25
         nBins_real = nBins_orig - nBins_discard
         
-        if (!is.null(vertice_color_TFs)) {
-            color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = 10, c = 85, l = c(25, 95)))[(nBins_discard + 1):nBins_orig] # red
-            colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
-            colors_categories.l[["TF"]]  = color_gradient 
-            symbols_categories.l[["TF"]] = c(15,NA,15)
-        }
+        #if (!is.null(vertice_color_TFs)) {
+        color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_TFs[["h"]], c = vertice_color_TFs[["c"]], l = vertice_color_TFs[["l"]]))[(nBins_discard + 1):nBins_orig] # red
+        colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
+        colors_categories.l[["TF"]]  = color_gradient 
+        symbols_categories.l[["TF"]] = c(15,NA,15)
+        vertice_color_TFs   = append(list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log"), vertice_color_TFs)
+        #}
         
         if(graph == "TF-peak-gene"){
-            
-            if (!is.null(vertice_color_peaks)) {
-                color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = 135, c = 45, l = c(35, 95)))[(nBins_discard + 1):nBins_orig]  # green
-                colors_categories.l[["PEAK"]] = c(color_gradient[1], color_gradient[nBins_real])
-                colors_categories.l[["PEAK"]] = color_gradient
-                symbols_categories.l[["PEAK"]] = c(21,NA,21)
-            }
-            
+            #if (!is.null(vertice_color_peaks)) {
+            color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_peaks[["h"]], c = vertice_color_peaks[["c"]], l = vertice_color_peaks[["l"]]))[(nBins_discard + 1):nBins_orig]  # green
+            colors_categories.l[["PEAK"]] = c(color_gradient[1], color_gradient[nBins_real])
+            colors_categories.l[["PEAK"]] = color_gradient
+            symbols_categories.l[["PEAK"]] = c(21,NA,21)
+            vertice_color_peaks = append(list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log"), vertice_color_peaks)
+            # }
         }
         
-        if (!is.null(vertice_color_genes)) {
-            color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = 260, c = 80, l = c(30, 90)))[(nBins_discard + 1):nBins_orig] # blue
-            colors_categories.l[["GENE"]] = c(color_gradient[1], color_gradient[nBins_real]) 
-            colors_categories.l[["GENE"]] = color_gradient
-            symbols_categories.l[["GENE"]] = c(21,NA,21)
-        }
+        #if (!is.null(vertice_color_genes)) {
+        color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_genes[["h"]], c = vertice_color_genes[["c"]], l = vertice_color_genes[["l"]]))[(nBins_discard + 1):nBins_orig] # blue
+        colors_categories.l[["GENE"]] = c(color_gradient[1], color_gradient[nBins_real]) 
+        colors_categories.l[["GENE"]] = color_gradient
+        symbols_categories.l[["GENE"]] = c(21,NA,21)
+        vertice_color_genes = append(list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"), vertice_color_genes)
+        #}
         
         ## VERTICES ##
         
@@ -3637,9 +3666,9 @@ visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaul
             ncommunities = length(unique(GRN@graph$TF_gene$clusterGraph$membership))
             
             if (ncommunities >=8){
-                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = T)[1:ncommunities]),
+                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = T)[1:nCommunitiesMax]),
                                               color = rainbow(7))
-                fillercolors = data.frame(community = 8:ncommunities, color = "847E89") # only color the x largest communities
+                fillercolors = data.frame(community = nCommunitiesMax:ncommunities, color = "847E89") # only color the x largest communities
                 community_colors = rbind(community_colors, fillercolors)
                 
             }else{
@@ -3742,7 +3771,7 @@ visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaul
         
         
         # Calling plot.new() might be necessary here
-        if(is.null(file)){
+        if(!plotAsPDF){
             plot.new()
         }
         par(mar=c(7,0,0,0) + 0.2)
@@ -3759,12 +3788,12 @@ visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaul
             edge.width = igraph::E(net)$weight,
             vertex.label=igraph::V(net)$label,
             vertex.label.font=1, 
-            vertex.label.cex = 0.3, 
+            vertex.label.cex = vertexLabel_cex, 
             vertex.label.family="Helvetica", 
             vertex.label.color = "black",
             vertex.label.degree= -pi/2,
             vertex.label=igraph::V(net)$label,
-            vertex.label.dist= 0,
+            vertex.label.dist= vertexLabel_dist,
             vertex.shape = shape_vertex[igraph::V(net)$type],
             main = title
         )
@@ -3834,22 +3863,20 @@ visualizeGRN <- function(GRN, file, title = NULL, maxRowsToPlot = 500, useDefaul
         
     }
     
-    if (!is.null(file)) {
+    if (plotAsPDF) {
         grDevices::dev.off()
     }
     
     .printExecutionTime(start)
     
+    GRN
 }
 
 
 
-
-
-
 .verifyArgument_verticeType <- function(vertice_color_list) {
-  
-  checkmate::assertList(vertice_color_list, len = 3)
-  checkmate::assertDataFrame(vertice_color_list[[1]])
-  checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]))
+    
+    checkmate::assertList(vertice_color_list, len = 6)
+    checkmate::assertDataFrame(vertice_color_list[[1]])
+    checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]))
 }
