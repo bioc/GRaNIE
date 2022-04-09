@@ -47,7 +47,7 @@ visualizeGRN(
 
 \item{layered}{Boolean. Default \code{FALSE}. Display the network in a layered format where each layer corresponds to a node type (TF/peak/gene).}
 
-\item{vertice_color_TFs}{Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{\link[colorspace]} package for more details and examples}
+\item{vertice_color_TFs}{Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{colorspace} package for more details and examples}
 
 \item{vertice_color_peaks}{Named list. Default \code{list(h = 135, c = 45, l = c(35, 95))}.}
 
@@ -58,12 +58,14 @@ visualizeGRN(
 \item{vertexLabel_dist}{Numeric. Default \code{0} vertex. Distance between the label and the vertex.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
-
-\item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 }
 \value{
 the GRN object
 }
 \description{
 Visualize a filtered GRN.
+}
+\examples{
+GRN = loadExampleObject()
+GRN = visualizeGRN(GRN, maxRowsToPlot = 700, graph = "TF-gene", colorby = "type")
 }

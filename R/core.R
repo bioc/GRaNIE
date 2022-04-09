@@ -3972,7 +3972,15 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
   filePath = BiocFileCache::bfcrpath(bfc, rids = rid)
   
   # Now we can read in the locally stored file
-  readRDS(filePath)
+  GRN = readRDS(filePath)
+  
+  # Change the default path to the current working directory
+  GRN@config$directories$outputRoot = "."
+  GRN@config$directories$output_plots = "."
+  GRN@config$directories$motifFolder = "."
+  GRN@config$files$output_log = "GRN.log"
+  
+  GRN
   
 }
 

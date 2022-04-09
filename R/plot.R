@@ -486,7 +486,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotDiagnosticPlots_TFPeaks(GRN, outputFolder = ".", plotPermuted = FALSE, nTFMax = 2)
+#' GRN = plotDiagnosticPlots_TFPeaks(GRN, outputFolder = ".", dataType = "real", nTFMax = 2)
 #' @export
 plotDiagnosticPlots_TFPeaks <- function(GRN, 
                                         outputFolder = NULL, 
@@ -2453,21 +2453,23 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
         
             gDegreeDist = community.degreeStats$figures$degreeDist + ggtitle("Degree Distribution")
-            gTopGenes   = community.degreeStats$figures$topGenes   + ggtitle(paste0("Top ", topnGenes," degree-central genes"))
-            gTopTFs     = community.degreeStats$figures$topTFs     + ggtitle(paste0("Top ", topnTFs  ," degree-central TFs"))
-            
-            plot(gDegreeDist + (gTopGenes/gTopTFs) + 
-                 patchwork::plot_layout(widths = c(2,2)) + 
+          
+
+            plot(gDegreeDist  + 
                  patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
         }
         pageCounter = pageCounter + 1 
         
 
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+            gTopGenes   = community.degreeStats$figures$topGenes   + ggtitle(paste0("Top ", topnGenes," degree-central genes"))
+            gTopTFs     = community.degreeStats$figures$topTFs     + ggtitle(paste0("Top ", topnTFs  ," degree-central TFs"))
+          
             gTopEigenGenes = community.eigenStats$topGenes + ggtitle(paste0("Top ", topnGenes," eigenvector-central genes"))
             gTopEigenTFs   = community.eigenStats$topTFs   + ggtitle(paste0("Top ", topnTFs,  " eigenvector-central TFs"))   
-            
-            plot(gTopEigenGenes/gTopEigenTFs)
+
+            plot((gTopGenes | gTopTFs) / (gTopEigenGenes | gTopEigenTFs) + 
+                   patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
         } 
         pageCounter = pageCounter + 1 
       
@@ -3257,7 +3259,6 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' Visualize a filtered GRN. 
 #'
 #' @template GRN 
-#' @template permuted
 #' @template outputFolder
 #' @template basenameOutput
 #' @template plotAsPDF
@@ -3268,22 +3269,21 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' @param graph Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.
 #' @param colorby Character. Default \code{type}. One of \code{type}, code \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}
 #' @param layered Boolean. Default \code{FALSE}. Display the network in a layered format where each layer corresponds to a node type (TF/peak/gene).
-#' @param vertice_color_TFs Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{\link[colorspace]} package for more details and examples
+#' @param vertice_color_TFs Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{colorspace} package for more details and examples
 #' @param vertice_color_peaks Named list. Default \code{list(h = 135, c = 45, l = c(35, 95))}.
 #' @param vertice_color_genes Named list. Default \code{list(h = 260, c = 80, l = c(30, 90))}.
 #' @param vertexLabel_cex Numeric. Default \code{0.4}. Font size (multiplication factor, device-dependent)
 #' @param vertexLabel_dist Numeric. Default \code{0} vertex. Distance between the label and the vertex.
 #' @template forceRerun
-#' @example 
-#' GRN = visualizeGRN(GRN, maxRowsToPlot = 700, graph = "TF-peak-gene", colorby = "type")
+#' @examples
+#' GRN = loadExampleObject()
+#' GRN = visualizeGRN(GRN, maxRowsToPlot = 700, graph = "TF-gene", colorby = "type")
 #' @return the GRN object
 #' @export
 visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12,
                          title = NULL, maxRowsToPlot = 500, graph = "TF-gene" , colorby = "type", layered = FALSE,
                          vertice_color_TFs = list(h = 10, c = 85, l = c(25, 95)), vertice_color_peaks = list(h = 135, c = 45, l = c(35, 95)), vertice_color_genes = list(h = 260, c = 80, l = c(30, 90)),
-                         vertexLabel_cex = 0.4, vertexLabel_dist = 0,
-                         
-                         forceRerun = FALSE
+                         vertexLabel_cex = 0.4, vertexLabel_dist = 0, forceRerun = FALSE
 ) {
     
     
@@ -3310,6 +3310,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     
     outputFolder = .checkOutputFolder(GRN, outputFolder)
     
+    metadata_visualization.l = getBasic_metadata_visualization(GRN)
     # if (useDefaultMetadata) {
     #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
     #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
@@ -3334,8 +3335,8 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
         
         edges_final = grn.merged %>%
-            dplyr::mutate(R = as.vector(na.omit(c(TF_peak.r, peak_gene.r))),
-                          weight = as.vector(na.omit(c(1- TF_peak.fdr, peak_gene.r))),
+            dplyr::mutate(R = as.vector(stats::na.omit(c(TF_peak.r, peak_gene.r))),
+                          weight = as.vector(stats::na.omit(c(1- TF_peak.fdr, peak_gene.r))),
                           linetype = "solid") %>%
             dplyr::rename(from = V1, to = V2) 
         
@@ -3349,7 +3350,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
                                                             TRUE ~ 3),
                       R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
                       color       = dplyr::case_when(R < 0 ~ "blue", TRUE ~ "grey")) %>%
-        dplyr::select(from, to, weight, R, linetype, weight_transformed, R_direction, color)
+        dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
     
     
     
@@ -3647,7 +3648,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         # note: the layout_with_sugiyama which can convert the layout to tri/bipartite creates an order that minimizes edge overlap/crossover, makes it cleaner to visualize. do we want to enforce a custom order?
         
         net <- igraph::simplify(net, remove.multiple = FALSE, remove.loops = TRUE)
-        deg <- igraph::degree(net, mode="all", normalized = T) # added normalized = T in case later used to determine node size. for now not rly needed
+        deg <- igraph::degree(net, mode="all", normalized = TRUE) # added normalized = T in case later used to determine node size. for now not rly needed
         #V(net)$size <- deg*2
         #igraph::V(net)$vertex_degree <-  deg*4 # the vertex_degree attribute doesn't need to be changed 
         igraph::V(net)$label = vertices$label
@@ -3666,18 +3667,18 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
             ncommunities = length(unique(GRN@graph$TF_gene$clusterGraph$membership))
             
             if (ncommunities >=8){
-                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = T)[1:nCommunitiesMax]),
+                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:nCommunitiesMax]),
                                               color = rainbow(7))
                 fillercolors = data.frame(community = nCommunitiesMax:ncommunities, color = "847E89") # only color the x largest communities
                 community_colors = rbind(community_colors, fillercolors)
                 
             }else{
-                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = T)[1:ncommunities]),
+                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:ncommunities]),
                                               color = rainbow(ncommunities))
             }
             
-            TF_ensembl = GRN@graph$TF_gene$table$V1[match(vertices$id, GRN@graph$TF_gene$table$V1_name)] %>% na.omit() %>% as.vector()
-            gene_ensembl = GRN@graph$TF_gene$table$V2[match(vertices$id, GRN@graph$TF_gene$table$V2)] %>% na.omit() %>% as.vector()
+            TF_ensembl = GRN@graph$TF_gene$table$V1[match(vertices$id, GRN@graph$TF_gene$table$V1_name)] %>% stats::na.omit() %>% as.vector()
+            gene_ensembl = GRN@graph$TF_gene$table$V2[match(vertices$id, GRN@graph$TF_gene$table$V2)] %>% stats::na.omit() %>% as.vector()
             if(graph == "TF-peak-gene"){
                 network_ensembl = c(TF_ensembl, rep(NA, length(unique(vertices_peaks$peak))), gene_ensembl) 
             }else{
