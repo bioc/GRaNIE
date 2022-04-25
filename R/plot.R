@@ -3772,9 +3772,9 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         
         
         # Calling plot.new() might be necessary here
-        if(!plotAsPDF){
-            plot.new()
-        }
+        # if(!plotAsPDF){
+        #     #plot.new()
+        # }
         par(mar=c(7,0,0,0) + 0.2)
         
         plot(

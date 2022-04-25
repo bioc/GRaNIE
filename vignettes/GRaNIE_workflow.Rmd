@@ -296,7 +296,7 @@ This function may run a while, and each time-consuming step has a built-in progr
 For reasons of brevity and organization, we fully describe their interpretation and meaning in detail elsewhere, however. In summary, TF-enhancer diagnostic plots are available for each TF, and each page summarizes the QC for each TF in two plots:  
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
 GRN = plotDiagnosticPlots_TFPeaks(GRN, dataType = c("real", "permuted"), plotAsPDF = FALSE, pages = 4)
 ```
 
@@ -338,7 +338,7 @@ For more parameter details, see also the R help (`?AR_classification_wrapper`).
 
 After steps that take up a bit of time, it may make sense to store the `GRaNIE` object to disk in order to be able to restore it at any time point. This can simply be done, for example, by saving it as an `rds` file using the built-in function `saveRDS` from R to save our `GRaNIE` object in a compressed rds format.  
 
-```{r saveObject2, echo=TRUE, include=TRUE, eval=FALSE}
+```{r saveObject2, echo=TRUE, include=TRUE, eval=FALSE, class.output="scroll-200"}
 GRN_file_outputRDS = paste0(dir_output, "/GRN.rds")
 saveRDS(GRN, GRN_file_outputRDS)
 ```
@@ -404,7 +404,7 @@ As can be seen from the output, the Pearson correlation for 587 TF-gene pairs ha
 For more parameter details, see the R help (`?add_TF_gene_correlation`). 
 
 Time to save our object again!
-```{r saveObject, echo=TRUE, include=TRUE , eval=FALSE}
+```{r saveObject, echo=TRUE, include=TRUE , eval=FALSE, class.output="scroll-200"}
 GRN = deleteIntermediateData(GRN)
 saveRDS(GRN, GRN_file_outputRDS)
 ```
@@ -428,10 +428,9 @@ The table contains many columns, and the prefix of each column name indicates th
 
 The `GRaNIE` package also offers a function to visualize a filtered *eGRN* network! It is very easy to invoke, but provides many options to customize the output and the way the graph is drawn. We recommend to explore the options in the R help (`?getGRNConnections`), and here just run the default visualization.
 
-Here, we do not run it, due to some temporary problems causes by RMarkdown. We will update this section as soon as this issue is resolved.
 
 ```{r visualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200"}
-# GRN = visualizeGRN(GRN, plotAsPDF = FALSE)
+GRN = visualizeGRN(GRN, plotAsPDF = FALSE)
 
 ```
 
@@ -509,7 +508,7 @@ We don't include the output here, but this function runs actually very quickly.
 
 Let's, however, check some of the results that are produced! Let's start with checking some general network statistics for the full network. From the various graphs that are produced, we here select only 2 of them for demonstration purposes. First we can check the vertex distribution and gene types for the overall network to get an idea of how the network looks like. Second, we can investigate the most important TFs and genes for the network for both the TF-enhancer-gene as well as TF-gene network. Here, we here show the results for the TF-gene network only:
 
-```{r plotGraphStats, echo=FALSE, fig.cap="<i>General network statistics for the filtered network</i>", out.width = '80%'}
+```{r plotGraphStats, echo=FALSE, fig.cap="<i>General network statistics for the filtered network</i>", class.output="scroll-200"}
 
 GRN = plotGeneralGraphStats(GRN, plotAsPDF = FALSE, pages = c(1,6))
 
@@ -525,7 +524,7 @@ We can also use algorithms for measuring the influence of a node in a network (*
 
 Now that we have our eGRN network, we can do various enrichment analyses. Let's start with the most obvious one: Enrichment for the whole network. Again, we are not executing the function here for reasons of time, but you should do so of course when learning how to use the package!
 
-```{r generalEnrichment, echo=FALSE, eval = FALSE}
+```{r generalEnrichment, echo=FALSE, eval = FALSE, class.output="scroll-200"}
 
 GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP")
 
@@ -533,7 +532,7 @@ GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP")
 
 We can now plot the enrichment for the full graph. In analogy to all the other `plot` functions, a PDF with all enrichment results is produced with the default setting, but by setting `plotAsPDF` to `FALSE`, we can also plot selected results / pages directly to the currently active graphics device. In this case here, as we select only one ontology, there is only one page:
 
-```{r plotGeneralEnrichment, echo=FALSE, fig.cap="<i>General network enrichment for the filtered network</i>", out.width = '80%'}
+```{r plotGeneralEnrichment, echo=FALSE, fig.cap="<i>General network enrichment for the filtered network</i>", class.output="scroll-200"}
 
 GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE, pages = 1)
 
@@ -547,7 +546,7 @@ We can see that overall, cell cycle is the term with the most number of genes, a
 
 Now, let's check whether we can identify communities within the whole network, along with community-specific enrichments.
 
-```{r communityEnrichment, echo=FALSE}
+```{r communityEnrichment, echo=FALSE, class.output="scroll-200"}
 
 GRN = calculateCommunitiesStats(GRN)
 GRN = calculateCommunitiesEnrichment(GRN, ontology = "GO_BP")
@@ -556,7 +555,7 @@ GRN = calculateCommunitiesEnrichment(GRN, ontology = "GO_BP")
 
 These functions may take a while, as enrichment is calculated for each community. Once finished, we are ready to plot the results! First, let's start with some general community statistics:
 
-```{r plotCommunityStats, echo=FALSE, fig.cap="<i>General statistics for the communities from the filtered network</i>", out.width = '80%'}
+```{r plotCommunityStats, echo=FALSE, fig.cap="<i>General statistics for the communities from the filtered network</i>", class.output="scroll-200"}
 
 GRN = plotCommunitiesStats(GRN, plotAsPDF = FALSE, pages = c(1,3))
 
@@ -566,7 +565,7 @@ First, we see an overview across all communities and their network sizes, and wh
 
 Next, let's plot the community-specific enrichment:
 
-```{r plotCommunityEnrichment, echo=FALSE, fig.cap="<i>Community enrichment for 3 different communities</i>", out.width = '80%'}
+```{r plotCommunityEnrichment, echo=FALSE, fig.cap="<i>Community enrichment for 3 different communities</i>", class.output="scroll-200"}
 
 GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = c(1,2,3))
 
@@ -576,7 +575,7 @@ GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = c(1,2,3))
 We also provide an overview across the whole network and all communities that lists all the enriched terms that appear in at least one enrichment analysis, so a direct comparison of the specificity and commonalities across communities and between the general network and any community is facilitated. This also shows that some terms, here more than with a full dataset, are only identified as being enriched for the full network but not within any of the communities individually. We offer this function for all terms as well as only the top 10 enriched terms per community, and we here show only the filtered version due to reasons of brevity:
 
 
-```{r plotCommunityEnrichment2, echo=FALSE, fig.cap="<i>Summary of the community enrichment</i>", out.width = '80%'}
+```{r plotCommunityEnrichment2, echo=FALSE, fig.cap="<i>Summary of the community enrichment</i>", class.output="scroll-200"}
 
 GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = c(5))
 
@@ -588,7 +587,7 @@ GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = c(5))
 
 In analogy to community enrichment, we can also calculate enrichment based on TFs via their target genes they are connected to. Running a TF enrichment analyses is straight forward, with the parameter `n` we can control the number of TFs to run the enrichment for - the function runs the enrichment for the top connected TFs. Thus, `n=3` equals running the enrichment for the top 3 connected TFs. Here, we show the results for one of the TFs, *EGR1.0.A*, as well as a summary across all top 3 connected TFs, in analogy the results for the community enrichment.
 
-```{r TFEnrichment, echo=FALSE, fig.cap="<i>Enrichment summary for TFs</i>", out.width = '100%'}
+```{r TFEnrichment, echo=FALSE, fig.cap="<i>Enrichment summary for TFs</i>", class.output="scroll-200"}
 GRN = plotTFEnrichment(GRN, plotAsPDF = FALSE, n = 3, pages = c(1,5))
 ```
 
@@ -598,7 +597,7 @@ GRN = plotTFEnrichment(GRN, plotAsPDF = FALSE, n = 3, pages = c(1,5))
 
 We are now finished with the main workflow, all that is left to do is to save our `GRaNIE` object to disk so we can load it at a later time point without having to repeat the analysis. We recommend to run the convenience function `deleteIntermediateData()` beforehand that aims to reduce its size by deleting some intermediate data that may still be stored within the object. For more parameter details, see the R help (`?deleteIntermediateData`).  Finally, as we did already in the middle of the workflow, we save the object finally in rds format.
 
-```{r saveObject3, echo=TRUE, include=TRUE, eval=FALSE}
+```{r saveObject3, echo=TRUE, include=TRUE, eval=FALSE, class.output="scroll-200"}
 GRN = deleteIntermediateData(GRN)
 saveRDS(GRN, GRN_file_outputRDS)
 ```

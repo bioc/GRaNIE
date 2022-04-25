@@ -4208,7 +4208,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
     "plot_TFPeak_fdr"                = "TF_peak.fdrCurves",
     "plot_TFPeak_fdr_GC"             = "TF_peak.GCCorrection",
     "plot_TFPeak_TFActivity_QC"      = "TF_peak.TFActivity_QC",
-    "plot_class_density"             = "TF_classification_densityPlotsForegroundBackground",
+    "plot_class_density"             = "TF_classification_densityPlots",
     "plot_class_medianClass"         = "TF_classification_stringencyThresholds",
     "plot_class_densityClass"        = "TF_classification_summaryHeatmap",
     "plot_peakGene_diag"             = "peakGene_diagnosticPlots",
