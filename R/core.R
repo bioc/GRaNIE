@@ -421,7 +421,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 
 .getKnownGeneAnnotationNew <- function(GRN, gene.types, extendRegions = NULL) {
   
-  checkmate::assertCharacter(GRN@config$parameters$chrToKeep, min.len = 1)
+  checkmate::assertCharacter(GRN@config$parameters$genomeAssembly, len = 1)
   
   if (!is.null(extendRegions)) {
     stop("Not yet implemented")

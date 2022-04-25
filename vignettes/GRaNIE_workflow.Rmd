@@ -1,10 +1,10 @@
 ---
-title: "Workflow example"
+title: "GRaNIE Workflow Example"
 author: "Christian Arnold, Judith Zaugg, Rim Moussa"
 date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('GRaNIE')`"
 abstract: >
-  This workflow vignette shows how to use the `GRaNIE` package in a real-world example. For this purpose, you will use real data for a more complex analysis to illustrate most of its features. Importantly, you will also learn in detail how to work with a `GRaNIE` object and what its main functions and properties are. The vignette will be continuously updated whenever new functionality becomes available or when we receive user feedback.
+        In this vignette, we present GRaNIE (**G**ene **R**egul**a**tory **N**etwork **I**nference including **E**nhancers), a framework to reconstruct predictive enhancer-mediated regulatory network models that are based on integrating of expression and chromatin accessibility/activity pattern across individuals, and provide a comprehensive resource of cell-type specific gene regulatory networks for particular cell types. For an extended biological motivation, see the first section below. In the following, we summarize how to use the `GRaNIE` package in a real-world example, illustrate most features and how to work with a `GRaNIE` object. Importantly, this vignette will be continuously updated whenever new functionality becomes available or when we receive user feedback.
 vignette: >
   %\VignetteIndexEntry{Workflow example}
   %\VignetteEngine{knitr::rmarkdown}
@@ -53,9 +53,13 @@ pre[class] {
 }
 ```
 
+# Motivation and Summary
+
+Genetic variants associated with diseases often affect non-coding regions, thus likely having a regulatory role. To understand the effects of genetic variants in these regulatory regions, identifying genes that are modulated by specific regulatory elements (REs) is crucial. The effect of gene regulatory elements, such as enhancers, is often cell-type specific, likely because the combinations of transcription factors (TFs) that are regulating a given enhancer have cell-type specific activity. This TF activity can be quantified with existing tools such as `diffTF` and captures differences in binding of a TF in open chromatin regions. Collectively, this forms a enhancer-mediated gene regulatory network (*eGRN*) with cell-type and data-specific TF-RE and RE-gene links. Here, we reconstruct such a *eGRN* using bulk RNA-seq and open chromatin (e.g., using ATAC-seq or ChIP-seq for open chromatin marks) and optionally TF activity data. Our network contains different types of links, connecting TFs to regulatory elements, the latter of which is connected to genes in the vicinity or within the same chromatin domain (*TAD*). We use a statistical framework to assign empirical FDRs and weights to all links using a permutation-based approach.
+
 # Example data
 
-The data is taken from [here](https://zenodo.org/record/1188300#.X370PXUzaSN) [1], has been processed to meet the requirements of the `GRaNIE` package and consists of the following files:
+Before we start with the package, let's retrieve some example data! For the purpose of this vignette, the data we will use is taken from [here](https://zenodo.org/record/1188300#.X370PXUzaSN) [1], has been minimally processed to meet the requirements of the `GRaNIE` package and consists of the following files:
 
 * ATAC-seq peaks, raw counts (originally around 75,000, genome-wide, here filtered to around 60,500)
 * RNA-Seq data, raw counts (originally for around 35,000 genes, here filtered to around 19,000)
@@ -71,7 +75,7 @@ Furthermore, the example dataset is accompanied by the following files:
 # Example Workflow
 <a name="section1"></a>
 
-In the following example, you will use the example data to construct a *eGRN* from ATAC-seq, RNA-seq data as well transcription factor data.
+In the following example, you will use the example data to construct a *eGRN* from ATAC-seq, RNA-seq data as well transcription factor (TF) data.
 
 
 ```{r <knitr, echo=FALSE, message=FALSE, results="hide", class.output="scroll-200"}
@@ -108,7 +112,7 @@ To set up a `GRaNIE` analysis, we first need to read in some data into `R`. The 
 The following data can be used optionally but are not required:
 
 * sample metadata (e.g., sex, gender, age, sequencing batch, etc)
-* TAD domains (bed file)
+* TAD domains (bed file, not used here in this vignette)
 
 So, let's import the enhancer and RNA-seq data as a data frame as well as some sample metadata. This can be done in any way you want as long as you end up with the right format. 
 
