@@ -12,7 +12,6 @@ This repository for our *GRaNIE* package (**G**ene **R**egul**a**tory **N**etwor
 
 
 In addition, the full documentation is available at the following stable URL and will soon be extended and completed:
-
 **[https://grp-zaugg.embl-community.io/GRaNIE](https://grp-zaugg.embl-community.io/GRaNIE)**
 
 
