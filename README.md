@@ -8,13 +8,12 @@ This project is currently under active development.
 This repository for our *GRaNIE* package (**G**ene **R**egul**a**tory **N**etwork **I**nference including **E**nhancers) 
 
 
-The full documentation for the all packages is available at the following stable URL and will soon be extended and completed:
+** *GRaNIE* is soon included on *Bioconductor*. The package and installation instructions canb e found here: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE)**
+
+
+In addition, the full documentation is available at the following stable URL and will soon be extended and completed:
 
 **[https://grp-zaugg.embl-community.io/GRaNIE](https://grp-zaugg.embl-community.io/GRaNIE)**
-
-
-** *GRaNIE* is soon included on *Bioconductor*. We will post the link to the stable release of *Bioconductor* here soon.**
-
 
 
 **If you use our packages, please use the following citation (we will update it once the paper has been officially published):**
