@@ -8,7 +8,7 @@ This project is currently under active development.
 This repository for our *GRaNIE* package (**G**ene **R**egul**a**tory **N**etwork **I**nference including **E**nhancers) 
 
 
-** *GRaNIE* is soon included on *Bioconductor*. The package and installation instructions canb e found here: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE)**
+***GRaNIE* is soon included on *Bioconductor*. The package and installation instructions can be found here: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE)**
 
 
 In addition, the full documentation is available at the following stable URL and will soon be extended and completed:
