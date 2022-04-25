@@ -1654,7 +1654,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
         suffixFile = .getPermutationSuffixStr(permutationCur)
         
         
-        fileCur = paste0(outputFolder, .getOutputFileName("plot_class_density"), "_", connectionTypeCur, suffixFile)
+        fileCur = paste0(outputFolder, .getOutputFileName("plot_class_density"), "_", connectionTypeCur, suffixFile, ".pdf")
         if (!file.exists(fileCur) | forceRerun) {
           .plot_density(.asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_foreground),
                         .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_background), 
@@ -1664,7 +1664,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
           futile.logger::flog.info(paste0("  File ", fileCur, " already exists, not overwriting since forceRerun = FALSE"))
         }
         
-        fileCur = paste0(outputFolder, .getOutputFileName("plot_class_medianClass"), "_", connectionTypeCur, suffixFile)
+        fileCur = paste0(outputFolder, .getOutputFileName("plot_class_medianClass"), "_", connectionTypeCur, suffixFile, ".pdf")
         if (!file.exists(fileCur) | forceRerun) {
           .plot_AR_thresholds(
             median.cor.tfs = .asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_cor_median_foreground), 
@@ -1677,7 +1677,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
           futile.logger::flog.info(paste0("  File ", fileCur, " already exists, not overwriting since forceRerun = FALSE"))
         }
         
-        fileCur = paste0(outputFolder, .getOutputFileName("plot_class_densityClass"), "_", connectionTypeCur, suffixFile)
+        fileCur = paste0(outputFolder, .getOutputFileName("plot_class_densityClass"), "_", connectionTypeCur, suffixFile, ".pdf")
         if (!file.exists(fileCur) | forceRerun) {
           
           TF_peak_cor = GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor
@@ -3171,7 +3171,7 @@ filterGRNAndConnectGenes <- function(GRN,
         suffixFile = .getPermutationSuffixStr(permutationCur)
         
         outputFolder = .checkOutputFolder(GRN, outputFolder)
-        outputFile = paste0(outputFolder, .getOutputFileName("plot_peakGene_IHW_diag"), suffixFile)
+        outputFile = paste0(outputFolder, .getOutputFileName("plot_peakGene_IHW_diag"), suffixFile, ".pdf")
         
         IHW.res = .performIHW(grn.filt$peak_gene.p_raw[indexes], 
                               covariate_val[indexes] %>% unlist() %>% unname(), 

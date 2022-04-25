@@ -546,7 +546,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     }
     
     # TODO: page selection not implemented here yet
-    fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_fdr_GC"), suffixFile)
+    fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_fdr_GC"), suffixFile, ".pdf")
     if (useGCCorrection & (!file.exists(fileCur) | !plotAsPDF | forceRerun)) {
         
         if (!plotAsPDF) fileCur = NULL
@@ -3365,7 +3365,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     
     if (plotAsPDF) {
         futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
-        grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"),width = pdf_width, height = pdf_height )
+        grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"), width = pdf_width, height = pdf_height )
     } else {
         futile.logger::flog.info(paste0("Plotting GRN network"))
     }
