@@ -42,7 +42,7 @@ plotCommunitiesEnrichment(
 
 \item{nID}{Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.}
 
-\item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
+\item{maxWidth_nchar_plot}{Integer (>=10). Default 50.  Maximum number of characters for a term before it is truncated.}
 
 \item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
 

@@ -2140,7 +2140,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   ontology = NULL, topn_pvalue = 30, p = 0.05, 
                                   display_pAdj = FALSE, 
-                                  maxWidth_nchar_plot = 50,
+                                  maxWidth_nchar_plot = 50, 
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                   forceRerun = FALSE) {
   
