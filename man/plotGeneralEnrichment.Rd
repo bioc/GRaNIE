@@ -12,6 +12,7 @@ plotGeneralEnrichment(
   topn_pvalue = 30,
   p = 0.05,
   display_pAdj = FALSE,
+  maxWidth_nchar_plot = 50,
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
@@ -33,6 +34,8 @@ plotGeneralEnrichment(
 \item{p}{Numeric. Default 0.05. p-value threshold to determine significance.}
 
 \item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
+
+\item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 

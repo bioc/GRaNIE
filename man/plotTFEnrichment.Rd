@@ -14,7 +14,7 @@ plotTFEnrichment(
   nSignificant = 2,
   nID = 10,
   display_pAdj = FALSE,
-  maxWidth_nchar_plot = 100,
+  maxWidth_nchar_plot = 50,
   outputFolder = NULL,
   basenameOutput = NULL,
   plotAsPDF = TRUE,
@@ -43,7 +43,7 @@ plotTFEnrichment(
 
 \item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
 
-\item{maxWidth_nchar_plot}{Integer (>=10). Default 100. Maximum number of characters for a term before it is truncated.}
+\item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 

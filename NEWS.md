@@ -1,3 +1,32 @@
+
+# GRaNIE 1.1.X (2022-05-31)
+
+## Minor changes
+
+- added the argument *maxWidth_nchar_plot* to all functions that plot enrichments, and changed the default from 100 to 50. 
+
+## Bug fixes
+
+- fixed a small bug that resulted in the enrichment plots to ignore the value of *maxWidth_nchar_plot*
+
+# GRaNIE 0.99.X (2022-04-26)
+
+## Major changes
+
+- Bioconductor acceptance: this version is the final version for the Bioconductor 3.15 release branch
+- full inclusion of the GRN visualization
+- extensive vignette updates
+- added the possibility to print only particular output pages for all plot functions
+
+## Bug fixes
+
+- various minor bug fixes
+
+## Minor changes
+
+- various minor changes
+
+
 # GRaNIE 0.15-0.17 (2021-12-13)
 
 ## Major changes
