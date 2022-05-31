@@ -2130,6 +2130,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @param p Numeric. Default 0.05. p-value threshold to determine significance.
 #' @param topn_pvalue Numeric. Default 30. Maximum number of ontology terms that meet the p-value significance threshold to display in the enrichment dot plot
 #' @param display_pAdj \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.
+#' @param maxWidth_nchar_plot Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
@@ -2139,6 +2140,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   ontology = NULL, topn_pvalue = 30, p = 0.05, 
                                   display_pAdj = FALSE, 
+                                  maxWidth_nchar_plot = 50,
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                   forceRerun = FALSE) {
   
@@ -2199,7 +2201,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
           .plotEnrichmentGeneral(data = GRN@stats$Enrichment$general[[ontologyCur]], 
                                  type = ontologyCur, 
                                  prefixTitle = "General Enrichment Analysis",
-                                 topn_pvalue, p = p, maxWidth_nchar_plot = 100, display_pAdj = display_pAdj)
+                                 topn_pvalue, p = p, maxWidth_nchar_plot = maxWidth_nchar_plot, display_pAdj = display_pAdj)
       }
         
     }
@@ -2217,7 +2219,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 }
 
 
-.plotEnrichmentGeneral <- function(data, type, prefixTitle, topn_pvalue = 30, maxWidth_nchar_plot = 100, p = 0.05, display_pAdj = FALSE) {
+.plotEnrichmentGeneral <- function(data, type, prefixTitle, topn_pvalue = 30, maxWidth_nchar_plot = 50, p = 0.05, display_pAdj = FALSE) {
   
   dataCur   = data[["results"]]
   paramsCur = data[["parameters"]]
@@ -2498,7 +2500,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @param communities \code{NULL} or numeric vector. Default \code{NULL}. If set to \code{NULL}, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities are plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} are plotted. 
 #' @param nSignificant Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
 #' @param nID Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.
-#' @param maxWidth_nchar_plot Integer (>=10). Default 100. Maximum number of characters for a term before it is truncated.
+#' @param maxWidth_nchar_plot Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.
 #' @return  The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
@@ -2509,7 +2511,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @importFrom grid gpar
 plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                       display = "byRank", communities = NULL,
-                                      topn_pvalue = 30, p = 0.05, nSignificant = 2, nID = 10, maxWidth_nchar_plot = 100,
+                                      topn_pvalue = 30, p = 0.05, nSignificant = 2, nID = 10, maxWidth_nchar_plot = 50,
                                       display_pAdj = FALSE,
                                       plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                       forceRerun = FALSE) {
@@ -2841,7 +2843,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
                              topn_pvalue = 30, p = 0.05, 
                              nSignificant = 2, nID = 10,
                              display_pAdj = FALSE,
-                             maxWidth_nchar_plot = 100,
+                             maxWidth_nchar_plot = 50,
                              outputFolder = NULL, 
                              basenameOutput = NULL, 
                              plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
