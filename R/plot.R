@@ -171,14 +171,25 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     dd.vst = DESeq2::varianceStabilizingTransformation(counts)
     counts.transf = SummarizedExperiment::assay(dd.vst)
     metadata = SummarizedExperiment::colData(dd.vst) %>% as.data.frame()
+    
+
+    
   } else if (transformation == "log2") {
     checkmate::assertMatrix(counts)
     counts.transf = log2(counts + 1)
     metadata = GRN@data$metadata %>% dplyr::filter(sampleID %in% colnames(counts.transf)) %>% tibble::column_to_rownames("sampleID") %>% as.data.frame()
+  
   } else {
     checkmate::assertMatrix(counts)
     counts.transf = counts
     metadata = GRN@data$metadata %>% dplyr::filter(sampleID %in% colnames(counts.transf)) %>% tibble::column_to_rownames("sampleID") %>% as.data.frame()
+  }
+  
+  # Override scaling when already vst-transformed
+  # See https://support.bioconductor.org/p/60531/
+  if (transformation != "none") {
+      scale = FALSE
+      futile.logger::flog.info(paste0("Set scale = FALSE as data has already been transformed"))
   }
   
   # Add sampleID as explicit column so it is alwys included in the PCA plot to identify outliers
@@ -2140,7 +2151,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   ontology = NULL, topn_pvalue = 30, p = 0.05, 
                                   display_pAdj = FALSE, 
-                                  maxWidth_nchar_plot = 50, 
+                                  maxWidth_nchar_plot = 50,
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                   forceRerun = FALSE) {
   
@@ -3383,7 +3394,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         }
         
         .printExecutionTime(start)
-        return()
+        return(GRN)
     }
     
     if (nrow(grn.merged) == 0) {
