@@ -201,7 +201,7 @@ setMethod("show",
                 # Community identification (no, yes and how many and how many nodes each)
                 cat(" Communities (TF-gene):\n")
                 df = igraph::vertex.attributes(GRN@graph[["TF_gene"]]$graph)
-                if (!is.null(df)) {
+                if (!is.null(df) & "community" %in% names(df)) {
                     communities = df %>% as.data.frame() %>% dplyr::count(community) %>% dplyr::arrange(desc(n))
                     cat("  Communities, sorted by size (n = Number of nodes): ", paste0(communities$community, " (n=", communities$n, collapse = "), "), ")\n", sep = "")
                 } else {

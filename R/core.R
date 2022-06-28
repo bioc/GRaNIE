@@ -2876,11 +2876,11 @@ filterGRNAndConnectGenes <- function(GRN,
   
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertCharacter(TF_peak.connectionTypes, min.len = 1, any.missing = FALSE)
-  checkmate::assert(checkmate::checkNull(peak_gene.p_raw.threshold), checkmate::checkNumeric(peak_gene.p_raw.threshold, lower = 0, upper = 1, min.len = 1))
+  checkmate::assert(checkmate::checkNull(peak_gene.p_raw.threshold), checkmate::checkNumber(peak_gene.p_raw.threshold, lower = 0, upper = 1))
   checkmate::assertNumeric(peak_gene.r_range, lower = -1, upper = 1, len = 2)
   checkmate::assertCharacter(gene.types, min.len = 1)
   checkmate::assertNumber(TF_peak.fdr.threshold, lower = 0, upper = 1)
-  checkmate::assertNumber(peak_gene.fdr.threshold, lower = 0, upper = 1)
+  checkmate::assert(checkmate::checkNull(peak_gene.fdr.threshold), checkmate::checkNumber(peak_gene.fdr.threshold, lower = 0, upper = 1))
   
   checkmate::assertSubset(peak_gene.fdr.method, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW"))
   checkmate::assert(checkmate::checkNull(peak_gene.IHW.covariate), checkmate::checkCharacter(peak_gene.IHW.covariate, min.chars = 1, len = 1))
@@ -2892,6 +2892,11 @@ filterGRNAndConnectGenes <- function(GRN,
   
   if (peak_gene.fdr.method == "IHW" & !is.installed("IHW")) {
     message = "IHW has been selected for p-value adjustment, but IHW is currently not installed. Please install it and re-run the function or choose a different method."
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+  }
+  
+  if (!is.null(peak_gene.p_raw.threshold) & !is.null(peak_gene.fdr.threshold)) {
+    message = "Both parameters peak_gene.p_raw.threshold and peak_gene.fdr.threshold have been specified, choose only either of them."
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
