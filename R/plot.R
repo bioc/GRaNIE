@@ -62,10 +62,10 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     }
     
     for (norm in normVector) {
-        
-        if (!(norm %in% type | "all" %in% type)) {
-            next
-        }
+      
+      if (!(norm %in% type | "all" %in% type)) {
+        next
+      }
       
       # Only do a transformation if this is raw counts, already normalized counts dont need another transformation
       transformationCur = dplyr::if_else(norm == "raw", transformation, "none")
@@ -172,13 +172,13 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     counts.transf = SummarizedExperiment::assay(dd.vst)
     metadata = SummarizedExperiment::colData(dd.vst) %>% as.data.frame()
     
-
+    
     
   } else if (transformation == "log2") {
     checkmate::assertMatrix(counts)
     counts.transf = log2(counts + 1)
     metadata = GRN@data$metadata %>% dplyr::filter(sampleID %in% colnames(counts.transf)) %>% tibble::column_to_rownames("sampleID") %>% as.data.frame()
-  
+    
   } else {
     checkmate::assertMatrix(counts)
     counts.transf = counts
@@ -188,8 +188,8 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   # Override scaling when already vst-transformed
   # See https://support.bioconductor.org/p/60531/
   if (transformation != "none") {
-      scale = FALSE
-      futile.logger::flog.info(paste0("Set scale = FALSE as data has already been transformed"))
+    scale = FALSE
+    futile.logger::flog.info(paste0("Set scale = FALSE as data has already been transformed"))
   }
   
   # Add sampleID as explicit column so it is alwys included in the PCA plot to identify outliers
@@ -211,8 +211,8 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   
   # 0. Density plot for ALL features
   if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-      .plotDensity(counts.transf, logTransform = logTransformDensity, legend = dplyr::if_else(ncol(counts.transf) > 20, FALSE, TRUE))
-      
+    .plotDensity(counts.transf, logTransform = logTransformDensity, legend = dplyr::if_else(ncol(counts.transf) > 20, FALSE, TRUE))
+    
   }
   pageCounter = pageCounter + 1
   
@@ -236,24 +236,24 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     
     # 1. Scree plot
     if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        g = ggplot(screeplot.df, aes(PCs, variation)) + geom_bar(stat = "identity") + 
-            xlab("Principal component (PC)") + ylab("Explained variation / Cumultative sum (in %)") + 
-            geom_point(data = screeplot.df, aes(pos, variation_sum), color = "red") + 
-            geom_line(data = screeplot.df, aes(pos, variation_sum), color = "red") +
-            ggtitle(paste0("Screeplot for top ", topn, " variable features")) + 
-            theme_bw()
-        
-        plot(g)
+      
+      g = ggplot(screeplot.df, aes(PCs, variation)) + geom_bar(stat = "identity") + 
+        xlab("Principal component (PC)") + ylab("Explained variation / Cumultative sum (in %)") + 
+        geom_point(data = screeplot.df, aes(pos, variation_sum), color = "red") + 
+        geom_line(data = screeplot.df, aes(pos, variation_sum), color = "red") +
+        ggtitle(paste0("Screeplot for top ", topn, " variable features")) + 
+        theme_bw()
+      
+      plot(g)
     }
     pageCounter = pageCounter + 1
     
     # 2. Metadata correlation with PCs
     if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = TRUE, verbose = FALSE)
-        .plotPCA_QC(pcaResult = pca, dataCols = colnames(counts.transf), metadataTable = metadata, metadataColumns = metadata_columns, 
-                    varn = topn, metadataColumns_fill = metadata_columns, 
-                    file = NULL, logTransform = FALSE)
+      metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = TRUE, verbose = FALSE)
+      .plotPCA_QC(pcaResult = pca, dataCols = colnames(counts.transf), metadataTable = metadata, metadataColumns = metadata_columns, 
+                  varn = topn, metadataColumns_fill = metadata_columns, 
+                  file = NULL, logTransform = FALSE)
     }
     pageCounter = pageCounter + 1
     
@@ -262,71 +262,71 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = FALSE, verbose = FALSE)
     for (varCur in metadata_columns) {
       
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+        
+        plotTitle = paste0("Top ", topn, " variable features, colored by \n", varCur)
+        
+        skipLegend = FALSE
+        vecCur = metadata[, varCur] %>%unlist()
+        if (is.character(vecCur) & length(unique(vecCur)) > 30) {
+          skipLegend = TRUE
+          plotTitle = paste0(plotTitle, " (legend skipped)")
+        }
+        
+        result = tryCatch({
+          
+          # The following code is taken from plotPCA from DESeq2 and adapted here to be more flexible
+          intgroup.df <- as.data.frame(metadata[, varCur, drop=FALSE])
+          
+          # add the varCur factors together to create a new grouping factor
+          group = metadata[[varCur]]
+          
+          # assembly the data for the plot
+          d <- data.frame(PC1=pca$x[,1], PC2=pca$x[,2], group=group, intgroup.df, name=colnames(counts.transf))
+          
+          d = d %>%
+            dplyr::mutate_if(is.character, as.factor) %>%
+            dplyr::mutate_if(is.logical, as.factor)
+          
+          
+          g = g = ggplot(data=d, aes(x=PC1, y=PC2, color=group)) + geom_point(size=3) + 
+            xlab(paste0("PC1: ",round(percentVar[1] * 100, 1),"% variance")) +
+            ylab(paste0("PC2: ",round(percentVar[2] * 100, 1),"% variance")) +
+            ggtitle(plotTitle) + coord_fixed()
+          
+          
+          
+          if (is.factor(d$group)) {
+            g = g + scale_color_viridis_d()
             
-            plotTitle = paste0("Top ", topn, " variable features, colored by \n", varCur)
+          } else {
             
-            skipLegend = FALSE
-            vecCur = metadata[, varCur] %>%unlist()
-            if (is.character(vecCur) & length(unique(vecCur)) > 30) {
-                skipLegend = TRUE
-                plotTitle = paste0(plotTitle, " (legend skipped)")
+            is.date <- function(x) inherits(x, 'Date')
+            
+            if (!is.date(d$group)) {
+              g = g + scale_color_viridis_c()
+            } else {
+              g = g + scale_color_viridis_c(trans = "date")
             }
             
-            result = tryCatch({
-                
-                # The following code is taken from plotPCA from DESeq2 and adapted here to be more flexible
-                intgroup.df <- as.data.frame(metadata[, varCur, drop=FALSE])
-                
-                # add the varCur factors together to create a new grouping factor
-                group = metadata[[varCur]]
-                
-                # assembly the data for the plot
-                d <- data.frame(PC1=pca$x[,1], PC2=pca$x[,2], group=group, intgroup.df, name=colnames(counts.transf))
-                
-                d = d %>%
-                    dplyr::mutate_if(is.character, as.factor) %>%
-                    dplyr::mutate_if(is.logical, as.factor)
-                
-                
-                g = g = ggplot(data=d, aes(x=PC1, y=PC2, color=group)) + geom_point(size=3) + 
-                    xlab(paste0("PC1: ",round(percentVar[1] * 100, 1),"% variance")) +
-                    ylab(paste0("PC2: ",round(percentVar[2] * 100, 1),"% variance")) +
-                    ggtitle(plotTitle) + coord_fixed()
-                
-                
-                
-                if (is.factor(d$group)) {
-                    g = g + scale_color_viridis_d()
-                    
-                } else {
-                    
-                    is.date <- function(x) inherits(x, 'Date')
-                    
-                    if (!is.date(d$group)) {
-                        g = g + scale_color_viridis_c()
-                    } else {
-                        g = g + scale_color_viridis_c(trans = "date")
-                    }
-                    
-                    
-                }
-                
-                
-                if (skipLegend) {
-                    g = g + theme(legend.position = "none")
-                } 
-                
-                plot(g)
-                
-            }, error = function(e) {
-                futile.logger::flog.warn(paste0(" Could not plot PCA with variable ", varCur))
-                plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
-                message = paste0(" Could not plot PCA with variable ", varCur)
-                text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
-            })
-        }
-        pageCounter = pageCounter + 1
+            
+          }
+          
+          
+          if (skipLegend) {
+            g = g + theme(legend.position = "none")
+          } 
+          
+          plot(g)
+          
+        }, error = function(e) {
+          futile.logger::flog.warn(paste0(" Could not plot PCA with variable ", varCur))
+          plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
+          message = paste0(" Could not plot PCA with variable ", varCur)
+          text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+        })
+      }
+      pageCounter = pageCounter + 1
       
       
     } # end for each variable
@@ -536,9 +536,9 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     if (!permutationCur %in% dataType2) {
       next
     }
-      
+    
     futile.logger::flog.info(paste0("\n Plotting for permutation ", permutationCur))
-      
+    
     
     suffixFile = .getPermutationSuffixStr(permutationCur)
     
@@ -547,11 +547,11 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     
     
     if (!file.exists(fileCur) | !plotAsPDF | forceRerun) {
-        
-        if (!plotAsPDF) fileCur = NULL
       
-        heightCur = pdf_height_base * length(GRN@config$TF_peak_connectionTypes)
-        .plot_TF_peak_fdr(GRN, perm = permutationCur, useGCCorrection = useGCCorrection, 
+      if (!plotAsPDF) fileCur = NULL
+      
+      heightCur = pdf_height_base * length(GRN@config$TF_peak_connectionTypes)
+      .plot_TF_peak_fdr(GRN, perm = permutationCur, useGCCorrection = useGCCorrection, 
                         plotDetails = plotDetails, fileCur, width = pdf_width, height = heightCur,
                         nPagesMax = nTFMax, pages = pages) 
     }
@@ -559,9 +559,9 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     # TODO: page selection not implemented here yet
     fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_fdr_GC"), suffixFile, ".pdf")
     if (useGCCorrection & (!file.exists(fileCur) | !plotAsPDF | forceRerun)) {
-        
-        if (!plotAsPDF) fileCur = NULL
-        .plotTF_peak_GC_diagnosticPlots(GRN, perm = permutationCur, fileCur, width = pdf_width, height = pdf_height_base) 
+      
+      if (!plotAsPDF) fileCur = NULL
+      .plotTF_peak_GC_diagnosticPlots(GRN, perm = permutationCur, fileCur, width = pdf_width, height = pdf_height_base) 
     }
     
     # TODO: handle multiple activities and actually write this function
@@ -692,14 +692,14 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   pageCounter = 1  
   
   if (!is.null(file)) {
-      .checkOutputFile(file)
-      grDevices::pdf(file, width = width, height = height)
-      futile.logger::flog.info(paste0("Plotting to file ", file))
+    .checkOutputFile(file)
+    grDevices::pdf(file, width = width, height = height)
+    futile.logger::flog.info(paste0("Plotting to file ", file))
   } else {
-      futile.logger::flog.info(paste0("Plotting directly"))   
+    futile.logger::flog.info(paste0("Plotting directly"))   
   }
   
- 
+  
   
   # Dont take all TF, some might be missing.
   connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
@@ -710,7 +710,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   
   # TODO: Check difference between TFActivity TFs and expression TFs
   
-
+  
   pb <- progress::progress_bar$new(total = nTF)
   
   steps = GRN@config$parameters$internal$stepsFDR
@@ -834,25 +834,25 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     
     # Lets create the plots
     if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        plots_all = plotsCur.l$pos / plotsCur.l$neg
-        plot(plots_all)
+      plots_all = plotsCur.l$pos / plotsCur.l$neg
+      plot(plots_all)
     }
     pageCounter = pageCounter + 1 
     
     if (plotDetails) {
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            plots_all = plotsCur.l$pos_details / plotsCur.l$neg_details
-            plot(plots_all)
-        }
-        pageCounter = pageCounter + 1 
+      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+        plots_all = plotsCur.l$pos_details / plotsCur.l$neg_details
+        plot(plots_all)
+      }
+      pageCounter = pageCounter + 1 
     }
     
-  
+    
     
   } # end allTF
   
   .printWarningPageNumber(pages, pageCounter)
- 
+  
   if (!is.null(file)) dev.off()
   
   .printExecutionTime(start)
@@ -1072,7 +1072,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
     freq_class = gsub(freq_class, pattern = "random", replacement = "permuted")
     names(freq_class) <- names(freqs)
     
-
+    
     xlabels_peakGene_r.class = levels(peakGeneCorrelations.all$peak_gene.r.class)
     nCur = length(xlabels_peakGene_r.class)
     xlabels_peakGene_r.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
@@ -1093,7 +1093,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       
       # Reset page counter for each PDF anew
       pageCounter = 1
-        
+      
       futile.logger::flog.info(paste0(" Gene type ", paste0(geneTypesSelected, collapse = "+")))
       
       if ("all" %in% geneTypesSelected) {
@@ -1136,119 +1136,119 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         counter = counter + 1
         
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            
-            if (length(allTF) > 1) {
-                futile.logger::flog.info(paste0(" QC plots for TF ", TFCur, " (", counter, " of ", length(allTF), ")"))
-            }
-            
-            
-            if ("all" %in% geneTypesSelected) {
-                indexCur = seq_len(nrow(peakGeneCorrelations.all))
-            } else {
-                indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
-            }
-            
-            
-            if (TFCur != "all") {
-                indexCur = intersect(indexCur, which(peakGeneCorrelations.all$peak.ID %in% TF.peaks[[TFCur]]))
-            }
-            
-            # Get subset also for just the real data
-            indexCurReal = intersect(indexCur, which(peakGeneCorrelations.all$class == names(dist_class)[1]))
-            
-            
-            xlabel = paste0("Correlation raw p-value")
-            
-            # DENSITY PLOTS P VALUE
-            
-            # TODO: Densities as ratio
-            # https://stackoverflow.com/questions/58629959/how-can-i-extract-data-from-a-kernel-density-function-in-r-for-many-samples-at-o#:~:text=To%20compute%20the%20density%20you,can%20use%20the%20package%20spatstat%20.
-            
-            # Produce the labels for the class-specific subtitles
-            customLabel_class = .customLabeler(table(peakGeneCorrelations.all[indexCur,]$class))
-            
-            r_pos_freq = table(peakGeneCorrelations.all[indexCur,]$r_positive)
-            labeler_r_pos = labeller(r_positive = c("TRUE"  = paste0("r positive (", r_pos_freq["TRUE"], ")"), 
-                                                    "FALSE" = paste0("r negative (", r_pos_freq["FALSE"], ")")) )
-            theme_main = theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = rel(0.8)),
-                               axis.text.y = element_text(size=rel(0.8)),
-                               panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-            
-            
-            
-            ## p-val density curves stratified by real/permuted ##
-            
-            gA2 = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.p_raw, color = r_positive)) + geom_density()  +
-                facet_wrap(~ class, labeller = labeller(class=freq_class) ) +
-                xlab(xlabel) + ylab("Density") +  theme_bw() +
-                scale_color_manual(labels = names(r_pos_class), values = r_pos_class) +
-                theme(legend.position = "none", axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)))
-            
-            # Helper function to retrieve all tables and data aggregation steps for subsequent visualization
-            tbl.l = .createTables_peakGeneQC(peakGeneCorrelations.all[indexCur,], networkType_details, colors_vec, range)
-            
-            
-            xlabel = paste0("Correlation raw\np-value (binned)")
-            
-            
-            xlabels = levels(tbl.l$d_merged$peak_gene.p.raw.class)
-            xlabels[setdiff(seq_len(length(xlabels)), c(1, floor(length(xlabels)/2), length(xlabels)))] <- ""
-            
-            gB3 = ggplot(tbl.l$d_merged, aes(peak_gene.p.raw.class, ratio, fill = classAll)) + 
-                geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.5) + 
-                geom_hline(yintercept = 1, linetype = "dotted") + 
-                xlab(xlabel) + ylab("Ratio") +
-                scale_fill_manual("Class", values = c(dist_class, r_pos_class), 
-                                  labels = c("real", "permuted", "r+ (r>0)", "r- (r<=0)"), 
-                ) + # labels vector can be kind of manually specified here because the levels were previosly defined in a certain order
-                scale_x_discrete(labels = xlabels_peakGene_praw.class) +
-                theme_bw() +  
-                #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
-                # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
-                theme_main +
-                facet_wrap(~ factor(set), nrow = 2, scales = "free_y", strip.position = "left") 
-            
-            #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of permuted / permuted + real)
-            # that could give an indication of whether an FDR based on the permuted or based on the negative correlations would be more stringent
-            
-            # R PEAK GENE #
-            
-            xlabel = paste0("Correlation coefficient r")
-            
-            sum_real = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[1]]
-            sum_rnd  = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[2]]
-            binData.r = peakGeneCorrelations.all[indexCur,] %>%
-                dplyr::group_by(class) %>%
-                dplyr::count(peak_gene.r.class) %>%
-                dplyr::mutate(nnorm = dplyr::case_when(class == !! (names(dist_class)[1]) ~ .data$n / (sum_real / sum_rnd), 
-                                                       TRUE ~ as.double(.data$n)))
-            
-            xlabel = paste0("Correlation coefficient r (binned)")
-            
-            gD = ggplot(binData.r, aes(peak_gene.r.class, nnorm, group = class, fill = class)) + 
-                geom_bar(stat = "identity", position = position_dodge(preserve = "single"), na.rm = FALSE, width = 0.5) +
-                geom_line(aes(peak_gene.r.class, nnorm, group = class, color= class), stat = "identity") +
-                scale_fill_manual("Group", labels = names(dist_class), values = dist_class) +
-                scale_color_manual("Group", labels = names(dist_class), values = dist_class) +
-                scale_x_discrete(labels = xlabels_peakGene_r.class2, drop = FALSE) +
-                theme_bw() + theme(legend.position = "none") +
-                xlab(xlabel) + ylab("Abundance") +
-                theme_main  +
-                scale_y_continuous(labels = scales::scientific)
-            
-            
-            mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ",\n", .prettyNum(range), " bp promoter range)")
-            
-            plots_all = ( ((gA2 | gB3 ) + 
-                               patchwork::plot_layout(widths = c(2.5,1.5))) / ((gD) + 
-                                                                                   patchwork::plot_layout(widths = c(4))) ) + 
-                patchwork::plot_layout(heights = c(2,1), guides = 'collect') +
-                patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
-            
-            plot(plots_all)
+          
+          if (length(allTF) > 1) {
+            futile.logger::flog.info(paste0(" QC plots for TF ", TFCur, " (", counter, " of ", length(allTF), ")"))
+          }
+          
+          
+          if ("all" %in% geneTypesSelected) {
+            indexCur = seq_len(nrow(peakGeneCorrelations.all))
+          } else {
+            indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
+          }
+          
+          
+          if (TFCur != "all") {
+            indexCur = intersect(indexCur, which(peakGeneCorrelations.all$peak.ID %in% TF.peaks[[TFCur]]))
+          }
+          
+          # Get subset also for just the real data
+          indexCurReal = intersect(indexCur, which(peakGeneCorrelations.all$class == names(dist_class)[1]))
+          
+          
+          xlabel = paste0("Correlation raw p-value")
+          
+          # DENSITY PLOTS P VALUE
+          
+          # TODO: Densities as ratio
+          # https://stackoverflow.com/questions/58629959/how-can-i-extract-data-from-a-kernel-density-function-in-r-for-many-samples-at-o#:~:text=To%20compute%20the%20density%20you,can%20use%20the%20package%20spatstat%20.
+          
+          # Produce the labels for the class-specific subtitles
+          customLabel_class = .customLabeler(table(peakGeneCorrelations.all[indexCur,]$class))
+          
+          r_pos_freq = table(peakGeneCorrelations.all[indexCur,]$r_positive)
+          labeler_r_pos = labeller(r_positive = c("TRUE"  = paste0("r positive (", r_pos_freq["TRUE"], ")"), 
+                                                  "FALSE" = paste0("r negative (", r_pos_freq["FALSE"], ")")) )
+          theme_main = theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size = rel(0.8)),
+                             axis.text.y = element_text(size=rel(0.8)),
+                             panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+          
+          
+          
+          ## p-val density curves stratified by real/permuted ##
+          
+          gA2 = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.p_raw, color = r_positive)) + geom_density()  +
+            facet_wrap(~ class, labeller = labeller(class=freq_class) ) +
+            xlab(xlabel) + ylab("Density") +  theme_bw() +
+            scale_color_manual(labels = names(r_pos_class), values = r_pos_class) +
+            theme(legend.position = "none", axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)))
+          
+          # Helper function to retrieve all tables and data aggregation steps for subsequent visualization
+          tbl.l = .createTables_peakGeneQC(peakGeneCorrelations.all[indexCur,], networkType_details, colors_vec, range)
+          
+          
+          xlabel = paste0("Correlation raw\np-value (binned)")
+          
+          
+          xlabels = levels(tbl.l$d_merged$peak_gene.p.raw.class)
+          xlabels[setdiff(seq_len(length(xlabels)), c(1, floor(length(xlabels)/2), length(xlabels)))] <- ""
+          
+          gB3 = ggplot(tbl.l$d_merged, aes(peak_gene.p.raw.class, ratio, fill = classAll)) + 
+            geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.5) + 
+            geom_hline(yintercept = 1, linetype = "dotted") + 
+            xlab(xlabel) + ylab("Ratio") +
+            scale_fill_manual("Class", values = c(dist_class, r_pos_class), 
+                              labels = c("real", "permuted", "r+ (r>0)", "r- (r<=0)"), 
+            ) + # labels vector can be kind of manually specified here because the levels were previosly defined in a certain order
+            scale_x_discrete(labels = xlabels_peakGene_praw.class) +
+            theme_bw() +  
+            #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
+            # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
+            theme_main +
+            facet_wrap(~ factor(set), nrow = 2, scales = "free_y", strip.position = "left") 
+          
+          #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of permuted / permuted + real)
+          # that could give an indication of whether an FDR based on the permuted or based on the negative correlations would be more stringent
+          
+          # R PEAK GENE #
+          
+          xlabel = paste0("Correlation coefficient r")
+          
+          sum_real = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[1]]
+          sum_rnd  = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[2]]
+          binData.r = peakGeneCorrelations.all[indexCur,] %>%
+            dplyr::group_by(class) %>%
+            dplyr::count(peak_gene.r.class) %>%
+            dplyr::mutate(nnorm = dplyr::case_when(class == !! (names(dist_class)[1]) ~ .data$n / (sum_real / sum_rnd), 
+                                                   TRUE ~ as.double(.data$n)))
+          
+          xlabel = paste0("Correlation coefficient r (binned)")
+          
+          gD = ggplot(binData.r, aes(peak_gene.r.class, nnorm, group = class, fill = class)) + 
+            geom_bar(stat = "identity", position = position_dodge(preserve = "single"), na.rm = FALSE, width = 0.5) +
+            geom_line(aes(peak_gene.r.class, nnorm, group = class, color= class), stat = "identity") +
+            scale_fill_manual("Group", labels = names(dist_class), values = dist_class) +
+            scale_color_manual("Group", labels = names(dist_class), values = dist_class) +
+            scale_x_discrete(labels = xlabels_peakGene_r.class2, drop = FALSE) +
+            theme_bw() + theme(legend.position = "none") +
+            xlab(xlabel) + ylab("Abundance") +
+            theme_main  +
+            scale_y_continuous(labels = scales::scientific)
+          
+          
+          mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ",\n", .prettyNum(range), " bp promoter range)")
+          
+          plots_all = ( ((gA2 | gB3 ) + 
+                           patchwork::plot_layout(widths = c(2.5,1.5))) / ((gD) + 
+                                                                             patchwork::plot_layout(widths = c(4))) ) + 
+            patchwork::plot_layout(heights = c(2,1), guides = 'collect') +
+            patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
+          
+          plot(plots_all)
         }
         pageCounter = pageCounter + 1
-
+        
         
       } # end for each TF
       
@@ -1259,14 +1259,14 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         
         # no plot, as this is somehow just a list and no ggplot object
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            
-            ChIPseeker::plotAnnoPie(GRN@annotation$consensusPeaks_obj, 
-                                    main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$consensusPeaks), ")"))
+          
+          ChIPseeker::plotAnnoPie(GRN@annotation$consensusPeaks_obj, 
+                                  main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$consensusPeaks), ")"))
         }
         pageCounter = pageCounter + 1
-          
+        
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            plot(ChIPseeker::plotDistToTSS(GRN@annotation$consensusPeaks_obj))
+          plot(ChIPseeker::plotDistToTSS(GRN@annotation$consensusPeaks_obj))
         }
         
         pageCounter = pageCounter + 1
@@ -1373,96 +1373,96 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                              "FALSE" = paste0("r-(r<=0, n=" ,.prettyNum(r_pos_tbl[["FALSE"]]), ")"))
         
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            
-            
-            # Class in the facet_wrap has been removed, as this is only for real data here
-            gA3 = ggplot(dataCur, aes(peak_gene.p_raw, color = .data[[newColName]])) + geom_density(size = 0.2)  +
-                facet_wrap(~r_positive, labeller = labeller(r_positive = r_positive_label), nrow = 2) +
-                geom_density(aes(color = classNew), color = "black",  linetype = "dotted", alpha = 1) + 
-                xlab(xlabel) + ylab("Density (for real data only)") +  theme_bw() +
-                scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
-                theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)), 
-                      legend.text=element_text(size=rel(0.6)), legend.position = "none")
-            
-            # Ratios for r+ / r-
-            freq =  dataCur %>%
-                dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class, r_positive) %>%
-                dplyr::summarise(n = dplyr::n()) %>%
-                dplyr::ungroup() %>%
-                tidyr::complete(class, .data[[newColName]], peak_gene.p.raw.class, r_positive, fill = list(n = 0)) %>% # SOme cases might be missing
-                dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class) %>% # dont group by r_positive because we want to calculate the ratio within each group
-                dplyr::mutate(  
-                    n = .data$n + 1, # to allow ratios to be computed even for 0 counts
-                    ratio_pos_raw = .data$n[r_positive] / .data$n[!r_positive]) %>%
-                dplyr::filter(r_positive, class == names(dist_class)[1])# Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
-            
-            # Cap ratios > 10 at 10 to avoid visual artefacts
-            freq$ratio_pos_raw[which(freq$ratio_pos_raw > 10)] = 10
-            
-            # Without proper colors for now, this will be added after the next plot
-            gB3 = ggplot(freq, aes(peak_gene.p.raw.class, ratio_pos_raw, fill = .data[[newColName]])) + 
-                geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.8) + 
-                geom_hline(yintercept = 1, linetype = "dotted") + 
-                xlab(xlabel) + ylab("Ratio r+ / r- (capped at 10)") +
-                scale_x_discrete(labels = xlabels_peakGene_praw.class) +
-                scale_fill_manual (varCur, values = mycolors, labels = var.label, drop = FALSE )  +
-                theme_bw() +  
-                #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
-                # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
-                theme_main +
-                facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", labeller = labeller(class=freq_class)) 
-            
-            
-            plots_all = ( ((gA3 | gB3 ) + 
-                               patchwork::plot_layout(widths = c(2.5,1.5))) ) + 
-                patchwork::plot_layout(guides = 'collect') +
-                patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
-            
-            plot(plots_all)
+          
+          
+          # Class in the facet_wrap has been removed, as this is only for real data here
+          gA3 = ggplot(dataCur, aes(peak_gene.p_raw, color = .data[[newColName]])) + geom_density(size = 0.2)  +
+            facet_wrap(~r_positive, labeller = labeller(r_positive = r_positive_label), nrow = 2) +
+            geom_density(aes(color = classNew), color = "black",  linetype = "dotted", alpha = 1) + 
+            xlab(xlabel) + ylab("Density (for real data only)") +  theme_bw() +
+            scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
+            theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.8)), 
+                  legend.text=element_text(size=rel(0.6)), legend.position = "none")
+          
+          # Ratios for r+ / r-
+          freq =  dataCur %>%
+            dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class, r_positive) %>%
+            dplyr::summarise(n = dplyr::n()) %>%
+            dplyr::ungroup() %>%
+            tidyr::complete(class, .data[[newColName]], peak_gene.p.raw.class, r_positive, fill = list(n = 0)) %>% # SOme cases might be missing
+            dplyr::group_by(class, .data[[newColName]], peak_gene.p.raw.class) %>% # dont group by r_positive because we want to calculate the ratio within each group
+            dplyr::mutate(  
+              n = .data$n + 1, # to allow ratios to be computed even for 0 counts
+              ratio_pos_raw = .data$n[r_positive] / .data$n[!r_positive]) %>%
+            dplyr::filter(r_positive, class == names(dist_class)[1])# Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
+          
+          # Cap ratios > 10 at 10 to avoid visual artefacts
+          freq$ratio_pos_raw[which(freq$ratio_pos_raw > 10)] = 10
+          
+          # Without proper colors for now, this will be added after the next plot
+          gB3 = ggplot(freq, aes(peak_gene.p.raw.class, ratio_pos_raw, fill = .data[[newColName]])) + 
+            geom_bar(stat = "identity", position="dodge", na.rm = TRUE, width = 0.8) + 
+            geom_hline(yintercept = 1, linetype = "dotted") + 
+            xlab(xlabel) + ylab("Ratio r+ / r- (capped at 10)") +
+            scale_x_discrete(labels = xlabels_peakGene_praw.class) +
+            scale_fill_manual (varCur, values = mycolors, labels = var.label, drop = FALSE )  +
+            theme_bw() +  
+            #theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8), strip.background = element_blank(), strip.placement = "outside", axis.title.y = element_blank()) +
+            # theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = element_blank()) +
+            theme_main +
+            facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", labeller = labeller(class=freq_class)) 
+          
+          
+          plots_all = ( ((gA3 | gB3 ) + 
+                           patchwork::plot_layout(widths = c(2.5,1.5))) ) + 
+            patchwork::plot_layout(guides = 'collect') +
+            patchwork::plot_annotation(title = mainTitle, theme = theme(plot.title = element_text(hjust = 0.5)))
+          
+          plot(plots_all)
         }
         pageCounter = pageCounter + 1
         
         
         # VERSION JUDITH: simplified peak.gene distance + another variable as histogram, no permuted data
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            
-            datasetName = ""
-            if (!is.null(GRN@config$metadata$name)) {
-                datasetName = GRN@config$metadata$name
-            }
-            
-            mainTitle2 = paste0(datasetName, "\nSummary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ",
-                                .prettyNum(range), " bp promoter range, stratified by distance + ", varCur, ")")
-            
-            # r+ and r-
-            binwidth = 0.1
-            mycolors <- viridis::viridis(2)
-            xlabel = paste0("Correlation raw p-value (", binwidth, " bins)")
-            
-            dataCur = dataCur %>%
-                dplyr::mutate(peak_gene.distance.class250k = factor(dplyr::if_else(peak_gene.distance <= 250000, "<=250k", ">250k"))) %>%
-                dplyr::select(-peak_gene.distance)
-            
-            # closed = "left", boundary = 0, ensure correct numbers. See https://github.com/tidyverse/ggplot2/issues/1739
-            # Without boundary = 0, counts are actually wrong
-            
-            
-            nrows_plot = 2
-            if (length(unique(dataCur[[newColName]])) > 9) {
-                nrows_plot = 3
-            }
-            
-            gA5 = ggplot(dataCur, aes(peak_gene.p_raw, fill = r_positive)) + 
-                geom_histogram(binwidth = binwidth, position="dodge", closed = "left", boundary = 0)  +
-                facet_wrap(~ peak_gene.distance.class250k  + .data[[newColName]], nrow = nrows_plot, scales = "free_y") +
-                xlab(xlabel) + ylab(paste0("Abundance for classes with n>=", nGroupsMin)) +  theme_bw() +
-                ggtitle(mainTitle2) + 
-                scale_fill_manual("Class for r", values = mycolors, labels = r_positive_label, drop = FALSE ) +
-                theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.6)), 
-                      legend.text=element_text(size=rel(0.7)))
-            
-            
-            plot(gA5)
+          
+          datasetName = ""
+          if (!is.null(GRN@config$metadata$name)) {
+            datasetName = GRN@config$metadata$name
+          }
+          
+          mainTitle2 = paste0(datasetName, "\nSummary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ",
+                              .prettyNum(range), " bp promoter range, stratified by distance + ", varCur, ")")
+          
+          # r+ and r-
+          binwidth = 0.1
+          mycolors <- viridis::viridis(2)
+          xlabel = paste0("Correlation raw p-value (", binwidth, " bins)")
+          
+          dataCur = dataCur %>%
+            dplyr::mutate(peak_gene.distance.class250k = factor(dplyr::if_else(peak_gene.distance <= 250000, "<=250k", ">250k"))) %>%
+            dplyr::select(-peak_gene.distance)
+          
+          # closed = "left", boundary = 0, ensure correct numbers. See https://github.com/tidyverse/ggplot2/issues/1739
+          # Without boundary = 0, counts are actually wrong
+          
+          
+          nrows_plot = 2
+          if (length(unique(dataCur[[newColName]])) > 9) {
+            nrows_plot = 3
+          }
+          
+          gA5 = ggplot(dataCur, aes(peak_gene.p_raw, fill = r_positive)) + 
+            geom_histogram(binwidth = binwidth, position="dodge", closed = "left", boundary = 0)  +
+            facet_wrap(~ peak_gene.distance.class250k  + .data[[newColName]], nrow = nrows_plot, scales = "free_y") +
+            xlab(xlabel) + ylab(paste0("Abundance for classes with n>=", nGroupsMin)) +  theme_bw() +
+            ggtitle(mainTitle2) + 
+            scale_fill_manual("Class for r", values = mycolors, labels = r_positive_label, drop = FALSE ) +
+            theme(axis.text=element_text(size=rel(0.6)), strip.text.x = element_text(size = rel(0.6)), 
+                  legend.text=element_text(size=rel(0.7)))
+          
+          
+          plot(gA5)
         }
         pageCounter = pageCounter + 1
         
@@ -1483,28 +1483,28 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       indexFilt = intersect(indexFilt, indexCur)
       
       if (length(indexFilt) > 0) {
-          
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-              g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = peak_gene.distance_class_abs)) + geom_density() + 
-                  ggtitle(paste0("Density of the raw p-value distributions")) + 
-                  facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
-                  scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
-                  theme_bw()
-              plot(g)
-          }
+        
+        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+          g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = peak_gene.distance_class_abs)) + geom_density() + 
+            ggtitle(paste0("Density of the raw p-value distributions")) + 
+            facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
+            scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
+            theme_bw()
+          plot(g)
+        }
         pageCounter = pageCounter + 1
         
         if (includeRobustCols) {
+          
+          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
             
-            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-                
-                g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw.robust, color = peak_gene.distance_class_abs)) + geom_density() + 
-                    ggtitle(paste0("Density of the raw p-value distributions\n(stratified by whether r is positive)")) + 
-                    facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
-                    scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
-                    theme_bw()
-                plot(g)
-            }
+            g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw.robust, color = peak_gene.distance_class_abs)) + geom_density() + 
+              ggtitle(paste0("Density of the raw p-value distributions\n(stratified by whether r is positive)")) + 
+              facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
+              scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
+              theme_bw()
+            plot(g)
+          }
           pageCounter = pageCounter + 1
           
           
@@ -1516,15 +1516,15 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       
       
       if (length(indexFilt) > 0) {
-          
+        
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = r_positive)) + 
-                geom_density() + 
-                ggtitle(paste0("Density of the raw p-value distributions")) + 
-                facet_wrap(~ peak_gene.distance_class_abs,  ncol = 2, labeller = .customLabeler(table(peakGeneCorrelations.all$peak_gene.distance_class_abs))) +
-                scale_color_manual(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$r_positive)), values = r_pos_class) +
-                theme_bw()
-            plot(g)
+          g = ggplot(peakGeneCorrelations.all[indexFilt,], aes(peak_gene.p_raw, color = r_positive)) + 
+            geom_density() + 
+            ggtitle(paste0("Density of the raw p-value distributions")) + 
+            facet_wrap(~ peak_gene.distance_class_abs,  ncol = 2, labeller = .customLabeler(table(peakGeneCorrelations.all$peak_gene.distance_class_abs))) +
+            scale_color_manual(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$r_positive)), values = r_pos_class) +
+            theme_bw()
+          plot(g)
         }
         pageCounter = pageCounter + 1
         
@@ -1536,13 +1536,13 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       # Focus on peak_gene.r
       #
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          g = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.r, color = peak_gene.distance_class_abs)) + geom_density() + 
-              geom_density(data = peakGeneCorrelations.all[indexCur,], aes(peak_gene.r), color = "black") + 
-              ggtitle(paste0("Density of the correlation coefficients")) + 
-              scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs))) +
-              theme_bw()
-          plot(g)
+        
+        g = ggplot(peakGeneCorrelations.all[indexCur,], aes(peak_gene.r, color = peak_gene.distance_class_abs)) + geom_density() + 
+          geom_density(data = peakGeneCorrelations.all[indexCur,], aes(peak_gene.r), color = "black") + 
+          ggtitle(paste0("Density of the correlation coefficients")) + 
+          scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs))) +
+          theme_bw()
+        plot(g)
       }
       pageCounter = pageCounter + 1
       
@@ -1623,7 +1623,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
     }
     
     .plot_stats_connectionSummaryHeatmap(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
-  
+    
   } else if (type ==  "boxplot") {
     
     if (plotAsPDF) {
@@ -1719,28 +1719,28 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
               permSuffix = paste0(dplyr::if_else(permCur == 0, " (real)", " (permuted)"))
               
               if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-                  
-                  titlePlot =  paste0("Number of unique ", gsub("^n", "", elemCur), permSuffix,
-                                      "\nallowMissingTFs: ", allowMissingTFsCur, 
-                                      ", allowMissingGenes: ", allowMissingGenesCur, 
-                                      ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
-                  
-                  colors = circlize::colorRamp2(c(0, maxDataRange), c("white", "red"))
-                  
-                  ComplexHeatmap::Heatmap(
-                      plotData.l[[permIndex]],
-                      name = "Number of\nconnections",
-                      col = colors,
-                      cluster_columns = FALSE, cluster_rows = FALSE,
-                      row_names_side = "right", row_names_gp = grid::gpar(fontsize = 10), 
-                      column_title = titlePlot,
-                      column_names_gp = grid::gpar(fontsize = 10),
-                      row_title = "TF-peak FDR",
-                      cell_fun = function(j, i, x, y, width, height, fill) {
-                          grid::grid.text(sprintf("%.0f", plotData.l[[permIndex]][i, j]), x, y, gp = grid::gpar(fontsize = 20))
-                      }
-                  ) %>% plot()
-                  
+                
+                titlePlot =  paste0("Number of unique ", gsub("^n", "", elemCur), permSuffix,
+                                    "\nallowMissingTFs: ", allowMissingTFsCur, 
+                                    ", allowMissingGenes: ", allowMissingGenesCur, 
+                                    ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
+                
+                colors = circlize::colorRamp2(c(0, maxDataRange), c("white", "red"))
+                
+                ComplexHeatmap::Heatmap(
+                  plotData.l[[permIndex]],
+                  name = "Number of\nconnections",
+                  col = colors,
+                  cluster_columns = FALSE, cluster_rows = FALSE,
+                  row_names_side = "right", row_names_gp = grid::gpar(fontsize = 10), 
+                  column_title = titlePlot,
+                  column_names_gp = grid::gpar(fontsize = 10),
+                  row_title = "TF-peak FDR",
+                  cell_fun = function(j, i, x, y, width, height, fill) {
+                    grid::grid.text(sprintf("%.0f", plotData.l[[permIndex]][i, j]), x, y, gp = grid::gpar(fontsize = 20))
+                  }
+                ) %>% plot()
+                
               }
               pageCounter = pageCounter + 1
               
@@ -1825,67 +1825,67 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
             for (TF_peak.connectionTypeCur in .getAll_TF_peak_connectionTypes(GRN)) {
               
               pb$tick()
-                
+              
               if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-                    
-                  elemCur = "TF"
+                
+                elemCur = "TF"
+                dataCur0.df = as.data.frame(stats_details.l[["0"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
+                dataCur1.df = as.data.frame(stats_details.l[["1"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
+                
+                if (nrow(dataCur0.df) == 0) {
+                  dataCur0.df = data.frame(. = "MISSING", Freq = 0)
+                }
+                if (nrow(dataCur1.df) == 0) {
+                  dataCur1.df = data.frame(. = "MISSING", Freq = 0)
+                }
+                
+                dataCur.df = rbind(dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
+                                   dplyr::mutate(dataCur1.df, networkType = "permuted", connectionType = elemCur)) %>% 
+                  tibble::as_tibble()
+                
+                for (elemCur in c("gene","peak.gene","peak.TF")) {
+                  
                   dataCur0.df = as.data.frame(stats_details.l[["0"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
                   dataCur1.df = as.data.frame(stats_details.l[["1"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
                   
                   if (nrow(dataCur0.df) == 0) {
-                      dataCur0.df = data.frame(. = "MISSING", Freq = 0)
+                    dataCur0.df = data.frame(. = "MISSING", Freq = 0)
                   }
                   if (nrow(dataCur1.df) == 0) {
-                      dataCur1.df = data.frame(. = "MISSING", Freq = 0)
+                    dataCur1.df = data.frame(. = "MISSING", Freq = 0)
                   }
                   
-                  dataCur.df = rbind(dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
-                                     dplyr::mutate(dataCur1.df, networkType = "permuted", connectionType = elemCur)) %>% 
-                      tibble::as_tibble()
+                  dataCur.df = rbind(dataCur.df,
+                                     dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
+                                     dplyr::mutate(dataCur1.df, networkType = "permuted", connectionType = elemCur))
                   
-                  for (elemCur in c("gene","peak.gene","peak.TF")) {
-                      
-                      dataCur0.df = as.data.frame(stats_details.l[["0"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
-                      dataCur1.df = as.data.frame(stats_details.l[["1"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
-                      
-                      if (nrow(dataCur0.df) == 0) {
-                          dataCur0.df = data.frame(. = "MISSING", Freq = 0)
-                      }
-                      if (nrow(dataCur1.df) == 0) {
-                          dataCur1.df = data.frame(. = "MISSING", Freq = 0)
-                      }
-                      
-                      dataCur.df = rbind(dataCur.df,
-                                         dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
-                                         dplyr::mutate(dataCur1.df, networkType = "permuted", connectionType = elemCur))
-                      
-                  }
+                }
+                
+                dataCur.df$networkType =as.factor(dataCur.df$networkType)
+                
+                titlePlot =  paste0("TF_peak.fdr: ", TF_peak.fdr_cur, 
+                                    ", peak_gene.fdr: ", peak_gene.fdr_cur, 
+                                    "\nallowMissingTFs: ", allowMissingTFsCur, 
+                                    ", allowMissingGenes: ", allowMissingGenesCur, 
+                                    ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
+                
+                if (max(dataCur.df$Freq)> 0) {
                   
-                  dataCur.df$networkType =as.factor(dataCur.df$networkType)
+                  g = ggplot(dataCur.df, aes(networkType, log10(Freq), fill = networkType)) + geom_boxplot() +theme_bw() + 
+                    xlab("Network type")  +ylab(paste0("log10(Number of connections per category",  ", empty = 0)")) +
+                    ggtitle(titlePlot) + 
+                    facet_wrap(~connectionType, scales = "free") + 
+                    scale_fill_manual("Network type", values = c("real" =  "red", "permuted" = "gray"), 
+                                      labels = c("real" =  "real", "permuted" = "permuted"), drop = FALSE)
                   
-                  titlePlot =  paste0("TF_peak.fdr: ", TF_peak.fdr_cur, 
-                                      ", peak_gene.fdr: ", peak_gene.fdr_cur, 
-                                      "\nallowMissingTFs: ", allowMissingTFsCur, 
-                                      ", allowMissingGenes: ", allowMissingGenesCur, 
-                                      ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
+                  suppressWarnings(plot(g))
                   
-                  if (max(dataCur.df$Freq)> 0) {
-                      
-                      g = ggplot(dataCur.df, aes(networkType, log10(Freq), fill = networkType)) + geom_boxplot() +theme_bw() + 
-                          xlab("Network type")  +ylab(paste0("log10(Number of connections per category",  ", empty = 0)")) +
-                          ggtitle(titlePlot) + 
-                          facet_wrap(~connectionType, scales = "free") + 
-                          scale_fill_manual("Network type", values = c("real" =  "red", "permuted" = "gray"), 
-                                            labels = c("real" =  "real", "permuted" = "permuted"), drop = FALSE)
-                      
-                      suppressWarnings(plot(g))
-                      
-                  } else {
-                      
-                      plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', axes=FALSE, main = titlePlot)
-                      message = paste0(titlePlot, "\nNo data to show")
-                      text(x = 0.5, y = 0.5, message, cex = 1.2, col = "red")
-                  }
+                } else {
+                  
+                  plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', axes=FALSE, main = titlePlot)
+                  message = paste0(titlePlot, "\nNo data to show")
+                  text(x = 0.5, y = 0.5, message, cex = 1.2, col = "red")
+                }
               }
               pageCounter = pageCounter + 1  
               
@@ -1982,54 +1982,54 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     
     # Page 1: Pie charts of the connections
     if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        gVertexDist = ggplot(totalVerteces, aes(x="", y=Count, fill=Class)) + geom_bar(stat="identity") +
-            coord_polar("y", start=0) +
-            scale_fill_manual(values = c("#3B9AB2", "#F21A00", "#E1AF00")) +
-            geom_text(aes(label = paste0(round(Count/sum(Count) *100, digits = 1), "%")),
-                      position = position_stack(vjust = 0.5)) +
-            theme_plots +
-            ggtitle(paste0("Vertices (n=", sum(totalVerteces$Count), ")"))
-        
-        geneDist = as.data.frame(table(droplevels(GRN@connections$all.filtered$`0`$gene.type)))
-        if (nrow(geneDist) == 0) {
-            gGeneDist = 
-                ggplot() + 
-                annotate("text", x = 4, y = 25, size=5, color = "red", label = "Nothing to plot:\nNo genes found") + 
-                theme_void()
-            
-            
-            message = "No genes found in the GRN object. Make sure the filtered connections contain also genes."
-            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-            
-        } else {
-            gGeneDist = ggplot(geneDist, aes(x= "", y = Freq, fill = Var1)) + geom_bar(stat="identity") +
-                coord_polar("y") +
-                geom_text(aes(label = paste0(round(Freq/sum(Freq) *100, digits = 1 ), "%")),
-                          position = position_stack(vjust = 0.5)) +
-                theme_plots +
-                ggtitle(paste0("Genes (n=", sum(geneDist$Freq), ")"))
-        }
+      
+      gVertexDist = ggplot(totalVerteces, aes(x="", y=Count, fill=Class)) + geom_bar(stat="identity") +
+        coord_polar("y", start=0) +
+        scale_fill_manual(values = c("#3B9AB2", "#F21A00", "#E1AF00")) +
+        geom_text(aes(label = paste0(round(Count/sum(Count) *100, digits = 1), "%")),
+                  position = position_stack(vjust = 0.5)) +
+        theme_plots +
+        ggtitle(paste0("Vertices (n=", sum(totalVerteces$Count), ")"))
+      
+      geneDist = as.data.frame(table(droplevels(GRN@connections$all.filtered$`0`$gene.type)))
+      if (nrow(geneDist) == 0) {
+        gGeneDist = 
+          ggplot() + 
+          annotate("text", x = 4, y = 25, size=5, color = "red", label = "Nothing to plot:\nNo genes found") + 
+          theme_void()
         
         
-        totalEdges = as.data.frame(table(TF_peak_gene.df$connectionType))
-        if (nrow(totalEdges) == 0) {
-            gEdgeDist= ggplot() + 
-                annotate("text", x = 4, y = 25, size=5, color = "red", label = "Nothing to plot:\nNo genes found") + 
-                theme_void()
-        } else {
-            gEdgeDist = ggplot(totalEdges, aes(x="", y=Freq, fill=Var1)) + geom_bar(stat="identity") +
-                coord_polar("y", start=0) +
-                scale_fill_manual(values = c("#BDC367", "#6BB1C1")) +
-                geom_text(aes(label = paste0(round(Freq/sum(Freq) *100, digits = 1 ), "%")),
-                          position = position_stack(vjust = 0.5)) +
-                theme_plots +
-                ggtitle(paste0("Edges (n=", sum(totalEdges$Freq), ")"))
-        }
+        message = "No genes found in the GRN object. Make sure the filtered connections contain also genes."
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         
-        print((gVertexDist + gEdgeDist)/gGeneDist + patchwork::plot_layout(widths = c(2,1), guides = "collect"))
+      } else {
+        gGeneDist = ggplot(geneDist, aes(x= "", y = Freq, fill = Var1)) + geom_bar(stat="identity") +
+          coord_polar("y") +
+          geom_text(aes(label = paste0(round(Freq/sum(Freq) *100, digits = 1 ), "%")),
+                    position = position_stack(vjust = 0.5)) +
+          theme_plots +
+          ggtitle(paste0("Genes (n=", sum(geneDist$Freq), ")"))
+      }
+      
+      
+      totalEdges = as.data.frame(table(TF_peak_gene.df$connectionType))
+      if (nrow(totalEdges) == 0) {
+        gEdgeDist= ggplot() + 
+          annotate("text", x = 4, y = 25, size=5, color = "red", label = "Nothing to plot:\nNo genes found") + 
+          theme_void()
+      } else {
+        gEdgeDist = ggplot(totalEdges, aes(x="", y=Freq, fill=Var1)) + geom_bar(stat="identity") +
+          coord_polar("y", start=0) +
+          scale_fill_manual(values = c("#BDC367", "#6BB1C1")) +
+          geom_text(aes(label = paste0(round(Freq/sum(Freq) *100, digits = 1 ), "%")),
+                    position = position_stack(vjust = 0.5)) +
+          theme_plots +
+          ggtitle(paste0("Edges (n=", sum(totalEdges$Freq), ")"))
+      }
+      
+      print((gVertexDist + gEdgeDist)/gGeneDist + patchwork::plot_layout(widths = c(2,1), guides = "collect"))
     }
-
+    
     pageCounter = pageCounter + 1
     
     # First, we focus on the TF-peak-gene graph
@@ -2038,31 +2038,31 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     suffix = paste0(" in the filtered TF-peak-gene eGRN")
     if (nrow(TF_peak_gene.df) > 0) {
       #degreeDist.tbl = TF_peak_gene.degree.stats$tbl$degrees
-     
- 
+      
+      
       
       # Pages 2 to 4: TF-peak-gene network: Degree distribution, and top genes for 2 different measures
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          gDegrees  = TF_peak_gene.degree.stats$figures$degreeDist + ggtitle(paste0("Distribution of vertex degrees", suffix))
-          print(gDegrees)
+        
+        gDegrees  = TF_peak_gene.degree.stats$figures$degreeDist + ggtitle(paste0("Distribution of vertex degrees", suffix))
+        print(gDegrees)
       } 
       pageCounter = pageCounter + 1
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          gTopGenes = TF_peak_gene.degree.stats$figures$topGenes   + ggtitle(paste0("Top degree-central genes", suffix))
-          gTopTFs   = TF_peak_gene.degree.stats$figures$topTFs     + ggtitle(paste0("Top degree-central TFs", suffix))
-          print(gTopGenes/gTopTFs)
+        
+        gTopGenes = TF_peak_gene.degree.stats$figures$topGenes   + ggtitle(paste0("Top degree-central genes", suffix))
+        gTopTFs   = TF_peak_gene.degree.stats$figures$topTFs     + ggtitle(paste0("Top degree-central TFs", suffix))
+        print(gTopGenes/gTopTFs)
       } 
       pageCounter = pageCounter + 1
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          eigen_stats = .getEigenCentralVertices(GRN, "TF_peak_gene")
-          gTopEigenGenes = eigen_stats$topGenes + ggtitle(paste0("Top eigenvector-central genes", suffix))
-          gTopEigenTFs   = eigen_stats$topTFs   + ggtitle(paste0("Top eigenvector-central TFs", suffix))
-          print(gTopEigenGenes/gTopEigenTFs)
+        
+        eigen_stats = .getEigenCentralVertices(GRN, "TF_peak_gene")
+        gTopEigenGenes = eigen_stats$topGenes + ggtitle(paste0("Top eigenvector-central genes", suffix))
+        gTopEigenTFs   = eigen_stats$topTFs   + ggtitle(paste0("Top eigenvector-central TFs", suffix))
+        print(gTopEigenGenes/gTopEigenTFs)
       } 
       pageCounter = pageCounter + 1
       
@@ -2072,34 +2072,34 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
       suffix = paste0(" in the filtered TF-gene eGRN")
       # Get degree stats and central vertexes in the filtered GRN
       TF_gene.degree.stats = .getDegreeStats(GRN, TF_gene.df)
-     
+      
       
       # Pages 5 to 7: TF-gene network: Degree distribution, and top genes for 2 different measures
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          degreeDist.tbl = TF_gene.degree.stats$tbl$degrees
-          gDegrees = TF_gene.degree.stats$figures$degreeDist + ggtitle(paste0("Distribution of vertex degrees", suffix))
-          print(gDegrees)
+        degreeDist.tbl = TF_gene.degree.stats$tbl$degrees
+        gDegrees = TF_gene.degree.stats$figures$degreeDist + ggtitle(paste0("Distribution of vertex degrees", suffix))
+        print(gDegrees)
       } 
       pageCounter = pageCounter + 1
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          gTopGenes = TF_gene.degree.stats$figures$topGenes + ggtitle(paste0("Top degree-central genes", suffix))
-          gTopTFs = TF_gene.degree.stats$figures$topTFs + ggtitle(paste0("Top degree-central TFs", suffix))
-          print(gTopGenes/gTopTFs)
+        
+        gTopGenes = TF_gene.degree.stats$figures$topGenes + ggtitle(paste0("Top degree-central genes", suffix))
+        gTopTFs = TF_gene.degree.stats$figures$topTFs + ggtitle(paste0("Top degree-central TFs", suffix))
+        print(gTopGenes/gTopTFs)
       } 
       pageCounter = pageCounter + 1
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          # get top eigenvalue central TFs and genes
-          eigen_stats = .getEigenCentralVertices(GRN, "TF_gene")
-          gTopEigenGenes = eigen_stats$topGenes + ggtitle(paste0("Top eigenvector-central genes", suffix))
-          gTopEigenTFs = eigen_stats$topTFs + ggtitle(paste0("Top eigenvector-central TFs", suffix))
-          print(gTopEigenGenes/gTopEigenTFs)
-          
+        
+        # get top eigenvalue central TFs and genes
+        eigen_stats = .getEigenCentralVertices(GRN, "TF_gene")
+        gTopEigenGenes = eigen_stats$topGenes + ggtitle(paste0("Top eigenvector-central genes", suffix))
+        gTopEigenTFs = eigen_stats$topTFs + ggtitle(paste0("Top eigenvector-central TFs", suffix))
+        print(gTopEigenGenes/gTopEigenTFs)
+        
       } 
-
+      
     }
     
     .printWarningPageNumber(pages, pageCounter)
@@ -2117,11 +2117,11 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 }
 
 .printWarningPageNumber <- function(pages, pageCounter) {
-    
-    if(any(pages > pageCounter)) {
-        message = paste0("At least one page could not be plotted because the total number of plots is only ", pageCounter, " while a larger page number has been requested")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-    }
+  
+  if(any(pages > pageCounter)) {
+    message = paste0("At least one page could not be plotted because the total number of plots is only ", pageCounter, " while a larger page number has been requested")
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+  }
 }
 
 
@@ -2206,15 +2206,15 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     for (ontologyCur in ontologies) {
       
       pageCounter = pageCounter + 1
-            
+      
       futile.logger::flog.info(paste0(" Ontology ", ontologyCur))   
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          .plotEnrichmentGeneral(data = GRN@stats$Enrichment$general[[ontologyCur]], 
-                                 type = ontologyCur, 
-                                 prefixTitle = "General Enrichment Analysis",
-                                 topn_pvalue, p = p, maxWidth_nchar_plot = maxWidth_nchar_plot, display_pAdj = display_pAdj)
+        .plotEnrichmentGeneral(data = GRN@stats$Enrichment$general[[ontologyCur]], 
+                               type = ontologyCur, 
+                               prefixTitle = "General Enrichment Analysis",
+                               topn_pvalue, p = p, maxWidth_nchar_plot = maxWidth_nchar_plot, display_pAdj = display_pAdj)
       }
-        
+      
     }
     
     .printWarningPageNumber(pages, pageCounter)
@@ -2370,9 +2370,9 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
     if (is.null(vertexMetadata$community)) {
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          g = ggplot() + annotate("text", x = 4, y = 25, size=5, color = "red", 
-                                  label = "Nothing to plot:\nNo communities found") + theme_void()
-          plot(g)
+        g = ggplot() + annotate("text", x = 4, y = 25, size=5, color = "red", 
+                                label = "Nothing to plot:\nNo communities found") + theme_void()
+        plot(g)
       } 
       
       pageCounter = pageCounter + 1 
@@ -2403,16 +2403,16 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
       
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          # Class: TF or gene
-          gCommunityVertices = ggplot(communityVertices, aes(x = community, fill = Class)) +
-              geom_bar(position = "stack") +
-              ggtitle("Vertices per community") +
-              xlab("Community") +
-              ylab("Vertex count") +
-              scale_fill_manual(values = c("#3B9AB2", "#E1AF00")) + 
-              theme_bw()
-          plot(gCommunityVertices)
+        
+        # Class: TF or gene
+        gCommunityVertices = ggplot(communityVertices, aes(x = community, fill = Class)) +
+          geom_bar(position = "stack") +
+          ggtitle("Vertices per community") +
+          xlab("Community") +
+          ylab("Vertex count") +
+          scale_fill_manual(values = c("#3B9AB2", "#E1AF00")) + 
+          theme_bw()
+        plot(gCommunityVertices)
       } 
       pageCounter = pageCounter + 1 
       
@@ -2462,30 +2462,30 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
         )
         GRN@graph$communitySubgraph = NULL
         
-          
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
         
-            gDegreeDist = community.degreeStats$figures$degreeDist + ggtitle("Degree Distribution")
+        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
           
-
-            plot(gDegreeDist  + 
+          gDegreeDist = community.degreeStats$figures$degreeDist + ggtitle("Degree Distribution")
+          
+          
+          plot(gDegreeDist  + 
                  patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
         }
         pageCounter = pageCounter + 1 
         
-
+        
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            gTopGenes   = community.degreeStats$figures$topGenes   + ggtitle(paste0("Top ", topnGenes," degree-central genes"))
-            gTopTFs     = community.degreeStats$figures$topTFs     + ggtitle(paste0("Top ", topnTFs  ," degree-central TFs"))
+          gTopGenes   = community.degreeStats$figures$topGenes   + ggtitle(paste0("Top ", topnGenes," degree-central genes"))
+          gTopTFs     = community.degreeStats$figures$topTFs     + ggtitle(paste0("Top ", topnTFs  ," degree-central TFs"))
           
-            gTopEigenGenes = community.eigenStats$topGenes + ggtitle(paste0("Top ", topnGenes," eigenvector-central genes"))
-            gTopEigenTFs   = community.eigenStats$topTFs   + ggtitle(paste0("Top ", topnTFs,  " eigenvector-central TFs"))   
-
-            plot((gTopGenes | gTopTFs) / (gTopEigenGenes | gTopEigenTFs) + 
-                   patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
+          gTopEigenGenes = community.eigenStats$topGenes + ggtitle(paste0("Top ", topnGenes," eigenvector-central genes"))
+          gTopEigenTFs   = community.eigenStats$topTFs   + ggtitle(paste0("Top ", topnTFs,  " eigenvector-central TFs"))   
+          
+          plot((gTopGenes | gTopTFs) / (gTopEigenGenes | gTopEigenTFs) + 
+                 patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
         } 
         pageCounter = pageCounter + 1 
-      
+        
       } # end for each community
       
     }
@@ -2647,10 +2647,10 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
           .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, 
-                                   topn_pvalue = topn_pvalue, p = p, display_pAdj = display_pAdj)
+          .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, 
+                                 topn_pvalue = topn_pvalue, p = p, display_pAdj = display_pAdj)
         }
-
+        
         pageCounter = pageCounter + 1
         
       } # end for all communities 
@@ -2693,11 +2693,11 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
         dplyr::filter(!is.na(Term)) %>%
         dplyr::select(Term, dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
         dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
-        dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
+        # dplyr::mutate(Term_mod = make.names(stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right"), unique = TRUE)) %>%
         tibble::column_to_rownames("Term") %>%
         as.matrix()
       
- 
+      
       geneCounts_communities = geneCounts %>%
         dplyr::filter(community %in% as.character(colnames(matrix.m)),
                       community %in% geneCounts$community) %>%
@@ -2705,7 +2705,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
       
       # Sanity check
       stopifnot(identical(as.character(geneCounts_communities$community), colnames(matrix.m)[-1]))
-        
+      
       # Common heatmap parameters for both p1 and p2
       top_annotation = ComplexHeatmap::HeatmapAnnotation(
         nGenes = ComplexHeatmap::anno_barplot(
@@ -2718,50 +2718,52 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
       
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full summary heatmap and " , ncol(matrix.m), " columns"))
-          
-          p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
-                                    name = axixStr, 
-                                    colors_pvalue = colors_pvalue, 
-                                    column_title = paste0("Summary of all significantly enriched terms\nacross all communities and overall (Ontology: ", ontologyCur,")"),
-                                    top_annotation = top_annotation)
-          
-          print(p1)
-          
+        
+        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full summary heatmap and " , ncol(matrix.m), " columns"))
+        
+        p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
+                                  name = axixStr, 
+                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                  colors_pvalue = colors_pvalue, 
+                                  column_title = paste0("Summary of all significantly enriched terms\nacross all communities and overall (Ontology: ", ontologyCur,")"),
+                                  top_annotation = top_annotation)
+        
+        print(p1)
+        
       }
       pageCounter = pageCounter + 1
       
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          # Now focus on the top X only per community
-          ID_subset =  GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
-              dplyr::group_by(community) %>% 
-              dplyr::arrange(.data$pval) %>% 
-              dplyr::slice(seq_len(nID)) %>%
-              dplyr::pull(ID) %>% as.character()
-          
-          
-          matrix.m = all.df.wide %>%
-              dplyr::filter(ID %in% ID_subset) %>%
-              dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
-              dplyr::filter(!is.na(Term)) %>%
-              dplyr::select(-nSig, -ID) %>%
-              tibble::column_to_rownames("Term") %>%
-              dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
-              dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
-              as.matrix()
-          
-          futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
-          
-
-          p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
-                                    name = axixStr, 
-                                    colors_pvalue = colors_pvalue, 
-                                    column_title = paste0("Summary of top ", nID, " enriched terms\nper community and overall (Ontology: ", ontologyCur,")"),
-                                    top_annotation = top_annotation)
-          print(p2)
+        
+        # Now focus on the top X only per community
+        ID_subset =  GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
+          dplyr::group_by(community) %>% 
+          dplyr::arrange(.data$pval) %>% 
+          dplyr::slice(seq_len(nID)) %>%
+          dplyr::pull(ID) %>% as.character()
+        
+        
+        matrix.m = all.df.wide %>%
+          dplyr::filter(ID %in% ID_subset) %>%
+          dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
+          dplyr::filter(!is.na(Term)) %>%
+          dplyr::select(-nSig, -ID) %>%
+          tibble::column_to_rownames("Term") %>%
+          dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
+          dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
+          as.matrix()
+        
+        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
+        
+        
+        p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
+                                  name = axixStr, 
+                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                  colors_pvalue = colors_pvalue, 
+                                  column_title = paste0("Summary of top ", nID, " enriched terms\nper community and overall (Ontology: ", ontologyCur,")"),
+                                  top_annotation = top_annotation)
+        print(p2)
       } 
       pageCounter = pageCounter + 1
       
@@ -2782,7 +2784,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 }
 
 
-.drawCombinedHeatmap <- function(matrix, pdf_width, pdf_height, name, colors_pvalue, column_title, top_annotation) {
+.drawCombinedHeatmap <- function(matrix, pdf_width, pdf_height, name, maxWidth_nchar_plot, colors_pvalue, column_title, top_annotation) {
   
   nTerms = nrow(matrix)
   
@@ -2807,6 +2809,10 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   if (unique(matrix) %>% as.vector() %>% length() == 1) {
     colors_pvalue = colors_pvalue[1]
   }
+  
+  # Make the row names shorter and unique
+  rownames(matrix) = make.unique(stringr::str_trunc(rownames(matrix), width = maxWidth_nchar_plot, side = "right")) 
+  
   
   ComplexHeatmap::Heatmap(
     matrix,
@@ -2931,7 +2937,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     
     nodeDegree_TFset = dplyr::left_join(GRN@data$TFs$translationTable, 
                                         as.data.frame(nodeDegree) %>% tibble::rownames_to_column("ENSEMBL"), by = "ENSEMBL") %>%
-                        dplyr::filter(TF.name %in% as.character(TFset))
+      dplyr::filter(TF.name %in% as.character(TFset))
     
     pageCounter = 1  
     allOntologies = .checkEnrichmentCongruence_general_community(GRN, type = "TF")
@@ -2946,33 +2952,33 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
       }
       
       for (TFCur in as.character(TFset)){
-          
+        
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            
-            TF.ENSEMBL = GRN@data$TFs$translationTable %>% dplyr::filter(TF.name == TFCur) %>% dplyr::pull(TF.ENSEMBL)
-            
-            TF.name.full = paste0(TFCur, " (", TF.ENSEMBL, ")")
-            
-            futile.logger::flog.info(paste0("  TF ", TF.name.full))
-            
-            # if the enrichment slot for the TFs is empty, calculate the enrichment
-            if (is.null(GRN@stats$Enrichment[["byTF"]][[TFCur]])){ 
-                message = paste0("Could not find TF enrichment results. Run the function calculateTFEnrichment first or make sure the parameter n that was used for calculateTFEnrichmentn was larger or equal with the current value for n for this function.")
-                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-            }
-            
-            dataCur = GRN@stats$Enrichment[["byTF"]][[TFCur]][[ontologyCur]]
-            if (is.null(dataCur)) {
-                message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and TF ", TFCur, ". Rerun the function calculateTFEnrichment.")
-                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-            }
-            titleCur = paste0("Enrichment Analysis - TF: ", TF.name.full)
-            .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, topn_pvalue = topn_pvalue,  p = p, display_pAdj = display_pAdj)
-            
+          
+          TF.ENSEMBL = GRN@data$TFs$translationTable %>% dplyr::filter(TF.name == TFCur) %>% dplyr::pull(TF.ENSEMBL)
+          
+          TF.name.full = paste0(TFCur, " (", TF.ENSEMBL, ")")
+          
+          futile.logger::flog.info(paste0("  TF ", TF.name.full))
+          
+          # if the enrichment slot for the TFs is empty, calculate the enrichment
+          if (is.null(GRN@stats$Enrichment[["byTF"]][[TFCur]])){ 
+            message = paste0("Could not find TF enrichment results. Run the function calculateTFEnrichment first or make sure the parameter n that was used for calculateTFEnrichmentn was larger or equal with the current value for n for this function.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+          }
+          
+          dataCur = GRN@stats$Enrichment[["byTF"]][[TFCur]][[ontologyCur]]
+          if (is.null(dataCur)) {
+            message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and TF ", TFCur, ". Rerun the function calculateTFEnrichment.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+          }
+          titleCur = paste0("Enrichment Analysis - TF: ", TF.name.full)
+          .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, topn_pvalue = topn_pvalue,  p = p, display_pAdj = display_pAdj)
+          
           
         }
         pageCounter = pageCounter + 1
- 
+        
       }
       
       # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
@@ -3009,7 +3015,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
         dplyr::filter(!is.na(Term)) %>%
         dplyr::select(Term, dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
         dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
-        dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
+        # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
         tibble::column_to_rownames("Term") %>%
         as.matrix()
       
@@ -3032,54 +3038,56 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
       # Why colors here like this
       #colors_pvalue = c("#3B9AB2", "#9EBE91", "#E4B80E", "#F21A00")
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full heatmap and " , ncol(matrix.m), " columns"))
-          
-          p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
-                                    name = axixStr, 
-                                    colors_pvalue = colors_pvalue, 
-                                    column_title = paste0("Summary of all significantly enriched terms\nacross all TFs and overall (Ontology: ", ontologyCur,")"),
-                                    top_annotation = top_annotation)
-          
-          print(p1)
+        
+        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full heatmap and " , ncol(matrix.m), " columns"))
+        
+        p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
+                                  name = axixStr, 
+                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                  colors_pvalue = colors_pvalue, 
+                                  column_title = paste0("Summary of all significantly enriched terms\nacross all TFs and overall (Ontology: ", ontologyCur,")"),
+                                  top_annotation = top_annotation)
+        
+        print(p1)
       }
       pageCounter = pageCounter + 1
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          # Now focus on the top X only per community
-          ID_subset =  GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-              dplyr::group_by(TF.name) %>% 
-              dplyr::arrange(pval) %>% 
-              dplyr::slice(seq_len(nID)) %>%
-              dplyr::pull(ID) %>% as.character()
-          
-          
-          matrix.m = all.df.wide %>%
-              dplyr::filter(ID %in% ID_subset) %>%
-              dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
-              dplyr::filter(!is.na(Term)) %>%
-              dplyr::select(-nSig, -ID) %>%
-              tibble::column_to_rownames("Term") %>%
-              dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
-              dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
-              as.matrix()
-          
-          futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
-          
-          p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
-                                    name = axixStr, 
-                                    colors_pvalue = colors_pvalue, 
-                                    column_title = paste0("Summary of top ", nID, " enriched terms\n per TF and overall (Ontology: ", ontologyCur,")"),
-                                    top_annotation = top_annotation)
-          
-          print(p2)
+        
+        # Now focus on the top X only per community
+        ID_subset =  GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
+          dplyr::group_by(TF.name) %>% 
+          dplyr::arrange(pval) %>% 
+          dplyr::slice(seq_len(nID)) %>%
+          dplyr::pull(ID) %>% as.character()
+        
+        
+        matrix.m = all.df.wide %>%
+          dplyr::filter(ID %in% ID_subset) %>%
+          dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
+          dplyr::filter(!is.na(Term)) %>%
+          dplyr::select(-nSig, -ID) %>%
+          tibble::column_to_rownames("Term") %>%
+          dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
+          dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
+          as.matrix()
+        
+        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
+        
+        p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
+                                  name = axixStr, 
+                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                  colors_pvalue = colors_pvalue, 
+                                  column_title = paste0("Summary of top ", nID, " enriched terms\n per TF and overall (Ontology: ", ontologyCur,")"),
+                                  top_annotation = top_annotation)
+        
+        print(p2)
       }
       pageCounter = pageCounter + 1
       
       
     }
-  
+    
     .printWarningPageNumber(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
@@ -3298,599 +3306,599 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
                          vertice_color_TFs = list(h = 10, c = 85, l = c(25, 95)), vertice_color_peaks = list(h = 135, c = 45, l = c(35, 95)), vertice_color_genes = list(h = 260, c = 80, l = c(30, 90)),
                          vertexLabel_cex = 0.4, vertexLabel_dist = 0, forceRerun = FALSE
 ) {
+  
+  
+  start = Sys.time()
+  GRN = .addFunctionLogToObject(GRN)
+  
+  checkmate::assertFlag(plotAsPDF)
+  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+  checkmate::assertNumeric(maxRowsToPlot)
+  checkmate::assertSubset(graph, c("TF-gene", "TF-peak-gene"))
+  checkmate::assertSubset(colorby, c("type", "community"))
+  checkmate::assertFlag(layered)
+  checkmate::assertList(vertice_color_TFs)
+  checkmate::assertNames(names(vertice_color_TFs), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+  checkmate::assertList(vertice_color_peaks)
+  checkmate::assertNames(names(vertice_color_peaks), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+  checkmate::assertList(vertice_color_genes)
+  checkmate::assertNames(names(vertice_color_genes), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+  checkmate::assertNumeric(vertexLabel_cex)
+  checkmate::assertNumeric(vertexLabel_dist)
+  checkmate::assertFlag(forceRerun)
+  
+  
+  outputFolder = .checkOutputFolder(GRN, outputFolder)
+  
+  metadata_visualization.l = getBasic_metadata_visualization(GRN)
+  # if (useDefaultMetadata) {
+  #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
+  #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
+  #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
+  #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
+  # }
+  # 
+  #grn.merged = getGRNConnections(GRN, permuted = permuted, type = "all.filtered")
+  # check that it's in sync with the @ graph
+  if (graph == "TF-gene"){
+    grn.merged = GRN@graph$TF_gene$table %>%
+      dplyr::rename(TF.name = V1_name)
     
+    edges_final = grn.merged %>%
+      dplyr::rename(from = TF.name, to = V2) %>%
+      dplyr::mutate(weight = 1, R = 1, linetype = "solid")
     
-    start = Sys.time()
-    GRN = .addFunctionLogToObject(GRN)
+  }else{
     
-    checkmate::assertFlag(plotAsPDF)
-    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-    checkmate::assertNumeric(maxRowsToPlot)
-    checkmate::assertSubset(graph, c("TF-gene", "TF-peak-gene"))
-    checkmate::assertSubset(colorby, c("type", "community"))
-    checkmate::assertFlag(layered)
-    checkmate::assertList(vertice_color_TFs)
-    checkmate::assertNames(names(vertice_color_TFs), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
-    checkmate::assertList(vertice_color_peaks)
-    checkmate::assertNames(names(vertice_color_peaks), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
-    checkmate::assertList(vertice_color_genes)
-    checkmate::assertNames(names(vertice_color_genes), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
-    checkmate::assertNumeric(vertexLabel_cex)
-    checkmate::assertNumeric(vertexLabel_dist)
-    checkmate::assertFlag(forceRerun)
+    grn.merged = GRN@graph$TF_peak_gene$table %>%
+      dplyr::rename(TF.name = V1_name) 
+    grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
     
+    edges_final = grn.merged %>%
+      dplyr::mutate(R = as.vector(stats::na.omit(c(TF_peak.r, peak_gene.r))),
+                    weight = as.vector(stats::na.omit(c(1- TF_peak.fdr, peak_gene.r))),
+                    linetype = "solid") %>%
+      dplyr::rename(from = V1, to = V2) 
     
-    outputFolder = .checkOutputFolder(GRN, outputFolder)
-    
-    metadata_visualization.l = getBasic_metadata_visualization(GRN)
-    # if (useDefaultMetadata) {
-    #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
-    #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
-    #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
-    #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
-    # }
-    # 
-    #grn.merged = getGRNConnections(GRN, permuted = permuted, type = "all.filtered")
-    # check that it's in sync with the @ graph
-    if (graph == "TF-gene"){
-        grn.merged = GRN@graph$TF_gene$table %>%
-            dplyr::rename(TF.name = V1_name)
-        
-        edges_final = grn.merged %>%
-            dplyr::rename(from = TF.name, to = V2) %>%
-            dplyr::mutate(weight = 1, R = 1, linetype = "solid")
-        
-    }else{
-        
-        grn.merged = GRN@graph$TF_peak_gene$table %>%
-            dplyr::rename(TF.name = V1_name) 
-        grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
-        
-        edges_final = grn.merged %>%
-            dplyr::mutate(R = as.vector(stats::na.omit(c(TF_peak.r, peak_gene.r))),
-                          weight = as.vector(stats::na.omit(c(1- TF_peak.fdr, peak_gene.r))),
-                          linetype = "solid") %>%
-            dplyr::rename(from = V1, to = V2) 
-        
-    }
-    
-    edges_final = edges_final %>%
-        dplyr::mutate(weight_transformed = dplyr::case_when(weight < 0.2 ~ 1,
-                                                            weight < 0.4 ~ 1.5,
-                                                            weight < 0.6 ~ 2,
-                                                            weight < 0.8 ~ 2.5,
-                                                            TRUE ~ 3),
-                      R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
-                      color       = dplyr::case_when(R < 0 ~ "blue", TRUE ~ "grey")) %>%
-        dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
-    
-    
-    
-    nRows = nrow(edges_final)
-    
-    futile.logger::flog.info(paste0("Number of rows: ",nRows))
-    if (maxRowsToPlot > 500 & nRows > 500) {
-        futile.logger::flog.info(paste0("Plotting many connections takes a lot of time and memory"))
-    }
-    
-    
-    
-    if (plotAsPDF) {
-        futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
-        grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"), width = pdf_width, height = pdf_height )
-    } else {
-        futile.logger::flog.info(paste0("Plotting GRN network"))
-    }
-    
-    if (nRows > maxRowsToPlot) { 
-        futile.logger::flog.info(paste0("Number of rows to plot (", nRows, ") exceeds limit of the maxRowsToPlot parameter. Plotting only empty page"))
-        plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
-        message = paste0(title, "\n\nPlotting omitted.\n\nThe number of rows in the GRN (", nRows, ") exceeds the maximum of ", maxRowsToPlot, ".\nSee the maxRowsToPlot parameter to increase the limit")
-        text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
-        
-        if (plotAsPDF) {
-            grDevices::dev.off()
-        }
-        
-        .printExecutionTime(start)
-        return(GRN)
-    }
-    
-    if (nrow(grn.merged) == 0) {
-        
-        futile.logger::flog.warn(paste0("No rows left in the GRN. Creating empty plot."))
-        
-        plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
-        message = paste0(title, "\n\nThe GRN has no edges that pass the filter criteria.")
-        text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
-        
-    } else {
-        
-        # Fix with length
-        
-        if (graph == "TF-peak-gene"){
-            colors_categories.l = list(
-                "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
-                "PEAK" = RColorBrewer::brewer.pal(3,"Set1")[2], 
-                "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
-            
-            symbols_categories.l = list(
-                "TF"   = 15, # square
-                "PEAK" = 21, # circle
-                "GENE" = 21 # circle
-            )
-        }else{
-            colors_categories.l = list(
-                "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
-                "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
-            
-            symbols_categories.l = list(
-                "TF"   = 15, # square
-                "GENE" = 21 # circle
-            )
-        }
-        
-        
-        nBins_orig = 100
-        nBins_discard = 25
-        nBins_real = nBins_orig - nBins_discard
-        
-        #if (!is.null(vertice_color_TFs)) {
-        color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_TFs[["h"]], c = vertice_color_TFs[["c"]], l = vertice_color_TFs[["l"]]))[(nBins_discard + 1):nBins_orig] # red
-        colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
-        colors_categories.l[["TF"]]  = color_gradient 
-        symbols_categories.l[["TF"]] = c(15,NA,15)
-        vertice_color_TFs   = append(list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log"), vertice_color_TFs)
-        #}
-        
-        if(graph == "TF-peak-gene"){
-            #if (!is.null(vertice_color_peaks)) {
-            color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_peaks[["h"]], c = vertice_color_peaks[["c"]], l = vertice_color_peaks[["l"]]))[(nBins_discard + 1):nBins_orig]  # green
-            colors_categories.l[["PEAK"]] = c(color_gradient[1], color_gradient[nBins_real])
-            colors_categories.l[["PEAK"]] = color_gradient
-            symbols_categories.l[["PEAK"]] = c(21,NA,21)
-            vertice_color_peaks = append(list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log"), vertice_color_peaks)
-            # }
-        }
-        
-        #if (!is.null(vertice_color_genes)) {
-        color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_genes[["h"]], c = vertice_color_genes[["c"]], l = vertice_color_genes[["l"]]))[(nBins_discard + 1):nBins_orig] # blue
-        colors_categories.l[["GENE"]] = c(color_gradient[1], color_gradient[nBins_real]) 
-        colors_categories.l[["GENE"]] = color_gradient
-        symbols_categories.l[["GENE"]] = c(21,NA,21)
-        vertice_color_genes = append(list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"), vertice_color_genes)
-        #}
-        
-        ## VERTICES ##
-        
-        shape_vertex = c("square","circle", "circle")
-        names(shape_vertex) = names(colors_categories.l)
-        
-        
-        vertices = tibble::tribble(~id,
-                                   ~type,
-                                   ~label,
-                                   ~color_raw,
-                                   ~color_bin,
-                                   ~color_final)
-        
-        ## 1. TFs ##
-        
-        # Make the vertices unique, so that the same peak has only one vertice 
-        # vertices_TFs = unique_TF_peak.con %>%
-        #   dplyr::group_by(TF.name) %>%
-        #   dplyr::summarize(label = unique(TF.name)) %>%
-        #   dplyr::ungroup()
-        
-        vertices_TFs = grn.merged %>%
-            dplyr::filter(grepl("^tf", connectionType)) %>%
-            #dplyr::rename(TF.name = V1) %>%
-            dplyr::group_by(TF.name) %>%
-            dplyr::summarize(label = unique(TF.name)) %>%
-            dplyr::ungroup()
-        
-        if (nrow(vertices_TFs) > 0) {
-            
-            if (!is.null(vertice_color_TFs)) {
-                
-                .verifyArgument_verticeType(vertice_color_TFs)
-                
-                vertices_TFs = vertices_TFs %>%
-                    dplyr::left_join(vertice_color_TFs[[1]], by = c("TF.name" = vertice_color_TFs[[2]])) %>%
-                    dplyr::rename(color_raw = !!(vertice_color_TFs[[3]])) %>%
-                    dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["TF"]], ordered_result = TRUE)))  # Transform the colors for the vertices
-                
-                
-            } else {
-                vertices_TFs = dplyr::mutate(vertices_TFs, color_raw = NA, color_bin = colors_categories.l[["TF"]])
-            } 
-            
-            vertices = tibble::add_row(vertices, 
-                                       id = vertices_TFs$TF.name, 
-                                       type = "TF", 
-                                       label = as.vector(vertices_TFs$label), 
-                                       color_raw = vertices_TFs$color_raw,
-                                       color_bin = vertices_TFs$color_bin) 
-        }
-        
-        
-        ## 2. PEAKS ##
-        
-        if (graph == "TF-peak-gene"){
-            
-            # Make the vertices unique, so that the same peak has only one vertice 
-            peaks1 = grn.merged %>% dplyr::filter(grepl("peak$", connectionType)) %>% dplyr::pull(V2)
-            peaks2 = grn.merged %>% dplyr::filter(grepl("^peak", connectionType)) %>% dplyr::pull(V1)
-            #vertices_peaks = tibble::tibble(peak = unique(c(unique_peak_gene.con$peak.ID, unique_TF_peak.con$peak.ID)), label = NA)
-            vertices_peaks = tibble::tibble(peak = unique(c(peaks1, peaks2)), label = NA)
-            
-            if (nrow(vertices_peaks) > 0) {
-                
-                if (!is.null(vertice_color_peaks)) {
-                    
-                    .verifyArgument_verticeType(vertice_color_peaks)
-                    
-                    vertices_peaks = vertices_peaks %>%
-                        dplyr::left_join(vertice_color_peaks[[1]], by = c("peak" = vertice_color_peaks[[2]])) %>%
-                        dplyr::rename(color_raw = !!(vertice_color_peaks[[3]])) %>%
-                        dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["PEAK"]], ordered_result = TRUE)))  # Transform the colors for the vertices
-                    
-                } else {
-                    vertices_peaks = dplyr::mutate(vertices_peaks, color_raw = NA, color_bin = colors_categories.l[["PEAK"]])
-                } 
-                
-                vertices = tibble::add_row(vertices, 
-                                           id = vertices_peaks$peak, 
-                                           type = "PEAK", 
-                                           label = vertices_peaks$label, 
-                                           color_raw = vertices_peaks$color_raw,
-                                           color_bin = vertices_peaks$color_bin) 
-            }
-            
-        }
-        
-        
-        ## 3. GENES ##
-        
-        # Make the vertices unique, so that the same gene has only one vertice 
-        # vertices_genes = unique_peak_gene.con %>%
-        #   dplyr::group_by(gene.ENSEMBL) %>%
-        #   dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
-        #   dplyr::ungroup()
-        
-        vertices_genes = grn.merged %>%
-            dplyr::filter(grepl("gene$", connectionType)) %>%
-            #dplyr::rename(peak.ID = V1) %>%
-            dplyr::group_by(V2) %>%
-            dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
-            dplyr::ungroup() %>%
-            dplyr::rename(gene.ENSEMBL = V2)
-        
-        if (nrow(vertices_genes) > 0) {
-            
-            if (!is.null(vertice_color_genes)) {
-                
-                .verifyArgument_verticeType(vertice_color_genes)
-                
-                vertices_genes = vertices_genes %>%
-                    dplyr::left_join(vertice_color_genes[[1]], by = c("gene.ENSEMBL" = vertice_color_genes[[2]])) %>%
-                    dplyr::rename(color_raw = !!(vertice_color_genes[[3]])) %>%
-                    dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["GENE"]], ordered_result = TRUE)))  # Transform the colors for the vertices
-                
-            } else {
-                vertices_genes = dplyr::mutate(vertices_genes, color_raw = NA, color_bin = colors_categories.l[["GENE"]])
-            } 
-            
-            
-            vertices = tibble::add_row(vertices, 
-                                       id = vertices_genes$gene.ENSEMBL, 
-                                       type = "GENE", 
-                                       label = vertices_genes$label, 
-                                       color_raw = vertices_genes$color_raw,
-                                       color_bin = vertices_genes$color_bin) 
-            
-        }
-        
-        
-        
-        vertices = vertices %>%
-            dplyr::mutate(size = dplyr::case_when(type == "TF" ~ 6,
-                                                  type == "PEAK" ~ 3,
-                                                  TRUE ~ 4),
-                          size_transformed = NA) 
-        
-        
-        vertices_colorRanges = vertices %>% dplyr::group_by(.data$type) %>% dplyr::summarize(min = min(color_raw, na.rm = TRUE), max = max(color_raw, na.rm = TRUE))
-        
-        if (nrow(dplyr::filter(vertices_colorRanges, .data$type == "GENE")) == 0) {
-            vertices_colorRanges = tibble::add_row(vertices_colorRanges, type = "GENE", min = NA, max = NA)
-        }
-        
-        if(graph == "TF-peak-gene"){
-            text_categories.l = list(
-                "TF"   = "TF",
-                "PEAK" = "PEAK",
-                "GENE" = "GENE"
-            )
-        }else{
-            text_categories.l = list(
-                "TF"   = "TF",
-                "GENE" = "GENE"
-            )
-        }
-        
-        
-        if (!is.null(vertice_color_TFs)) {
-            subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "TF") 
-            text_categories.l[["TF"]] = c(signif(dplyr::pull(subsetCur, min),2), 
-                                          paste0("TF expression (", vertice_color_TFs[[3]], ")"),
-                                          signif(dplyr::pull(subsetCur, max),2)
-            )
-        }
-        
-        if( graph  == "TF-peak-gene"){
-            if (!is.null(vertice_color_peaks)) {
-                subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "PEAK") 
-                text_categories.l[["PEAK"]] = c(signif(dplyr::pull(subsetCur, min),2), 
-                                                paste0("Peak accessibility (", vertice_color_peaks[[3]], ")"),
-                                                signif(dplyr::pull(subsetCur, max),2)
-                )
-            }
-        }
-        
-        if (!is.null(vertice_color_genes)) {
-            subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "GENE") 
-            text_categories.l[["GENE"]] = c(signif(dplyr::pull(subsetCur, min),2), 
-                                            paste0("Gene expression (", vertice_color_genes[[3]], ")"),
-                                            signif(dplyr::pull(subsetCur, max),2)
-            )
-        }
-        
-        
-        net <- igraph::graph_from_data_frame(d=edges_final, vertices = vertices, directed = FALSE) 
-        
-        
-        # TODO: Integrate network stats: https://kateto.net/networks-r-igraph
-        # Make a separate df_to_igraph function for the entwork stats
-        
-        
-        ########### Color and Shape parameters 
-        
-        # TODO: https://stackoverflow.com/questions/48490378/order-vertices-within-layers-on-tripartite-igraph
-        # note: the layout_with_sugiyama which can convert the layout to tri/bipartite creates an order that minimizes edge overlap/crossover, makes it cleaner to visualize. do we want to enforce a custom order?
-        
-        net <- igraph::simplify(net, remove.multiple = FALSE, remove.loops = TRUE)
-        deg <- igraph::degree(net, mode="all", normalized = TRUE) # added normalized = T in case later used to determine node size. for now not rly needed
-        #V(net)$size <- deg*2
-        #igraph::V(net)$vertex_degree <-  deg*4 # the vertex_degree attribute doesn't need to be changed 
-        igraph::V(net)$label = vertices$label
-        
-        
-        
-        #assign colors to the 5 largest communities, rest is grey
-        if (colorby == "type"){
-            igraph::V(net)$vertex.color = vertices$color_bin
-        }else{
-            
-            if (is.null(GRN@graph$TF_gene$clusterGraph)){
-                GRN = calculateCommunitiesStats(GRN)
-            }
-            
-            ncommunities = length(unique(GRN@graph$TF_gene$clusterGraph$membership))
-            
-            if (ncommunities >=8){
-                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:nCommunitiesMax]),
-                                              color = rainbow(7))
-                fillercolors = data.frame(community = nCommunitiesMax:ncommunities, color = "847E89") # only color the x largest communities
-                community_colors = rbind(community_colors, fillercolors)
-                
-            }else{
-                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:ncommunities]),
-                                              color = rainbow(ncommunities))
-            }
-            
-            TF_ensembl = GRN@graph$TF_gene$table$V1[match(vertices$id, GRN@graph$TF_gene$table$V1_name)] %>% stats::na.omit() %>% as.vector()
-            gene_ensembl = GRN@graph$TF_gene$table$V2[match(vertices$id, GRN@graph$TF_gene$table$V2)] %>% stats::na.omit() %>% as.vector()
-            if(graph == "TF-peak-gene"){
-                network_ensembl = c(TF_ensembl, rep(NA, length(unique(vertices_peaks$peak))), gene_ensembl) 
-            }else{
-                network_ensembl = c(TF_ensembl, gene_ensembl) 
-            }
-            
-            
-            communities = GRN@graph$TF_gene$clusterGraph$membership[match(network_ensembl, GRN@graph$TF_gene$clusterGraph$names)]
-            igraph::V(net)$vertex.color = community_colors$color[match(communities, community_colors$community)]
-            
-        }
-        
-        igraph::V(net)$vertex.size = vertices$size
-        # https://rstudio-pubs-static.s3.amazonaws.com/337696_c6b008e0766e46bebf1401bea67f7b10.html
-        # TODO: E(net)$weight <- edges_final$weight_transformed
-        igraph::E(net)$color = edges_final$color
-        
-        #change arrow size and edge color:
-        #igraph::E(net)$arrow.size <- .1
-        igraph::E(net)$edge.color <- edges_final$color
-        # TODO: E(net)$lty = edges_final$linetype
-        # TODO: E(net)$width <- 1+E(net)$weight/12
-        #igraph::E(net)$width <- 1+igraph::E(net)$weight/12
-        igraph::E(net)$width <- igraph::E(net)$weight
-        #igraph::E(net)$weight <- edges_final$weight_transformed # too block-y for large networks. stick to givren weight.
-        
-        if (layered){
-            l <- igraph::layout_with_sugiyama(net, layers = as.numeric(as.factor(igraph::V(net)$type)), hgap = 1)$layout
-            l <- cbind(l[,2], l[,1])
-        }else{
-            l <- igraph::layout_with_fr(net)
-        }
-        
-        #test.layout <- layout_(net,with_dh(weight.edge.lengths = edge_density(net)/1000))
-        
-        # MyLO = matrix(0, nrow=vcount(net), ncol=2)
-        # 
-        # ## Horizontal position is determined by layer
-        # layer <- rep(NA, length(V(net)$name))
-        # layer[vertices$type == "TF"]   = 1
-        # layer[vertices$type == "PEAK"] = 2
-        # layer[vertices$type == "GENE"] = 3
-        # MyLO[,1] = layer
-        # 
-        # ## Vertical position is determined by sum of sorted vertex_degree
-        # for(i in 1:3) {
-        #     L  = which(layer ==i)
-        #     OL = order(V(net)$vertex_degree[L], decreasing=TRUE)
-        #     MyLO[L[OL],2] = cumsum(V(net)$vertex_degree[L][OL])
-        # }
-        # 
-        # layout = layout_with_sugiyama(net, layers=layer)
-        # plot(net,
-        #      layout=cbind(layer,layout$layout[,1]),edge.curved=0,
-        #      vertex.shape=c("square","circle","square")[layer],
-        #      vertex.frame.color = c("darkolivegreen","darkgoldenrod","orange3")[layer],
-        #      vertex.color=c("olivedrab","goldenrod1","orange1")[layer],
-        #      vertex.label.color="white",
-        #      vertex.label.font=1,
-        #      vertex.size=V(net)$vertex_degree,
-        #      vertex.label.dist=c(0,0,0)[layer],
-        #      vertex.label.degree=0)
-        
-        # 
-        # vertex.color	 Node color
-        # vertex.frame.color	 Node border color
-        # vertex.shape	 One of “none”, “circle”, “square”, “csquare”, “rectangle” “crectangle”, “vrectangle”, “pie”, “raster”, or “sphere”
-        # vertex.size	 Size of the node (default is 15)
-        # vertex.size2	 The second size of the node (e.g. for a rectangle)
-        # vertex.label	 Character vector used to label the nodes
-        # vertex.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
-        # vertex.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
-        # vertex.label.cex	 Font size (multiplication factor, device-dependent)
-        # vertex.label.dist	 Distance between the label and the vertex
-        # vertex.label.degree	 The position of the label in relation to the vertex, where 0 right, “pi” is left, “pi/2” is below, and “-pi/2” is above
-        # EDGES	 
-        # edge.color	 Edge color
-        # edge.width	 Edge width, defaults to 1
-        # edge.arrow.size	 Arrow size, defaults to 1
-        # edge.arrow.width	 Arrow width, defaults to 1
-        # edge.lty	 Line type, could be 0 or “blank”, 1 or “solid”, 2 or “dashed”, 3 or “dotted”, 4 or “dotdash”, 5 or “longdash”, 6 or “twodash”
-        # edge.label	 Character vector used to label edges
-        # edge.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
-        # edge.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
-        # edge.label.cex	 Font size for edge labels
-        # edge.curved	 Edge curvature, range 0-1 (FALSE sets it to 0, TRUE to 0.5)
-        # arrow.mode	 Vector specifying whether edges should have arrows,
-        # possible values: 0 no arrow, 1 back, 2 forward, 3 both
-        
-        #par(mar=c(5, 4, 4, 2) + 0.1)
-        
-        
-        # Calling plot.new() might be necessary here
-        # if(!plotAsPDF){
-        #     #plot.new()
-        # }
-        par(mar=c(7,0,0,0) + 0.2)
-        
-        plot(
-            net, layout=l,
-            #edge.arrow.size= 0.4, 
-            # TODO: edge.arrow.width= E(net)$weight, 
-            edge.font= 2,
-            # TODO: edge.lty = E(net)$lty,
-            vertex.size= igraph::V(net)$vertex.size,
-            vertex.color=igraph::V(net)$vertex.color,
-            edge.color = igraph::E(net)$color,
-            edge.width = igraph::E(net)$weight,
-            vertex.label=igraph::V(net)$label,
-            vertex.label.font=1, 
-            vertex.label.cex = vertexLabel_cex, 
-            vertex.label.family="Helvetica", 
-            vertex.label.color = "black",
-            vertex.label.degree= -pi/2,
-            vertex.label=igraph::V(net)$label,
-            vertex.label.dist= vertexLabel_dist,
-            vertex.shape = shape_vertex[igraph::V(net)$type],
-            main = title
-        )
-        
-        
-        if (colorby == "type"){
-            
-            text_final    = c(c(paste0(sapply(text_categories.l, '[[', 1), " (sel. min.)"), "negative (fixed color)"),   
-                              c(sapply(text_categories.l, '[[', 2), "Correlation between vertices"),    
-                              c(paste0(sapply(text_categories.l, '[[', 3), " (sel. max.)"), "positive (fixed color)")#, 
-                              #c("Negative correlation", "Positive correlation", "bla")
-            )
-            symbols_final = c(c(sapply(symbols_categories.l, '[[', 1), 20),
-                              c(sapply(symbols_categories.l, '[[', 2), NA), 
-                              c(sapply(symbols_categories.l, '[[', 3), 20)#,
-                              #c(20,20,20)
-            )
-            if (graph == "TF-peak-gene"){
-                colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
-                                  c(rep(NA,3), NA), 
-                                  c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
-                                  #c("red","blue","green")
-                )
-            }else{
-                colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
-                                  c(rep(NA,2), NA), 
-                                  c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
-                                  #c("red","blue","green")
-                )
-            }
-            
-            legend(x= "bottom", text_final, 
-                   pch=symbols_final,
-                   col=colors_final, 
-                   pt.bg=colors_final, 
-                   pt.cex=1, cex=.8, bty="n", xpd = TRUE, ncol=3, xjust = 0.5, yjust = 0.5, 
-                   inset=c(0,-0.1)
-            )  
-            
-        }else{
-            
-            text_final = community_colors$community
-            symbols_final = rep (21, length(text_final))
-            colors_final = community_colors$color
-            
-            legend(x = "bottom", title = "community",
-                   legend = text_final,
-                   pch = symbols_final,
-                   #fill = colors_final,
-                   #col = colors_final,
-                   pt.bg=colors_final,
-                   pt.cex=1, cex=.8, bty="n", xpd = TRUE,
-                   ncol= length(text_final), inset=c(0,-0.1)) #divide by something?
-            legend(x = "bottomright", title = "Node Type",
-                   legend = c("TF", ifelse(graph =="TF-gene",  "gene", "peak/gene")),
-                   pch = c(22,21),
-                   pt.cex=1, cex=.8, bty="n",  xpd = TRUE,
-                   ncol = 1, inset=c(0,-0.1))
-            
-        }
-        
-        # https://stackoverflow.com/questions/24933703/adjusting-base-graphics-legend-label-width
-        #labels = c("6.4", "blaaaaaaaaaaaaaaaaaaaaaaaa", "6.4")
-        
-        #par(mar=c(5, 2, 2, 2) + 0.1)
-        #bottom, left, top, and right.
-        
-    }
+  }
+  
+  edges_final = edges_final %>%
+    dplyr::mutate(weight_transformed = dplyr::case_when(weight < 0.2 ~ 1,
+                                                        weight < 0.4 ~ 1.5,
+                                                        weight < 0.6 ~ 2,
+                                                        weight < 0.8 ~ 2.5,
+                                                        TRUE ~ 3),
+                  R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
+                  color       = dplyr::case_when(R < 0 ~ "blue", TRUE ~ "grey")) %>%
+    dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
+  
+  
+  
+  nRows = nrow(edges_final)
+  
+  futile.logger::flog.info(paste0("Number of rows: ",nRows))
+  if (maxRowsToPlot > 500 & nRows > 500) {
+    futile.logger::flog.info(paste0("Plotting many connections takes a lot of time and memory"))
+  }
+  
+  
+  
+  if (plotAsPDF) {
+    futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
+    grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"), width = pdf_width, height = pdf_height )
+  } else {
+    futile.logger::flog.info(paste0("Plotting GRN network"))
+  }
+  
+  if (nRows > maxRowsToPlot) { 
+    futile.logger::flog.info(paste0("Number of rows to plot (", nRows, ") exceeds limit of the maxRowsToPlot parameter. Plotting only empty page"))
+    plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
+    message = paste0(title, "\n\nPlotting omitted.\n\nThe number of rows in the GRN (", nRows, ") exceeds the maximum of ", maxRowsToPlot, ".\nSee the maxRowsToPlot parameter to increase the limit")
+    text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
     
     if (plotAsPDF) {
-        grDevices::dev.off()
+      grDevices::dev.off()
     }
     
     .printExecutionTime(start)
+    return(GRN)
+  }
+  
+  if (nrow(grn.merged) == 0) {
     
-    GRN
+    futile.logger::flog.warn(paste0("No rows left in the GRN. Creating empty plot."))
+    
+    plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
+    message = paste0(title, "\n\nThe GRN has no edges that pass the filter criteria.")
+    text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+    
+  } else {
+    
+    # Fix with length
+    
+    if (graph == "TF-peak-gene"){
+      colors_categories.l = list(
+        "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
+        "PEAK" = RColorBrewer::brewer.pal(3,"Set1")[2], 
+        "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
+      
+      symbols_categories.l = list(
+        "TF"   = 15, # square
+        "PEAK" = 21, # circle
+        "GENE" = 21 # circle
+      )
+    }else{
+      colors_categories.l = list(
+        "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
+        "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
+      
+      symbols_categories.l = list(
+        "TF"   = 15, # square
+        "GENE" = 21 # circle
+      )
+    }
+    
+    
+    nBins_orig = 100
+    nBins_discard = 25
+    nBins_real = nBins_orig - nBins_discard
+    
+    #if (!is.null(vertice_color_TFs)) {
+    color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_TFs[["h"]], c = vertice_color_TFs[["c"]], l = vertice_color_TFs[["l"]]))[(nBins_discard + 1):nBins_orig] # red
+    colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
+    colors_categories.l[["TF"]]  = color_gradient 
+    symbols_categories.l[["TF"]] = c(15,NA,15)
+    vertice_color_TFs   = append(list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log"), vertice_color_TFs)
+    #}
+    
+    if(graph == "TF-peak-gene"){
+      #if (!is.null(vertice_color_peaks)) {
+      color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_peaks[["h"]], c = vertice_color_peaks[["c"]], l = vertice_color_peaks[["l"]]))[(nBins_discard + 1):nBins_orig]  # green
+      colors_categories.l[["PEAK"]] = c(color_gradient[1], color_gradient[nBins_real])
+      colors_categories.l[["PEAK"]] = color_gradient
+      symbols_categories.l[["PEAK"]] = c(21,NA,21)
+      vertice_color_peaks = append(list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log"), vertice_color_peaks)
+      # }
+    }
+    
+    #if (!is.null(vertice_color_genes)) {
+    color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_genes[["h"]], c = vertice_color_genes[["c"]], l = vertice_color_genes[["l"]]))[(nBins_discard + 1):nBins_orig] # blue
+    colors_categories.l[["GENE"]] = c(color_gradient[1], color_gradient[nBins_real]) 
+    colors_categories.l[["GENE"]] = color_gradient
+    symbols_categories.l[["GENE"]] = c(21,NA,21)
+    vertice_color_genes = append(list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"), vertice_color_genes)
+    #}
+    
+    ## VERTICES ##
+    
+    shape_vertex = c("square","circle", "circle")
+    names(shape_vertex) = names(colors_categories.l)
+    
+    
+    vertices = tibble::tribble(~id,
+                               ~type,
+                               ~label,
+                               ~color_raw,
+                               ~color_bin,
+                               ~color_final)
+    
+    ## 1. TFs ##
+    
+    # Make the vertices unique, so that the same peak has only one vertice 
+    # vertices_TFs = unique_TF_peak.con %>%
+    #   dplyr::group_by(TF.name) %>%
+    #   dplyr::summarize(label = unique(TF.name)) %>%
+    #   dplyr::ungroup()
+    
+    vertices_TFs = grn.merged %>%
+      dplyr::filter(grepl("^tf", connectionType)) %>%
+      #dplyr::rename(TF.name = V1) %>%
+      dplyr::group_by(TF.name) %>%
+      dplyr::summarize(label = unique(TF.name)) %>%
+      dplyr::ungroup()
+    
+    if (nrow(vertices_TFs) > 0) {
+      
+      if (!is.null(vertice_color_TFs)) {
+        
+        .verifyArgument_verticeType(vertice_color_TFs)
+        
+        vertices_TFs = vertices_TFs %>%
+          dplyr::left_join(vertice_color_TFs[[1]], by = c("TF.name" = vertice_color_TFs[[2]])) %>%
+          dplyr::rename(color_raw = !!(vertice_color_TFs[[3]])) %>%
+          dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["TF"]], ordered_result = TRUE)))  # Transform the colors for the vertices
+        
+        
+      } else {
+        vertices_TFs = dplyr::mutate(vertices_TFs, color_raw = NA, color_bin = colors_categories.l[["TF"]])
+      } 
+      
+      vertices = tibble::add_row(vertices, 
+                                 id = vertices_TFs$TF.name, 
+                                 type = "TF", 
+                                 label = as.vector(vertices_TFs$label), 
+                                 color_raw = vertices_TFs$color_raw,
+                                 color_bin = vertices_TFs$color_bin) 
+    }
+    
+    
+    ## 2. PEAKS ##
+    
+    if (graph == "TF-peak-gene"){
+      
+      # Make the vertices unique, so that the same peak has only one vertice 
+      peaks1 = grn.merged %>% dplyr::filter(grepl("peak$", connectionType)) %>% dplyr::pull(V2)
+      peaks2 = grn.merged %>% dplyr::filter(grepl("^peak", connectionType)) %>% dplyr::pull(V1)
+      #vertices_peaks = tibble::tibble(peak = unique(c(unique_peak_gene.con$peak.ID, unique_TF_peak.con$peak.ID)), label = NA)
+      vertices_peaks = tibble::tibble(peak = unique(c(peaks1, peaks2)), label = NA)
+      
+      if (nrow(vertices_peaks) > 0) {
+        
+        if (!is.null(vertice_color_peaks)) {
+          
+          .verifyArgument_verticeType(vertice_color_peaks)
+          
+          vertices_peaks = vertices_peaks %>%
+            dplyr::left_join(vertice_color_peaks[[1]], by = c("peak" = vertice_color_peaks[[2]])) %>%
+            dplyr::rename(color_raw = !!(vertice_color_peaks[[3]])) %>%
+            dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["PEAK"]], ordered_result = TRUE)))  # Transform the colors for the vertices
+          
+        } else {
+          vertices_peaks = dplyr::mutate(vertices_peaks, color_raw = NA, color_bin = colors_categories.l[["PEAK"]])
+        } 
+        
+        vertices = tibble::add_row(vertices, 
+                                   id = vertices_peaks$peak, 
+                                   type = "PEAK", 
+                                   label = vertices_peaks$label, 
+                                   color_raw = vertices_peaks$color_raw,
+                                   color_bin = vertices_peaks$color_bin) 
+      }
+      
+    }
+    
+    
+    ## 3. GENES ##
+    
+    # Make the vertices unique, so that the same gene has only one vertice 
+    # vertices_genes = unique_peak_gene.con %>%
+    #   dplyr::group_by(gene.ENSEMBL) %>%
+    #   dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
+    #   dplyr::ungroup()
+    
+    vertices_genes = grn.merged %>%
+      dplyr::filter(grepl("gene$", connectionType)) %>%
+      #dplyr::rename(peak.ID = V1) %>%
+      dplyr::group_by(V2) %>%
+      dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
+      dplyr::ungroup() %>%
+      dplyr::rename(gene.ENSEMBL = V2)
+    
+    if (nrow(vertices_genes) > 0) {
+      
+      if (!is.null(vertice_color_genes)) {
+        
+        .verifyArgument_verticeType(vertice_color_genes)
+        
+        vertices_genes = vertices_genes %>%
+          dplyr::left_join(vertice_color_genes[[1]], by = c("gene.ENSEMBL" = vertice_color_genes[[2]])) %>%
+          dplyr::rename(color_raw = !!(vertice_color_genes[[3]])) %>%
+          dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["GENE"]], ordered_result = TRUE)))  # Transform the colors for the vertices
+        
+      } else {
+        vertices_genes = dplyr::mutate(vertices_genes, color_raw = NA, color_bin = colors_categories.l[["GENE"]])
+      } 
+      
+      
+      vertices = tibble::add_row(vertices, 
+                                 id = vertices_genes$gene.ENSEMBL, 
+                                 type = "GENE", 
+                                 label = vertices_genes$label, 
+                                 color_raw = vertices_genes$color_raw,
+                                 color_bin = vertices_genes$color_bin) 
+      
+    }
+    
+    
+    
+    vertices = vertices %>%
+      dplyr::mutate(size = dplyr::case_when(type == "TF" ~ 6,
+                                            type == "PEAK" ~ 3,
+                                            TRUE ~ 4),
+                    size_transformed = NA) 
+    
+    
+    vertices_colorRanges = vertices %>% dplyr::group_by(.data$type) %>% dplyr::summarize(min = min(color_raw, na.rm = TRUE), max = max(color_raw, na.rm = TRUE))
+    
+    if (nrow(dplyr::filter(vertices_colorRanges, .data$type == "GENE")) == 0) {
+      vertices_colorRanges = tibble::add_row(vertices_colorRanges, type = "GENE", min = NA, max = NA)
+    }
+    
+    if(graph == "TF-peak-gene"){
+      text_categories.l = list(
+        "TF"   = "TF",
+        "PEAK" = "PEAK",
+        "GENE" = "GENE"
+      )
+    }else{
+      text_categories.l = list(
+        "TF"   = "TF",
+        "GENE" = "GENE"
+      )
+    }
+    
+    
+    if (!is.null(vertice_color_TFs)) {
+      subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "TF") 
+      text_categories.l[["TF"]] = c(signif(dplyr::pull(subsetCur, min),2), 
+                                    paste0("TF expression (", vertice_color_TFs[[3]], ")"),
+                                    signif(dplyr::pull(subsetCur, max),2)
+      )
+    }
+    
+    if( graph  == "TF-peak-gene"){
+      if (!is.null(vertice_color_peaks)) {
+        subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "PEAK") 
+        text_categories.l[["PEAK"]] = c(signif(dplyr::pull(subsetCur, min),2), 
+                                        paste0("Peak accessibility (", vertice_color_peaks[[3]], ")"),
+                                        signif(dplyr::pull(subsetCur, max),2)
+        )
+      }
+    }
+    
+    if (!is.null(vertice_color_genes)) {
+      subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "GENE") 
+      text_categories.l[["GENE"]] = c(signif(dplyr::pull(subsetCur, min),2), 
+                                      paste0("Gene expression (", vertice_color_genes[[3]], ")"),
+                                      signif(dplyr::pull(subsetCur, max),2)
+      )
+    }
+    
+    
+    net <- igraph::graph_from_data_frame(d=edges_final, vertices = vertices, directed = FALSE) 
+    
+    
+    # TODO: Integrate network stats: https://kateto.net/networks-r-igraph
+    # Make a separate df_to_igraph function for the entwork stats
+    
+    
+    ########### Color and Shape parameters 
+    
+    # TODO: https://stackoverflow.com/questions/48490378/order-vertices-within-layers-on-tripartite-igraph
+    # note: the layout_with_sugiyama which can convert the layout to tri/bipartite creates an order that minimizes edge overlap/crossover, makes it cleaner to visualize. do we want to enforce a custom order?
+    
+    net <- igraph::simplify(net, remove.multiple = FALSE, remove.loops = TRUE)
+    deg <- igraph::degree(net, mode="all", normalized = TRUE) # added normalized = T in case later used to determine node size. for now not rly needed
+    #V(net)$size <- deg*2
+    #igraph::V(net)$vertex_degree <-  deg*4 # the vertex_degree attribute doesn't need to be changed 
+    igraph::V(net)$label = vertices$label
+    
+    
+    
+    #assign colors to the 5 largest communities, rest is grey
+    if (colorby == "type"){
+      igraph::V(net)$vertex.color = vertices$color_bin
+    }else{
+      
+      if (is.null(GRN@graph$TF_gene$clusterGraph)){
+        GRN = calculateCommunitiesStats(GRN)
+      }
+      
+      ncommunities = length(unique(GRN@graph$TF_gene$clusterGraph$membership))
+      
+      if (ncommunities >=8){
+        community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:nCommunitiesMax]),
+                                      color = rainbow(7))
+        fillercolors = data.frame(community = nCommunitiesMax:ncommunities, color = "847E89") # only color the x largest communities
+        community_colors = rbind(community_colors, fillercolors)
+        
+      }else{
+        community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:ncommunities]),
+                                      color = rainbow(ncommunities))
+      }
+      
+      TF_ensembl = GRN@graph$TF_gene$table$V1[match(vertices$id, GRN@graph$TF_gene$table$V1_name)] %>% stats::na.omit() %>% as.vector()
+      gene_ensembl = GRN@graph$TF_gene$table$V2[match(vertices$id, GRN@graph$TF_gene$table$V2)] %>% stats::na.omit() %>% as.vector()
+      if(graph == "TF-peak-gene"){
+        network_ensembl = c(TF_ensembl, rep(NA, length(unique(vertices_peaks$peak))), gene_ensembl) 
+      }else{
+        network_ensembl = c(TF_ensembl, gene_ensembl) 
+      }
+      
+      
+      communities = GRN@graph$TF_gene$clusterGraph$membership[match(network_ensembl, GRN@graph$TF_gene$clusterGraph$names)]
+      igraph::V(net)$vertex.color = community_colors$color[match(communities, community_colors$community)]
+      
+    }
+    
+    igraph::V(net)$vertex.size = vertices$size
+    # https://rstudio-pubs-static.s3.amazonaws.com/337696_c6b008e0766e46bebf1401bea67f7b10.html
+    # TODO: E(net)$weight <- edges_final$weight_transformed
+    igraph::E(net)$color = edges_final$color
+    
+    #change arrow size and edge color:
+    #igraph::E(net)$arrow.size <- .1
+    igraph::E(net)$edge.color <- edges_final$color
+    # TODO: E(net)$lty = edges_final$linetype
+    # TODO: E(net)$width <- 1+E(net)$weight/12
+    #igraph::E(net)$width <- 1+igraph::E(net)$weight/12
+    igraph::E(net)$width <- igraph::E(net)$weight
+    #igraph::E(net)$weight <- edges_final$weight_transformed # too block-y for large networks. stick to givren weight.
+    
+    if (layered){
+      l <- igraph::layout_with_sugiyama(net, layers = as.numeric(as.factor(igraph::V(net)$type)), hgap = 1)$layout
+      l <- cbind(l[,2], l[,1])
+    }else{
+      l <- igraph::layout_with_fr(net)
+    }
+    
+    #test.layout <- layout_(net,with_dh(weight.edge.lengths = edge_density(net)/1000))
+    
+    # MyLO = matrix(0, nrow=vcount(net), ncol=2)
+    # 
+    # ## Horizontal position is determined by layer
+    # layer <- rep(NA, length(V(net)$name))
+    # layer[vertices$type == "TF"]   = 1
+    # layer[vertices$type == "PEAK"] = 2
+    # layer[vertices$type == "GENE"] = 3
+    # MyLO[,1] = layer
+    # 
+    # ## Vertical position is determined by sum of sorted vertex_degree
+    # for(i in 1:3) {
+    #     L  = which(layer ==i)
+    #     OL = order(V(net)$vertex_degree[L], decreasing=TRUE)
+    #     MyLO[L[OL],2] = cumsum(V(net)$vertex_degree[L][OL])
+    # }
+    # 
+    # layout = layout_with_sugiyama(net, layers=layer)
+    # plot(net,
+    #      layout=cbind(layer,layout$layout[,1]),edge.curved=0,
+    #      vertex.shape=c("square","circle","square")[layer],
+    #      vertex.frame.color = c("darkolivegreen","darkgoldenrod","orange3")[layer],
+    #      vertex.color=c("olivedrab","goldenrod1","orange1")[layer],
+    #      vertex.label.color="white",
+    #      vertex.label.font=1,
+    #      vertex.size=V(net)$vertex_degree,
+    #      vertex.label.dist=c(0,0,0)[layer],
+    #      vertex.label.degree=0)
+    
+    # 
+    # vertex.color	 Node color
+    # vertex.frame.color	 Node border color
+    # vertex.shape	 One of “none”, “circle”, “square”, “csquare”, “rectangle” “crectangle”, “vrectangle”, “pie”, “raster”, or “sphere”
+    # vertex.size	 Size of the node (default is 15)
+    # vertex.size2	 The second size of the node (e.g. for a rectangle)
+    # vertex.label	 Character vector used to label the nodes
+    # vertex.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
+    # vertex.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
+    # vertex.label.cex	 Font size (multiplication factor, device-dependent)
+    # vertex.label.dist	 Distance between the label and the vertex
+    # vertex.label.degree	 The position of the label in relation to the vertex, where 0 right, “pi” is left, “pi/2” is below, and “-pi/2” is above
+    # EDGES	 
+    # edge.color	 Edge color
+    # edge.width	 Edge width, defaults to 1
+    # edge.arrow.size	 Arrow size, defaults to 1
+    # edge.arrow.width	 Arrow width, defaults to 1
+    # edge.lty	 Line type, could be 0 or “blank”, 1 or “solid”, 2 or “dashed”, 3 or “dotted”, 4 or “dotdash”, 5 or “longdash”, 6 or “twodash”
+    # edge.label	 Character vector used to label edges
+    # edge.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
+    # edge.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
+    # edge.label.cex	 Font size for edge labels
+    # edge.curved	 Edge curvature, range 0-1 (FALSE sets it to 0, TRUE to 0.5)
+    # arrow.mode	 Vector specifying whether edges should have arrows,
+    # possible values: 0 no arrow, 1 back, 2 forward, 3 both
+    
+    #par(mar=c(5, 4, 4, 2) + 0.1)
+    
+    
+    # Calling plot.new() might be necessary here
+    # if(!plotAsPDF){
+    #     #plot.new()
+    # }
+    par(mar=c(7,0,0,0) + 0.2)
+    
+    plot(
+      net, layout=l,
+      #edge.arrow.size= 0.4, 
+      # TODO: edge.arrow.width= E(net)$weight, 
+      edge.font= 2,
+      # TODO: edge.lty = E(net)$lty,
+      vertex.size= igraph::V(net)$vertex.size,
+      vertex.color=igraph::V(net)$vertex.color,
+      edge.color = igraph::E(net)$color,
+      edge.width = igraph::E(net)$weight,
+      vertex.label=igraph::V(net)$label,
+      vertex.label.font=1, 
+      vertex.label.cex = vertexLabel_cex, 
+      vertex.label.family="Helvetica", 
+      vertex.label.color = "black",
+      vertex.label.degree= -pi/2,
+      vertex.label=igraph::V(net)$label,
+      vertex.label.dist= vertexLabel_dist,
+      vertex.shape = shape_vertex[igraph::V(net)$type],
+      main = title
+    )
+    
+    
+    if (colorby == "type"){
+      
+      text_final    = c(c(paste0(sapply(text_categories.l, '[[', 1), " (sel. min.)"), "negative (fixed color)"),   
+                        c(sapply(text_categories.l, '[[', 2), "Correlation between vertices"),    
+                        c(paste0(sapply(text_categories.l, '[[', 3), " (sel. max.)"), "positive (fixed color)")#, 
+                        #c("Negative correlation", "Positive correlation", "bla")
+      )
+      symbols_final = c(c(sapply(symbols_categories.l, '[[', 1), 20),
+                        c(sapply(symbols_categories.l, '[[', 2), NA), 
+                        c(sapply(symbols_categories.l, '[[', 3), 20)#,
+                        #c(20,20,20)
+      )
+      if (graph == "TF-peak-gene"){
+        colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
+                          c(rep(NA,3), NA), 
+                          c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
+                          #c("red","blue","green")
+        )
+      }else{
+        colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
+                          c(rep(NA,2), NA), 
+                          c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
+                          #c("red","blue","green")
+        )
+      }
+      
+      legend(x= "bottom", text_final, 
+             pch=symbols_final,
+             col=colors_final, 
+             pt.bg=colors_final, 
+             pt.cex=1, cex=.8, bty="n", xpd = TRUE, ncol=3, xjust = 0.5, yjust = 0.5, 
+             inset=c(0,-0.1)
+      )  
+      
+    }else{
+      
+      text_final = community_colors$community
+      symbols_final = rep (21, length(text_final))
+      colors_final = community_colors$color
+      
+      legend(x = "bottom", title = "community",
+             legend = text_final,
+             pch = symbols_final,
+             #fill = colors_final,
+             #col = colors_final,
+             pt.bg=colors_final,
+             pt.cex=1, cex=.8, bty="n", xpd = TRUE,
+             ncol= length(text_final), inset=c(0,-0.1)) #divide by something?
+      legend(x = "bottomright", title = "Node Type",
+             legend = c("TF", ifelse(graph =="TF-gene",  "gene", "peak/gene")),
+             pch = c(22,21),
+             pt.cex=1, cex=.8, bty="n",  xpd = TRUE,
+             ncol = 1, inset=c(0,-0.1))
+      
+    }
+    
+    # https://stackoverflow.com/questions/24933703/adjusting-base-graphics-legend-label-width
+    #labels = c("6.4", "blaaaaaaaaaaaaaaaaaaaaaaaa", "6.4")
+    
+    #par(mar=c(5, 2, 2, 2) + 0.1)
+    #bottom, left, top, and right.
+    
+  }
+  
+  if (plotAsPDF) {
+    grDevices::dev.off()
+  }
+  
+  .printExecutionTime(start)
+  
+  GRN
 }
 
 
 
 .verifyArgument_verticeType <- function(vertice_color_list) {
-    
-    checkmate::assertList(vertice_color_list, len = 6)
-    checkmate::assertDataFrame(vertice_color_list[[1]])
-    checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]))
+  
+  checkmate::assertList(vertice_color_list, len = 6)
+  checkmate::assertDataFrame(vertice_color_list[[1]])
+  checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]))
 }

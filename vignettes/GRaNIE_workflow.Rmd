@@ -536,7 +536,7 @@ GRN = calculateGeneralEnrichment(GRN, ontology = "GO_BP")
 
 We can now plot the enrichment for the full graph. In analogy to all the other `plot` functions, a PDF with all enrichment results is produced with the default setting, but by setting `plotAsPDF` to `FALSE`, we can also plot selected results / pages directly to the currently active graphics device. In this case here, as we select only one ontology, there is only one page:
 
-```{r plotGeneralEnrichment, echo=FALSE, fig.cap="<i>General network enrichment for the filtered network</i>", class.output="scroll-200"}
+```{r plotGeneralEnrichment, echo=TRUE, fig.cap="<i>General network enrichment for the filtered network</i>", class.output="scroll-200"}
 
 GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE, pages = 1)
 
@@ -573,14 +573,12 @@ Next, let's plot the community-specific enrichment:
 
 GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = c(1,2,3))
 
-
 ```
 
 We also provide an overview across the whole network and all communities that lists all the enriched terms that appear in at least one enrichment analysis, so a direct comparison of the specificity and commonalities across communities and between the general network and any community is facilitated. This also shows that some terms, here more than with a full dataset, are only identified as being enriched for the full network but not within any of the communities individually. We offer this function for all terms as well as only the top 10 enriched terms per community, and we here show only the filtered version due to reasons of brevity:
 
 
-```{r plotCommunityEnrichment2, echo=FALSE, fig.cap="<i>Summary of the community enrichment</i>", class.output="scroll-200"}
-
+```{r plotCommunityEnrichment2, echo=TRUE, fig.cap="<i>Summary of the community enrichment</i>", class.output="scroll-200"}
 GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = c(5))
 
 
@@ -591,7 +589,14 @@ GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = c(5))
 
 In analogy to community enrichment, we can also calculate enrichment based on TFs via their target genes they are connected to. Running a TF enrichment analyses is straight forward, with the parameter `n` we can control the number of TFs to run the enrichment for - the function runs the enrichment for the top connected TFs. Thus, `n=3` equals running the enrichment for the top 3 connected TFs. Here, we show the results for one of the TFs, *EGR1.0.A*, as well as a summary across all top 3 connected TFs, in analogy the results for the community enrichment.
 
-```{r TFEnrichment, echo=FALSE, fig.cap="<i>Enrichment summary for TFs</i>", class.output="scroll-200"}
+Let's first calculate the TF enrichment.This may take a while. We omit the output here.
+```{r TFEnrichmentCal, echo=FALSE, eval = FALSE, class.output="scroll-200"}
+GRN = calculateTFEnrichment(GRN, ontology = "GO_BP")
+```
+
+Now, we can plot it, similar to the enrichment results before:
+
+```{r TFEnrichment, echo=TRUE, fig.cap="<i>Enrichment summary for TFs</i>", class.output="scroll-200"}
 GRN = plotTFEnrichment(GRN, plotAsPDF = FALSE, n = 3, pages = c(1,5))
 ```
 
