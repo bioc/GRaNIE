@@ -424,6 +424,19 @@ GRN_connections.all
 The table contains many columns, and the prefix of each column name indicates the part of the *eGRN* network that the column refers to (e.g., TFs, TF-enhancers, enhancers, enhancer-genes or genes, or TF-gene if the function `add_TF_gene_correlation()` has been run before). Data are stored in a format that minimizes the memory footprint (e.g., each character column is stored as a factor). This table can now be used for any downstream analysis, as it is just a normal data frame.
 
 
+## Construct the eGRN graph
+
+For all network-related and visualization-related functions, we need to build a graph out of the filtered connections. For this, we provide a helper function that stores the graph-structure in the object, and it can be invoked as follows:
+
+```{r buildGraph, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}
+
+GRN = build_eGRN_graph(GRN, forceRerun = TRUE) 
+
+```
+
+We don't include the output here, but this function runs actually very quickly. 
+
+
 ## Visualize the filtered *eGRN*
 
 The `GRaNIE` package also offers a function to visualize a filtered *eGRN* network! It is very easy to invoke, but provides many options to customize the output and the way the graph is drawn. We recommend to explore the options in the R help (`?getGRNConnections`), and here just run the default visualization.
@@ -494,15 +507,6 @@ As this functions needs a few minutes, for the purpose of the vignette, we do no
 
 First, we have to create a network representation out of the filtered connections, and there are a few options for how the network structure should look like. We here keep the default options and refer to the R help for details (`?build_eGRN_graph`).
 
-### Construct the eGRN graph
-
-```{r buildGraph, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}
-
-GRN = build_eGRN_graph(GRN, forceRerun = TRUE) 
-
-```
-
-We don't include the output here, but this function runs actually very quickly. 
 
 ### General network statistics
 
