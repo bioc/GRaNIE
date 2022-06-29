@@ -1,6 +1,6 @@
 Package: GRaNIE
 Title: GRaNIE: Reconstruction cell type specific gene regulatory networks including enhancers using chromatin accessibility and RNA-seq data
-Version: 1.1.6
+Version: 1.1.7
 Encoding: UTF-8
 Authors@R: c(person("Christian", "Arnold", email =
         "chrarnold@web.de", role = c("cre","aut")),
@@ -92,5 +92,5 @@ License: Artistic-2.0
 LazyData: false
 URL: https://grp-zaugg.embl-community.io/GRaNIE
 BugReports: https://git.embl.de/grp-zaugg/GRaNIE/issues
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 Config/testthat/edition: 3
