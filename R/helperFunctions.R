@@ -212,24 +212,24 @@
   
   res.l = list()
   
-  maxCores = tryCatch(
-    {
-       out = BiocParallel::multicoreWorkers() / 2
-     
-    },
-    error=function() {
-
-      message = "Could not retrieve the available number of cores. There might be a problem with your installation of BiocParallel. Check whether BiocParallel::multicoreWorkers() returns an integer. Try executing the following line to fix the problem if a re-installation of BiocParallel does not work: library(parallel) and then options(mc.cores=4L), with 4 being the maximum number of cores available for the machine you run the pipeline on For now, the function will just run with 1 core."
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      return(1)
-    }
-  )    
-
-  
-  if (nCores > maxCores) {
-      nCores = max(1, floor(maxCores))
-      futile.logger::flog.warn(paste0(" Adjusted nCores down to ", nCores, " (only 50% of the cores are used at max)"))
-  }
+  # maxCores = tryCatch(
+  #   {
+  #      out = BiocParallel::multicoreWorkers() / 2
+  #    
+  #   },
+  #   error=function() {
+  # 
+  #     message = "Could not retrieve the available number of cores. There might be a problem with your installation of BiocParallel. Check whether BiocParallel::multicoreWorkers() returns an integer. Try executing the following line to fix the problem if a re-installation of BiocParallel does not work: library(parallel) and then options(mc.cores=4L), with 4 being the maximum number of cores available for the machine you run the pipeline on For now, the function will just run with 1 core."
+  #     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+  #     return(1)
+  #   }
+  # )    
+  # 
+  # 
+  # if (nCores > maxCores) {
+  #     nCores = max(1, floor(maxCores))
+  #     futile.logger::flog.warn(paste0(" Adjusted nCores down to ", nCores, " (only 50% of the cores are used at max)"))
+  # }
   
   if (nCores > 1) {
     
