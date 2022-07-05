@@ -92,7 +92,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
                        "_RNA.", norm, ".pdf")
       if (!file.exists(fileCur) | forceRerun) {
         
-        futile.logger::flog.info(paste0("\nPlotting PCA and metadata correlation of ", norm, 
+        futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", norm, 
                                         " RNA data for all shared samples to file ", fileCur , 
                                         "... This may take a few minutes"))
         
@@ -2141,7 +2141,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @param p Numeric. Default 0.05. p-value threshold to determine significance.
 #' @param topn_pvalue Numeric. Default 30. Maximum number of ontology terms that meet the p-value significance threshold to display in the enrichment dot plot
 #' @param display_pAdj \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.
-#' @param maxWidth_nchar_plot Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.
+#' @template maxWidth_nchar_plot
 #' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
@@ -2511,7 +2511,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @param communities \code{NULL} or numeric vector. Default \code{NULL}. If set to \code{NULL}, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities are plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} are plotted. 
 #' @param nSignificant Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
 #' @param nID Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.
-#' @param maxWidth_nchar_plot Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.
+#' @template maxWidth_nchar_plot
 #' @return  The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
@@ -2693,7 +2693,6 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
         dplyr::filter(!is.na(Term)) %>%
         dplyr::select(Term, dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
         dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
-        # dplyr::mutate(Term_mod = make.names(stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right"), unique = TRUE)) %>%
         tibble::column_to_rownames("Term") %>%
         as.matrix()
       
@@ -3289,7 +3288,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' @param maxRowsToPlot Numeric. Default 500. Refers to the maximum number of connections to be plotted.
 #' @param graph Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.
 #' @param colorby Character. Default \code{type}. One of \code{type}, code \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}
-#' @param layered Boolean. Default \code{FALSE}. Display the network in a layered format where each layer corresponds to a node type (TF/peak/gene).
+#' @param layout Character. Dfault \code{fr}. One of \code{star}, \code{fr}, \code{sugiyama}, \code{kk}, \code{lgl}, \code{graphopt}, \code{mds}, \code{sphere}
 #' @param vertice_color_TFs Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{colorspace} package for more details and examples
 #' @param vertice_color_peaks Named list. Default \code{list(h = 135, c = 45, l = c(35, 95))}.
 #' @param vertice_color_genes Named list. Default \code{list(h = 260, c = 80, l = c(30, 90))}.
@@ -3302,596 +3301,617 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' @return the GRN object
 #' @export
 visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12,
-                         title = NULL, maxRowsToPlot = 500, graph = "TF-gene" , colorby = "type", layered = FALSE,
+                         title = NULL, maxRowsToPlot = 500, graph = "TF-gene" , colorby = "type", layout = "fr",
                          vertice_color_TFs = list(h = 10, c = 85, l = c(25, 95)), vertice_color_peaks = list(h = 135, c = 45, l = c(35, 95)), vertice_color_genes = list(h = 260, c = 80, l = c(30, 90)),
                          vertexLabel_cex = 0.4, vertexLabel_dist = 0, forceRerun = FALSE
 ) {
-  
-  
-  start = Sys.time()
-  GRN = .addFunctionLogToObject(GRN)
-  
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assertNumeric(maxRowsToPlot)
-  checkmate::assertSubset(graph, c("TF-gene", "TF-peak-gene"))
-  checkmate::assertSubset(colorby, c("type", "community"))
-  checkmate::assertFlag(layered)
-  checkmate::assertList(vertice_color_TFs)
-  checkmate::assertNames(names(vertice_color_TFs), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
-  checkmate::assertList(vertice_color_peaks)
-  checkmate::assertNames(names(vertice_color_peaks), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
-  checkmate::assertList(vertice_color_genes)
-  checkmate::assertNames(names(vertice_color_genes), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
-  checkmate::assertNumeric(vertexLabel_cex)
-  checkmate::assertNumeric(vertexLabel_dist)
-  checkmate::assertFlag(forceRerun)
-  
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  metadata_visualization.l = getBasic_metadata_visualization(GRN)
-  # if (useDefaultMetadata) {
-  #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
-  #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
-  #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
-  #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
-  # }
-  # 
-  #grn.merged = getGRNConnections(GRN, permuted = permuted, type = "all.filtered")
-  # check that it's in sync with the @ graph
-  if (graph == "TF-gene"){
-    grn.merged = GRN@graph$TF_gene$table %>%
-      dplyr::rename(TF.name = V1_name)
     
-    edges_final = grn.merged %>%
-      dplyr::rename(from = TF.name, to = V2) %>%
-      dplyr::mutate(weight = 1, R = 1, linetype = "solid")
     
-  }else{
+    start = Sys.time()
+    GRN = .addFunctionLogToObject(GRN)
     
-    grn.merged = GRN@graph$TF_peak_gene$table %>%
-      dplyr::rename(TF.name = V1_name) 
-    grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assertNumeric(maxRowsToPlot)
+    checkmate::assertSubset(graph, c("TF-gene", "TF-peak-gene"))
+    checkmate::assertSubset(colorby, c("type", "community"))
+    #checkmate::assertFlag(layered)
+    checkmate::assertSubset(layout, c("star", "fr", "sugiyama", "kk", "lgl", "graphopt", "mds", "sphere"))
+    checkmate::assertList(vertice_color_TFs)
+    checkmate::assertNames(names(vertice_color_TFs), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertList(vertice_color_peaks)
+    checkmate::assertNames(names(vertice_color_peaks), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertList(vertice_color_genes)
+    checkmate::assertNames(names(vertice_color_genes), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertNumeric(vertexLabel_cex)
+    checkmate::assertNumeric(vertexLabel_dist)
+    checkmate::assertFlag(forceRerun)
     
-    edges_final = grn.merged %>%
-      dplyr::mutate(R = as.vector(stats::na.omit(c(TF_peak.r, peak_gene.r))),
-                    weight = as.vector(stats::na.omit(c(1- TF_peak.fdr, peak_gene.r))),
-                    linetype = "solid") %>%
-      dplyr::rename(from = V1, to = V2) 
     
-  }
-  
-  edges_final = edges_final %>%
-    dplyr::mutate(weight_transformed = dplyr::case_when(weight < 0.2 ~ 1,
-                                                        weight < 0.4 ~ 1.5,
-                                                        weight < 0.6 ~ 2,
-                                                        weight < 0.8 ~ 2.5,
-                                                        TRUE ~ 3),
-                  R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
-                  color       = dplyr::case_when(R < 0 ~ "blue", TRUE ~ "grey")) %>%
-    dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
-  
-  
-  
-  nRows = nrow(edges_final)
-  
-  futile.logger::flog.info(paste0("Number of rows: ",nRows))
-  if (maxRowsToPlot > 500 & nRows > 500) {
-    futile.logger::flog.info(paste0("Plotting many connections takes a lot of time and memory"))
-  }
-  
-  
-  
-  if (plotAsPDF) {
-    futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
-    grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"), width = pdf_width, height = pdf_height )
-  } else {
-    futile.logger::flog.info(paste0("Plotting GRN network"))
-  }
-  
-  if (nRows > maxRowsToPlot) { 
-    futile.logger::flog.info(paste0("Number of rows to plot (", nRows, ") exceeds limit of the maxRowsToPlot parameter. Plotting only empty page"))
-    plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
-    message = paste0(title, "\n\nPlotting omitted.\n\nThe number of rows in the GRN (", nRows, ") exceeds the maximum of ", maxRowsToPlot, ".\nSee the maxRowsToPlot parameter to increase the limit")
-    text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    metadata_visualization.l = getBasic_metadata_visualization(GRN)
+    # if (useDefaultMetadata) {
+    #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
+    #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
+    #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
+    #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
+    # }
+    # 
+    #grn.merged = getGRNConnections(GRN, permuted = permuted, type = "all.filtered")
+    # check that it's in sync with the @ graph
+    if (graph == "TF-gene"){
+        grn.merged = GRN@graph$TF_gene$table %>%
+            dplyr::rename(TF.name = V1_name)
+        
+        edges_final = grn.merged %>%
+            dplyr::rename(from = TF.name, to = V2) %>%
+            dplyr::mutate(weight = 1, R = 1, linetype = "solid")
+        
+    }else{
+        
+        grn.merged = GRN@graph$TF_peak_gene$table %>%
+            dplyr::rename(TF.name = V1_name) 
+        grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
+        
+        edges_final = grn.merged %>%
+            dplyr::mutate(R = as.vector(stats::na.omit(c(TF_peak.r, peak_gene.r))),
+                          weight = as.vector(stats::na.omit(c(1- TF_peak.fdr, peak_gene.r))),
+                          linetype = "solid") %>%
+            dplyr::rename(from = V1, to = V2) 
+        
+    }
+    
+    edges_final = edges_final %>%
+        dplyr::mutate(weight_transformed = dplyr::case_when(weight < 0.2 ~ 1,
+                                                            weight < 0.4 ~ 1.5,
+                                                            weight < 0.6 ~ 2,
+                                                            weight < 0.8 ~ 2.5,
+                                                            TRUE ~ 3),
+                      R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
+                      color       = dplyr::case_when(R < 0 ~ "blue", TRUE ~ "grey")) %>%
+        dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
+    
+    
+    
+    nRows = nrow(edges_final)
+    
+    futile.logger::flog.info(paste0("Number of rows: ",nRows))
+    if (maxRowsToPlot > 500 & nRows > 500) {
+        futile.logger::flog.info(paste0("Plotting many connections takes a lot of time and memory"))
+    }
+    
+    
     
     if (plotAsPDF) {
-      grDevices::dev.off()
+        futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
+        grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"), width = pdf_width, height = pdf_height )
+    } else {
+        futile.logger::flog.info(paste0("Plotting GRN network"))
+    }
+    
+    if (nRows > maxRowsToPlot) { 
+        futile.logger::flog.info(paste0("Number of rows to plot (", nRows, ") exceeds limit of the maxRowsToPlot parameter. Plotting only empty page"))
+        plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
+        message = paste0(title, "\n\nPlotting omitted.\n\nThe number of rows in the GRN (", nRows, ") exceeds the maximum of ", maxRowsToPlot, ".\nSee the maxRowsToPlot parameter to increase the limit")
+        text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+        
+        if (plotAsPDF) {
+            grDevices::dev.off()
+        }
+        
+        .printExecutionTime(start)
+        return(GRN)
+    }
+    
+    if (nrow(grn.merged) == 0) {
+        
+        futile.logger::flog.warn(paste0("No rows left in the GRN. Creating empty plot."))
+        
+        plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
+        message = paste0(title, "\n\nThe GRN has no edges that pass the filter criteria.")
+        text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+        
+    } else {
+        
+        # Fix with length
+        
+        if (graph == "TF-peak-gene"){
+            colors_categories.l = list(
+                "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
+                "PEAK" = RColorBrewer::brewer.pal(3,"Set1")[2], 
+                "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
+            
+            symbols_categories.l = list(
+                "TF"   = 15, # square
+                "PEAK" = 21, # circle
+                "GENE" = 21 # circle
+            )
+        }else{
+            colors_categories.l = list(
+                "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
+                "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
+            
+            symbols_categories.l = list(
+                "TF"   = 15, # square
+                "GENE" = 21 # circle
+            )
+        }
+        
+        
+        nBins_orig = 100
+        nBins_discard = 25
+        nBins_real = nBins_orig - nBins_discard
+        
+        #if (!is.null(vertice_color_TFs)) {
+        color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_TFs[["h"]], c = vertice_color_TFs[["c"]], l = vertice_color_TFs[["l"]]))[(nBins_discard + 1):nBins_orig] # red
+        colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
+        colors_categories.l[["TF"]]  = color_gradient 
+        symbols_categories.l[["TF"]] = c(15,NA,15)
+        vertice_color_TFs   = append(list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log"), vertice_color_TFs)
+        #}
+        
+        if(graph == "TF-peak-gene"){
+            #if (!is.null(vertice_color_peaks)) {
+            color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_peaks[["h"]], c = vertice_color_peaks[["c"]], l = vertice_color_peaks[["l"]]))[(nBins_discard + 1):nBins_orig]  # green
+            colors_categories.l[["PEAK"]] = c(color_gradient[1], color_gradient[nBins_real])
+            colors_categories.l[["PEAK"]] = color_gradient
+            symbols_categories.l[["PEAK"]] = c(21,NA,21)
+            vertice_color_peaks = append(list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log"), vertice_color_peaks)
+            # }
+        }
+        
+        #if (!is.null(vertice_color_genes)) {
+        color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_genes[["h"]], c = vertice_color_genes[["c"]], l = vertice_color_genes[["l"]]))[(nBins_discard + 1):nBins_orig] # blue
+        colors_categories.l[["GENE"]] = c(color_gradient[1], color_gradient[nBins_real]) 
+        colors_categories.l[["GENE"]] = color_gradient
+        symbols_categories.l[["GENE"]] = c(21,NA,21)
+        vertice_color_genes = append(list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"), vertice_color_genes)
+        #}
+        
+        ## VERTICES ##
+        
+        shape_vertex = c("square","circle", "circle")
+        names(shape_vertex) = names(colors_categories.l)
+        
+        
+        vertices = tibble::tribble(~id,
+                                   ~type,
+                                   ~label,
+                                   ~color_raw,
+                                   ~color_bin,
+                                   ~color_final)
+        
+        ## 1. TFs ##
+        
+        # Make the vertices unique, so that the same peak has only one vertice 
+        # vertices_TFs = unique_TF_peak.con %>%
+        #   dplyr::group_by(TF.name) %>%
+        #   dplyr::summarize(label = unique(TF.name)) %>%
+        #   dplyr::ungroup()
+        
+        vertices_TFs = grn.merged %>%
+            dplyr::filter(grepl("^tf", connectionType)) %>%
+            #dplyr::rename(TF.name = V1) %>%
+            dplyr::group_by(TF.name) %>%
+            dplyr::summarize(label = unique(TF.name)) %>%
+            dplyr::ungroup()
+        
+        if (nrow(vertices_TFs) > 0) {
+            
+            if (!is.null(vertice_color_TFs)) {
+                
+                .verifyArgument_verticeType(vertice_color_TFs)
+                
+                vertices_TFs = vertices_TFs %>%
+                    dplyr::left_join(vertice_color_TFs[[1]], by = c("TF.name" = vertice_color_TFs[[2]])) %>%
+                    dplyr::rename(color_raw = !!(vertice_color_TFs[[3]])) %>%
+                    dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["TF"]], ordered_result = TRUE)))  # Transform the colors for the vertices
+                
+                
+            } else {
+                vertices_TFs = dplyr::mutate(vertices_TFs, color_raw = NA, color_bin = colors_categories.l[["TF"]])
+            } 
+            
+            vertices = tibble::add_row(vertices, 
+                                       id = vertices_TFs$TF.name, 
+                                       type = "TF", 
+                                       label = as.vector(vertices_TFs$label), 
+                                       color_raw = vertices_TFs$color_raw,
+                                       color_bin = vertices_TFs$color_bin) 
+        }
+        
+        
+        ## 2. PEAKS ##
+        
+        if (graph == "TF-peak-gene"){
+            
+            # Make the vertices unique, so that the same peak has only one vertice 
+            peaks1 = grn.merged %>% dplyr::filter(grepl("peak$", connectionType)) %>% dplyr::pull(V2)
+            peaks2 = grn.merged %>% dplyr::filter(grepl("^peak", connectionType)) %>% dplyr::pull(V1)
+            #vertices_peaks = tibble::tibble(peak = unique(c(unique_peak_gene.con$peak.ID, unique_TF_peak.con$peak.ID)), label = NA)
+            vertices_peaks = tibble::tibble(peak = unique(c(peaks1, peaks2)), label = NA)
+            
+            if (nrow(vertices_peaks) > 0) {
+                
+                if (!is.null(vertice_color_peaks)) {
+                    
+                    .verifyArgument_verticeType(vertice_color_peaks)
+                    
+                    vertices_peaks = vertices_peaks %>%
+                        dplyr::left_join(vertice_color_peaks[[1]], by = c("peak" = vertice_color_peaks[[2]])) %>%
+                        dplyr::rename(color_raw = !!(vertice_color_peaks[[3]])) %>%
+                        dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["PEAK"]], ordered_result = TRUE)))  # Transform the colors for the vertices
+                    
+                } else {
+                    vertices_peaks = dplyr::mutate(vertices_peaks, color_raw = NA, color_bin = colors_categories.l[["PEAK"]])
+                } 
+                
+                vertices = tibble::add_row(vertices, 
+                                           id = vertices_peaks$peak, 
+                                           type = "PEAK", 
+                                           label = vertices_peaks$label, 
+                                           color_raw = vertices_peaks$color_raw,
+                                           color_bin = vertices_peaks$color_bin) 
+            }
+            
+        }
+        
+        
+        ## 3. GENES ##
+        
+        # Make the vertices unique, so that the same gene has only one vertice 
+        # vertices_genes = unique_peak_gene.con %>%
+        #   dplyr::group_by(gene.ENSEMBL) %>%
+        #   dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
+        #   dplyr::ungroup()
+        
+        vertices_genes = grn.merged %>%
+            dplyr::filter(grepl("gene$", connectionType)) %>%
+            #dplyr::rename(peak.ID = V1) %>%
+            dplyr::group_by(V2) %>%
+            dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
+            dplyr::ungroup() %>%
+            dplyr::rename(gene.ENSEMBL = V2)
+        
+        if (nrow(vertices_genes) > 0) {
+            
+            if (!is.null(vertice_color_genes)) {
+                
+                .verifyArgument_verticeType(vertice_color_genes)
+                
+                vertices_genes = vertices_genes %>%
+                    dplyr::left_join(vertice_color_genes[[1]], by = c("gene.ENSEMBL" = vertice_color_genes[[2]])) %>%
+                    dplyr::rename(color_raw = !!(vertice_color_genes[[3]])) %>%
+                    dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["GENE"]], ordered_result = TRUE)))  # Transform the colors for the vertices
+                
+            } else {
+                vertices_genes = dplyr::mutate(vertices_genes, color_raw = NA, color_bin = colors_categories.l[["GENE"]])
+            } 
+            
+            
+            vertices = tibble::add_row(vertices, 
+                                       id = vertices_genes$gene.ENSEMBL, 
+                                       type = "GENE", 
+                                       label = vertices_genes$label, 
+                                       color_raw = vertices_genes$color_raw,
+                                       color_bin = vertices_genes$color_bin) 
+            
+        }
+        
+        
+        
+        vertices = vertices %>%
+            dplyr::mutate(size = dplyr::case_when(type == "TF" ~ 6,
+                                                  type == "PEAK" ~ 3,
+                                                  TRUE ~ 4),
+                          size_transformed = NA) 
+        
+        
+        vertices_colorRanges = vertices %>% dplyr::group_by(.data$type) %>% dplyr::summarize(min = min(color_raw, na.rm = TRUE), max = max(color_raw, na.rm = TRUE))
+        
+        if (nrow(dplyr::filter(vertices_colorRanges, .data$type == "GENE")) == 0) {
+            vertices_colorRanges = tibble::add_row(vertices_colorRanges, type = "GENE", min = NA, max = NA)
+        }
+        
+        if(graph == "TF-peak-gene"){
+            text_categories.l = list(
+                "TF"   = "TF",
+                "PEAK" = "PEAK",
+                "GENE" = "GENE"
+            )
+        }else{
+            text_categories.l = list(
+                "TF"   = "TF",
+                "GENE" = "GENE"
+            )
+        }
+        
+        
+        if (!is.null(vertice_color_TFs)) {
+            subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "TF") 
+            text_categories.l[["TF"]] = c(signif(dplyr::pull(subsetCur, min),2), 
+                                          paste0("TF expression (", vertice_color_TFs[[3]], ")"),
+                                          signif(dplyr::pull(subsetCur, max),2)
+            )
+        }
+        
+        if( graph  == "TF-peak-gene"){
+            if (!is.null(vertice_color_peaks)) {
+                subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "PEAK") 
+                text_categories.l[["PEAK"]] = c(signif(dplyr::pull(subsetCur, min),2), 
+                                                paste0("Peak accessibility (", vertice_color_peaks[[3]], ")"),
+                                                signif(dplyr::pull(subsetCur, max),2)
+                )
+            }
+        }
+        
+        if (!is.null(vertice_color_genes)) {
+            subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "GENE") 
+            text_categories.l[["GENE"]] = c(signif(dplyr::pull(subsetCur, min),2), 
+                                            paste0("Gene expression (", vertice_color_genes[[3]], ")"),
+                                            signif(dplyr::pull(subsetCur, max),2)
+            )
+        }
+        
+        
+        net <- igraph::graph_from_data_frame(d=edges_final, vertices = vertices, directed = FALSE) 
+        
+        
+        # TODO: Integrate network stats: https://kateto.net/networks-r-igraph
+        # Make a separate df_to_igraph function for the entwork stats
+        
+        
+        ########### Color and Shape parameters 
+        
+        # TODO: https://stackoverflow.com/questions/48490378/order-vertices-within-layers-on-tripartite-igraph
+        # note: the layout_with_sugiyama which can convert the layout to tri/bipartite creates an order that minimizes edge overlap/crossover, makes it cleaner to visualize. do we want to enforce a custom order?
+        
+        net <- igraph::simplify(net, remove.multiple = FALSE, remove.loops = TRUE)
+        deg <- igraph::degree(net, mode="all", normalized = TRUE) # added normalized = T in case later used to determine node size. for now not rly needed
+        #V(net)$size <- deg*2
+        #igraph::V(net)$vertex_degree <-  deg*4 # the vertex_degree attribute doesn't need to be changed 
+        igraph::V(net)$label = vertices$label
+        
+        
+        
+        #assign colors to the 5 largest communities, rest is grey
+        if (colorby == "type"){
+            igraph::V(net)$vertex.color = vertices$color_bin
+        }else{
+            
+            if (is.null(GRN@graph$TF_gene$clusterGraph)){
+                GRN = calculateCommunitiesStats(GRN)
+            }
+            
+            ncommunities = length(unique(GRN@graph$TF_gene$clusterGraph$membership))
+            
+            if (ncommunities >=8){
+                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:nCommunitiesMax]),
+                                              color = rainbow(7))
+                fillercolors = data.frame(community = nCommunitiesMax:ncommunities, color = "847E89") # only color the x largest communities
+                community_colors = rbind(community_colors, fillercolors)
+                
+            }else{
+                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:ncommunities]),
+                                              color = rainbow(ncommunities))
+            }
+            
+            TF_ensembl = GRN@graph$TF_gene$table$V1[match(vertices$id, GRN@graph$TF_gene$table$V1_name)] %>% stats::na.omit() %>% as.vector()
+            gene_ensembl = GRN@graph$TF_gene$table$V2[match(vertices$id, GRN@graph$TF_gene$table$V2)] %>% stats::na.omit() %>% as.vector()
+            if(graph == "TF-peak-gene"){
+                network_ensembl = c(TF_ensembl, rep(NA, length(unique(vertices_peaks$peak))), gene_ensembl) 
+            }else{
+                network_ensembl = c(TF_ensembl, gene_ensembl) 
+            }
+            
+            
+            communities = GRN@graph$TF_gene$clusterGraph$membership[match(network_ensembl, GRN@graph$TF_gene$clusterGraph$names)]
+            igraph::V(net)$vertex.color = community_colors$color[match(communities, community_colors$community)]
+            
+        }
+        
+        igraph::V(net)$vertex.size = vertices$size
+        # https://rstudio-pubs-static.s3.amazonaws.com/337696_c6b008e0766e46bebf1401bea67f7b10.html
+        # TODO: E(net)$weight <- edges_final$weight_transformed
+        igraph::E(net)$color = edges_final$color
+        
+        #change arrow size and edge color:
+        #igraph::E(net)$arrow.size <- .1
+        igraph::E(net)$edge.color <- edges_final$color
+        # TODO: E(net)$lty = edges_final$linetype
+        # TODO: E(net)$width <- 1+E(net)$weight/12
+        #igraph::E(net)$width <- 1+igraph::E(net)$weight/12
+        igraph::E(net)$width <- igraph::E(net)$weight
+        #igraph::E(net)$weight <- edges_final$weight_transformed # too block-y for large networks. stick to givren weight.
+        
+        
+        if (layout == "sugiyama"){
+            l <- igraph::layout_with_sugiyama(net, layers = as.numeric(as.factor(igraph::V(net)$type)), hgap = 1)$layout
+            l <- cbind(l[,2], l[,1])
+        }
+        if (layout == "fr"){
+            l <- igraph::layout_with_fr(net)
+        }
+        if(layout == "star"){
+            l <- igraph::layout_as_star(net)
+        }
+        if(layout == "kk"){
+            l <- igraph::layout_with_kk(net)
+        }
+        if(layout == "lgl"){
+            l <- igraph::layout_with_lgl(net)
+        }
+        if(layout == "graphopt"){
+            l <- igraph::layout_with_graphopt(net)
+        }
+        if (layout == "mds"){
+            l <- igraph::layout_with_mds(net)
+        } 
+        if (layout == "sphere"){
+            l <- igraph::layout_on_sphere(net)
+        }
+        
+        
+        
+        # MyLO = matrix(0, nrow=vcount(net), ncol=2)
+        # 
+        # ## Horizontal position is determined by layer
+        # layer <- rep(NA, length(V(net)$name))
+        # layer[vertices$type == "TF"]   = 1
+        # layer[vertices$type == "PEAK"] = 2
+        # layer[vertices$type == "GENE"] = 3
+        # MyLO[,1] = layer
+        # 
+        # ## Vertical position is determined by sum of sorted vertex_degree
+        # for(i in 1:3) {
+        #     L  = which(layer ==i)
+        #     OL = order(V(net)$vertex_degree[L], decreasing=TRUE)
+        #     MyLO[L[OL],2] = cumsum(V(net)$vertex_degree[L][OL])
+        # }
+        # 
+        # layout = layout_with_sugiyama(net, layers=layer)
+        # plot(net,
+        #      layout=cbind(layer,layout$layout[,1]),edge.curved=0,
+        #      vertex.shape=c("square","circle","square")[layer],
+        #      vertex.frame.color = c("darkolivegreen","darkgoldenrod","orange3")[layer],
+        #      vertex.color=c("olivedrab","goldenrod1","orange1")[layer],
+        #      vertex.label.color="white",
+        #      vertex.label.font=1,
+        #      vertex.size=V(net)$vertex_degree,
+        #      vertex.label.dist=c(0,0,0)[layer],
+        #      vertex.label.degree=0)
+        
+        # 
+        # vertex.color	 Node color
+        # vertex.frame.color	 Node border color
+        # vertex.shape	 One of “none”, “circle”, “square”, “csquare”, “rectangle” “crectangle”, “vrectangle”, “pie”, “raster”, or “sphere”
+        # vertex.size	 Size of the node (default is 15)
+        # vertex.size2	 The second size of the node (e.g. for a rectangle)
+        # vertex.label	 Character vector used to label the nodes
+        # vertex.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
+        # vertex.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
+        # vertex.label.cex	 Font size (multiplication factor, device-dependent)
+        # vertex.label.dist	 Distance between the label and the vertex
+        # vertex.label.degree	 The position of the label in relation to the vertex, where 0 right, “pi” is left, “pi/2” is below, and “-pi/2” is above
+        # EDGES	 
+        # edge.color	 Edge color
+        # edge.width	 Edge width, defaults to 1
+        # edge.arrow.size	 Arrow size, defaults to 1
+        # edge.arrow.width	 Arrow width, defaults to 1
+        # edge.lty	 Line type, could be 0 or “blank”, 1 or “solid”, 2 or “dashed”, 3 or “dotted”, 4 or “dotdash”, 5 or “longdash”, 6 or “twodash”
+        # edge.label	 Character vector used to label edges
+        # edge.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
+        # edge.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
+        # edge.label.cex	 Font size for edge labels
+        # edge.curved	 Edge curvature, range 0-1 (FALSE sets it to 0, TRUE to 0.5)
+        # arrow.mode	 Vector specifying whether edges should have arrows,
+        # possible values: 0 no arrow, 1 back, 2 forward, 3 both
+        
+        #par(mar=c(5, 4, 4, 2) + 0.1)
+        
+        
+        # Calling plot.new() might be necessary here
+        # if(!plotAsPDF){
+        #     #plot.new()
+        # }
+        par(mar=c(7,0,0,0) + 0.2)
+        
+        plot(
+            net, layout=l,
+            #edge.arrow.size= 0.4, 
+            # TODO: edge.arrow.width= E(net)$weight, 
+            edge.font= 2,
+            # TODO: edge.lty = E(net)$lty,
+            vertex.size= igraph::V(net)$vertex.size,
+            vertex.color=igraph::V(net)$vertex.color,
+            edge.color = igraph::E(net)$color,
+            edge.width = igraph::E(net)$weight,
+            vertex.label=igraph::V(net)$label,
+            vertex.label.font=1, 
+            vertex.label.cex = vertexLabel_cex, 
+            vertex.label.family="Helvetica", 
+            vertex.label.color = "black",
+            vertex.label.degree= -pi/2,
+            vertex.label=igraph::V(net)$label,
+            vertex.label.dist= vertexLabel_dist,
+            vertex.shape = shape_vertex[igraph::V(net)$type],
+            main = title
+        )
+        
+        
+        if (colorby == "type"){
+            
+            text_final    = c(c(paste0(sapply(text_categories.l, '[[', 1), " (sel. min.)"), "negative (fixed color)"),   
+                              c(sapply(text_categories.l, '[[', 2), "Correlation between vertices"),    
+                              c(paste0(sapply(text_categories.l, '[[', 3), " (sel. max.)"), "positive (fixed color)")#, 
+                              #c("Negative correlation", "Positive correlation", "bla")
+            )
+            symbols_final = c(c(sapply(symbols_categories.l, '[[', 1), 20),
+                              c(sapply(symbols_categories.l, '[[', 2), NA), 
+                              c(sapply(symbols_categories.l, '[[', 3), 20)#,
+                              #c(20,20,20)
+            )
+            if (graph == "TF-peak-gene"){
+                colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
+                                  c(rep(NA,3), NA), 
+                                  c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
+                                  #c("red","blue","green")
+                )
+            }else{
+                colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
+                                  c(rep(NA,2), NA), 
+                                  c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
+                                  #c("red","blue","green")
+                )
+            }
+            
+            legend(x= "bottom", text_final, 
+                   pch=symbols_final,
+                   col=colors_final, 
+                   pt.bg=colors_final, 
+                   pt.cex=1, cex=.8, bty="n", xpd = TRUE, ncol=3, xjust = 0.5, yjust = 0.5, 
+                   inset=c(0,-0.1)
+            )  
+            
+        }else{
+            
+            text_final = community_colors$community
+            symbols_final = rep (21, length(text_final))
+            colors_final = community_colors$color
+            
+            legend(x = "bottom", title = "community",
+                   legend = text_final,
+                   pch = symbols_final,
+                   #fill = colors_final,
+                   #col = colors_final,
+                   pt.bg=colors_final,
+                   pt.cex=1, cex=.8, bty="n", xpd = TRUE,
+                   ncol= length(text_final), inset=c(0,-0.1)) #divide by something?
+            legend(x = "bottomright", title = "Node Type",
+                   legend = c("TF", ifelse(graph =="TF-gene",  "gene", "peak/gene")),
+                   pch = c(22,21),
+                   pt.cex=1, cex=.8, bty="n",  xpd = TRUE,
+                   ncol = 1, inset=c(0,-0.1))
+            
+        }
+        
+        # https://stackoverflow.com/questions/24933703/adjusting-base-graphics-legend-label-width
+        #labels = c("6.4", "blaaaaaaaaaaaaaaaaaaaaaaaa", "6.4")
+        
+        #par(mar=c(5, 2, 2, 2) + 0.1)
+        #bottom, left, top, and right.
+        
+    }
+    
+    if (plotAsPDF) {
+        grDevices::dev.off()
     }
     
     .printExecutionTime(start)
-    return(GRN)
-  }
-  
-  if (nrow(grn.merged) == 0) {
     
-    futile.logger::flog.warn(paste0("No rows left in the GRN. Creating empty plot."))
-    
-    plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
-    message = paste0(title, "\n\nThe GRN has no edges that pass the filter criteria.")
-    text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
-    
-  } else {
-    
-    # Fix with length
-    
-    if (graph == "TF-peak-gene"){
-      colors_categories.l = list(
-        "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
-        "PEAK" = RColorBrewer::brewer.pal(3,"Set1")[2], 
-        "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
-      
-      symbols_categories.l = list(
-        "TF"   = 15, # square
-        "PEAK" = 21, # circle
-        "GENE" = 21 # circle
-      )
-    }else{
-      colors_categories.l = list(
-        "TF"   = RColorBrewer::brewer.pal(3,"Set1")[1], 
-        "GENE" = RColorBrewer::brewer.pal(3,"Set1")[3])
-      
-      symbols_categories.l = list(
-        "TF"   = 15, # square
-        "GENE" = 21 # circle
-      )
-    }
-    
-    
-    nBins_orig = 100
-    nBins_discard = 25
-    nBins_real = nBins_orig - nBins_discard
-    
-    #if (!is.null(vertice_color_TFs)) {
-    color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_TFs[["h"]], c = vertice_color_TFs[["c"]], l = vertice_color_TFs[["l"]]))[(nBins_discard + 1):nBins_orig] # red
-    colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
-    colors_categories.l[["TF"]]  = color_gradient 
-    symbols_categories.l[["TF"]] = c(15,NA,15)
-    vertice_color_TFs   = append(list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log"), vertice_color_TFs)
-    #}
-    
-    if(graph == "TF-peak-gene"){
-      #if (!is.null(vertice_color_peaks)) {
-      color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_peaks[["h"]], c = vertice_color_peaks[["c"]], l = vertice_color_peaks[["l"]]))[(nBins_discard + 1):nBins_orig]  # green
-      colors_categories.l[["PEAK"]] = c(color_gradient[1], color_gradient[nBins_real])
-      colors_categories.l[["PEAK"]] = color_gradient
-      symbols_categories.l[["PEAK"]] = c(21,NA,21)
-      vertice_color_peaks = append(list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log"), vertice_color_peaks)
-      # }
-    }
-    
-    #if (!is.null(vertice_color_genes)) {
-    color_gradient = rev(colorspace::sequential_hcl(nBins_orig, h = vertice_color_genes[["h"]], c = vertice_color_genes[["c"]], l = vertice_color_genes[["l"]]))[(nBins_discard + 1):nBins_orig] # blue
-    colors_categories.l[["GENE"]] = c(color_gradient[1], color_gradient[nBins_real]) 
-    colors_categories.l[["GENE"]] = color_gradient
-    symbols_categories.l[["GENE"]] = c(21,NA,21)
-    vertice_color_genes = append(list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"), vertice_color_genes)
-    #}
-    
-    ## VERTICES ##
-    
-    shape_vertex = c("square","circle", "circle")
-    names(shape_vertex) = names(colors_categories.l)
-    
-    
-    vertices = tibble::tribble(~id,
-                               ~type,
-                               ~label,
-                               ~color_raw,
-                               ~color_bin,
-                               ~color_final)
-    
-    ## 1. TFs ##
-    
-    # Make the vertices unique, so that the same peak has only one vertice 
-    # vertices_TFs = unique_TF_peak.con %>%
-    #   dplyr::group_by(TF.name) %>%
-    #   dplyr::summarize(label = unique(TF.name)) %>%
-    #   dplyr::ungroup()
-    
-    vertices_TFs = grn.merged %>%
-      dplyr::filter(grepl("^tf", connectionType)) %>%
-      #dplyr::rename(TF.name = V1) %>%
-      dplyr::group_by(TF.name) %>%
-      dplyr::summarize(label = unique(TF.name)) %>%
-      dplyr::ungroup()
-    
-    if (nrow(vertices_TFs) > 0) {
-      
-      if (!is.null(vertice_color_TFs)) {
-        
-        .verifyArgument_verticeType(vertice_color_TFs)
-        
-        vertices_TFs = vertices_TFs %>%
-          dplyr::left_join(vertice_color_TFs[[1]], by = c("TF.name" = vertice_color_TFs[[2]])) %>%
-          dplyr::rename(color_raw = !!(vertice_color_TFs[[3]])) %>%
-          dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["TF"]], ordered_result = TRUE)))  # Transform the colors for the vertices
-        
-        
-      } else {
-        vertices_TFs = dplyr::mutate(vertices_TFs, color_raw = NA, color_bin = colors_categories.l[["TF"]])
-      } 
-      
-      vertices = tibble::add_row(vertices, 
-                                 id = vertices_TFs$TF.name, 
-                                 type = "TF", 
-                                 label = as.vector(vertices_TFs$label), 
-                                 color_raw = vertices_TFs$color_raw,
-                                 color_bin = vertices_TFs$color_bin) 
-    }
-    
-    
-    ## 2. PEAKS ##
-    
-    if (graph == "TF-peak-gene"){
-      
-      # Make the vertices unique, so that the same peak has only one vertice 
-      peaks1 = grn.merged %>% dplyr::filter(grepl("peak$", connectionType)) %>% dplyr::pull(V2)
-      peaks2 = grn.merged %>% dplyr::filter(grepl("^peak", connectionType)) %>% dplyr::pull(V1)
-      #vertices_peaks = tibble::tibble(peak = unique(c(unique_peak_gene.con$peak.ID, unique_TF_peak.con$peak.ID)), label = NA)
-      vertices_peaks = tibble::tibble(peak = unique(c(peaks1, peaks2)), label = NA)
-      
-      if (nrow(vertices_peaks) > 0) {
-        
-        if (!is.null(vertice_color_peaks)) {
-          
-          .verifyArgument_verticeType(vertice_color_peaks)
-          
-          vertices_peaks = vertices_peaks %>%
-            dplyr::left_join(vertice_color_peaks[[1]], by = c("peak" = vertice_color_peaks[[2]])) %>%
-            dplyr::rename(color_raw = !!(vertice_color_peaks[[3]])) %>%
-            dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["PEAK"]], ordered_result = TRUE)))  # Transform the colors for the vertices
-          
-        } else {
-          vertices_peaks = dplyr::mutate(vertices_peaks, color_raw = NA, color_bin = colors_categories.l[["PEAK"]])
-        } 
-        
-        vertices = tibble::add_row(vertices, 
-                                   id = vertices_peaks$peak, 
-                                   type = "PEAK", 
-                                   label = vertices_peaks$label, 
-                                   color_raw = vertices_peaks$color_raw,
-                                   color_bin = vertices_peaks$color_bin) 
-      }
-      
-    }
-    
-    
-    ## 3. GENES ##
-    
-    # Make the vertices unique, so that the same gene has only one vertice 
-    # vertices_genes = unique_peak_gene.con %>%
-    #   dplyr::group_by(gene.ENSEMBL) %>%
-    #   dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
-    #   dplyr::ungroup()
-    
-    vertices_genes = grn.merged %>%
-      dplyr::filter(grepl("gene$", connectionType)) %>%
-      #dplyr::rename(peak.ID = V1) %>%
-      dplyr::group_by(V2) %>%
-      dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
-      dplyr::ungroup() %>%
-      dplyr::rename(gene.ENSEMBL = V2)
-    
-    if (nrow(vertices_genes) > 0) {
-      
-      if (!is.null(vertice_color_genes)) {
-        
-        .verifyArgument_verticeType(vertice_color_genes)
-        
-        vertices_genes = vertices_genes %>%
-          dplyr::left_join(vertice_color_genes[[1]], by = c("gene.ENSEMBL" = vertice_color_genes[[2]])) %>%
-          dplyr::rename(color_raw = !!(vertice_color_genes[[3]])) %>%
-          dplyr::mutate(color_bin = as.character(cut(color_raw, nBins_real, labels = colors_categories.l[["GENE"]], ordered_result = TRUE)))  # Transform the colors for the vertices
-        
-      } else {
-        vertices_genes = dplyr::mutate(vertices_genes, color_raw = NA, color_bin = colors_categories.l[["GENE"]])
-      } 
-      
-      
-      vertices = tibble::add_row(vertices, 
-                                 id = vertices_genes$gene.ENSEMBL, 
-                                 type = "GENE", 
-                                 label = vertices_genes$label, 
-                                 color_raw = vertices_genes$color_raw,
-                                 color_bin = vertices_genes$color_bin) 
-      
-    }
-    
-    
-    
-    vertices = vertices %>%
-      dplyr::mutate(size = dplyr::case_when(type == "TF" ~ 6,
-                                            type == "PEAK" ~ 3,
-                                            TRUE ~ 4),
-                    size_transformed = NA) 
-    
-    
-    vertices_colorRanges = vertices %>% dplyr::group_by(.data$type) %>% dplyr::summarize(min = min(color_raw, na.rm = TRUE), max = max(color_raw, na.rm = TRUE))
-    
-    if (nrow(dplyr::filter(vertices_colorRanges, .data$type == "GENE")) == 0) {
-      vertices_colorRanges = tibble::add_row(vertices_colorRanges, type = "GENE", min = NA, max = NA)
-    }
-    
-    if(graph == "TF-peak-gene"){
-      text_categories.l = list(
-        "TF"   = "TF",
-        "PEAK" = "PEAK",
-        "GENE" = "GENE"
-      )
-    }else{
-      text_categories.l = list(
-        "TF"   = "TF",
-        "GENE" = "GENE"
-      )
-    }
-    
-    
-    if (!is.null(vertice_color_TFs)) {
-      subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "TF") 
-      text_categories.l[["TF"]] = c(signif(dplyr::pull(subsetCur, min),2), 
-                                    paste0("TF expression (", vertice_color_TFs[[3]], ")"),
-                                    signif(dplyr::pull(subsetCur, max),2)
-      )
-    }
-    
-    if( graph  == "TF-peak-gene"){
-      if (!is.null(vertice_color_peaks)) {
-        subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "PEAK") 
-        text_categories.l[["PEAK"]] = c(signif(dplyr::pull(subsetCur, min),2), 
-                                        paste0("Peak accessibility (", vertice_color_peaks[[3]], ")"),
-                                        signif(dplyr::pull(subsetCur, max),2)
-        )
-      }
-    }
-    
-    if (!is.null(vertice_color_genes)) {
-      subsetCur = dplyr::filter(vertices_colorRanges, .data$type == "GENE") 
-      text_categories.l[["GENE"]] = c(signif(dplyr::pull(subsetCur, min),2), 
-                                      paste0("Gene expression (", vertice_color_genes[[3]], ")"),
-                                      signif(dplyr::pull(subsetCur, max),2)
-      )
-    }
-    
-    
-    net <- igraph::graph_from_data_frame(d=edges_final, vertices = vertices, directed = FALSE) 
-    
-    
-    # TODO: Integrate network stats: https://kateto.net/networks-r-igraph
-    # Make a separate df_to_igraph function for the entwork stats
-    
-    
-    ########### Color and Shape parameters 
-    
-    # TODO: https://stackoverflow.com/questions/48490378/order-vertices-within-layers-on-tripartite-igraph
-    # note: the layout_with_sugiyama which can convert the layout to tri/bipartite creates an order that minimizes edge overlap/crossover, makes it cleaner to visualize. do we want to enforce a custom order?
-    
-    net <- igraph::simplify(net, remove.multiple = FALSE, remove.loops = TRUE)
-    deg <- igraph::degree(net, mode="all", normalized = TRUE) # added normalized = T in case later used to determine node size. for now not rly needed
-    #V(net)$size <- deg*2
-    #igraph::V(net)$vertex_degree <-  deg*4 # the vertex_degree attribute doesn't need to be changed 
-    igraph::V(net)$label = vertices$label
-    
-    
-    
-    #assign colors to the 5 largest communities, rest is grey
-    if (colorby == "type"){
-      igraph::V(net)$vertex.color = vertices$color_bin
-    }else{
-      
-      if (is.null(GRN@graph$TF_gene$clusterGraph)){
-        GRN = calculateCommunitiesStats(GRN)
-      }
-      
-      ncommunities = length(unique(GRN@graph$TF_gene$clusterGraph$membership))
-      
-      if (ncommunities >=8){
-        community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:nCommunitiesMax]),
-                                      color = rainbow(7))
-        fillercolors = data.frame(community = nCommunitiesMax:ncommunities, color = "847E89") # only color the x largest communities
-        community_colors = rbind(community_colors, fillercolors)
-        
-      }else{
-        community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[1:ncommunities]),
-                                      color = rainbow(ncommunities))
-      }
-      
-      TF_ensembl = GRN@graph$TF_gene$table$V1[match(vertices$id, GRN@graph$TF_gene$table$V1_name)] %>% stats::na.omit() %>% as.vector()
-      gene_ensembl = GRN@graph$TF_gene$table$V2[match(vertices$id, GRN@graph$TF_gene$table$V2)] %>% stats::na.omit() %>% as.vector()
-      if(graph == "TF-peak-gene"){
-        network_ensembl = c(TF_ensembl, rep(NA, length(unique(vertices_peaks$peak))), gene_ensembl) 
-      }else{
-        network_ensembl = c(TF_ensembl, gene_ensembl) 
-      }
-      
-      
-      communities = GRN@graph$TF_gene$clusterGraph$membership[match(network_ensembl, GRN@graph$TF_gene$clusterGraph$names)]
-      igraph::V(net)$vertex.color = community_colors$color[match(communities, community_colors$community)]
-      
-    }
-    
-    igraph::V(net)$vertex.size = vertices$size
-    # https://rstudio-pubs-static.s3.amazonaws.com/337696_c6b008e0766e46bebf1401bea67f7b10.html
-    # TODO: E(net)$weight <- edges_final$weight_transformed
-    igraph::E(net)$color = edges_final$color
-    
-    #change arrow size and edge color:
-    #igraph::E(net)$arrow.size <- .1
-    igraph::E(net)$edge.color <- edges_final$color
-    # TODO: E(net)$lty = edges_final$linetype
-    # TODO: E(net)$width <- 1+E(net)$weight/12
-    #igraph::E(net)$width <- 1+igraph::E(net)$weight/12
-    igraph::E(net)$width <- igraph::E(net)$weight
-    #igraph::E(net)$weight <- edges_final$weight_transformed # too block-y for large networks. stick to givren weight.
-    
-    if (layered){
-      l <- igraph::layout_with_sugiyama(net, layers = as.numeric(as.factor(igraph::V(net)$type)), hgap = 1)$layout
-      l <- cbind(l[,2], l[,1])
-    }else{
-      l <- igraph::layout_with_fr(net)
-    }
-    
-    #test.layout <- layout_(net,with_dh(weight.edge.lengths = edge_density(net)/1000))
-    
-    # MyLO = matrix(0, nrow=vcount(net), ncol=2)
-    # 
-    # ## Horizontal position is determined by layer
-    # layer <- rep(NA, length(V(net)$name))
-    # layer[vertices$type == "TF"]   = 1
-    # layer[vertices$type == "PEAK"] = 2
-    # layer[vertices$type == "GENE"] = 3
-    # MyLO[,1] = layer
-    # 
-    # ## Vertical position is determined by sum of sorted vertex_degree
-    # for(i in 1:3) {
-    #     L  = which(layer ==i)
-    #     OL = order(V(net)$vertex_degree[L], decreasing=TRUE)
-    #     MyLO[L[OL],2] = cumsum(V(net)$vertex_degree[L][OL])
-    # }
-    # 
-    # layout = layout_with_sugiyama(net, layers=layer)
-    # plot(net,
-    #      layout=cbind(layer,layout$layout[,1]),edge.curved=0,
-    #      vertex.shape=c("square","circle","square")[layer],
-    #      vertex.frame.color = c("darkolivegreen","darkgoldenrod","orange3")[layer],
-    #      vertex.color=c("olivedrab","goldenrod1","orange1")[layer],
-    #      vertex.label.color="white",
-    #      vertex.label.font=1,
-    #      vertex.size=V(net)$vertex_degree,
-    #      vertex.label.dist=c(0,0,0)[layer],
-    #      vertex.label.degree=0)
-    
-    # 
-    # vertex.color	 Node color
-    # vertex.frame.color	 Node border color
-    # vertex.shape	 One of “none”, “circle”, “square”, “csquare”, “rectangle” “crectangle”, “vrectangle”, “pie”, “raster”, or “sphere”
-    # vertex.size	 Size of the node (default is 15)
-    # vertex.size2	 The second size of the node (e.g. for a rectangle)
-    # vertex.label	 Character vector used to label the nodes
-    # vertex.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
-    # vertex.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
-    # vertex.label.cex	 Font size (multiplication factor, device-dependent)
-    # vertex.label.dist	 Distance between the label and the vertex
-    # vertex.label.degree	 The position of the label in relation to the vertex, where 0 right, “pi” is left, “pi/2” is below, and “-pi/2” is above
-    # EDGES	 
-    # edge.color	 Edge color
-    # edge.width	 Edge width, defaults to 1
-    # edge.arrow.size	 Arrow size, defaults to 1
-    # edge.arrow.width	 Arrow width, defaults to 1
-    # edge.lty	 Line type, could be 0 or “blank”, 1 or “solid”, 2 or “dashed”, 3 or “dotted”, 4 or “dotdash”, 5 or “longdash”, 6 or “twodash”
-    # edge.label	 Character vector used to label edges
-    # edge.label.family	 Font family of the label (e.g.“Times”, “Helvetica”)
-    # edge.label.font	 Font: 1 plain, 2 bold, 3, italic, 4 bold italic, 5 symbol
-    # edge.label.cex	 Font size for edge labels
-    # edge.curved	 Edge curvature, range 0-1 (FALSE sets it to 0, TRUE to 0.5)
-    # arrow.mode	 Vector specifying whether edges should have arrows,
-    # possible values: 0 no arrow, 1 back, 2 forward, 3 both
-    
-    #par(mar=c(5, 4, 4, 2) + 0.1)
-    
-    
-    # Calling plot.new() might be necessary here
-    # if(!plotAsPDF){
-    #     #plot.new()
-    # }
-    par(mar=c(7,0,0,0) + 0.2)
-    
-    plot(
-      net, layout=l,
-      #edge.arrow.size= 0.4, 
-      # TODO: edge.arrow.width= E(net)$weight, 
-      edge.font= 2,
-      # TODO: edge.lty = E(net)$lty,
-      vertex.size= igraph::V(net)$vertex.size,
-      vertex.color=igraph::V(net)$vertex.color,
-      edge.color = igraph::E(net)$color,
-      edge.width = igraph::E(net)$weight,
-      vertex.label=igraph::V(net)$label,
-      vertex.label.font=1, 
-      vertex.label.cex = vertexLabel_cex, 
-      vertex.label.family="Helvetica", 
-      vertex.label.color = "black",
-      vertex.label.degree= -pi/2,
-      vertex.label=igraph::V(net)$label,
-      vertex.label.dist= vertexLabel_dist,
-      vertex.shape = shape_vertex[igraph::V(net)$type],
-      main = title
-    )
-    
-    
-    if (colorby == "type"){
-      
-      text_final    = c(c(paste0(sapply(text_categories.l, '[[', 1), " (sel. min.)"), "negative (fixed color)"),   
-                        c(sapply(text_categories.l, '[[', 2), "Correlation between vertices"),    
-                        c(paste0(sapply(text_categories.l, '[[', 3), " (sel. max.)"), "positive (fixed color)")#, 
-                        #c("Negative correlation", "Positive correlation", "bla")
-      )
-      symbols_final = c(c(sapply(symbols_categories.l, '[[', 1), 20),
-                        c(sapply(symbols_categories.l, '[[', 2), NA), 
-                        c(sapply(symbols_categories.l, '[[', 3), 20)#,
-                        #c(20,20,20)
-      )
-      if (graph == "TF-peak-gene"){
-        colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
-                          c(rep(NA,3), NA), 
-                          c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
-                          #c("red","blue","green")
-        )
-      }else{
-        colors_final  = c(c(sapply(colors_categories.l , '[[', 1), "blue"), 
-                          c(rep(NA,2), NA), 
-                          c(sapply(colors_categories.l , '[[', nBins_real), "grey")#,
-                          #c("red","blue","green")
-        )
-      }
-      
-      legend(x= "bottom", text_final, 
-             pch=symbols_final,
-             col=colors_final, 
-             pt.bg=colors_final, 
-             pt.cex=1, cex=.8, bty="n", xpd = TRUE, ncol=3, xjust = 0.5, yjust = 0.5, 
-             inset=c(0,-0.1)
-      )  
-      
-    }else{
-      
-      text_final = community_colors$community
-      symbols_final = rep (21, length(text_final))
-      colors_final = community_colors$color
-      
-      legend(x = "bottom", title = "community",
-             legend = text_final,
-             pch = symbols_final,
-             #fill = colors_final,
-             #col = colors_final,
-             pt.bg=colors_final,
-             pt.cex=1, cex=.8, bty="n", xpd = TRUE,
-             ncol= length(text_final), inset=c(0,-0.1)) #divide by something?
-      legend(x = "bottomright", title = "Node Type",
-             legend = c("TF", ifelse(graph =="TF-gene",  "gene", "peak/gene")),
-             pch = c(22,21),
-             pt.cex=1, cex=.8, bty="n",  xpd = TRUE,
-             ncol = 1, inset=c(0,-0.1))
-      
-    }
-    
-    # https://stackoverflow.com/questions/24933703/adjusting-base-graphics-legend-label-width
-    #labels = c("6.4", "blaaaaaaaaaaaaaaaaaaaaaaaa", "6.4")
-    
-    #par(mar=c(5, 2, 2, 2) + 0.1)
-    #bottom, left, top, and right.
-    
-  }
-  
-  if (plotAsPDF) {
-    grDevices::dev.off()
-  }
-  
-  .printExecutionTime(start)
-  
-  GRN
+    GRN
 }
 
 

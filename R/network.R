@@ -197,6 +197,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 #' @inheritParams plotCommunitiesStats
 #' @inheritParams plotCommunitiesEnrichment
 #' @inheritParams calculateCommunitiesStats
+#' @template maxWidth_nchar_plot
 #' @export
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
@@ -209,6 +210,7 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
                                       clustering = "louvain",
                                       communities = seq_len(10), display = "byRank",
                                       topnGenes = 20, topnTFs = 20,
+                                      maxWidth_nchar_plot = 50,
                                       display_pAdj = FALSE,
                                       outputFolder = NULL,
                                       forceRerun = FALSE) {
@@ -222,7 +224,8 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   GRN = calculateGeneralEnrichment(GRN, ontology = ontology, algorithm = algorithm, statistic = statistic, 
                                    background = background, forceRerun = forceRerun)
-  GRN = plotGeneralEnrichment(GRN, outputFolder = outputFolder, display_pAdj = display_pAdj, forceRerun = forceRerun) 
+  GRN = plotGeneralEnrichment(GRN, outputFolder = outputFolder, display_pAdj = display_pAdj, 
+                              maxWidth_nchar_plot = maxWidth_nchar_plot, forceRerun = forceRerun) 
   
   
   GRN = calculateCommunitiesStats(GRN, clustering = clustering, forceRerun = forceRerun)
@@ -234,13 +237,15 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
                                        background = background, forceRerun = forceRerun)
   
   GRN = plotCommunitiesEnrichment(GRN, outputFolder = outputFolder, display = display, communities = communities, 
-                                  display_pAdj = display_pAdj, forceRerun = forceRerun)
+                                  display_pAdj = display_pAdj,  maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                  forceRerun = forceRerun)
   
   GRN = calculateTFEnrichment(GRN, ontology = ontology, algorithm = algorithm, statistic = statistic,
                               background = background, pAdjustMethod = "BH",
                               forceRerun = forceRerun)
   
-  GRN = plotTFEnrichment(GRN, display_pAdj = display_pAdj, outputFolder = outputFolder, forceRerun = forceRerun)
+  GRN = plotTFEnrichment(GRN, display_pAdj = display_pAdj, outputFolder = outputFolder, maxWidth_nchar_plot = maxWidth_nchar_plot,
+                         forceRerun = forceRerun)
   
   
   .printExecutionTime(start)

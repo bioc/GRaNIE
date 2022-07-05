@@ -2218,6 +2218,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       
     } # end for each TF
     
+    futile.logger::flog.info(paste0("Stored ", nrow(tblFilt.df), " connections with an FDR <= ", maxFDRToStore))
+    
+    
     .printExecutionTime(start2, prefix = "  ")
     
   } # end for each connectionType

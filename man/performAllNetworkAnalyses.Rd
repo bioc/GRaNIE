@@ -15,6 +15,7 @@ performAllNetworkAnalyses(
   display = "byRank",
   topnGenes = 20,
   topnTFs = 20,
+  maxWidth_nchar_plot = 50,
   display_pAdj = FALSE,
   outputFolder = NULL,
   forceRerun = FALSE
@@ -40,6 +41,8 @@ performAllNetworkAnalyses(
 \item{topnGenes}{Integer. Default 20. Number of genes to plot, sorted by their rank or label.}
 
 \item{topnTFs}{Integer. Default 20. Number of TFs to plot, sorted by their rank or label.}
+
+\item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 
 \item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
 
