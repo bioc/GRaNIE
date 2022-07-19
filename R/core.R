@@ -618,7 +618,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 #' @param maxNormalizedMean_peaks Numeric or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
 #' @param minNormalizedMeanRNA Numeric or \code{NULL}. Default 5. Minimum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
 #' @param maxNormalizedMeanRNA Numeric or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
-#' @param chrToKeep_peaks Character vector. Default \code{c(paste0("chr", 1:22), "chrX", "chrY")}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example.
+#' @param chrToKeep_peaks Character vector or \code{NULL}. Default \code{c(paste0("chr", 1:22), "chrX", "chrY")}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example.
 #' @param minSize_peaks Integer or \code{NULL}. Default \code{NULL}. Minimum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
 #' @param maxSize_peaks Integer or \code{NULL}. Default 10000. Maximum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
 #' @param minCV_peaks Numeric or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
@@ -643,11 +643,11 @@ filterData <- function (GRN,
   GRN = .addFunctionLogToObject(GRN) 
   
   checkmate::assertClass(GRN, "GRN")
-  checkmate::assertNumber(minNormalizedMean_peaks, lower = 0)
-  checkmate::assertNumber(minNormalizedMeanRNA, lower = 0)
+  checkmate::assertNumber(minNormalizedMean_peaks, lower = 0, null.ok = TRUE)
+  checkmate::assertNumber(minNormalizedMeanRNA, lower = 0, null.ok = TRUE)
   checkmate::assertNumber(maxNormalizedMean_peaks, lower = minNormalizedMean_peaks , null.ok = TRUE)
   checkmate::assertNumber(maxNormalizedMeanRNA, lower = minNormalizedMeanRNA, null.ok = TRUE)
-  checkmate::assertCharacter(chrToKeep_peaks, min.len = 1, any.missing = FALSE)
+  checkmate::assertCharacter(chrToKeep_peaks, min.len = 1, any.missing = FALSE, null.ok = TRUE)
   checkmate::assertIntegerish(minSize_peaks, lower = 1, null.ok = TRUE)
   checkmate::assertIntegerish(maxSize_peaks, lower = dplyr::if_else(is.null(minSize_peaks), 1, minSize_peaks), null.ok = TRUE)
   checkmate::assertNumber(minCV_peaks, lower = 0, null.ok = TRUE)
@@ -729,7 +729,13 @@ filterData <- function (GRN,
     minSize_peaks = 1
   }
   
-  futile.logger::flog.info(paste0("Filter and sort peaks and remain only those on the following chromosomes: ", paste0(chrToKeep, collapse = ",")))
+  if (is.null(chrToKeep)) {
+    chrToKeep = GRN@data$peaks$consensusPeaks %>% dplyr::pull(chr) %>% unique()
+  } else {
+    futile.logger::flog.info(paste0("Filter and sort peaks and remain only those on the following chromosomes: ", paste0(chrToKeep, collapse = ",")))
+  }
+  
+
   futile.logger::flog.info(paste0("Filter and sort peaks by size and remain only those smaller than : ", maxSize_peaks))
   futile.logger::flog.info(paste0(" Number of peaks before filtering: ", nrow(GRN@data$peaks$consensusPeaks)))
   ids = strsplit(GRN@data$peaks$consensusPeaks %>% dplyr::pull(!!(idColumn)), split = ":", fixed = TRUE)
@@ -798,7 +804,9 @@ filterData <- function (GRN,
   
   
   if (is.null(minMean)) {
-    minMean = 0
+    
+    # As data can be pre-normalized, set the minimum to a very small value so the filter is effectively off
+    minMean = -9e+99
   }
   
   if (is.null(maxMean)) {
@@ -838,18 +846,22 @@ filterData <- function (GRN,
     futile.logger::flog.info(paste0("  Filter genes by CV: Min = ", minCV, ", Max = ", maxCV))
   }
   
+  messageMean = paste0("  Filter genes by mean:")
   
   if (is.null(minMean)) {
-    minMean = 0
+    minMean = -9e+99
+  } else {
+    messageMean = paste0(messageMean, " Min = ", minMean)
   }
   
-  
+
   if (is.null(maxMean)) {
-    futile.logger::flog.info(paste0("  Filter genes by mean: Min = ", minMean))
     maxMean = 9e+99
   } else {
-    futile.logger::flog.info(paste0("  Filter genes by mean: Min = ", minMean, ", Max = ", maxMean))  
+    messageMean = paste0(messageMean, " Max = ", maxMean)
   }   
+  
+  futile.logger::flog.info(messageMean)
   
   
   genesFiltered = dplyr::filter(GRN@annotation$genes, 
