@@ -10,7 +10,7 @@ filterData(
   maxNormalizedMean_peaks = NULL,
   minNormalizedMeanRNA = 1,
   maxNormalizedMeanRNA = NULL,
-  chrToKeep_peaks = c(paste0("chr", seq_len(22)), "chrX", "chrY"),
+  chrToKeep_peaks = NULL,
   minSize_peaks = NULL,
   maxSize_peaks = 10000,
   minCV_peaks = NULL,
@@ -31,7 +31,7 @@ filterData(
 
 \item{maxNormalizedMeanRNA}{Numeric or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.}
 
-\item{chrToKeep_peaks}{Character vector. Default \code{c(paste0("chr", 1:22), "chrX", "chrY")}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example.}
+\item{chrToKeep_peaks}{Character vector or \code{NULL}. Default \code{NULL}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example (e.g, \code{c(paste0("chr", 1:22), "chrX", "chrY")})}
 
 \item{minSize_peaks}{Integer or \code{NULL}. Default \code{NULL}. Minimum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.}
 

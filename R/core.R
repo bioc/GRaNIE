@@ -618,7 +618,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 #' @param maxNormalizedMean_peaks Numeric or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
 #' @param minNormalizedMeanRNA Numeric or \code{NULL}. Default 5. Minimum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
 #' @param maxNormalizedMeanRNA Numeric or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
-#' @param chrToKeep_peaks Character vector or \code{NULL}. Default \code{c(paste0("chr", 1:22), "chrX", "chrY")}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example.
+#' @param chrToKeep_peaks Character vector or \code{NULL}. Default \code{NULL}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example (e.g, \code{c(paste0("chr", 1:22), "chrX", "chrY")})
 #' @param minSize_peaks Integer or \code{NULL}. Default \code{NULL}. Minimum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
 #' @param maxSize_peaks Integer or \code{NULL}. Default 10000. Maximum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
 #' @param minCV_peaks Numeric or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
@@ -635,7 +635,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 filterData <- function (GRN, 
                         minNormalizedMean_peaks = 5, maxNormalizedMean_peaks = NULL, 
                         minNormalizedMeanRNA = 1,  maxNormalizedMeanRNA = NULL,
-                        chrToKeep_peaks = c(paste0("chr", seq_len(22)), "chrX", "chrY"),
+                        chrToKeep_peaks = NULL,
                         minSize_peaks = NULL, maxSize_peaks = 10000,
                         minCV_peaks = NULL, maxCV_peaks = NULL,
                         minCV_genes = NULL, maxCV_genes = NULL,
@@ -730,7 +730,7 @@ filterData <- function (GRN,
   }
   
   if (is.null(chrToKeep)) {
-    chrToKeep = GRN@data$peaks$consensusPeaks %>% dplyr::pull(chr) %>% unique()
+    chrToKeep = GRN@data$peaks$consensusPeaks %>% dplyr::pull(.data$chr) %>% unique()
   } else {
     futile.logger::flog.info(paste0("Filter and sort peaks and remain only those on the following chromosomes: ", paste0(chrToKeep, collapse = ",")))
   }
