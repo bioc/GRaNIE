@@ -33,9 +33,11 @@ test_that("addConnections_TF_peak", {
 
 test_that("AR wrapper", {
     
-    options(timeout = 500)
+    # We need to increase the timeout, as sometimes, loading this from the internet (here: from our Zaugg download folder) is slow
+    options(timeout = 1000)
     GRN = loadExampleObject()
 
+    # When we expect an error, we should always try to capture the error by something that is supposed to be captured by the code with a specific error message
     expect_error(AR_classification_wrapper(GRN, significanceThreshold_Wilcoxon = 1.5, outputFolder = "."),  regexp = "Assertion on")
     
     # Run with TF activity and expression
