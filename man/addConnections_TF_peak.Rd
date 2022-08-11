@@ -13,6 +13,7 @@ addConnections_TF_peak(
   connectionTypes = c("expression"),
   removeNegativeCorrelation = c(FALSE),
   maxFDRToStore = 0.3,
+  addForPermuted = TRUE,
   useGCCorrection = FALSE,
   percBackground_size = 75,
   percBackground_resample = TRUE,
@@ -35,6 +36,8 @@ addConnections_TF_peak(
 \item{removeNegativeCorrelation}{Vector of \code{TRUE} or \code{FALSE}. Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is \code{FALSE}, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.}
 
 \item{maxFDRToStore}{Numeric. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.}
+
+\item{addForPermuted}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for permuted data. Leave at \code{TRUE} unless you know what you are doing.}
 
 \item{useGCCorrection}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?}
 

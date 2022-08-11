@@ -1761,6 +1761,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @param connectionTypes Character vector. Default \code{expression}. Vector of connection types to include for the TF-peak connections. If an additional connection type is specified here, it has to be available already within the object (EXPERIMENTAL). See the function \code{\link{addData_TFActivity}} for details.
 #' @param removeNegativeCorrelation  Vector of \code{TRUE} or \code{FALSE}. Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is \code{FALSE}, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.  
 #' @param maxFDRToStore Numeric. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.
+#' @param addForPermuted \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for permuted data. Leave at \code{TRUE} unless you know what you are doing.
 #' @param useGCCorrection \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?
 #' @param percBackground_size Numeric (0 to 100). Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @param percBackground_resample \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
@@ -1776,6 +1777,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                                     connectionTypes = c("expression"),
                                     removeNegativeCorrelation = c(FALSE),
                                     maxFDRToStore = 0.3, 
+                                    addForPermuted = TRUE,
                                     useGCCorrection = FALSE, percBackground_size = 75, percBackground_resample = TRUE,
                                     forceRerun = FALSE) {
   
@@ -1785,6 +1787,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
   checkmate::assertFlag(plotDiagnosticPlots)
   checkmate::assertFlag(plotDetails)
   checkmate::assertChoice(corMethod, c("pearson", "spearman"))
+  checkmate::assertFlag(addForPermuted)
   
   GRN = .checkAndUpdateConnectionTypes(GRN) # For compatibility with older versions
   checkmate::assertSubset(connectionTypes, GRN@config$TF_peak_connectionTypes)
@@ -1814,6 +1817,10 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     }
     
     for (permutationCur in 0:.getMaxPermutation(GRN)) {
+        
+      if(!addForPermuted & permutationCur != 0) {
+          next
+      }
       
       futile.logger::flog.info(paste0("\n", .getPermStr(permutationCur), "\n"))
       permIndex = as.character(permutationCur)
