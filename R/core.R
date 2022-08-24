@@ -3105,7 +3105,12 @@ filterGRNAndConnectGenes <- function(GRN,
     if (filterLoops) {
       futile.logger::flog.info(paste0(" Filter TF-TF self-loops"))
       futile.logger::flog.info(paste0("  Number of rows before filtering genes: ", nrow(grn.filt)))
-      grn.filt = dplyr::filter(grn.filt, as.character(.data$gene.ENSEMBL) != as.character(.data$TF.ENSEMBL))
+      
+      # Be aware of NA values here in the selection, depending on allowMissingTFs
+      grn.filt = dplyr::filter(grn.filt, 
+                               is.na(.data$TF.ENSEMBL) | 
+                               (!is.na(.data$TF.ENSEMBL) & (as.character(.data$gene.ENSEMBL) != as.character(.data$TF.ENSEMBL))))
+      
       futile.logger::flog.info(paste0("  Number of rows after filtering genes: ", nrow(grn.filt)))
     }
     
