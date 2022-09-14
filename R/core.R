@@ -1,24 +1,42 @@
 ######## Init GRN ########
 
-#' Initialize a \code{\linkS4class{GRN}} object
+#' Create and initialize a \code{\linkS4class{GRN}} object.
+#' 
+#' Executing this function is the very first step in the *GRaNIE* workflow. After its execution, data can be added to the object. 
+#' \strong{Depending on the genome assembly version, additional genome annotation packages are required, as follows:} 
+#' For \code{hg19} and \code{hg38},
+#' the packages \code{org.Hs.eg.db} as well as \code{BSgenome.Hsapiens.UCSC.hg19}+\code{TxDb.Hsapiens.UCSC.hg19.knownGene} or 
+#' \code{BSgenome.Hsapiens.UCSC.hg38}+\code{TxDb.Hsapiens.UCSC.hg38.knownGene} are required, respectively. 
+#' For \code{mm9} and \code{mm10},
+#' the packages \code{org.Mm.eg.db} as well as \code{BSgenome.Mmusculus.UCSC.mm9}+\code{TxDb.Mmusculus.UCSC.mm9.knownGene} or 
+#' \code{Mmusculus.UCSC.mm10}+\code{TxDb.Mmusculus.UCSC.mm10.knownGene} are required, respectively.
+#' For more information, see the error message if any of these packages is missing or the 
+#' \href{https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation}{Package Details Vignette}.
 #' 
 #' @export
-#' @param objectMetadata List. Default \code{list()}. Optional (named) list with an arbitrary number of elements, all of which capture metadata for the object. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.
-#' @param outputFolder Output folder, either absolute or relative to the current working directory. No default. Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.
-#' @param genomeAssembly Character. No default. The genome assembly of all data that to be used within this object. Currently, supported genomes are: \code{hg19}, \code{hg38}, and \code{mm10}.
+#' @param objectMetadata List. Default \code{list()}. Optional (named) list with an arbitrary number of elements, all of which 
+#' capture metadata for the object. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.
+#' @param outputFolder Output folder, either absolute or relative to the current working directory. Default \code{"."}. 
+#' Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. 
+#' Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.
+#' @param genomeAssembly Character. No default. The genome assembly of all data that to be used within this object. 
+#' Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9} and \code{mm10}. See function description for further information and notes.
 #' @return Empty \code{\linkS4class{GRN}} object
 #' @examples 
 #' meta.l = list(name = "exampleName", date = "01.03.22")
 #' GRN = initializeGRN(objectMetadata = meta.l, outputFolder = "output", genomeAssembly = "hg38")
 #' @export
-#' @import tidyverse
 #' @importFrom stats sd median cor cor.test quantile
 initializeGRN <- function(objectMetadata = list(),
-                          outputFolder, 
+                          outputFolder = ".", 
                           genomeAssembly) {
   
+  start = Sys.time()   
+    
   checkmate::assert(checkmate::checkNull(objectMetadata), checkmate::checkList(objectMetadata))
-  checkmate::assertSubset(genomeAssembly, c("hg19","hg38", "mm10"))
+  checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
+
+  .checkAndLoadPackagesGenomeAssembly(genomeAssembly)
   
   # Create the folder first if not yet existing
   if (!dir.exists(outputFolder)) {
@@ -51,8 +69,7 @@ initializeGRN <- function(objectMetadata = list(),
   packageName = utils::packageName()
   par.l$packageVersion = ifelse(is.null(packageName), NA, paste0(utils::packageVersion(packageName)[[1]], collapse = "."))
   par.l$genomeAssembly = genomeAssembly
-  
-  .checkAndLoadPackagesGenomeAssembly(genomeAssembly)
+
   
   # Make an internal subslot
   par.l$internal = list()
@@ -92,29 +109,47 @@ initializeGRN <- function(objectMetadata = list(),
   
   futile.logger::flog.info(paste0("Empty GRN object created successfully. Type the object name (e.g., GRN) to retrieve summary information about it at any time."))
   
+  .printExecutionTime(start, prefix = "")
   
   GRN
 }
 
 ######## Add and filter data ########
 
-#' Add data to a \code{\linkS4class{GRN}} object
+#' Add data to a \code{\linkS4class{GRN}} object.
+#' 
+#' This function adds both RNA and peak data to a \code{\linkS4class{GRN}} object, along with data normalization.
+#' In addition, and highly recommended, sample metadata can be optionally provided.
+#' 
+#' If the \code{ChIPseeker} package is installed, additional peak annotation is provided in the annotation slot and a peak annotation QC plot is produced as part of peak-gene QC.
+#' This is fully optional, however, and has no consequences for downstream functions.
 #' 
 #' @export
 #' @template GRN 
-#' @param counts_peaks Data frame. No default. Counts for the peaks, with raw or normalized counts for each peak (rows) across all samples (columns). In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
-#' @param normalization_peaks Character. Default \code{DESeq_sizeFactor}. Normalization procedure for peak data. Must be one of \code{DESeq_sizeFactor}, \code{none}, or \code{quantile}.
-#' @param idColumn_peaks Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. The required format must be {chr}:{start}-{end}", with {chr} denoting the abbreviated chromosome name, and {start} and {end} the begin and end of the peak coordinates, respectively. End must be bigger than start. Examples for valid peak IDs are \code{chr1:400-800} or \code{chrX:20-25}.
-#' @param counts_rna Data frame. No default. Counts for the RNA-seq data, with raw or normalized counts for each gene (rows) across all samples (columns). In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
-#' @param normalization_rna Character. Default \code{quantile}. Normalization procedure for peak data. Must be one of "DESeq_sizeFactor", "none", or "quantile"
+#' @param counts_peaks Data frame. No default. Counts for the peaks, with raw or normalized counts for each peak (rows) across all samples (columns). 
+#' In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. 
+#' Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
+#' @param normalization_peaks Character. Default \code{DESeq_sizeFactor}. 
+#' Normalization procedure for peak data. Must be one of \code{DESeq_sizeFactor}, \code{none}, or \code{quantile}.
+#' @param idColumn_peaks Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. 
+#' The required format must be {chr}:{start}-{end}", with {chr} denoting the abbreviated chromosome name, and {start} and {end} the begin and end 
+#' of the peak coordinates, respectively. End must be bigger than start. Examples for valid peak IDs are \code{chr1:400-800} or \code{chrX:20-25}.
+#' @param counts_rna Data frame. No default. Counts for the RNA-seq data, with raw or normalized counts for each gene (rows) across all samples (columns). 
+#' In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. 
+#' Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
+#' @param normalization_rna Character. Default \code{quantile}. Normalization procedure for peak data. 
+#' Must be one of "DESeq_sizeFactor", "none", or "quantile". For "quantile", \code{limma::normalizeQuantiles} is used for normalization.
 #' @param idColumn_RNA Character. Default \code{ENSEMBL}. Name of the column in the \code{counts_rna} data frame that contains Ensembl IDs.
-#' @param sampleMetadata Data frame. Default \code{NULL}. Optional, additional metadata for the samples, such as age, sex, gender etc. If provided, the @seealso [plotPCA_all()] function can then incorporate and plot it. Sample names must match with those from both peak and RNA-Seq data. The first column is expected to contain the sample IDs, the actual column name is irrelevant.
-#' @param allowOverlappingPeaks \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping peaks be allowed (then only a warning is issued when overlapping peaks are found) or (the default) should an error be raised?
+#' @param sampleMetadata Data frame. Default \code{NULL}. Optional, additional metadata for the samples, such as age, sex, gender etc. 
+#' If provided, the @seealso [plotPCA_all()] function can then incorporate and plot it. Sample names must match with those from both peak and RNA-Seq data. The first column is expected to contain the sample IDs, the actual column name is irrelevant.
+#' @param allowOverlappingPeaks \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping peaks be allowed (then only a warning is issued 
+#' when overlapping peaks are found) or (the default) should an error be raised?
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function (e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
+#' @seealso \code{\link{plotPCA_all}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # library(tidyverse)
+#' # library(readr)
 #' # rna.df   = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz")
 #' # peaks.df = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz")
 #' # meta.df  = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz")
@@ -127,15 +162,18 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
                     allowOverlappingPeaks= FALSE,
                     forceRerun = FALSE) {
   
-  GRN = .addFunctionLogToObject(GRN)      
+  start = Sys.time()
   
   checkmate::assertClass(GRN, "GRN")
+  GRN = .addFunctionLogToObject(GRN)      
+  
   checkmate::assertDataFrame(counts_peaks, min.rows = 1, min.cols = 2)
   checkmate::assertDataFrame(counts_rna, min.rows = 1, min.cols = 2)
   checkmate::assertCharacter(idColumn_peaks, min.chars = 1, len = 1)
   checkmate::assertCharacter(idColumn_RNA, min.chars = 1, len = 1)
   checkmate::assertChoice(normalization_peaks, c("none", "DESeq_sizeFactor", "quantile"))
   checkmate::assertChoice(normalization_rna, c("none", "DESeq_sizeFactor", "quantile"))  
+  checkmate::assertFlag(allowOverlappingPeaks)
   checkmate::assertFlag(forceRerun)
   
   if (is.null(GRN@data$peaks$counts_norm) |
@@ -328,6 +366,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   # Add gene annotation once
   GRN = .populateGeneAnnotation(GRN)
   
+  .printExecutionTime(start, prefix = "")
+  
   GRN
   
 }
@@ -369,10 +409,10 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   paste0(ids_chr, ":", format(as.integer(start), scientific = FALSE), "-", format(as.integer(end), scientific= FALSE))
 }
 
-
+#' @importFrom biomaRt useEnsembl getBM
 .retrieveAnnotationData <- function(genomeAssembly) {
     
-    futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt... This may take a while"))
+    futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt for ", genomeAssembly, "... This may take a while"))
     
     params.l = .getBiomartParameters(genomeAssembly)
     
@@ -407,7 +447,9 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
         dplyr::mutate(chromosome_name = paste0("chr", chromosome_name)) %>%
         dplyr::rename(gene.chr = chromosome_name, gene.start = start_position, gene.end = end_position, 
                       gene.strand = strand, gene.ENSEMBL = ensembl_gene_id, gene.type = gene_biotype, gene.name = external_gene_name) %>%
+        tidyr::replace_na(list(gene.type = "unknown")) %>%
         dplyr::mutate_if(is.character, as.factor) %>%
+        dplyr::mutate(gene.type = dplyr::recode_factor(gene.type, lncRNA = "lincRNA")) %>%  # there seems to be a name change from lincRNA -> lncRNA, lets change it here 
         dplyr::mutate(gene.strand = factor(gene.strand, levels = c(1,-1), labels = c("+", "-")))
     
 }
@@ -458,11 +500,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
                                   peak.CV = CV_peaks)
   
   GRN@annotation$consensusPeaks = metadata_peaks
-  
+
   if (!is.installed("ChIPseeker")) {
-    message = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
-                     " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      packageMessage = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
+                              " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
+      .checkPackageInstallation("ChIPseeker", packageMessage, isWarning = TRUE)
   } else {
     
     futile.logger::flog.info(paste0(" Retrieve peak annotation using ChipSeeker. This may take a while"))
@@ -545,7 +587,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
                                 gene.mean = rowMeans_rna, 
                                 gene.median = rowMedians_rna, 
                                 gene.CV = CV_rna) %>%
-    dplyr::full_join(genomeAnnotation.df, by = c("gene.ENSEMBL"))
+    dplyr::full_join(genomeAnnotation.df, by = c("gene.ENSEMBL")) %>%
+    dplyr::mutate(gene.type = forcats::fct_explicit_na(gene.type, na_level = "unknown/missing"))
   
   GRN@annotation$genes = metadata_rna
   
@@ -560,7 +603,6 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   
 }
 
-#' @importFrom IRanges width
 #' @importFrom rlang .data `:=`
 .calcGCContentPeaks <- function(GRN) {
   
@@ -582,7 +624,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   
   GC_content.df = GC_content.df %>%
     tibble::as_tibble() %>%
-    dplyr::mutate(length = IRanges::width(query),
+    dplyr::mutate(length = GenomicRanges::width(query),
                   peak.ID = query$peakID,
                   GC_class = cut(`G|C`, breaks = seq(0,1,0.1), include.lowest = TRUE, ordered_result = TRUE))
   
@@ -611,22 +653,22 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   GRN
 }
 
-#' Filter data from a \code{\linkS4class{GRN}} object
+#' Filter RNA-seq and/or peak data from a \code{\linkS4class{GRN}} object
 #' 
 #' @template GRN 
-#' @param minNormalizedMean_peaks Numeric or \code{NULL}. Default 5. Minimum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
-#' @param maxNormalizedMean_peaks Numeric or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
-#' @param minNormalizedMeanRNA Numeric or \code{NULL}. Default 5. Minimum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
-#' @param maxNormalizedMeanRNA Numeric or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' @param minNormalizedMean_peaks Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' @param maxNormalizedMean_peaks Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' @param minNormalizedMeanRNA Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' @param maxNormalizedMeanRNA Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
 #' @param chrToKeep_peaks Character vector or \code{NULL}. Default \code{NULL}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example (e.g, \code{c(paste0("chr", 1:22), "chrX", "chrY")})
-#' @param minSize_peaks Integer or \code{NULL}. Default \code{NULL}. Minimum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
-#' @param maxSize_peaks Integer or \code{NULL}. Default 10000. Maximum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
-#' @param minCV_peaks Numeric or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
-#' @param maxCV_peaks Numeric or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
-#' @param minCV_genes Numeric or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
-#' @param maxCV_genes Numeric or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
+#' @param minSize_peaks Integer[1,] or \code{NULL}. Default \code{NULL}. Minimum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+#' @param maxSize_peaks Integer[1,] or \code{NULL}. Default 10000. Maximum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+#' @param minCV_peaks Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+#' @param maxCV_peaks Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+#' @param minCV_genes Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
+#' @param maxCV_genes Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -640,9 +682,12 @@ filterData <- function (GRN,
                         minCV_peaks = NULL, maxCV_peaks = NULL,
                         minCV_genes = NULL, maxCV_genes = NULL,
                         forceRerun = FALSE) {
-  GRN = .addFunctionLogToObject(GRN) 
   
+  start = Sys.time()
+    
   checkmate::assertClass(GRN, "GRN")
+  GRN = .addFunctionLogToObject(GRN) 
+
   checkmate::assertNumber(minNormalizedMean_peaks, lower = 0, null.ok = TRUE)
   checkmate::assertNumber(minNormalizedMeanRNA, lower = 0, null.ok = TRUE)
   checkmate::assertNumber(maxNormalizedMean_peaks, lower = minNormalizedMean_peaks , null.ok = TRUE)
@@ -716,6 +761,8 @@ filterData <- function (GRN,
     
     GRN@config$isFiltered = TRUE
   } 
+  
+  .printExecutionTime(start, prefix = "")
   
   GRN
 }
@@ -887,17 +934,18 @@ filterData <- function (GRN,
 #' @param TFs Character vector. Default \code{all}. Vector of TF names to include. The special keyword \code{all} can be used to include all TF found in the folder as specified by \code{motifFolder}. If \code{all} is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.
 #' @param filesTFBSPattern Character. Default \code{"_TFBS"}. Suffix for the file names in the TFBS folder that is not part of the TF name. Can be empty. For example, for the TF CTCF, if the file is called \code{CTCF.all.TFBS.bed}, set this parameter to \code{".all.TFBS"}.
 #' @param fileEnding Character. Default \code{".bed"}. File ending for the files from the motif folder.
-#' @param nTFMax \code{NULL} or integer. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
+#' @param nTFMax \code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function (\code{GRN@data$TFs$translationTable} in particular)
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' @export
 addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPattern = "_TFBS", fileEnding = ".bed", forceRerun = FALSE) {
   
-  GRN = .addFunctionLogToObject(GRN)
-  
+  start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
+  GRN = .addFunctionLogToObject(GRN)
+
   checkmate::assertDirectoryExists(motifFolder)
   checkmate::assertCharacter(TFs, min.len = 1)
   checkmate::assert(checkmate::testNull(nTFMax), checkmate::testIntegerish(nTFMax, lower = 1))
@@ -926,6 +974,8 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
     
     
   } 
+  
+  .printExecutionTime(start, prefix = "")
   
   GRN
   
@@ -1006,7 +1056,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
 #' @template GRN
 #' @template nCores
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function. 
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function (\code{GRN@data$TFs$TF_peak_overlap} in particular)
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -1014,9 +1064,11 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
 #' @export
 overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   
+  start = Sys.time()
+    
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
   checkmate::assertIntegerish(nCores, lower = 1)
   checkmate::assertFlag(forceRerun)
   
@@ -1092,6 +1144,8 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     
   } 
   
+  .printExecutionTime(start, prefix = "")
+  
   GRN
 }
 
@@ -1140,7 +1194,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     dplyr::group_by(peakID) %>%
     dplyr::slice(which.min(distance)) %>%
     #arrange(distance, .by_group = TRUE) %>%
-    # top_n(n = 2, desc(distance)) %>%
+    # top_n(n = 2, dplyr::desc(distance)) %>%
     dplyr::ungroup()
   
   futile.logger::flog.info(paste0(" Calculating intersection for TF ", TFCur, " finished. Number of overlapping TFBS after filtering: ", nrow(final.df)))
@@ -1226,7 +1280,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   # Reorder to make sure the order is the same. Due to the duplication ID issue, the number of columns may increase after the column selection
   
   # Some columns may be removed here due to zero standard deviation
-  HOCOMOCO_mapping.exp.filt = HOCOMOCO_mapping.exp %>% dplyr::filter(ENSEMBL %in% colnames(sort.cor.m))
+  HOCOMOCO_mapping.exp.filt = HOCOMOCO_mapping.exp %>% dplyr::filter(.data$ENSEMBL %in% colnames(sort.cor.m))
   
   sort.cor.m = sort.cor.m[,as.character(HOCOMOCO_mapping.exp.filt$ENSEMBL)] 
   colnames(sort.cor.m) = as.character(HOCOMOCO_mapping.exp.filt$HOCOID)
@@ -1239,8 +1293,8 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   
   peak_TF_overlapCur.df = .asMatrixFromSparse(GRN@data$TFs$TF_peak_overlap, convertZero_to_NA = FALSE) %>% 
     tibble::as_tibble() %>%
-    dplyr::filter(!isFiltered) %>% 
-    dplyr::select(-isFiltered) 
+    dplyr::filter(!.data$isFiltered) %>% 
+    dplyr::select(-.data$isFiltered) 
   
   if (perm > 0 & shuffle) {
     peak_TF_overlapCur.df = .shuffleRowsPerColumn(peak_TF_overlapCur.df)
@@ -1257,18 +1311,22 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
 
 #' Add TF activity data to GRN object using a simplified procedure for estimating it. EXPERIMENTAL.
 #' 
+#' We do not yet provide full support for this function. It is currently being tested. Use at our own risk.
+#' 
 #' @template GRN
 #' @template normalization_TFActivity
 #' @template name_TFActivity
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function. 
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function
+#' (\code{GRN@data$TFs[[name]]} in particular, with \code{name} referring to the value of tje \code{name} parameter) 
 
 addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_activity", forceRerun = FALSE) {
   
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   start = Sys.time()
   
-  checkmate::assertClass(GRN, "GRN")
+  
   checkmate::assertChoice(normalization, c("cyclicLoess", "sizeFactors", "quantile", "none"))
   checkmate::assertCharacter(name, min.chars = 1, len = 1)
   checkmate::assertFlag(forceRerun)
@@ -1365,6 +1423,11 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
   if (normalization == "cyclicLoess") {
     
     futile.logger::flog.info(paste0(" Normalizing data using cyclic LOESS"))
+      
+      
+    packageMessage = paste0("The package csaw is not installed but required for the cyclic LOESS normalization. Please install it and re-run this function or change the normalization type (if possible).")
+    .checkPackageInstallation("csaw", packageMessage)   
+      
     # Perform a cyclic loess normalization
     # We use a slighlty more complicated setup to derive size factors for library normalization
     # Instead of just determining the size factors in DeSeq2 via cirtual samples, we use 
@@ -1413,6 +1476,8 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
 
 #' Import externally derived TF Activity data. EXPERIMENTAL.
 #' 
+#' We do not yet provide full support for this function. It is currently being tested. Use at our own risk.
+#' 
 #' @template GRN
 #' @param data Data frame. No default. Data with TF data.
 #' @template name_TFActivity
@@ -1420,18 +1485,19 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
 #' @param nameColumn Character. Default \code{TF.name}. Must be unique for each TF / row.
 #' @template normalization_TFActivity
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.  
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function.  
 importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF.name", normalization = "none", forceRerun = FALSE) {
   
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
   start = Sys.time()
   
-  checkmate::assertClass(GRN, "GRN")
+  
   checkmate::assertDataFrame(data, min.cols = 2, min.rows = 1)
-  checkmate::assertSubset(idColumn, colnames(data))
-  checkmate::assertSubset(nameColumn, colnames(data))
-  checkmate::assertSubset(GRN@config$sharedSamples, colnames(data))
+  checkmate::assertChoice(idColumn, colnames(data))
+  checkmate::assertChoice(nameColumn, colnames(data))
+  checkmate::assertSubset(GRN@config$sharedSamples, colnames(data), empty.ok = FALSE)
   checkmate::assertCharacter(name, min.chars = 1, any.missing = FALSE, len = 1)
   checkmate::assertChoice(normalization, c("cyclicLoess", "sizeFactors", "quantile", "none"))
   
@@ -1482,7 +1548,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     countsNorm$ENSEMBL = data$ENSEMBL
     
     nRowBefore = nrow(countsNorm)
-    countsNorm.subset = dplyr::filter(countsNorm, ENSEMBL %in% GRN@data$TFs$translationTable$ENSEMBL)
+    countsNorm.subset = dplyr::filter(countsNorm, .data$ENSEMBL %in% GRN@data$TFs$translationTable$ENSEMBL)
     nRowAfter = nrow(countsNorm.subset)
     if (nRowAfter == 0) {
       message = "No rows overlapping with translation table, check ENSEMBL IDs."
@@ -1535,14 +1601,14 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
 #' Run the activator-repressor classification for the TFs for a \code{\linkS4class{GRN}} object
 #' 
 #' @template GRN
-#' @param significanceThreshold_Wilcoxon Numeric between 0 and 1. Default 0.05. Significance threshold for Wilcoxon test that is run in the end for the final classification. See the Vignette and *diffTF* paper for details.
-#' @param plot_minNoTFBS_heatmap Integer. Default 100. Minimum number of TFBS for a TF to be included in the heatmap that is part of the output of this function.
+#' @param significanceThreshold_Wilcoxon Numeric[0,1]. Default 0.05. Significance threshold for Wilcoxon test that is run in the end for the final classification. See the Vignette and *diffTF* paper for details.
+#' @param plot_minNoTFBS_heatmap Integer[1,]. Default 100. Minimum number of TFBS for a TF to be included in the heatmap that is part of the output of this function.
 #' @param deleteIntermediateData \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Should intermediate data be deleted before returning the object after a successful run? Due to the size of the produced intermediate data, we recommend setting this to \code{TRUE}, but if memory or object size are not an issue, the information can also be kept.
 #' @template plotDiagnosticPlots
 #' @template outputFolder
 #' @template corMethod
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.  
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' # GRN = loadExampleObject()
@@ -1554,9 +1620,12 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
                                       corMethod = "pearson",
                                       forceRerun = FALSE) {
   
+  start = Sys.time()
+    
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
+  
   checkmate::assertNumber(significanceThreshold_Wilcoxon, lower = 0, upper = 1)
   checkmate::assertNumber(plot_minNoTFBS_heatmap, lower = 1)
   checkmate::assertFlag(deleteIntermediateData)
@@ -1730,6 +1799,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
     
   } # end of for each connection type
   
+  .printExecutionTime(start, prefix = "")
   
   GRN
   
@@ -1753,6 +1823,8 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 
 #' Add TF-peak connections to a \code{\linkS4class{GRN}} object
 #' 
+#' After the execution of this function, QC plots can be plotted with the function \code{\link{plotDiagnosticPlots_TFPeaks}} unless this has already been done by default due to \code{plotDiagnosticPlots = TRUE}
+#' 
 #' @template GRN 
 #' @template plotDiagnosticPlots
 #' @template plotDetails
@@ -1760,13 +1832,14 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @template corMethod
 #' @param connectionTypes Character vector. Default \code{expression}. Vector of connection types to include for the TF-peak connections. If an additional connection type is specified here, it has to be available already within the object (EXPERIMENTAL). See the function \code{\link{addData_TFActivity}} for details.
 #' @param removeNegativeCorrelation  Vector of \code{TRUE} or \code{FALSE}. Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is \code{FALSE}, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.  
-#' @param maxFDRToStore Numeric. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.
+#' @param maxFDRToStore Numeric[0,1]. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.
 #' @param addForPermuted \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for permuted data. Leave at \code{TRUE} unless you know what you are doing.
 #' @param useGCCorrection \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?
-#' @param percBackground_size Numeric (0 to 100). Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
+#' @param percBackground_size Numeric[0,100]. Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @param percBackground_resample \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @seealso \code{\link{plotDiagnosticPlots_TFPeaks}}
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -1781,16 +1854,18 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                                     useGCCorrection = FALSE, percBackground_size = 75, percBackground_resample = TRUE,
                                     forceRerun = FALSE) {
   
-  GRN = .addFunctionLogToObject(GRN)
-  
+  start = Sys.time()
+
   checkmate::assertClass(GRN, "GRN")
+  GRN = .addFunctionLogToObject(GRN)
+
   checkmate::assertFlag(plotDiagnosticPlots)
   checkmate::assertFlag(plotDetails)
   checkmate::assertChoice(corMethod, c("pearson", "spearman"))
   checkmate::assertFlag(addForPermuted)
   
   GRN = .checkAndUpdateConnectionTypes(GRN) # For compatibility with older versions
-  checkmate::assertSubset(connectionTypes, GRN@config$TF_peak_connectionTypes)
+  checkmate::assertSubset(connectionTypes, GRN@config$TF_peak_connectionTypes, empty.ok = FALSE)
   
   checkmate::assertLogical(removeNegativeCorrelation, any.missing = FALSE, len = length(connectionTypes))
   
@@ -1851,6 +1926,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     }
     
   }
+  
+  .printExecutionTime(start, prefix = "")
   
   GRN
 }
@@ -1928,7 +2005,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     pb <- progress::progress_bar$new(total = length(allTF))
     
-    peaksFiltered = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!isFiltered) 
+    peaksFiltered = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!.data$isFiltered) 
     
     if (!useGCCorrection) {
       minPerc = 100
@@ -2036,7 +2113,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         peakIDsSel = c()
         for (i in seq_len(nrow(GC_classes_foreground.df))) {
           
-          peaksBackgroundGCCur =  peaksBackground %>% dplyr::filter(GC_class == GC_classes_foreground.df$GC_class[i])
+          peaksBackgroundGCCur =  peaksBackground %>% dplyr::filter(.data$GC_class == GC_classes_foreground.df$GC_class[i])
           
           if (nrow( peaksBackgroundGCCur) == 0) {
             next
@@ -2180,7 +2257,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         if (connectionTypeCur %in% connectionTypes_removeNegCor ) {
           
           # futile.logger::flog.info(paste0(" Remove negatively correlated TF-peak pairs for connection type ", connectionTypeCur))
-          cor.peak.tf = dplyr::filter(cor.peak.tf, TF_peak.r >= 0)
+          cor.peak.tf = dplyr::filter(cor.peak.tf, .data$TF_peak.r >= 0)
           
         }
         
@@ -2218,10 +2295,10 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         # DISCARD other rows altogether
         # Left join here is what we want, as we need this df only for "real" data
         tblFilt.df = dplyr::left_join(cor.peak.tf, fdr.curve, by = "TF_peak.r_bin") %>%
-          dplyr::filter(TF_peak.fdr <= maxFDRToStore) %>%
-          dplyr::select(TF.name, TF_peak.r_bin, TF_peak.r, TF_peak.fdr, 
-                        TF_peak.fdr_orig, peak.ID, TF_peak.fdr_direction, 
-                        TF_peak.connectionType, tidyselect::contains("value"))
+          dplyr::filter(.data$TF_peak.fdr <= maxFDRToStore) %>%
+          dplyr::select(.data$TF.name, .data$TF_peak.r_bin, .data$TF_peak.r, .data$TF_peak.fdr, 
+                        .data$TF_peak.fdr_orig, .data$peak.ID, .data$TF_peak.fdr_direction, 
+                        .data$TF_peak.connectionType, tidyselect::contains("value"))
         
         
         if (!plotDetails) {
@@ -2277,7 +2354,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       requiredNoPeaks = round(n_rel * targetNoPeaks, 0)
       # Check in background
       availableNoPeaks = GC_classes_background.df %>% 
-        dplyr::filter(GC_class == GC_class.cur) %>%
+        dplyr::filter(.data$GC_class == GC_class.cur) %>%
         dplyr::pull(.data$n)
       #futile.logger::flog.info(paste0(" GC.class ", GC.class.cur, ": Required: ", requiredNoPeaks, ", available: ", availableNoPeaks))
       if ( availableNoPeaks < requiredNoPeaks) {
@@ -2309,6 +2386,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 
 #' Add peak-gene connections to a \code{\linkS4class{GRN}} object
 #' 
+#' After the execution of this function, QC plots can be plotted with the function \code{\link{plotDiagnosticPlots_peakGene}} unless this has already been done by default due to \code{plotDiagnosticPlots = TRUE}
+#' 
 #' @export
 #' @template GRN
 #' @param  overlapTypeGene Character. \code{"TSS"} or \code{"full"}. Default \code{"TSS"}. If set to \code{"TSS"}, only the TSS of the gene is used as reference for finding genes in the neighborhood of a peak. If set to \code{"full"}, the whole annotated gene (including all exons and introns) is used instead. 
@@ -2317,11 +2396,12 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @param TADs Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.
 #' @template nCores
 #' @template plotDiagnosticPlots
-#' @param plotGeneTypes List of character vectors. Default \code{list(c("all"), c("protein_coding"), c("protein_coding", "lincRNA"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).
+#' @param plotGeneTypes List of character vectors. Default \code{list(c("all"), c("protein_coding"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).
 #' @template outputFolder
 #' @template addRobustRegression
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function in different flavors.
+#' @seealso \code{\link{plotDiagnosticPlots_peakGene}}
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2330,24 +2410,35 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                      promoterRange = 250000, TADs = NULL,
                                      nCores = 4, 
                                      plotDiagnosticPlots = TRUE, 
-                                     plotGeneTypes = list(c("all"), c("protein_coding"), c("protein_coding", "lincRNA")), 
+                                     plotGeneTypes = list(c("all"), c("protein_coding")), 
                                      outputFolder = NULL,
                                      addRobustRegression = FALSE,
                                      forceRerun = FALSE) {
   
+  start = Sys.time() 
+    
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
+  
   checkmate::assertChoice(overlapTypeGene, c("TSS", "full"))
   checkmate::assertChoice(corMethod, c("pearson", "spearman"))
   checkmate::assertIntegerish(promoterRange, lower = 0)
   checkmate::assert(checkmate::testNull(TADs), checkmate::testDataFrame(TADs))
   checkmate::assertIntegerish(nCores, lower = 1)
   checkmate::assertFlag(plotDiagnosticPlots) 
-  checkmate::assertList(plotGeneTypes, any.missing = FALSE, min.len = 1, types = "character")
+  for (elemCur in plotGeneTypes) {
+      checkmate::assertSubset(elemCur, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
+  }
+  
   checkmate::assert(checkmate::testNull(outputFolder), checkmate::testDirectoryExists(outputFolder))
   checkmate::assertFlag(addRobustRegression)
   checkmate::assertFlag(forceRerun)
+  
+  if (addRobustRegression) {
+      packageMessage = paste0("The package robust is not installed, but needed here due to addRobustRegression = TRUE. Please install it and re-run this function or change addRobustRegression to FALSE.")
+      .checkPackageInstallation("robust", packageMessage)  
+  }
   
   # As this is independent of the underlying GRN, it has to be done only once
   
@@ -2362,7 +2453,8 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     # Check which gene types are available for the particular genome annotation
     # Use all of them to collect statistics. Filtering can be done later
-    gene.types = unique(GRN@annotation$genes$gene.type)
+    # Just remove NA
+    gene.types = unique(GRN@annotation$genes$gene.type) %>% stats::na.omit()
     
     
     for (permutationCur in 0:.getMaxPermutation(GRN)) {
@@ -2381,7 +2473,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
         .calculatePeakGeneCorrelations(GRN, permutationCur,
                                        TADs = TADs,
                                        neighborhoodSize = promoterRange,
-                                       gene.types = names(gene.types),
+                                       gene.types = as.character(gene.types),
                                        corMethod = corMethod,
                                        randomizePeakGeneConnections = randomizePeakGeneConnections,
                                        overlapTypeGene,
@@ -2400,10 +2492,10 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
   }
   
+  .printExecutionTime(start, prefix = "")
+  
   GRN
-  
-  
-  
+
 }
 
 .calculatePeakGeneOverlaps <- function(GRN, allPeaks, peak_TAD_mapping = NULL, par.l, neighborhoodSize = 250000, genomeAssembly, 
@@ -2470,7 +2562,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   subject = .getKnownGeneAnnotationNew(GRN, gene.types = gene.types, extendRegions = NULL)
   
   requiredColnames = c("gene.ENSEMBL","gene.type", "gene.name")
-  checkmate::assertSubset(requiredColnames, colnames(subject))
+  checkmate::assertSubset(requiredColnames, colnames(subject), empty.ok = FALSE)
   
   subject.gr = GenomicRanges::makeGRangesFromDataFrame(subject, keep.extra.columns = TRUE)
   
@@ -2517,7 +2609,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                                         TRUE ~ pmin(abs(orig_peak_start - gene.start), abs(orig_peak_end - gene.start))))
   
   if (removeEnsemblNA) {
-    overlaps.sub.df = dplyr::filter(overlaps.sub.df, !is.na(gene.ENSEMBL))
+    overlaps.sub.df = dplyr::filter(overlaps.sub.df, !is.na(.data$gene.ENSEMBL))
   }
   
   .printExecutionTime(start)
@@ -2532,7 +2624,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                            TADs = NULL, 
                                            mergeOverlappingTADs = FALSE, 
                                            neighborhoodSize = 250000,
-                                           gene.types = c("protein_coding", "lincRNA"),
+                                           gene.types = c("protein_coding"),
                                            overlapTypeGene = "TSS",
                                            corMethod = "pearson",
                                            randomizePeakGeneConnections = FALSE, 
@@ -2545,7 +2637,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   
   genomeAssembly = GRN@config$parameters$genomeAssembly
   
-  checkmate::assertSubset(gene.types, c("all", names(.getAllGeneTypesAndFrequencies(GRN@config$parameters$genomeAssembly, verbose = FALSE))))
+  # checkmate::assertSubset(gene.types, c("all", names(.getAllGeneTypesAndFrequencies(GRN@config$parameters$genomeAssembly, verbose = FALSE))), empty.ok = FALSE)
   
   if (is.null(nCores)) {
     nCores = 1
@@ -2554,7 +2646,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   
   #consensusPeaks = .createDF_fromCoordinates(getCounts(GRN, type = "peaks", norm = TRUE, 0)$peakID, "peakID")
   
-  consensusPeaks = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!isFiltered)
+  consensusPeaks = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!.data$isFiltered)
   # Preprocess TAD boundaries
   if (!is.null(TADs)) {
     
@@ -2786,6 +2878,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     res.m[rowCur, "r"]     = res$estimate
     
     if (addRobustRegression) {
+        
       lmRob.sum = tryCatch( {
         summary(robust::lmRob(data1 ~data2))
         
@@ -2838,18 +2931,29 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 
 
 
-#' Filter the GRN and integrate peak-gene connections. 
+#' Filter TF-peaks and peak-gene connections and combine them to TF-peak-gene connections to construct an eGRN.
 #' 
-#' This is one of the main integrative functions of the \code{GRN} package. It has two main functions: Filtering the TF-peak and peak-gene connections that have been identified before, and combining the 3 major elements (TFs, peaks, genes) into one data frame, with one row per connection. Here, a connection can either be a TF-peak, peak-gene or TF-peak-gene link, depending on the parameters. 
-#' Internally, first, the TF-peak are filtered before the peak-gene connections are added for reasons of memory and computational efficacy: It takes a lot of time and particularly space to connect the full GRN with all peak-gene connections - as most of the links have weak support (i.e., high FDR), first filtering out unwanted links dramatically reduces the memory needed for the combined GRN 
+#' This is one of the main integrative functions of the \code{GRaNIE} package. It has two main functions: 
+#' First, filtering both TF-peak and peak-gene connections according to different criteria such as FDR and other properties 
+#' Second, joining the three major elements that an eGRN consist of (TFs, peaks, genes) into one data frame, with one row per unique TF-peak-gene connection.
+#' \strong{Note that the eGRN graph is reset upon successful execution of this function, and re-running the function \code{\link{build_eGRN_graph}} 
+#' is necessary when any of the network functions of the package shall be executed.}
+
+#' Internally, before joining them, both TF-peak links and peak-gene connections are filtered separately for reasons of memory and computational efficacy:
+#' First filtering out unwanted links dramatically reduces the memory needed for the full eGRN. Peak-gene p-value adjustment is only done after all filtering steps on the remaining set of
+#' connections to lower the statistical burden of multiple-testing adjustment; therefore, this may lead to initially counter-intuitive effects such as a particular connections not being included anymore as compared to a 
+#' filtering based on different thresholds, or the FDR being different for the same reason.
 #' @template GRN
 #' @param TF_peak.fdr.threshold Numeric[0,1]. Default 0.2. Maximum FDR for the TF-peak links. Set to 1 or NULL to disable this filter.
 #' @template TF_peak.connectionTypes
 #' @param peak_gene.p_raw.threshold Numeric[0,1]. Default NULL. Threshold for the peak-gene connections, based on the raw p-value. All peak-gene connections with a larger raw p-value will be filtered out.
 #' @param peak_gene.fdr.threshold Numeric[0,1]. Default 0.2. Threshold for the peak-gene connections, based on the FDR. All peak-gene connections with a larger FDR will be filtered out.
-#' @param peak_gene.fdr.method Character. Default "BH". One of: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW". Method for adjusting p-values for multiple testing. If set to "IHW", independent hypothesis weighting will be performed, and a suitable covariate has to be specified for the parameter \code{peak_gene.IHW.covariate}.
+#' @param peak_gene.fdr.method Character. Default "BH". One of: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW". 
+#' Method for adjusting p-values for multiple testing. 
+#' If set to "IHW", the package \code{IHW} is required (as it is listed under \code{Suggests}, it may not be installed), 
+#' and independent hypothesis weighting will be performed, and a suitable covariate has to be specified for the parameter \code{peak_gene.IHW.covariate}.
 #' @param peak_gene.IHW.covariate Character. Default NULL. Name of the covariate to use for IHW (column name from the table thatis returned with the function \code{getGRNConnections}. Only relevant if \code{peak_gene.fdr.method} is set to "IHW". You have to make sure the specified covariate is suitable or IHW, see the diagnostic plots that are generated in this function for this. For many datasets, the peak-gene distance (called \code{peak_gene.distance} in the object) seems suitable.
-#' @param peak_gene.IHW.nbins Integer or "auto". Default 5. Number of bins for IHW. Only relevant if \code{peak_gene.fdr.method} is set to "IHW".
+#' @param peak_gene.IHW.nbins Integer or "auto". Default "auto". Number of bins for IHW. Only relevant if \code{peak_gene.fdr.method} is set to "IHW".
 #' @template gene.types
 #' @param allowMissingTFs \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should connections be returned for which the TF is NA (i.e., connections consisting only of peak-gene links?). If set to \code{TRUE}, this generally greatly increases the number of connections but it may not be what you aim for.
 #' @param allowMissingGenes \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Should connections be returned for which the gene is NA (i.e., connections consisting only of TF-peak links?). If set to \code{TRUE}, this generally increases the number of connections.
@@ -2863,7 +2967,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @param silent \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.
 #' @param filterLoops  \code{TRUE} or \code{FALSE}. Default \code{TRUE}. If a TF regulates itself (i.e., the TF and the gene are the same entity), should such loops be filtered from the GRN?
 #' @template outputFolder
-#' @return The same \code{\linkS4class{GRN}} object, with the filtered and merged TF-peak and peak-gene connections in the slot connections$all.filtered.
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function. The filtered and merged TF-peak and peak-gene connections in the slot \code{GRN@connections$all.filtered}.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2871,6 +2975,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @seealso \code{\link{visualizeGRN}}
 #' @seealso \code{\link{addConnections_TF_peak}} 
 #' @seealso \code{\link{addConnections_peak_gene}} 
+#' @seealso \code{\link{build_eGRN_graph}} 
 #' @importFrom rlang .data
 #' @importFrom magrittr `%>%`
 #' @export
@@ -2881,8 +2986,8 @@ filterGRNAndConnectGenes <- function(GRN,
                                      peak_gene.fdr.threshold= 0.2,
                                      peak_gene.fdr.method = "BH",
                                      peak_gene.IHW.covariate = NULL,
-                                     peak_gene.IHW.nbins = 5,
-                                     gene.types = c("protein_coding", "lincRNA"), 
+                                     peak_gene.IHW.nbins = "auto",
+                                     gene.types = c("protein_coding"), 
                                      allowMissingTFs = FALSE, allowMissingGenes = TRUE,
                                      peak_gene.r_range = c(0,1), 
                                      peak_gene.selection = "all",
@@ -2893,28 +2998,36 @@ filterGRNAndConnectGenes <- function(GRN,
                                      outputFolder = NULL,
                                      silent = FALSE) {
   
-  
+  start = Sys.time()  
+
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
+  
   checkmate::assertCharacter(TF_peak.connectionTypes, min.len = 1, any.missing = FALSE)
   checkmate::assert(checkmate::checkNull(peak_gene.p_raw.threshold), checkmate::checkNumber(peak_gene.p_raw.threshold, lower = 0, upper = 1))
   checkmate::assertNumeric(peak_gene.r_range, lower = -1, upper = 1, len = 2)
-  checkmate::assertCharacter(gene.types, min.len = 1)
+  checkmate::assertSubset(gene.types, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertNumber(TF_peak.fdr.threshold, lower = 0, upper = 1)
   checkmate::assert(checkmate::checkNull(peak_gene.fdr.threshold), checkmate::checkNumber(peak_gene.fdr.threshold, lower = 0, upper = 1))
   
-  checkmate::assertSubset(peak_gene.fdr.method, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW"))
+  checkmate::assertChoice(peak_gene.fdr.method, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW"))
   checkmate::assert(checkmate::checkNull(peak_gene.IHW.covariate), checkmate::checkCharacter(peak_gene.IHW.covariate, min.chars = 1, len = 1))
+  
+  checkmate::assert(checkIntegerish(peak_gene.IHW.nbins, lower = 1), checkSubset(peak_gene.IHW.nbins, "auto"))
+  
   checkmate::assertFlag(silent)
   checkmate::assertChoice(peak_gene.selection, c("all", "closest"))
   checkmate::assertFlag(allowMissingTFs)
   checkmate::assertFlag(allowMissingGenes)
+  
+  checkmate::assertFlag(TF_peak_FDR_selectViaCorBins)
   checkmate::assertFlag(filterLoops)
   
   if (peak_gene.fdr.method == "IHW" & !is.installed("IHW")) {
-    message = "IHW has been selected for p-value adjustment, but IHW is currently not installed. Please install it and re-run the function or choose a different method."
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    packageMessage = "IHW has been selected for p-value adjustment, but IHW is currently not installed. Please install it and re-run the function or choose a different method."
+    .checkPackageInstallation("IHW", packageMessage)  
+
   }
   
   if (!is.null(peak_gene.p_raw.threshold) & !is.null(peak_gene.fdr.threshold)) {
@@ -2922,7 +3035,6 @@ filterGRNAndConnectGenes <- function(GRN,
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
-  start = Sys.time()
   if (silent) {
     futile.logger::flog.threshold(futile.logger::WARN)
   }
@@ -2964,7 +3076,7 @@ filterGRNAndConnectGenes <- function(GRN,
     futile.logger::flog.info(paste0("Inital number of rows left before all filtering steps: ", nrow(grn.filt)))
     
     if (! "all" %in% TF_peak.connectionTypes) {
-      checkmate::assertSubset(TF_peak.connectionTypes, .getAll_TF_peak_connectionTypes(GRN))
+      checkmate::assertSubset(TF_peak.connectionTypes, .getAll_TF_peak_connectionTypes(GRN), empty.ok = FALSE)
       futile.logger::flog.info(paste0(" Filter network and retain only rows with one of the following TF-peak connection types: ", paste0(TF_peak.connectionTypes, collapse = ", ")))
       futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering connection types: ", nrow(grn.filt)))
       grn.filt = dplyr::filter(grn.filt, .data$TF_peak.connectionType %in% TF_peak.connectionTypes)
@@ -3169,7 +3281,7 @@ filterGRNAndConnectGenes <- function(GRN,
       
       if (peak_gene.fdr.method == "IHW") {
         
-        # Identify those entries for which both p-value and covairate are not NA
+        # Identify those entries for which both p-value and covariate are not NA
         
         covariate_val = grn.filt %>% dplyr::pull(!!(peak_gene.IHW.covariate))
         indexes = which(!is.na(grn.filt$peak_gene.p_raw) & !is.na(covariate_val))
@@ -3267,13 +3379,21 @@ filterGRNAndConnectGenes <- function(GRN,
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
-    .printExecutionTime(start)
+    
     
     
   } #end for all permutations
   
+  if (!is.null(GRN@graph)) {
+      futile.logger::flog.info(paste0("Reset the graph slot in the object. Rerun the method build_eGRN_graph."))
+      GRN@graph = list()
+  }
+ 
+  
   
   if (silent) futile.logger::flog.threshold(futile.logger::INFO)
+  
+  .printExecutionTime(start)
   
   GRN
   
@@ -3294,7 +3414,7 @@ filterGRNAndConnectGenes <- function(GRN,
   checkmate::assert(checkmate::checkNumeric(covariates), checkmate::checkFactor(covariates))
   stopifnot(length(pvalues) == length(covariates))
   checkmate::assertNumber(alpha, lower = 0, upper = 1)
-  checkmate::assertSubset(covariate_type, c("ordinal", "nominal"))
+  checkmate::assertChoice(covariate_type, c("ordinal", "nominal"))
   checkmate::assert(checkmate::checkInt(nbins, lower = 1), checkmate::checkSubset(nbins, c("auto")))
   checkmate::assert(checkmate::checkNull(m_groups), checkmate::checkInteger(m_groups, len = length(covariates)))
   checkmate::assertLogical(quiet)
@@ -3303,9 +3423,9 @@ filterGRNAndConnectGenes <- function(GRN,
   checkmate::assertInt(nsplits_internal, lower = 1)
   checkmate::assert(checkmate::checkNumeric(lambdas), checkmate::checkSubset(lambdas, c("auto")))
   checkmate::assert(checkmate::checkNull(seed), checkmate::checkInteger(seed)) 
-  checkmate::assertSubset(distrib_estimator, c("grenander", "ECDF"))
-  checkmate::assertSubset(lp_solver, c("lpsymphony", "gurobi"))
-  checkmate::assertSubset(adjustment_type, c("BH", "bonferroni"))
+  checkmate::assertChoice(distrib_estimator, c("grenander", "ECDF"))
+  checkmate::assertChoice(lp_solver, c("lpsymphony", "gurobi"))
+  checkmate::assertChoice(adjustment_type, c("BH", "bonferroni"))
   checkmate::assertLogical(return_internal)
   checkmate::assertLogical(doDiagnostics)
   checkmate::assert(checkmate::checkNull(pdfFile), checkmate::checkDirectoryExists(dirname(pdfFile), access = "w"))
@@ -3448,14 +3568,26 @@ filterGRNAndConnectGenes <- function(GRN,
 #' @template addRobustRegression
 #' @template nCores
 #' @template forceRerun
-#' @return  The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
 add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegression = FALSE, nCores = 1, forceRerun = FALSE) {
   
+  start = Sys.time() 
+  
+  checkmate::assertClass(GRN, "GRN")  
   GRN = .addFunctionLogToObject(GRN)    
+  checkmate::assertChoice(corMethod, c("pearson", "spearman"))
+  assertFlag(addRobustRegression)
+  checkmate::assertIntegerish(nCores, lower = 1)
+  assertFlag(forceRerun)
+  
+  if (addRobustRegression) {
+      packageMessage = paste0("The package robust is not installed, but needed here due to addRobustRegression = TRUE. Please install it and re-run this function or change addRobustRegression to FALSE.")
+      .checkPackageInstallation("robust", packageMessage)  
+  }
   
   if (is.null(GRN@connections$TF_genes.filtered) | forceRerun) {
     
@@ -3562,6 +3694,8 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
     } # end for each permutation
   }
   
+  .printExecutionTime(start, prefix = "")
+  
   GRN
 }
 
@@ -3580,8 +3714,8 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
   
   futile.logger::flog.info(paste0(" Checking validity of input"))
   checkmate::assertDataFrame(SNPData, min.rows = 1)
-  checkmate::assertSubset(c(col_chr, col_pos), colnames(SNPData))
-  checkmate::assertSubset(c(col_peakID), colnames(grn))
+  checkmate::assertSubset(c(col_chr, col_pos), colnames(SNPData), empty.ok = FALSE)
+  checkmate::assertSubset(c(col_peakID), colnames(grn), empty.ok = FALSE)
   
   if (genomeAssembly_peaks != genomeAssembly_SNP) {
     
@@ -3683,22 +3817,24 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
 ####### STATS #########
 
 
-#' Generate a summary PDF for the number of connections for a \code{\linkS4class{GRN}} object. 
+#' Generate a summary for the number of connections for different filtering criteria for a \code{\linkS4class{GRN}} object. 
 #' 
-#' Essentially, this functions calls \code{\link{filterGRNAndConnectGenes}} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{\link{filterGRNAndConnectGenes}}, see the help for this function for details.
+#' This functions calls \code{\link{filterGRNAndConnectGenes}} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{\link{filterGRNAndConnectGenes}}, see the help for this function for details.
+#' The function \code{\link{plot_stats_connectionSummary}} can be used afterwards for plotting.
 #' 
 #' @export
 #' @template GRN 
-#' @param TF_peak.fdr Numeric vector. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. TF-peak FDR values to iterate over.
+#' @param TF_peak.fdr Numeric vector[0,1]. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. TF-peak FDR values to iterate over.
 #' @template TF_peak.connectionTypes
-#' @param peak_gene.fdr Numeric vector. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. Peak-gene FDR values to iterate over.
-#' @param peak_gene.p_raw  Numeric vector. Default \code{NULL}. Peak-gene raw p-value values to iterate over. Skipped if set to NULL.
-#' @param peak_gene.r_range Numeric vector of length 2 (minimum -1, maximum 1). Default \code{c(0,1)}. The correlation range of peak-gene connections to keep.
+#' @param peak_gene.fdr Numeric vector[0,1]. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. Peak-gene FDR values to iterate over.
+#' @param peak_gene.p_raw  Numeric vector[0,1]. Default \code{NULL}. Peak-gene raw p-value values to iterate over. Skipped if set to NULL.
+#' @param peak_gene.r_range Numeric vector of length 2[-1,1]. Default \code{c(0,1)}. The correlation range of peak-gene connections to keep.
 #' @template gene.types
-#' @param allowMissingGenes Logical vector. Default \code{c(FALSE, TRUE)}. Allow genes to be missing for peak-gene connections?
-#' @param allowMissingTFs Logical vector. Default \code{c(FALSE)}. Allow TFs to be missing for TF-peak connections?
+#' @param allowMissingGenes Logical vector of length 1 or 2. Default \code{c(FALSE, TRUE)}. Allow genes to be missing for peak-gene connections? If both \code{FALSE} and \code{TRUE} are given, the code loops over both
+#' @param allowMissingTFs Logical vector of length 1 or 2. Default \code{c(FALSE)}. Allow TFs to be missing for TF-peak connections?  If both \code{FALSE} and \code{TRUE} are given, the code loops over both
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @seealso \code{\link{plot_stats_connectionSummary}}
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -3710,21 +3846,23 @@ generateStatsSummary <- function(GRN,
                                  peak_gene.fdr = c(0.001, 0.01, 0.05, 0.1, 0.2),
                                  peak_gene.p_raw = NULL,
                                  peak_gene.r_range = c(0,1),
-                                 gene.types = c("protein_coding", "lincRNA"),
+                                 gene.types = c("protein_coding"),
                                  allowMissingGenes = c(FALSE, TRUE),
                                  allowMissingTFs = c(FALSE),
                                  forceRerun = FALSE
 ) {
   
-  GRN = .addFunctionLogToObject(GRN)
+  start = Sys.time()   
   
   checkmate::assertClass(GRN, "GRN")
+  GRN = .addFunctionLogToObject(GRN)
+
   checkmate::assertNumeric(TF_peak.fdr, lower = 0, upper = 1, min.len = 1)
-  checkmate::assertSubset(TF_peak.connectionTypes, c("all", GRN@config$TF_peak_connectionTypes))
+  checkmate::assertSubset(TF_peak.connectionTypes, c("all", GRN@config$TF_peak_connectionTypes), empty.ok = FALSE)
   checkmate::assertNumeric(peak_gene.fdr, lower = 0, upper = 1, min.len = 1)
   checkmate::assert(checkmate::checkNull(peak_gene.p_raw), checkmate::checkNumeric(peak_gene.p_raw, lower = 0, upper = 1, min.len = 1))
   checkmate::assertNumeric(peak_gene.r_range, lower = -1, upper = 1, len = 2)
-  checkmate::assertCharacter(gene.types, min.len = 1)
+  checkmate::assertSubset(gene.types, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertSubset(allowMissingGenes, c(TRUE, FALSE))
   checkmate::assertSubset(allowMissingTFs, c(TRUE, FALSE))
   
@@ -3859,7 +3997,7 @@ generateStatsSummary <- function(GRN,
     futile.logger::flog.info(paste0("Data already exists in object. Set forceRerun = TRUE to regenerate and overwrite."))
   }
   
-  
+  .printExecutionTime(start, prefix = "")
   
   GRN
   
@@ -3975,42 +4113,62 @@ generateStatsSummary <- function(GRN,
 
 #' Load example GRN dataset
 #' 
+#' Loads an example GRN object with 6 TFs, ~61.000 peaks, ~19.000 genes, 259 filtered connections and pre-calculated enrichments from the internet. 
+#' This function uses \code{BiocFileCache} if installed to cache the example object, which is 
+#' considerably faster than re-downloading the file anew every time the function is executed.
+#' If not, the file is re-downloaded every time anew. Thus, to enable caching, you may install the package \code{BiocFileCache}.
+#' 
 #' @export
 #' @param forceDownload \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the download be enforced even if the local cached file is already present?
 #' @param fileURL Character. Default \url{https://www.embl.de/download/zaugg/GRaNIE/GRN.rds}. URL to the GRN example object in rds format.
 #' @examples 
 #' GRN = loadExampleObject()
-#' @return 
-#' An example \code{\linkS4class{GRN}} object
-#' @import BiocFileCache
+#' @return An small example \code{\linkS4class{GRN}} object
 loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl.de/download/zaugg/GRaNIE/GRN.rds") {
   
   checkmate::assertFlag(forceDownload)
-  # Taken and modified from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
-  
-  bfc <- .get_cache()
-  
-  rid <- BiocFileCache::bfcquery(bfc, "GRaNIE_object_example")$rid
-  if (!length(rid)) {
-    rid <- names(BiocFileCache::bfcadd(bfc, "GRaNIE_object_example", fileURL))
+    
+  if (!is.installed("BiocFileCache")) {
+      
+      message = paste0("The package BiocFileCache is not installed, but recommended if you want to speed-up the retrieval of the GRN example object ",
+      "via this function when using it multiple times. If not installed, the example object has to be downloaded anew every time you use this function.")
+      .checkPackageInstallation("BiocFileCache", message, isWarning = TRUE)
+      
+      GRN = readRDS(url(fileURL))
+
+  } else {
+      
+      
+      # Taken and modified from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
+      
+      bfc <- .get_cache()
+      
+      rid <- BiocFileCache::bfcquery(bfc, "GRaNIE_object_example")$rid
+      if (!length(rid)) {
+          rid <- names(BiocFileCache::bfcadd(bfc, "GRaNIE_object_example", fileURL))
+      }
+      if (!isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
+          messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
+          message(messageStr)
+          filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
+      }
+      
+      
+      filePath = BiocFileCache::bfcrpath(bfc, rids = rid)
+      
+      # Now we can read in the locally stored file
+      GRN = readRDS(filePath)
   }
-  if (!isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
-    messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
-    message(messageStr)
-    filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
-  }
-  
-  
-  filePath = BiocFileCache::bfcrpath(bfc, rids = rid)
-  
-  # Now we can read in the locally stored file
-  GRN = readRDS(filePath)
+
   
   # Change the default path to the current working directory
   GRN@config$directories$outputRoot = "."
   GRN@config$directories$output_plots = "."
   GRN@config$directories$motifFolder = "."
   GRN@config$files$output_log = "GRN.log"
+  
+  # Temporary fix: Replace lincRNA with lncRNA due to a recent change in biomaRt until we update the object directly
+  GRN@annotation$genes = dplyr::mutate(GRN@annotation$genes, gene.type = dplyr::recode_factor(gene.type, lncRNA = "lincRNA")) 
   
   GRN
   
@@ -4020,10 +4178,11 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
 #' Get counts for the various data defined in a \code{\linkS4class{GRN}} object
 #' 
 #' Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
+#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 #' 
 #' @template GRN 
 #' @param type Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.
-#' @param norm Logical. \code{TRUE} or \code{FALSE}.  Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?
+#' @param norm Logical. \code{TRUE} or \code{FALSE}. Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?
 #' @template permuted
 #' @export
 #' @import tibble
@@ -4031,10 +4190,11 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' counts.df = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
-#' @return Data frame of counts, with the type as indicated by the function parameters.
+#' @return Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 
 getCounts <- function(GRN, type, norm, permuted = FALSE) {
   
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)      
   
   checkmate::assertChoice(type, c("peaks", "rna"))
@@ -4083,7 +4243,7 @@ getCounts <- function(GRN, type, norm, permuted = FALSE) {
   } else { # permutation 1
     
     if (type == "peaks") {
-      message = "Could not find counts in object."
+      message = "Could not find permuted peak counts in GRN object. Peaks are not stored as pemruted, set permuted = FALSE for type = \"peaks\""
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     } else {
       
@@ -4110,23 +4270,28 @@ getCounts <- function(GRN, type, norm, permuted = FALSE) {
 
 
 
-#' Extract connections from a \code{\linkS4class{GRN}} object
+#' Extract connections or links from a \code{\linkS4class{GRN}} object as da data frame.
+#' 
+#' Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
+#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 #' 
 #' @export
 #' @template GRN 
 #' @template permuted
-#' @param type Character. Default \code{all.filtered}. Must be one of \code{TF_peaks}, \code{peak_genes}, \code{all.filtered}. The type of connections to retrieve.
-#' @param include_TF_gene_correlations Logical. \code{TRUE} or \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.
-#' @return A data frame with the connections. Importantly, this function does **NOT** return a \code{\linkS4class{GRN}} object.
+#' @param type Character. One of \code{TF_peaks}, \code{peak_genes}, \code{all.filtered}. Default \code{all.filtered}. The type of connections to retrieve.
+#' @param include_TF_gene_correlations Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.
+#' @return A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object.
+#' @seealso \code{\link{filterGRNAndConnectGenes}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' GRN_con.all.df = getGRNConnections(GRN)
 getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, include_TF_gene_correlations = FALSE) {
   
+  checkmate::assertClass(GRN, "GRN")  
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")  
+   
   checkmate::assertChoice(type, c("TF_peaks", "peak_genes", "all.filtered"))
   checkmate::assertFlag(permuted)
   #checkmate::assertIntegerish(permutation, lower = 0, upper = .getMaxPermutation(GRN))
@@ -4304,11 +4469,13 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
 
 #' Retrieve parameters for previously used function calls and general parameters for a \code{\linkS4class{GRN}} object. 
 #' 
+#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
+#' 
 #' @export
 #' @template GRN 
 #' @param name Character. Default \code{all}. Name of parameter or function name to retrieve. Set to the special keyword \code{all} to retrieve all parameters.
-#' @param type Character. Default \code{parameter}. Either \code{function} or \code{parameter}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. When set to \code{parameter}, in combination with \code{name}, returns a specific parameter (as specified in \code{GRN@config})).
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @param type Character. Either \code{function} or \code{parameter}. Default \code{parameter}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. When set to \code{parameter}, in combination with \code{name}, returns a specific parameter (as specified in \code{GRN@config})).
+#' @return The requested parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -4316,14 +4483,14 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, inc
 getParameters <- function (GRN, type = "parameter", name = "all") {
   
   checkmate::assertClass(GRN, "GRN")
-  checkmate::assertSubset(type, c("function", "parameter"))
+  checkmate::assertChoice(type, c("function", "parameter"))
   
   if (type == "function") {
     
     checkmate::assertCharacter(name, any.missing = FALSE, len = 1)
     functionParameters = GRN@config$functionParameters[[name]]
     if (is.null(functionParameters)) {
-      checkmate::assertSubset(name, ls(paste0("package:", utils::packageName())))
+      checkmate::assertChoice(name, ls(paste0("package:", utils::packageName())))
     } 
     
     return(functionParameters)
@@ -4335,7 +4502,7 @@ getParameters <- function (GRN, type = "parameter", name = "all") {
     } else {
       parameters = GRN@config[[name]]
       if (is.null(parameters)) {
-        checkmate::assertSubset(name, names(GRN@config$parameters))
+        checkmate::assertChoice(name, names(GRN@config$parameters))
       } 
       
       return(parameters)
@@ -4360,17 +4527,16 @@ getParameters <- function (GRN, type = "parameter", name = "all") {
 #' Optional convenience function to delete intermediate data from the function \code{\link{AR_classification_wrapper}} and summary statistics that may occupy a lot of space
 #' @export
 #' @template GRN
-#' @return The same \code{\linkS4class{GRN}} object, with some slots being deleted (\code{GRN@data$TFs$classification} as well as \code{GRN@stats$connectionDetails.l})
+#' @return An updated \code{\linkS4class{GRN}} object, with some slots being deleted (\code{GRN@data$TFs$classification} as well as \code{GRN@stats$connectionDetails.l})
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # GRN = deleteIntermediateData(GRN)
+#' GRN = loadExampleObject()
+#' GRN = deleteIntermediateData(GRN)
 deleteIntermediateData <- function(GRN) {
   
-  
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
   
   for (permutationCur in 0:.getMaxPermutation(GRN)) {
     
@@ -4400,7 +4566,9 @@ deleteIntermediateData <- function(GRN) {
 
 getBasic_metadata_visualization <- function(GRN, forceRerun = FALSE) {
   
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN) 
+  checkmate::assertFlag(forceRerun)
   
   # Get base mean expression for genes and TFs and mean accessibility from peaks
   
@@ -4438,7 +4606,7 @@ getBasic_metadata_visualization <- function(GRN, forceRerun = FALSE) {
 #' @export
 #' @template GRN
 #' @param outputDirectory Character. Default \code{.}. New output directory for all output files unless overwritten via the parameter \code{outputFolder}.
-#' @return The same \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
+#' @return An updated \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
 #' @examples 
 #' GRN = loadExampleObject()
 #' GRN = changeOutputDirectory(GRN, outputDirectory = ".")

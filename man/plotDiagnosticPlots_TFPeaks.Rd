@@ -33,7 +33,7 @@ plotDiagnosticPlots_TFPeaks(
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
-\item{pdf_width}{Number. Default 12. Width of the PDF, in cm.}
+\item{pdf_width}{Number>0. Default 12. Width of the PDF, in cm.}
 
 \item{pdf_height_base}{Number. Default 8. Base height of the PDF, in cm, per connection type. The total height is automatically determined based on the number of connection types that are found in the object (e.g., expression or TF activity). For example, when two connection types are found, the base height is multiplied by 2.}
 
@@ -42,7 +42,7 @@ plotDiagnosticPlots_TFPeaks(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object.
 }
 \description{
 Due to the number of plots that this functions produces, we currently provide only the option to plot as PDF. This may change in the future.

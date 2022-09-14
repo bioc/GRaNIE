@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plotCommunitiesEnrichment}
 \alias{plotCommunitiesEnrichment}
-\title{Plot community-based enrichment results}
+\title{Plot community-based enrichment results for a filtered \code{\linkS4class{GRN}} object}
 \usage{
 plotCommunitiesEnrichment(
   GRN,
@@ -40,7 +40,7 @@ plotCommunitiesEnrichment(
 
 \item{nSignificant}{Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
 
-\item{nID}{Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.}
+\item{nID}{Numeric. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
 
 \item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 
@@ -48,22 +48,30 @@ plotCommunitiesEnrichment(
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
-\item{pdf_width}{Number. Default 12. Width of the PDF, in cm.}
+\item{pdf_width}{Number>0. Default 12. Width of the PDF, in cm.}
 
-\item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
+\item{pdf_height}{Number >0. Default 12. Height of the PDF, in cm.}
 
 \item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
+The same \code{\linkS4class{GRN}} object, without modifications.
 }
 \description{
-Similarly to \code{\link{plotGeneralEnrichment}}, the results of the community-based enrichment analysis are plotted.. By default, the results for the 10 largest communities are displayed. Additionally, if a general enrichment analysis was previously generated, this function plots an additional heatmap to compare the general enrichment with the community based enrichment. A reduced version of this heatmap is also produced where terms are filtered out to improve visibility and display and highlight the most significant terms.
+Similarly to \code{\link{plotGeneralEnrichment}} and \code{\link{plotTFEnrichment}}, the results of the community-based enrichment analysis are plotted.
+This function produces multiple plots. First, one plot per community to summarize the community-specific enrichment.
+Second, a summary heatmap of all significantly enriched terms across all communities and for the whole eGRN. The latter allows to compare the results with the general network enrichment.
+#' Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per community and for the whole eGRN (as specified by \code{nID}) for improved visibility
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE)
+}
+\seealso{
+\code{\link{plotGeneralEnrichment}}
+
+\code{\link{plotTFEnrichment}}
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{addData}
 \alias{addData}
-\title{Add data to a \code{\linkS4class{GRN}} object}
+\title{Add data to a \code{\linkS4class{GRN}} object.}
 \usage{
 addData(
   GRN,
@@ -20,37 +20,55 @@ addData(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{counts_peaks}{Data frame. No default. Counts for the peaks, with raw or normalized counts for each peak (rows) across all samples (columns). In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
+\item{counts_peaks}{Data frame. No default. Counts for the peaks, with raw or normalized counts for each peak (rows) across all samples (columns). 
+In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. 
+Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
 
-\item{normalization_peaks}{Character. Default \code{DESeq_sizeFactor}. Normalization procedure for peak data. Must be one of \code{DESeq_sizeFactor}, \code{none}, or \code{quantile}.}
+\item{normalization_peaks}{Character. Default \code{DESeq_sizeFactor}. 
+Normalization procedure for peak data. Must be one of \code{DESeq_sizeFactor}, \code{none}, or \code{quantile}.}
 
-\item{idColumn_peaks}{Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. The required format must be {chr}:{start}-{end}", with {chr} denoting the abbreviated chromosome name, and {start} and {end} the begin and end of the peak coordinates, respectively. End must be bigger than start. Examples for valid peak IDs are \code{chr1:400-800} or \code{chrX:20-25}.}
+\item{idColumn_peaks}{Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. 
+The required format must be {chr}:{start}-{end}", with {chr} denoting the abbreviated chromosome name, and {start} and {end} the begin and end 
+of the peak coordinates, respectively. End must be bigger than start. Examples for valid peak IDs are \code{chr1:400-800} or \code{chrX:20-25}.}
 
-\item{counts_rna}{Data frame. No default. Counts for the RNA-seq data, with raw or normalized counts for each gene (rows) across all samples (columns). In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
+\item{counts_rna}{Data frame. No default. Counts for the RNA-seq data, with raw or normalized counts for each gene (rows) across all samples (columns). 
+In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. 
+Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
 
-\item{normalization_rna}{Character. Default \code{quantile}. Normalization procedure for peak data. Must be one of "DESeq_sizeFactor", "none", or "quantile"}
+\item{normalization_rna}{Character. Default \code{quantile}. Normalization procedure for peak data. 
+Must be one of "DESeq_sizeFactor", "none", or "quantile". For "quantile", \code{limma::normalizeQuantiles} is used for normalization.}
 
 \item{idColumn_RNA}{Character. Default \code{ENSEMBL}. Name of the column in the \code{counts_rna} data frame that contains Ensembl IDs.}
 
-\item{sampleMetadata}{Data frame. Default \code{NULL}. Optional, additional metadata for the samples, such as age, sex, gender etc. If provided, the @seealso [plotPCA_all()] function can then incorporate and plot it. Sample names must match with those from both peak and RNA-Seq data. The first column is expected to contain the sample IDs, the actual column name is irrelevant.}
+\item{sampleMetadata}{Data frame. Default \code{NULL}. Optional, additional metadata for the samples, such as age, sex, gender etc. 
+If provided, the @seealso [plotPCA_all()] function can then incorporate and plot it. Sample names must match with those from both peak and RNA-Seq data. The first column is expected to contain the sample IDs, the actual column name is irrelevant.}
 
-\item{allowOverlappingPeaks}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping peaks be allowed (then only a warning is issued when overlapping peaks are found) or (the default) should an error be raised?}
+\item{allowOverlappingPeaks}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping peaks be allowed (then only a warning is issued 
+when overlapping peaks are found) or (the default) should an error be raised?}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object, with added data from this function (e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 }
 \description{
-Add data to a \code{\linkS4class{GRN}} object
+This function adds both RNA and peak data to a \code{\linkS4class{GRN}} object, along with data normalization.
+In addition, and highly recommended, sample metadata can be optionally provided.
+}
+\details{
+If the \code{ChIPseeker} package is installed, additional peak annotation is provided in the annotation slot and a peak annotation QC plot is produced as part of peak-gene QC.
+This is fully optional, however, and has no consequences for downstream functions.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# library(tidyverse)
+# library(readr)
 # rna.df   = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/rna.tsv.gz")
 # peaks.df = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/peaks.tsv.gz")
 # meta.df  = read_tsv("https://www.embl.de/download/zaugg/GRaNIE/sampleMetadata.tsv.gz")
 # GRN = loadExampleObject()
 # We omit sampleMetadata = meta.df in the following line, becomes too long otherwise
 # GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
+}
+\seealso{
+\code{\link{plotPCA_all}}
 }

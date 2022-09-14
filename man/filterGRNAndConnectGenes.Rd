@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{filterGRNAndConnectGenes}
 \alias{filterGRNAndConnectGenes}
-\title{Filter the GRN and integrate peak-gene connections.}
+\title{Filter TF-peaks and peak-gene connections and combine them to TF-peak-gene connections to construct an eGRN.}
 \usage{
 filterGRNAndConnectGenes(
   GRN,
@@ -12,8 +12,8 @@ filterGRNAndConnectGenes(
   peak_gene.fdr.threshold = 0.2,
   peak_gene.fdr.method = "BH",
   peak_gene.IHW.covariate = NULL,
-  peak_gene.IHW.nbins = 5,
-  gene.types = c("protein_coding", "lincRNA"),
+  peak_gene.IHW.nbins = "auto",
+  gene.types = c("protein_coding"),
   allowMissingTFs = FALSE,
   allowMissingGenes = TRUE,
   peak_gene.r_range = c(0, 1),
@@ -39,13 +39,21 @@ filterGRNAndConnectGenes(
 
 \item{peak_gene.fdr.threshold}{Numeric[0,1]. Default 0.2. Threshold for the peak-gene connections, based on the FDR. All peak-gene connections with a larger FDR will be filtered out.}
 
-\item{peak_gene.fdr.method}{Character. Default "BH". One of: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW". Method for adjusting p-values for multiple testing. If set to "IHW", independent hypothesis weighting will be performed, and a suitable covariate has to be specified for the parameter \code{peak_gene.IHW.covariate}.}
+\item{peak_gene.fdr.method}{Character. Default "BH". One of: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW". 
+Method for adjusting p-values for multiple testing. 
+If set to "IHW", the package \code{IHW} is required (as it is listed under \code{Suggests}, it may not be installed), 
+and independent hypothesis weighting will be performed, and a suitable covariate has to be specified for the parameter \code{peak_gene.IHW.covariate}.}
 
 \item{peak_gene.IHW.covariate}{Character. Default NULL. Name of the covariate to use for IHW (column name from the table thatis returned with the function \code{getGRNConnections}. Only relevant if \code{peak_gene.fdr.method} is set to "IHW". You have to make sure the specified covariate is suitable or IHW, see the diagnostic plots that are generated in this function for this. For many datasets, the peak-gene distance (called \code{peak_gene.distance} in the object) seems suitable.}
 
-\item{peak_gene.IHW.nbins}{Integer or "auto". Default 5. Number of bins for IHW. Only relevant if \code{peak_gene.fdr.method} is set to "IHW".}
+\item{peak_gene.IHW.nbins}{Integer or "auto". Default "auto". Number of bins for IHW. Only relevant if \code{peak_gene.fdr.method} is set to "IHW".}
 
-\item{gene.types}{Character vector of supported gene types. Default \code{c("protein_coding", "lincRNA")}. Filter for gene types to retain, genes with other gene types are filtered.}
+\item{gene.types}{Character vector of supported gene types. Default \code{c("protein_coding", "lincRNA")}. 
+Filter for gene types to retain, genes with gene types not listed here are filtered. The special keyword "all" indicates no filter and retains all gene types.
+The specified names must match the names as stored in the \code{\linkS4class{GRN}} object (\code{see GRN@annotation$genes$gene.type}) and
+correspond 1:1 to the gene type names as provided by \code{biomaRt}, with the exception of \code{lncRNAs}, 
+which is internally renamed to \code{lincRNAs} when first fetching all gene types. This is done due to a recent change in \code{biomaRt} and aims at 
+keeping backwards compatibility with \code{\linkS4class{GRN}} objects.}
 
 \item{allowMissingTFs}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should connections be returned for which the TF is NA (i.e., connections consisting only of peak-gene links?). If set to \code{TRUE}, this generally greatly increases the number of connections but it may not be what you aim for.}
 
@@ -72,11 +80,18 @@ filterGRNAndConnectGenes(
 \item{silent}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with the filtered and merged TF-peak and peak-gene connections in the slot connections$all.filtered.
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function. The filtered and merged TF-peak and peak-gene connections in the slot \code{GRN@connections$all.filtered}.
 }
 \description{
-This is one of the main integrative functions of the \code{GRN} package. It has two main functions: Filtering the TF-peak and peak-gene connections that have been identified before, and combining the 3 major elements (TFs, peaks, genes) into one data frame, with one row per connection. Here, a connection can either be a TF-peak, peak-gene or TF-peak-gene link, depending on the parameters. 
-Internally, first, the TF-peak are filtered before the peak-gene connections are added for reasons of memory and computational efficacy: It takes a lot of time and particularly space to connect the full GRN with all peak-gene connections - as most of the links have weak support (i.e., high FDR), first filtering out unwanted links dramatically reduces the memory needed for the combined GRN
+This is one of the main integrative functions of the \code{GRaNIE} package. It has two main functions: 
+First, filtering both TF-peak and peak-gene connections according to different criteria such as FDR and other properties 
+Second, joining the three major elements that an eGRN consist of (TFs, peaks, genes) into one data frame, with one row per unique TF-peak-gene connection.
+\strong{Note that the eGRN graph is reset upon successful execution of this function, and re-running the function \code{\link{build_eGRN_graph}} 
+is necessary when any of the network functions of the package shall be executed.}
+Internally, before joining them, both TF-peak links and peak-gene connections are filtered separately for reasons of memory and computational efficacy:
+First filtering out unwanted links dramatically reduces the memory needed for the full eGRN. Peak-gene p-value adjustment is only done after all filtering steps on the remaining set of
+connections to lower the statistical burden of multiple-testing adjustment; therefore, this may lead to initially counter-intuitive effects such as a particular connections not being included anymore as compared to a 
+filtering based on different thresholds, or the FDR being different for the same reason.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
@@ -89,4 +104,6 @@ GRN = filterGRNAndConnectGenes(GRN)
 \code{\link{addConnections_TF_peak}}
 
 \code{\link{addConnections_peak_gene}}
+
+\code{\link{build_eGRN_graph}}
 }

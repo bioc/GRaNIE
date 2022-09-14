@@ -4,3 +4,14 @@ vignettes/*_files
 vignettes/*_cache
 vignettes/output
 .Rproj.user
+docs
+exampleDataset
+pkgdown
+TFBS_selected
+TFBS_selected.zip
+_pkgdown.yml
+.Rhistory
+.RData
+GRaNIE.Rproj
+fixBugs_RELASE_GRaNIE.sh
+logo.png

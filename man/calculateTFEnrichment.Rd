@@ -2,7 +2,7 @@
 % Please edit documentation in R/network.R
 \name{calculateTFEnrichment}
 \alias{calculateTFEnrichment}
-\title{Calculate TF-based GO enrichment}
+\title{Run an enrichment analysis for the set of genes connected to a particular TF or sets of TFs in the filtered \code{\linkS4class{GRN}} object}
 \usage{
 calculateTFEnrichment(
   GRN,
@@ -26,7 +26,12 @@ calculateTFEnrichment(
 
 \item{TF.names}{Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.}
 
-\item{ontology}{Character vector of ontologies. Default \code{c("GO_BP", "GO_MF")}. Valid values are \code{"GO_BP"}, \code{"GO_MF"}, \code{"GO_CC"}, \code{"KEGG"}, \code{"DO"}, and \code{"Reactome"}, referring to GO Biological Process, GO Molecular Function, GO Cellular Component, KEGG, Disease Ontology, and Reactome Pathways.}
+\item{ontology}{Character vector of ontologies. Default \code{c("GO_BP", "GO_MF")}. 
+Valid values are \code{"GO_BP"}, \code{"GO_MF"}, \code{"GO_CC"}, \code{"KEGG"}, \code{"DO"}, and \code{"Reactome"}, 
+referring to \emph{GO Biological Process}, \emph{GO Molecular Function}, \emph{GO Cellular Component}, \emph{KEGG}, \emph{Disease Ontology}, 
+and \emph{Reactome Pathways}, respectively. \code{GO} ontologies require the \code{topGO}, 
+\code{"KEGG"} the \code{clusterProfiler}, \code{"DO"} the \code{DOSE}, and \code{"Reactome"} the \code{ReactomePA} packages, respectively.
+As they are listed under \code{Suggests}, they may not yet be installed, and the function will throw an error if they are missing.}
 
 \item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library.}
 
@@ -39,13 +44,23 @@ calculateTFEnrichment(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
+An updated \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
 }
 \description{
-This function calculates the GO enrichment per TF, i.e. for the set of genes a given TF is connected to in the filtered \code{\linkS4class{GRN}}.
+The enrichment analysis is based on the subset of the network connected to particular TFs (TF regulons), see \code{\link{calculateCommunitiesEnrichment}} and \code{\link{calculateGeneralEnrichment}} for 
+community- and general enrichment, respectively.
+This function requires the existence of the eGRN graph in the \code{\linkS4class{GRN}} object as produced by \code{\link{build_eGRN_graph}}. 
+Results can subsequently be visualized with the function \code{\link{plotTFEnrichment}}.
+}
+\details{
+All enrichment functions use the TF-gene graph as defined in the `GRN` object. See the `ontology` argument for currently supported ontologies.
+Also note that some parameter combinations for `algorithm` and `statistic` are incompatible, an error message will be thrown in such a case.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN =  loadExampleObject()
 GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
+}
+\seealso{
+\code{\link{plotTFEnrichment}}
 }

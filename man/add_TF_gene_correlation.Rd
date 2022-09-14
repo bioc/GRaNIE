@@ -17,14 +17,17 @@ add_TF_gene_correlation(
 
 \item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
 
-\item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. Use a robust regression in addition to a non-robust one? Significantly increases overall running time.}
+\item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. 
+Use a robust regression in addition to a non-robust one? Significantly increases overall running time.
+If set to \code{TRUE}, the package \code{robust} is required (as it is listed under \code{Suggests}, it may not be installed).}
 
-\item{nCores}{Integer >0. Default 1. Number of cores to use.}
+\item{nCores}{Integer >0. Default 1. Number of cores to use. 
+A value >1 requires the \code{BiocParallel} package (as it is listed under \code{Suggests}, it may not be installed yet).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 }
 \description{
 Add TF-gene correlations to a \code{\linkS4class{GRN}} object. The information is currently stored in \code{GRN@connections$TF_genes.filtered}. Note that raw p-values are not adjusted.

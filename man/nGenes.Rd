@@ -16,11 +16,16 @@ nGenes(GRN, filter = TRUE)
 Integer. Number of genes that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) genes that are currently marked as \emph{filtered}.
 }
 \description{
-Return the number of genes (all or only non-filtered ones) that are defined in the \code{\linkS4class{GRN}} object.
+Returns the number of genes (all or only non-filtered ones) from the provided RNA-seq data in the \code{\linkS4class{GRN}} object.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 nGenes(GRN, filter = TRUE)
 nGenes(GRN, filter = FALSE)
+}
+\seealso{
+\code{\link{nTFs}}
+
+\code{\link{nPeaks}}
 }

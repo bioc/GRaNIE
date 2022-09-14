@@ -18,9 +18,9 @@ AR_classification_wrapper(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{significanceThreshold_Wilcoxon}{Numeric between 0 and 1. Default 0.05. Significance threshold for Wilcoxon test that is run in the end for the final classification. See the Vignette and *diffTF* paper for details.}
+\item{significanceThreshold_Wilcoxon}{Numeric[0,1]. Default 0.05. Significance threshold for Wilcoxon test that is run in the end for the final classification. See the Vignette and *diffTF* paper for details.}
 
-\item{plot_minNoTFBS_heatmap}{Integer. Default 100. Minimum number of TFBS for a TF to be included in the heatmap that is part of the output of this function.}
+\item{plot_minNoTFBS_heatmap}{Integer[1,]. Default 100. Minimum number of TFBS for a TF to be included in the heatmap that is part of the output of this function.}
 
 \item{deleteIntermediateData}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Should intermediate data be deleted before returning the object after a successful run? Due to the size of the produced intermediate data, we recommend setting this to \code{TRUE}, but if memory or object size are not an issue, the information can also be kept.}
 
@@ -33,7 +33,7 @@ AR_classification_wrapper(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 }
 \description{
 Run the activator-repressor classification for the TFs for a \code{\linkS4class{GRN}} object

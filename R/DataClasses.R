@@ -202,7 +202,7 @@ setMethod("show",
                 cat(" Communities (TF-gene):\n")
                 df = igraph::vertex.attributes(GRN@graph[["TF_gene"]]$graph)
                 if (!is.null(df) & "community" %in% names(df)) {
-                    communities = df %>% as.data.frame() %>% dplyr::count(community) %>% dplyr::arrange(desc(n))
+                    communities = df %>% as.data.frame() %>% dplyr::count(community) %>% dplyr::arrange(dplyr::desc(.data$n))
                     cat("  Communities, sorted by size (n = Number of nodes): ", paste0(communities$community, " (n=", communities$n, collapse = "), "), ")\n", sep = "")
                 } else {
                     cat("  None found\n")
@@ -241,11 +241,13 @@ setMethod("show",
 
 #' Get the number of peaks for a \code{\linkS4class{GRN}} object.
 #' 
-#' Return the number of peaks (all or only non-filtered ones) that are defined in the \code{\linkS4class{GRN}} object.
+#' Returns the number of peaks (all or only non-filtered ones) from the provided peak datain the \code{\linkS4class{GRN}} object.
 #'
 #' @template GRN
 #' @param filter TRUE or FALSE. Default TRUE. Should peaks marked as filtered be included in the count?
 #' @return Integer. Number of peaks that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) peaks that are currently marked as \emph{filtered}.
+#' @seealso \code{\link{nTFs}}
+#' @seealso \code{\link{nGenes}}
 #' @examples
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -253,7 +255,6 @@ setMethod("show",
 #' nPeaks(GRN, filter = FALSE)
 #' @export
 #' @aliases peaks
-#' @rdname peaks-methods
 nPeaks <- function(GRN, filter = TRUE) {
   
   checkmate::assertClass(GRN, "GRN")
@@ -276,11 +277,13 @@ nPeaks <- function(GRN, filter = TRUE) {
 
 #' Get the number of genes for a \code{\linkS4class{GRN}} object.
 #' 
-#' Return the number of genes (all or only non-filtered ones) that are defined in the \code{\linkS4class{GRN}} object.
+#' Returns the number of genes (all or only non-filtered ones) from the provided RNA-seq data in the \code{\linkS4class{GRN}} object.
 #'
 #' @template GRN
 #' @param filter TRUE or FALSE. Default TRUE. Should genes marked as filtered be included in the count?
 #' @return Integer. Number of genes that are defined in the \code{\linkS4class{GRN}} object, either by excluding (filter = TRUE) or including (filter = FALSE) genes that are currently marked as \emph{filtered}.
+#' @seealso \code{\link{nTFs}}
+#' @seealso \code{\link{nPeaks}}
 #' @examples
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -288,7 +291,6 @@ nPeaks <- function(GRN, filter = TRUE) {
 #' nGenes(GRN, filter = FALSE)
 #' @export
 #' @aliases genes
-#' @rdname genes-methods
 nGenes <- function(GRN, filter = TRUE) {
   
   checkmate::assertClass(GRN, "GRN")
@@ -306,4 +308,32 @@ nGenes <- function(GRN, filter = TRUE) {
   
   nGenes
   
+}
+
+
+
+#' Get the number of TFs for a \code{\linkS4class{GRN}} object.
+#' 
+#' Returns the number of TFs  from the provided TFBS data in the \code{\linkS4class{GRN}} object.
+#'
+#' @template GRN
+#' @return Integer. Number of TFs that are defined in the \code{\linkS4class{GRN}} object.
+#' @seealso \code{\link{nGenes}}
+#' @seealso \code{\link{nPeaks}}
+#' @examples
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' nTFs(GRN)
+#' @export
+#' @aliases TFs
+nTFs <- function(GRN) {
+    
+    checkmate::assertClass(GRN, "GRN")
+    
+    if (is.null(GRN@data$TFs$translationTable)) {
+        return(NA)
+    }
+    
+    nrow(GRN@data$TFs$translationTable)
+    
 }

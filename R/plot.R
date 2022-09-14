@@ -15,7 +15,7 @@
 #' @template pdf_width
 #' @template pdf_height
 #' @template pages
-#' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for each specified \code{type}, a PDF file is produced with a PCA. We refer to the Vignettes for details and further explanations.
+#' @return An updated \code{\linkS4class{GRN}} object. 
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' # GRN = loadExampleObject()
@@ -26,11 +26,12 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
                         plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                         forceRerun = FALSE) {
   
+  start = Sys.time()
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
-  checkmate::assertSubset(data , c("rna", "peaks", "all"))
-  checkmate::assertSubset(type , c("raw", "normalized", "all"))
+  checkmate::assertSubset(data , c("rna", "peaks", "all"), empty.ok = FALSE)
+  checkmate::assertSubset(type , c("raw", "normalized", "all"), empty.ok = FALSE)
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
@@ -153,7 +154,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     
   }
   
-  
+  .printExecutionTime(start, prefix = "") 
   GRN
   
   
@@ -398,8 +399,8 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   checkmate::assertIntegerish(varn, lower = 100)
   checkmate::assertFlag(logTransform)
   
-  checkmate::assertSubset(metadataColumns, colnames(metadataTable))
-  checkmate::assertSubset(metadataColumns_fill, metadataColumns)
+  checkmate::assertSubset(metadataColumns, colnames(metadataTable), empty.ok = FALSE)
+  checkmate::assertSubset(metadataColumns_fill, metadataColumns, empty.ok = FALSE)
   
   # Enforce checking that they are identical
   checkmate::assertSetEqual(rownames(metadataTable), dataCols)
@@ -493,7 +494,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 #' @param pdf_height_base  Number. Default 8. Base height of the PDF, in cm, per connection type. The total height is automatically determined based on the number of connection types that are found in the object (e.g., expression or TF activity). For example, when two connection types are found, the base height is multiplied by 2.
 #' @template pages
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @return An updated \code{\linkS4class{GRN}} object.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -507,14 +508,15 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                         nTFMax = NULL,
                                         plotAsPDF = TRUE, pdf_width = 12, pdf_height_base = 8, pages = NULL,
                                         forceRerun = FALSE) {
-  
+    
+  start = Sys.time()
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertFlag(plotDetails)
-  checkmate::assertSubset(dataType, c("real", "permuted"))
+  checkmate::assertSubset(dataType, c("real", "permuted"), empty.ok = FALSE)
   checkmate::assert(checkmate::checkNull(nTFMax), checkmate::checkIntegerish(nTFMax))
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
@@ -537,7 +539,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
       next
     }
     
-    futile.logger::flog.info(paste0("\n Plotting for permutation ", permutationCur))
+    futile.logger::flog.info(paste0("\n Plotting for ", .getPermStr(permutationCur)))
     
     
     suffixFile = .getPermutationSuffixStr(permutationCur)
@@ -571,6 +573,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     # }
   }
   
+  .printExecutionTime(start, prefix = "")
   GRN
   
   
@@ -880,12 +883,12 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 #' @template pdf_height
 #' @template pages
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, with added data from this function.
+#' @return An updated \code{\linkS4class{GRN}} object.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' # GRN = loadExampleObject()
-#' # types = list(c("protein_coding"))
-#' # GRN = plotDiagnosticPlots_peakGene(GRN, gene.types=types, plotAsPDF = FALSE)
+#' GRN = loadExampleObject()
+#' types = list(c("protein_coding"))
+#' GRN = plotDiagnosticPlots_peakGene(GRN, gene.types=types, plotAsPDF = FALSE, pages = 1)
 #' @export
 # TODO: implement forceRerun correctly
 plotDiagnosticPlots_peakGene <- function(GRN, 
@@ -896,11 +899,12 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                                          plotDetails = FALSE,
                                          plotPerTF = FALSE,
                                          plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
-                                         forceRerun= FALSE) {
+                                         forceRerun = FALSE) {
   
+  start = Sys.time()
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertList(gene.types, any.missing = FALSE, min.len = 1, types = "character")
@@ -944,7 +948,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                                     pages = pages,
                                     forceRerun = forceRerun)
   
-  
+  .printExecutionTime(start, prefix = "")
   GRN
   
 }
@@ -1589,7 +1593,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
 #' @template pdf_height
 #' @template pages
 #' @template forceRerun
-#' @return The same \code{\linkS4class{GRN}} object, without modifications. In addition, for the specified \code{type}, a PDF file (default filename is \code{GRN.connectionSummary_{type}.pdf}) is produced with a connection summary.
+#' @return The same \code{\linkS4class{GRN}} object, without modifications. 
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -1600,10 +1604,12 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                                          outputFolder = NULL, basenameOutput = NULL, 
                                          plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                          forceRerun = FALSE) {
-  
+
+  start = Sys.time()     
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
+  
   checkmate::assertChoice(type, c("heatmap", "boxplot", "density"))
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
@@ -1645,6 +1651,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
     .plot_stats_connectionSummaryDensity(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
   }
   
+  .printExecutionTime(start, prefix = "")
   GRN
   
 }
@@ -1725,6 +1732,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                                     ", allowMissingGenes: ", allowMissingGenesCur, 
                                     ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
                 
+                # TOOO PACKAGES: Replace by something else?
                 colors = circlize::colorRamp2(c(0, maxDataRange), c("white", "red"))
                 
                 ComplexHeatmap::Heatmap(
@@ -1915,7 +1923,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 ######## General & communities Stats Functions ########
 
 
-#' Plot general structure and connectivity statistics for a filtered \code{\linkS4class{GRN}}
+#' Plot general structure and connectivity statistics for a filtered \code{\linkS4class{GRN}} object
 #' 
 #' This function generates graphical summaries about the structure and connectivity of the TF-peak-gene and TF-gene graphs. These include, distribution of vertex types (TF, peak, gene) and edge types (tf-peak, peak-gene), the distribution of vertex degrees, and the most "important" vertices according to degree centrality and eigenvector centrality scores.
 #' @template GRN
@@ -1926,7 +1934,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @template pdf_width
 #' @template pdf_height
 #' @template pages
-#' @return The same \code{\linkS4class{GRN}} object with no changes. The results are output to a file.
+#' @return The same \code{\linkS4class{GRN}} object, without modifications. 
 #' @seealso \code{\link{plotGeneralEnrichment}}
 #' @seealso \code{\link{plotCommunitiesStats}}
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
@@ -1940,9 +1948,9 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
                                   forceRerun = FALSE) {
   
   start = Sys.time()
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
@@ -2142,7 +2150,9 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @param topn_pvalue Numeric. Default 30. Maximum number of ontology terms that meet the p-value significance threshold to display in the enrichment dot plot
 #' @param display_pAdj \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.
 #' @template maxWidth_nchar_plot
-#' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
+#' @return The same \code{\linkS4class{GRN}} object, without modifications.
+#' @seealso \code{\link{plotCommunitiesEnrichment}}
+#' @seealso \code{\link{plotTFEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2156,9 +2166,9 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
                                   forceRerun = FALSE) {
   
   start = Sys.time()
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertClass(GRN, "GRN")
   
   ontologiesFound = names(GRN@stats$Enrichment$general)
   
@@ -2317,7 +2327,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @template forceRerun
 #' @param topnGenes Integer. Default 20. Number of genes to plot, sorted by their rank or label.
 #' @param topnTFs Integer. Default 20. Number of TFs to plot, sorted by their rank or label.
-#' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the statistics.
+#' @return The same \code{\linkS4class{GRN}} object, without modifications.
 #' @seealso \code{\link{plotGeneralGraphStats}}
 #' @seealso \code{\link{calculateCommunitiesStats}}
 #' @seealso \code{\link{calculateCommunitiesEnrichment}}
@@ -2333,15 +2343,16 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
                                  forceRerun = FALSE){
   
   start = Sys.time()
-  GRN = .addFunctionLogToObject(GRN)
   checkmate::assertClass(GRN, "GRN")
+  GRN = .addFunctionLogToObject(GRN)
+  
   
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   
   checkmate::assertIntegerish(topnGenes)
   checkmate::assertIntegerish(topnTFs)
-  checkmate::assertSubset(display , c("byRank", "byLabel"))
+  checkmate::assertChoice(display , c("byRank", "byLabel"))
   checkmate::assert(checkmate::checkNull(communities), checkmate::checkNumeric(communities, lower = 1, any.missing = FALSE, min.len = 1))
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
@@ -2389,7 +2400,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
           communitiesDisplay = as.character(communities)
         }
       } else {
-        communitiesDisplay = unique(vertexMetadata$community)
+        communitiesDisplay = unique(vertexMetadata$community) %>% as.character()
+
       }
       
       # TODO here
@@ -2502,17 +2514,22 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   GRN
 }
 
-#' Plot community-based enrichment results
+#' Plot community-based enrichment results for a filtered \code{\linkS4class{GRN}} object
 #' 
-#' Similarly to \code{\link{plotGeneralEnrichment}}, the results of the community-based enrichment analysis are plotted.. By default, the results for the 10 largest communities are displayed. Additionally, if a general enrichment analysis was previously generated, this function plots an additional heatmap to compare the general enrichment with the community based enrichment. A reduced version of this heatmap is also produced where terms are filtered out to improve visibility and display and highlight the most significant terms.
+#' Similarly to \code{\link{plotGeneralEnrichment}} and \code{\link{plotTFEnrichment}}, the results of the community-based enrichment analysis are plotted.
+#' This function produces multiple plots. First, one plot per community to summarize the community-specific enrichment.
+#' Second, a summary heatmap of all significantly enriched terms across all communities and for the whole eGRN. The latter allows to compare the results with the general network enrichment.
+#' #' Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per community and for the whole eGRN (as specified by \code{nID}) for improved visibility 
 #' 
 #' @inheritParams plotGeneralEnrichment
 #' @param display Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will be displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
 #' @param communities \code{NULL} or numeric vector. Default \code{NULL}. If set to \code{NULL}, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities are plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} are plotted. 
 #' @param nSignificant Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
-#' @param nID Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.
+#' @param nID Numeric. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.
 #' @template maxWidth_nchar_plot
-#' @return  The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
+#' @return  The same \code{\linkS4class{GRN}} object, without modifications.
+#' @seealso \code{\link{plotGeneralEnrichment}}
+#' @seealso \code{\link{plotTFEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2528,10 +2545,10 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
                                       forceRerun = FALSE) {
   
   start = Sys.time()
-  GRN = .addFunctionLogToObject(GRN)
   checkmate::assertClass(GRN, "GRN")
+  GRN = .addFunctionLogToObject(GRN)
   
-  checkmate::assertSubset(display , c("byRank", "byLabel"))
+  checkmate::assertChoice(display , c("byRank", "byLabel"))
   checkmate::assert(checkmate::checkNull(communities), checkmate::checkNumeric(communities, lower = 1, any.missing = FALSE, min.len = 1))
   checkmate::assertNumeric(p, lower = 0, upper = 1)
   checkmate::assertIntegerish(topn_pvalue, lower = 1)
@@ -2840,15 +2857,20 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 
 #' Plot TF-based GO enrichment results
 #' 
-#' This function plots the enrichment results. The result consist of a dot plot per specified TF, as well as two comparative heatmaps. The first heatmap displays the p value for each GO term across the TFs. Terms that The second heatmap is a subset of the first, where select terms are kept or filtered out for better visibility and display.
+#' Similarly to \code{\link{plotGeneralEnrichment}} and \code{\link{plotCommunitiesEnrichment}}, the results of the TF-based enrichment analysis are plotted.
+#' This function produces multiple plots. First, one plot per community to summarize the TF-specific enrichment.
+#' Second, a summary heatmap of all significantly enriched terms across all TFs and for the whole eGRN. The latter allows to compare the results with the general network enrichment.
+#' Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per TF and for the whole eGRN (as specified by \code{nID}) for improved visibility .
+#' 
 #' 
 #' @inheritParams plotGeneralEnrichment
 #' @inheritParams plotCommunitiesEnrichment
 #' @param TF.names \code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the names of the TFs to plot. Ignored otherwise.
 #' @param rankType Character. One of: "degree", "EV", "custom". This parameter will determine the criterion to be used to identify the "top" nodes. If set to "degree", the function will select top nodes based on the number of connections they have, i.e. based on their degree-centrality. If set to "EV" it will select the top nodes based on their eigenvector-centrality score in the network.
 #' @param n NULL or numeric. Default NULL. If set to NULL, all previously calculated TF enrichments will be plotted. If set to a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if rankType = "custom".
-#' @return The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
-#' @seealso \code{\link{calculateTFEnrichment}}
+#' @return The same \code{\linkS4class{GRN}} object, without modifications.
+#' @seealso \code{\link{plotGeneralEnrichment}}
+#' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2866,10 +2888,10 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
                              forceRerun = FALSE) {
   
   start = Sys.time()
-  GRN = .addFunctionLogToObject(GRN)
-  
   checkmate::assertClass(GRN, "GRN")
-  checkmate::assertSubset(rankType, c("degree", "EV", "custom"))
+  GRN = .addFunctionLogToObject(GRN)
+
+  checkmate::assertChoice(rankType, c("degree", "EV", "custom"))
   checkmate::assert(checkmate::checkNull(n), checkmate::checkNumeric(n))
   checkmate::assertNumeric(p, lower = 0, upper = 1)
   checkmate::assertNumeric(topn_pvalue, lower = 1)
@@ -3276,7 +3298,9 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 
 ############### GRN visualization ###############
 
-#' Visualize a filtered GRN. 
+#' Visualize a filtered GRN in a flexible manner. 
+#' 
+#' This function requires a filtered set of connections in the \code{\linkS4class{GRN}} object as generated by \code{\link{filterGRNAndConnectGenes}}
 #'
 #' @template GRN 
 #' @template outputFolder
@@ -3285,20 +3309,21 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' @template pdf_width
 #' @template pdf_height
 #' @param title NULL or Character. Default NULL. Title to be assigned to the plot.
-#' @param maxRowsToPlot Numeric. Default 500. Refers to the maximum number of connections to be plotted.
+#' @param maxRowsToPlot Numeric. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.
 #' @param graph Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.
 #' @param colorby Character. Default \code{type}. One of \code{type}, code \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}
-#' @param layout Character. Dfault \code{fr}. One of \code{star}, \code{fr}, \code{sugiyama}, \code{kk}, \code{lgl}, \code{graphopt}, \code{mds}, \code{sphere}
+#' @param layout Character. Default \code{fr}. One of \code{star}, \code{fr}, \code{sugiyama}, \code{kk}, \code{lgl}, \code{graphopt}, \code{mds}, \code{sphere}
 #' @param vertice_color_TFs Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{colorspace} package for more details and examples
 #' @param vertice_color_peaks Named list. Default \code{list(h = 135, c = 45, l = c(35, 95))}.
 #' @param vertice_color_genes Named list. Default \code{list(h = 260, c = 80, l = c(30, 90))}.
 #' @param vertexLabel_cex Numeric. Default \code{0.4}. Font size (multiplication factor, device-dependent)
 #' @param vertexLabel_dist Numeric. Default \code{0} vertex. Distance between the label and the vertex.
 #' @template forceRerun
+#' @seealso \code{\link{filterGRNAndConnectGenes}}
 #' @examples
 #' GRN = loadExampleObject()
 #' GRN = visualizeGRN(GRN, maxRowsToPlot = 700, graph = "TF-gene", colorby = "type")
-#' @return the GRN object
+#' @return The same \code{\linkS4class{GRN}} object, without modifications.
 #' @export
 visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12,
                          title = NULL, maxRowsToPlot = 500, graph = "TF-gene" , colorby = "type", layout = "fr",
@@ -3308,16 +3333,17 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     
     
     start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
     GRN = .addFunctionLogToObject(GRN)
     
     checkmate::assertFlag(plotAsPDF)
     checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
     checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
     checkmate::assertNumeric(maxRowsToPlot)
-    checkmate::assertSubset(graph, c("TF-gene", "TF-peak-gene"))
-    checkmate::assertSubset(colorby, c("type", "community"))
+    checkmate::assertChoice(graph, c("TF-gene", "TF-peak-gene"))
+    checkmate::assertChoice(colorby, c("type", "community"))
     #checkmate::assertFlag(layered)
-    checkmate::assertSubset(layout, c("star", "fr", "sugiyama", "kk", "lgl", "graphopt", "mds", "sphere"))
+    checkmate::assertChoice(layout, c("star", "fr", "sugiyama", "kk", "lgl", "graphopt", "mds", "sphere"))
     checkmate::assertList(vertice_color_TFs)
     checkmate::assertNames(names(vertice_color_TFs), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
     checkmate::assertList(vertice_color_peaks)
@@ -3920,5 +3946,5 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
   
   checkmate::assertList(vertice_color_list, len = 6)
   checkmate::assertDataFrame(vertice_color_list[[1]])
-  checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]))
+  checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]), empty.ok = FALSE)
 }

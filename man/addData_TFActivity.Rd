@@ -14,15 +14,17 @@ addData_TFActivity(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{normalization}{Character. Default \code{cyclicLoess}. One of \code{cyclicLoess}, \code{sizeFactors}, \code{quantile}, or \code{none}. Normalization procedure.}
+\item{normalization}{Character. Default \code{cyclicLoess}. One of \code{cyclicLoess}, \code{sizeFactors}, \code{quantile}, or \code{none}. 
+Normalization procedure. When set to \code{cyclicLoess}, the \code{csaw} package is required (as it is listed under \code{Suggests}, it may not be installed).}
 
 \item{name}{Name in object under which it should be stored. This corresponds to the \code{connectionType} afterwards that some functions iterate over.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object, with added data from this function
+(\code{GRN@data$TFs[[name]]} in particular, with \code{name} referring to the value of tje \code{name} parameter)
 }
 \description{
-Add TF activity data to GRN object using a simplified procedure for estimating it. EXPERIMENTAL.
+We do not yet provide full support for this function. It is currently being tested. Use at our own risk.
 }

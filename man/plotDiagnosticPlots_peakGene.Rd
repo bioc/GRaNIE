@@ -36,23 +36,23 @@ plotDiagnosticPlots_peakGene(
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
-\item{pdf_width}{Number. Default 12. Width of the PDF, in cm.}
+\item{pdf_width}{Number>0. Default 12. Width of the PDF, in cm.}
 
-\item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
+\item{pdf_height}{Number >0. Default 12. Height of the PDF, in cm.}
 
 \item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object.
 }
 \description{
 Plot diagnostic plots for peak-gene connections for a \code{\linkS4class{GRN}} object
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-# GRN = loadExampleObject()
-# types = list(c("protein_coding"))
-# GRN = plotDiagnosticPlots_peakGene(GRN, gene.types=types, plotAsPDF = FALSE)
+GRN = loadExampleObject()
+types = list(c("protein_coding"))
+GRN = plotDiagnosticPlots_peakGene(GRN, gene.types=types, plotAsPDF = FALSE, pages = 1)
 }

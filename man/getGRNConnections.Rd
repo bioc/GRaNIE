@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{getGRNConnections}
 \alias{getGRNConnections}
-\title{Extract connections from a \code{\linkS4class{GRN}} object}
+\title{Extract connections or links from a \code{\linkS4class{GRN}} object as da data frame.}
 \usage{
 getGRNConnections(
   GRN,
@@ -14,20 +14,24 @@ getGRNConnections(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{type}{Character. Default \code{all.filtered}. Must be one of \code{TF_peaks}, \code{peak_genes}, \code{all.filtered}. The type of connections to retrieve.}
+\item{type}{Character. One of \code{TF_peaks}, \code{peak_genes}, \code{all.filtered}. Default \code{all.filtered}. The type of connections to retrieve.}
 
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 
-\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.}
+\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.}
 }
 \value{
-A data frame with the connections. Importantly, this function does **NOT** return a \code{\linkS4class{GRN}} object.
+A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 }
 \description{
-Extract connections from a \code{\linkS4class{GRN}} object
+Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
+\strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 GRN_con.all.df = getGRNConnections(GRN)
+}
+\seealso{
+\code{\link{filterGRNAndConnectGenes}}
 }

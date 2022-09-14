@@ -12,7 +12,7 @@ changeOutputDirectory(GRN, outputDirectory = ".")
 \item{outputDirectory}{Character. Default \code{.}. New output directory for all output files unless overwritten via the parameter \code{outputFolder}.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
+An updated \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
 }
 \description{
 Change the output directory of a GRN object

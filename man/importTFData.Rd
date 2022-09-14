@@ -25,13 +25,14 @@ importTFData(
 
 \item{nameColumn}{Character. Default \code{TF.name}. Must be unique for each TF / row.}
 
-\item{normalization}{Character. Default \code{cyclicLoess}. One of \code{cyclicLoess}, \code{sizeFactors}, \code{quantile}, or \code{none}. Normalization procedure.}
+\item{normalization}{Character. Default \code{cyclicLoess}. One of \code{cyclicLoess}, \code{sizeFactors}, \code{quantile}, or \code{none}. 
+Normalization procedure. When set to \code{cyclicLoess}, the \code{csaw} package is required (as it is listed under \code{Suggests}, it may not be installed).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object, with added data from this function.
 }
 \description{
-Import externally derived TF Activity data. EXPERIMENTAL.
+We do not yet provide full support for this function. It is currently being tested. Use at our own risk.
 }

@@ -1,6 +1,6 @@
 Package: GRaNIE
 Title: GRaNIE: Reconstruction cell type specific gene regulatory networks including enhancers using chromatin accessibility and RNA-seq data
-Version: 1.1.10
+Version: 1.1.12
 Encoding: UTF-8
 Authors@R: c(person("Christian", "Arnold", email =
         "chrarnold@web.de", role = c("cre","aut")),
@@ -27,28 +27,22 @@ Imports:
     RColorBrewer,
     ComplexHeatmap,
     DESeq2,
-    csaw,
     circlize,
-    robust,
     progress,
     utils,
     methods,
     stringr,
     scales,
-    BiocManager,
-    BiocParallel,
     igraph,
     S4Vectors,
     ggplot2,
     rlang,
     Biostrings,
     GenomeInfoDb,
-    IRanges,
     SummarizedExperiment,
     forcats,
     gridExtra,
     limma,
-    purrr,
     tidyselect,
     readr,
     grid,
@@ -60,12 +54,10 @@ Imports:
     magrittr,
     tibble,
     viridis,
-    BiocFileCache,
-    colorspace
+    colorspace,
+    biomaRt
 Depends:
-    R (>= 4.2.0),
-    tidyverse,
-    topGO
+    R (>= 4.2.0)
 Suggests:
     knitr,
     BSgenome.Hsapiens.UCSC.hg19,
@@ -79,13 +71,17 @@ Suggests:
     org.Hs.eg.db,
     org.Mm.eg.db,
     IHW,
-    biomaRt,
     clusterProfiler,
     ReactomePA,
     DOSE,
+    BiocFileCache,
     ChIPseeker,
     testthat (>= 3.0.0),
-    BiocStyle
+    BiocStyle,
+    csaw,
+    BiocParallel,
+    topGO,
+    robust
 VignetteBuilder: knitr
 biocViews: Software, GeneExpression, GeneRegulation, NetworkInference, GeneSetEnrichment, BiomedicalInformatics, Genetics, Transcriptomics, ATACSeq, RNASeq, GraphAndNetwork, Regression, Transcription, ChIPSeq
 License: Artistic-2.0

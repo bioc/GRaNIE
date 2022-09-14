@@ -1,0 +1,6 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+pkgdown/
+TFBS_selected/
+exampleDataset/
+logo.png

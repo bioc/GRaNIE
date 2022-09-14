@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{generateStatsSummary}
 \alias{generateStatsSummary}
-\title{Generate a summary PDF for the number of connections for a \code{\linkS4class{GRN}} object.}
+\title{Generate a summary for the number of connections for different filtering criteria for a \code{\linkS4class{GRN}} object.}
 \usage{
 generateStatsSummary(
   GRN,
@@ -11,7 +11,7 @@ generateStatsSummary(
   peak_gene.fdr = c(0.001, 0.01, 0.05, 0.1, 0.2),
   peak_gene.p_raw = NULL,
   peak_gene.r_range = c(0, 1),
-  gene.types = c("protein_coding", "lincRNA"),
+  gene.types = c("protein_coding"),
   allowMissingGenes = c(FALSE, TRUE),
   allowMissingTFs = c(FALSE),
   forceRerun = FALSE
@@ -20,33 +20,42 @@ generateStatsSummary(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{TF_peak.fdr}{Numeric vector. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. TF-peak FDR values to iterate over.}
+\item{TF_peak.fdr}{Numeric vector[0,1]. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. TF-peak FDR values to iterate over.}
 
 \item{TF_peak.connectionTypes}{Character vector. Default \code{all}. TF-peak connection types to consider. The special keyword \code{all} denotes all connection types (e.g., \code{expression} and \code{TFActivity}) that are found in the \code{\linkS4class{GRN}} object. By default, only \code{expression} is present in the object, so \code{all} and \code{expression} are usually equivalent unless calculation of TF-peak links based on TF activity has also been enabled.}
 
-\item{peak_gene.fdr}{Numeric vector. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. Peak-gene FDR values to iterate over.}
+\item{peak_gene.fdr}{Numeric vector[0,1]. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. Peak-gene FDR values to iterate over.}
 
-\item{peak_gene.p_raw}{Numeric vector. Default \code{NULL}. Peak-gene raw p-value values to iterate over. Skipped if set to NULL.}
+\item{peak_gene.p_raw}{Numeric vector[0,1]. Default \code{NULL}. Peak-gene raw p-value values to iterate over. Skipped if set to NULL.}
 
-\item{peak_gene.r_range}{Numeric vector of length 2 (minimum -1, maximum 1). Default \code{c(0,1)}. The correlation range of peak-gene connections to keep.}
+\item{peak_gene.r_range}{Numeric vector of length 2[-1,1]. Default \code{c(0,1)}. The correlation range of peak-gene connections to keep.}
 
-\item{gene.types}{Character vector of supported gene types. Default \code{c("protein_coding", "lincRNA")}. Filter for gene types to retain, genes with other gene types are filtered.}
+\item{gene.types}{Character vector of supported gene types. Default \code{c("protein_coding", "lincRNA")}. 
+Filter for gene types to retain, genes with gene types not listed here are filtered. The special keyword "all" indicates no filter and retains all gene types.
+The specified names must match the names as stored in the \code{\linkS4class{GRN}} object (\code{see GRN@annotation$genes$gene.type}) and
+correspond 1:1 to the gene type names as provided by \code{biomaRt}, with the exception of \code{lncRNAs}, 
+which is internally renamed to \code{lincRNAs} when first fetching all gene types. This is done due to a recent change in \code{biomaRt} and aims at 
+keeping backwards compatibility with \code{\linkS4class{GRN}} objects.}
 
-\item{allowMissingGenes}{Logical vector. Default \code{c(FALSE, TRUE)}. Allow genes to be missing for peak-gene connections?}
+\item{allowMissingGenes}{Logical vector of length 1 or 2. Default \code{c(FALSE, TRUE)}. Allow genes to be missing for peak-gene connections? If both \code{FALSE} and \code{TRUE} are given, the code loops over both}
 
-\item{allowMissingTFs}{Logical vector. Default \code{c(FALSE)}. Allow TFs to be missing for TF-peak connections?}
+\item{allowMissingTFs}{Logical vector of length 1 or 2. Default \code{c(FALSE)}. Allow TFs to be missing for TF-peak connections?  If both \code{FALSE} and \code{TRUE} are given, the code loops over both}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 }
 \description{
-Essentially, this functions calls \code{\link{filterGRNAndConnectGenes}} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{\link{filterGRNAndConnectGenes}}, see the help for this function for details.
+This functions calls \code{\link{filterGRNAndConnectGenes}} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{\link{filterGRNAndConnectGenes}}, see the help for this function for details.
+The function \code{\link{plot_stats_connectionSummary}} can be used afterwards for plotting.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 GRN = generateStatsSummary(GRN, TF_peak.fdr = c(0.01, 0.1), peak_gene.fdr = c(0.01, 0.1))
 
+}
+\seealso{
+\code{\link{plot_stats_connectionSummary}}
 }

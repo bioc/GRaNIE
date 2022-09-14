@@ -9,15 +9,15 @@ getParameters(GRN, type = "parameter", name = "all")
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{type}{Character. Default \code{parameter}. Either \code{function} or \code{parameter}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. When set to \code{parameter}, in combination with \code{name}, returns a specific parameter (as specified in \code{GRN@config})).}
+\item{type}{Character. Either \code{function} or \code{parameter}. Default \code{parameter}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. When set to \code{parameter}, in combination with \code{name}, returns a specific parameter (as specified in \code{GRN@config})).}
 
 \item{name}{Character. Default \code{all}. Name of parameter or function name to retrieve. Set to the special keyword \code{all} to retrieve all parameters.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+The requested parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 }
 \description{
-Retrieve parameters for previously used function calls and general parameters for a \code{\linkS4class{GRN}} object.
+\strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

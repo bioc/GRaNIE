@@ -2,22 +2,35 @@
 % Please edit documentation in R/core.R
 \name{initializeGRN}
 \alias{initializeGRN}
-\title{Initialize a \code{\linkS4class{GRN}} object}
+\title{Create and initialize a \code{\linkS4class{GRN}} object.}
 \usage{
-initializeGRN(objectMetadata = list(), outputFolder, genomeAssembly)
+initializeGRN(objectMetadata = list(), outputFolder = ".", genomeAssembly)
 }
 \arguments{
-\item{objectMetadata}{List. Default \code{list()}. Optional (named) list with an arbitrary number of elements, all of which capture metadata for the object. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.}
+\item{objectMetadata}{List. Default \code{list()}. Optional (named) list with an arbitrary number of elements, all of which 
+capture metadata for the object. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.}
 
-\item{outputFolder}{Output folder, either absolute or relative to the current working directory. No default. Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.}
+\item{outputFolder}{Output folder, either absolute or relative to the current working directory. Default \code{"."}. 
+Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. 
+Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.}
 
-\item{genomeAssembly}{Character. No default. The genome assembly of all data that to be used within this object. Currently, supported genomes are: \code{hg19}, \code{hg38}, and \code{mm10}.}
+\item{genomeAssembly}{Character. No default. The genome assembly of all data that to be used within this object. 
+Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9} and \code{mm10}. See function description for further information and notes.}
 }
 \value{
 Empty \code{\linkS4class{GRN}} object
 }
 \description{
-Initialize a \code{\linkS4class{GRN}} object
+Executing this function is the very first step in the *GRaNIE* workflow. After its execution, data can be added to the object. 
+\strong{Depending on the genome assembly version, additional genome annotation packages are required, as follows:} 
+For \code{hg19} and \code{hg38},
+the packages \code{org.Hs.eg.db} as well as \code{BSgenome.Hsapiens.UCSC.hg19}+\code{TxDb.Hsapiens.UCSC.hg19.knownGene} or 
+\code{BSgenome.Hsapiens.UCSC.hg38}+\code{TxDb.Hsapiens.UCSC.hg38.knownGene} are required, respectively. 
+For \code{mm9} and \code{mm10},
+the packages \code{org.Mm.eg.db} as well as \code{BSgenome.Mmusculus.UCSC.mm9}+\code{TxDb.Mmusculus.UCSC.mm9.knownGene} or 
+\code{Mmusculus.UCSC.mm10}+\code{TxDb.Mmusculus.UCSC.mm10.knownGene} are required, respectively.
+For more information, see the error message if any of these packages is missing or the 
+\href{https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation}{Package Details Vignette}.
 }
 \examples{
 meta.l = list(name = "exampleName", date = "01.03.22")

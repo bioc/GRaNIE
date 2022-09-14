@@ -9,12 +9,13 @@ overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{nCores}{Integer >0. Default 1. Number of cores to use.}
+\item{nCores}{Integer >0. Default 1. Number of cores to use. 
+A value >1 requires the \code{BiocParallel} package (as it is listed under \code{Suggests}, it may not be installed yet).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function.
+An updated \code{\linkS4class{GRN}} object, with added data from this function (\code{GRN@data$TFs$TF_peak_overlap} in particular)
 }
 \description{
 Overlap peaks and TFBS for a \code{\linkS4class{GRN}} object

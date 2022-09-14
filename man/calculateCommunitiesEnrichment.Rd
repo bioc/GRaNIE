@@ -2,7 +2,7 @@
 % Please edit documentation in R/network.R
 \name{calculateCommunitiesEnrichment}
 \alias{calculateCommunitiesEnrichment}
-\title{Enrichment analysis for the genes in each community in the filtered \code{\linkS4class{GRN}}}
+\title{Run an enrichment analysis for the genes in each community in the filtered \code{\linkS4class{GRN}} object}
 \usage{
 calculateCommunitiesEnrichment(
   GRN,
@@ -19,7 +19,12 @@ calculateCommunitiesEnrichment(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{ontology}{Character vector of ontologies. Default \code{c("GO_BP", "GO_MF")}. Valid values are \code{"GO_BP"}, \code{"GO_MF"}, \code{"GO_CC"}, \code{"KEGG"}, \code{"DO"}, and \code{"Reactome"}, referring to GO Biological Process, GO Molecular Function, GO Cellular Component, KEGG, Disease Ontology, and Reactome Pathways.}
+\item{ontology}{Character vector of ontologies. Default \code{c("GO_BP", "GO_MF")}. 
+Valid values are \code{"GO_BP"}, \code{"GO_MF"}, \code{"GO_CC"}, \code{"KEGG"}, \code{"DO"}, and \code{"Reactome"}, 
+referring to \emph{GO Biological Process}, \emph{GO Molecular Function}, \emph{GO Cellular Component}, \emph{KEGG}, \emph{Disease Ontology}, 
+and \emph{Reactome Pathways}, respectively. \code{GO} ontologies require the \code{topGO}, 
+\code{"KEGG"} the \code{clusterProfiler}, \code{"DO"} the \code{DOSE}, and \code{"Reactome"} the \code{ReactomePA} packages, respectively.
+As they are listed under \code{Suggests}, they may not yet be installed, and the function will throw an error if they are missing.}
 
 \item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library.}
 
@@ -36,10 +41,17 @@ calculateCommunitiesEnrichment(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byCommunity} slot.
+An updated \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byCommunity} slot.
 }
 \description{
-After the vertices of the filtered GRN are clustered into communities using \code{\link{calculateCommunitiesStats}}, this function will run a per-community enrichment analysis.
+The enrichment analysis is based on the subset of the network connected to a particular community as identified by \code{\link{calculateCommunitiesStats}} , see \code{\link{calculateTFEnrichment}} and \code{\link{calculateGeneralEnrichment}} for 
+TF-specific and general enrichment, respectively.
+This function requires the existence of the eGRN graph in the \code{\linkS4class{GRN}} object as produced by \code{\link{build_eGRN_graph}} as well as community information as calculated by \code{\link{calculateCommunitiesStats}}. 
+Results can subsequently be visualized with the function \code{\link{plotCommunitiesEnrichment}}.
+}
+\details{
+All enrichment functions use the TF-gene graph as defined in the `GRN` object. See the `ontology` argument for currently supported ontologies.
+Also note that some parameter combinations for `algorithm` and `statistic` are incompatible, an error message will be thrown in such a case.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
@@ -52,4 +64,6 @@ GRN = calculateCommunitiesEnrichment(GRN, ontology = c("GO_BP"), forceRerun = FA
 \code{\link{plotGeneralEnrichment}}
 
 \code{\link{calculateGeneralEnrichment}}
+
+\code{\link{calculateCommunitiesStats}}
 }

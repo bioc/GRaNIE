@@ -124,12 +124,15 @@
   
   .printExecutionTime(start)
   
-  counts.norm %>% 
+  counts.norm = counts.norm %>% 
     as.data.frame()  %>% 
     tibble::as_tibble() %>% 
     dplyr::mutate({{idColumn}} := ids) %>%
-    dplyr::select({{idColumn}}, tidyselect::everything()) %>%
-    purrr::set_names(c(idColumn, colnames_samples))
+    dplyr::select({{idColumn}}, tidyselect::everything()) 
+  
+  colnames(counts.norm) = c(idColumn, colnames_samples)
+  
+  counts.norm
   
 }
 

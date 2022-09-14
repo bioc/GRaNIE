@@ -63,9 +63,9 @@
 
 .startLogger <- function(logfile, level, removeOldLog = TRUE, appenderName = "consoleAndFile", verbose = TRUE) {
   
-  checkmate::assertSubset(level, c("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"))
+  checkmate::assertChoice(level, c("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"))
   checkmate::assertFlag(removeOldLog)
-  checkmate::assertSubset(appenderName, c("console", "file", "consoleAndFile"))
+  checkmate::assertChoice(appenderName, c("console", "file", "consoleAndFile"))
   checkmate::assertFlag(verbose)
   
   if (appenderName != "console") {
@@ -105,12 +105,60 @@
 # PACKAGE LOADING AND DETACHING FUNCTIONS #
 ###########################################
 
-.checkOntologyPackageInstallation <- function(pkg) {
-    if (!is.installed(pkg)) {
-        message = paste0("The package ", pkg, " is not installed, which is however needed for the chosen ontology enrichment. Please install it and re-run this function or change the ontology.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+.checkPackageInstallation <- function(pkg, message, isWarning = FALSE) {
+    
+    pkgMissing = c()
+    for (packageCur in pkg) {
+        if (!is.installed(packageCur)) {
+            pkgMissing = c(pkgMissing, packageCur)
+        }
+    }
+    
+    if (length(pkgMissing) > 0) {
+        message = paste0(message, "\n\nExecute the following line in R to install the missing package(s): `BiocManager::install(c(\"", 
+                         paste0(pkgMissing, collapse = "\",\""), 
+                         "\"))`")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = isWarning)
+    }
+   
+    
+}
+
+
+.checkAndLoadPackagesGenomeAssembly <- function(genomeAssembly) {
+    
+    baseMessage = paste0("For the chosen genome assembly version, particular genome annotation packages are required but not installed. Please install and re-run this function.")
+
+    if (genomeAssembly == "hg38") {
+        .checkPackageInstallation(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg38.knownGene", "BSgenome.Hsapiens.UCSC.hg38"), baseMessage)
+    } else if (genomeAssembly == "hg19") {
+        .checkPackageInstallation(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg19.knownGene", "BSgenome.Hsapiens.UCSC.hg19"), baseMessage)
+    } else if (genomeAssembly == "mm10") {
+        .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene", "BSgenome.Mmusculus.UCSC.mm10"), baseMessage)
+    } else if (genomeAssembly == "mm9") {
+        .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene", "BSgenome.Mmusculus.UCSC.mm9"), baseMessage)
+    }
+
+}
+
+
+.checkPackage_topGO_and_arguments <- function (ontology, algorithm, statistic) {
+    
+    if (length(intersect(ontology, c("GO_BP", "GO_MF", "GO_CC"))) > 0) {
+        
+        packageMessage = paste0("The package topGO is not installed but required when selecting any of the three following ontologies: GO_BP, GO_MF, GO_CC. Please install it and re-run this function or change the ontology.")
+        .checkPackageInstallation("topGO", packageMessage) 
+        
+        # This function is calle in the topGO:::.onAttach function and needs to be executed once otherwise
+        # errors like object 'GOBPTerm' of mode 'environment' was not found are thrown
+        suppressMessages(topGO::groupGOTerms()) 
+        
+        checkmate::assertChoice(algorithm , topGO::whichAlgorithms())
+        checkmate::assertChoice(statistic , topGO::whichTests())
     }
 }
+
+
 
 .clearOpenDevices <- function() {
   
@@ -212,26 +260,11 @@
   
   res.l = list()
   
-  # maxCores = tryCatch(
-  #   {
-  #      out = BiocParallel::multicoreWorkers() / 2
-  #    
-  #   },
-  #   error=function() {
-  # 
-  #     message = "Could not retrieve the available number of cores. There might be a problem with your installation of BiocParallel. Check whether BiocParallel::multicoreWorkers() returns an integer. Try executing the following line to fix the problem if a re-installation of BiocParallel does not work: library(parallel) and then options(mc.cores=4L), with 4 being the maximum number of cores available for the machine you run the pipeline on For now, the function will just run with 1 core."
-  #     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-  #     return(1)
-  #   }
-  # )    
-  # 
-  # 
-  # if (nCores > maxCores) {
-  #     nCores = max(1, floor(maxCores))
-  #     futile.logger::flog.warn(paste0(" Adjusted nCores down to ", nCores, " (only 50% of the cores are used at max)"))
-  # }
-  
+
   if (nCores > 1) {
+      
+    message = paste0("The package BiocParallel is not installed but required if more than 1 core should be used as requested. Please install it and re-run this function to speed-up the computation time or set the nCores parameter to 1 to disable parallel computation.")
+    .checkPackageInstallation("BiocParallel", message)
     
     res.l = tryCatch( {
         BiocParallel::bplapply(iteration, functionName, ..., BPPARAM = .initBiocParallel(nCores))
@@ -381,31 +414,18 @@
   gr
 }
 
-.checkAndLoadPackages <- function(packageList, verbose = FALSE) {
-    
-    for (packageCur in packageList) {
-        if (!is.installed(packageCur)) {
-            message = paste0("The suggested package \"", packageCur, "\" is not yet installed, but it is required for this function and in this context. Please install it and re-run this function.")
-            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-        }
-    }
-    
-}
+
 
 .getGenomeObject <- function(genomeAssembly, type = "txbd") {
     
-    
-    checkmate::assertSubset(type, c("txbd", "BSgenome", "packageName"))
-    checkmate::assertSubset(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
-    
+    checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName"))
+    checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
     
     if (genomeAssembly == "hg38") {
 
         if (type == "txbd") {
-            .checkAndLoadPackages(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg38.knownGene"), verbose = FALSE) 
             obj <- TxDb.Hsapiens.UCSC.hg38.knownGene::TxDb.Hsapiens.UCSC.hg38.knownGene
         } else if (type == "BSgenome") {
-            .checkAndLoadPackages(c("BSgenome.Hsapiens.UCSC.hg38"), verbose = FALSE) 
             obj <- BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38
         } else {
             obj = "org.Hs.eg.db"
@@ -414,10 +434,8 @@
     } else if (genomeAssembly == "hg19") {
         
         if (type == "txbd") {
-            .checkAndLoadPackages(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg19.knownGene"), verbose = FALSE) 
             obj <- TxDb.Hsapiens.UCSC.hg19.knownGene::TxDb.Hsapiens.UCSC.hg19.knownGene
         } else if (type == "BSgenome") {
-            .checkAndLoadPackages(c("BSgenome.Hsapiens.UCSC.hg19"), verbose = FALSE) 
             obj <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
         } else {
             obj = "org.Hs.eg.db"
@@ -427,10 +445,8 @@
     } else if (genomeAssembly == "mm10") {
         
         if (type == "txbd") { 
-            .checkAndLoadPackages(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene"), verbose = FALSE) 
             obj <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
         } else if (type == "BSgenome") {
-            .checkAndLoadPackages(c("BSgenome.Mmusculus.UCSC.mm10"), verbose = FALSE) 
             obj <- BSgenome.Mmusculus.UCSC.mm10::BSgenome.Mmusculus.UCSC.mm10
         } else {
             obj = "org.Mm.eg.db"
@@ -439,10 +455,8 @@
     } else if (genomeAssembly == "mm9") {
         
         if (type == "txbd") {
-            .checkAndLoadPackages(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene"), verbose = FALSE) 
             obj <- TxDb.Mmusculus.UCSC.mm9.knownGene::TxDb.Mmusculus.UCSC.mm9.knownGene
         } else if (type == "BSgenome") {
-            .checkAndLoadPackages(c("BSgenome.Mmusculus.UCSC.mm9"), verbose = FALSE) 
             obj <- BSgenome.Mmusculus.UCSC.mm9::BSgenome.Mmusculus.UCSC.mm9
         } else {
             obj = "org.Mm.eg.db"
@@ -456,31 +470,6 @@
 .getChrLengths <- function(genomeAssembly) {
   txdb = .getGenomeObject(genomeAssembly)
   GenomeInfoDb::seqlengths(txdb)
-}
-
-.checkAndLoadPackagesGenomeAssembly <- function(genomeAssembly) {
-    
-    checkmate::assertSubset(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
-    
-    if (genomeAssembly == "hg38") {
-        
-        packages = c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg38.knownGene")
-        
-    } else if (genomeAssembly == "hg19") {
-        
-        packages = c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg19.knownGene")
-        
-    } else if (genomeAssembly == "mm10") {
-        
-        packages = c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene")
-        
-    } else if (genomeAssembly == "mm9") {
-        
-        packages = c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene")
-        
-    }
-    
-    packages
 }
 
 .shuffleColumns <- function(df, nPermutations, returnUnshuffled = TRUE, returnAsList = TRUE, saveMemory = TRUE) {
@@ -552,7 +541,7 @@
     
 }
 
-
+#' @importFrom Matrix Matrix
 .asSparseMatrix <- function(matrix, convertNA_to_zero=TRUE, dimnames = NULL) {
   
   if (convertNA_to_zero) {
@@ -562,7 +551,7 @@
   Matrix::Matrix(matrix, sparse=TRUE, dimnames = dimnames)
 }
 
-
+#' @importFrom Matrix Matrix
 .asMatrixFromSparse <-function(matrix, convertZero_to_NA=TRUE) {
   
   if (methods::is(matrix,"dgeMatrix") | methods::is(matrix,"dgCMatrix") | methods::is(matrix,"dgRMatrix")) {
@@ -589,7 +578,7 @@
 
 .read_tidyverse_wrapper <- function(file, type = "tsv", ncolExpected = NULL, minRows = 0, verbose = TRUE, ...) {
   
-  checkmate::assertSubset(type, c("csv", "csv2", "tsv", "delim"))
+  checkmate::assertChoice(type, c("csv", "csv2", "tsv", "delim"))
   
   start = Sys.time()
   if (verbose) futile.logger::flog.info(paste0("Reading file ", file))
@@ -720,10 +709,7 @@ is.installed <- function(mypkg){
   }
 }
 
-
 .getBiomartParameters <- function(genomeAssembly) {
-    
-    .checkOntologyPackageInstallation("biomaRt")
     
     if (grepl(x = genomeAssembly, pattern = "^hg\\d\\d")){
         dataset = "hsapiens_gene_ensembl"

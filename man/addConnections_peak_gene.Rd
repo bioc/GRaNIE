@@ -12,7 +12,7 @@ addConnections_peak_gene(
   TADs = NULL,
   nCores = 4,
   plotDiagnosticPlots = TRUE,
-  plotGeneTypes = list(c("all"), c("protein_coding"), c("protein_coding", "lincRNA")),
+  plotGeneTypes = list(c("all"), c("protein_coding")),
   outputFolder = NULL,
   addRobustRegression = FALSE,
   forceRerun = FALSE
@@ -29,26 +29,32 @@ addConnections_peak_gene(
 
 \item{TADs}{Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.}
 
-\item{nCores}{Integer >0. Default 1. Number of cores to use.}
+\item{nCores}{Integer >0. Default 1. Number of cores to use. 
+A value >1 requires the \code{BiocParallel} package (as it is listed under \code{Suggests}, it may not be installed yet).}
 
 \item{plotDiagnosticPlots}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. Run and plot various diagnostic plots? If set to \code{TRUE}, PDF files will be produced and saved in the output directory (in a subfolder called \code{plots}).}
 
-\item{plotGeneTypes}{List of character vectors. Default \code{list(c("all"), c("protein_coding"), c("protein_coding", "lincRNA"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).}
+\item{plotGeneTypes}{List of character vectors. Default \code{list(c("all"), c("protein_coding"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).}
 
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 
-\item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. Use a robust regression in addition to a non-robust one? Significantly increases overall running time.}
+\item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. 
+Use a robust regression in addition to a non-robust one? Significantly increases overall running time.
+If set to \code{TRUE}, the package \code{robust} is required (as it is listed under \code{Suggests}, it may not be installed).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, with added data from this function in different flavors.
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 }
 \description{
-Add peak-gene connections to a \code{\linkS4class{GRN}} object
+After the execution of this function, QC plots can be plotted with the function \code{\link{plotDiagnosticPlots_peakGene}} unless this has already been done by default due to \code{plotDiagnosticPlots = TRUE}
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 GRN = addConnections_peak_gene(GRN, promoterRange=10000, plotDiagnosticPlots = FALSE)
+}
+\seealso{
+\code{\link{plotDiagnosticPlots_peakGene}}
 }

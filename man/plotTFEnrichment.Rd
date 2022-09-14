@@ -39,7 +39,7 @@ plotTFEnrichment(
 
 \item{nSignificant}{Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
 
-\item{nID}{Numeric. Default 10. For the reduced heatmap, number of top terms to select per community.}
+\item{nID}{Numeric. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
 
 \item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
 
@@ -51,19 +51,22 @@ plotTFEnrichment(
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
-\item{pdf_width}{Number. Default 12. Width of the PDF, in cm.}
+\item{pdf_width}{Number>0. Default 12. Width of the PDF, in cm.}
 
-\item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
+\item{pdf_height}{Number >0. Default 12. Height of the PDF, in cm.}
 
 \item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
+The same \code{\linkS4class{GRN}} object, without modifications.
 }
 \description{
-This function plots the enrichment results. The result consist of a dot plot per specified TF, as well as two comparative heatmaps. The first heatmap displays the p value for each GO term across the TFs. Terms that The second heatmap is a subset of the first, where select terms are kept or filtered out for better visibility and display.
+Similarly to \code{\link{plotGeneralEnrichment}} and \code{\link{plotCommunitiesEnrichment}}, the results of the TF-based enrichment analysis are plotted.
+This function produces multiple plots. First, one plot per community to summarize the TF-specific enrichment.
+Second, a summary heatmap of all significantly enriched terms across all TFs and for the whole eGRN. The latter allows to compare the results with the general network enrichment.
+Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per TF and for the whole eGRN (as specified by \code{nID}) for improved visibility .
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
@@ -71,5 +74,7 @@ GRN = loadExampleObject()
 GRN = plotTFEnrichment(GRN, n = 5, plotAsPDF = FALSE)
 }
 \seealso{
-\code{\link{calculateTFEnrichment}}
+\code{\link{plotGeneralEnrichment}}
+
+\code{\link{plotCommunitiesEnrichment}}
 }

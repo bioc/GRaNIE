@@ -15,10 +15,13 @@ loadExampleObject(
 \item{fileURL}{Character. Default \url{https://www.embl.de/download/zaugg/GRaNIE/GRN.rds}. URL to the GRN example object in rds format.}
 }
 \value{
-An example \code{\linkS4class{GRN}} object
+An small example \code{\linkS4class{GRN}} object
 }
 \description{
-Load example GRN dataset
+Loads an example GRN object with 6 TFs, ~61.000 peaks, ~19.000 genes, 259 filtered connections and pre-calculated enrichments from the internet. 
+This function uses \code{BiocFileCache} if installed to cache the example object, which is 
+considerably faster than re-downloading the file anew every time the function is executed.
+If not, the file is re-downloaded every time anew. Thus, to enable caching, you may install the package \code{BiocFileCache}.
 }
 \examples{
 GRN = loadExampleObject()

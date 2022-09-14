@@ -11,15 +11,16 @@ getCounts(GRN, type, norm, permuted = FALSE)
 
 \item{type}{Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.}
 
-\item{norm}{Logical. \code{TRUE} or \code{FALSE}.  Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?}
+\item{norm}{Logical. \code{TRUE} or \code{FALSE}. Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?}
 
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 }
 \value{
-Data frame of counts, with the type as indicated by the function parameters.
+Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 }
 \description{
 Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
+\strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

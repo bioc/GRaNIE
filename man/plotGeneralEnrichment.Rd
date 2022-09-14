@@ -39,16 +39,16 @@ plotGeneralEnrichment(
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
-\item{pdf_width}{Number. Default 12. Width of the PDF, in cm.}
+\item{pdf_width}{Number>0. Default 12. Width of the PDF, in cm.}
 
-\item{pdf_height}{Number. Default 12. Height of the PDF, in cm.}
+\item{pdf_height}{Number >0. Default 12. Height of the PDF, in cm.}
 
 \item{pages}{Integer vector or \code{NULL}. Default \code{NULL}. Page number(s) to plot. Can be used to plot only specific pages to a PDF or the currently active graphics device.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-The same \code{\linkS4class{GRN}} object, without modifications. A single PDF file is produced with the results.
+The same \code{\linkS4class{GRN}} object, without modifications.
 }
 \description{
 This function plots the results of the general enrichment analysis for every specified ontology.
@@ -57,4 +57,9 @@ This function plots the results of the general enrichment analysis for every spe
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE)
+}
+\seealso{
+\code{\link{plotCommunitiesEnrichment}}
+
+\code{\link{plotTFEnrichment}}
 }
