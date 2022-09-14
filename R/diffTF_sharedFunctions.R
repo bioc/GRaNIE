@@ -191,7 +191,7 @@
 .readHOCOMOCOTable <- function(file, delim = " ") {
 
   HOCOMOCO_mapping.df = .read_tidyverse_wrapper(file, type = "delim", delim = delim, col_types = readr::cols()) %>%
-    dplyr::mutate(ENSEMBL = gsub("\\..+", "", ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
+    dplyr::mutate(ENSEMBL = gsub("\\..+", "", .data$ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
   
   checkmate::assertSubset(c("ENSEMBL", "HOCOID"), colnames(HOCOMOCO_mapping.df))
   
@@ -379,7 +379,7 @@
             TFs_to_change = dplyr::filter(output.global.TFs, (!!as.name(colnameClassification) == "activator" | 
                                                                   !!as.name(colnameClassification) == "repressor") & 
                                               !!as.name( colnameClassificationPVal) > !!significanceThreshold_Wilcoxon) %>%
-                            dplyr::pull(TF)
+                            dplyr::pull(.data$TF)
             
             # Filter some TFs to be undetermined
             if (length(TFs_to_change) > 0) {
@@ -496,7 +496,7 @@
   
   # Prepare the RNASeq data
   TF.specific = dplyr::left_join(HOCOMOCO_mapping, DESeq_results, by = "ENSEMBL") %>% 
-    dplyr::filter(!is.na(baseMean))
+    dplyr::filter(!is.na(.data$baseMean))
   
   if (nrow(TF.specific) == 0) {
     message = "The Ensembl IDs from the translation table do not match with the IDs from the RNA-seq counts table."
@@ -510,7 +510,7 @@
     output.global.TFs.merged = output.global.TFs %>%
       dplyr::filter(!!as.name(colnameClassificationCur) != "not-expressed")  %>%
       dplyr::full_join(TF.specific, by = c( "TF" = "HOCOID"))  %>%
-      dplyr::mutate(baseMeanNorm = (baseMean - min(baseMean, na.rm = TRUE)) / (max(baseMean, na.rm = TRUE) - min(baseMean, na.rm = TRUE)) + par.l$minPointSize)   %>%
+      dplyr::mutate(baseMeanNorm = (.data$baseMean - min(.data$baseMean, na.rm = TRUE)) / (max(.data$baseMean, na.rm = TRUE) - min(.data$baseMean, na.rm = TRUE)) + par.l$minPointSize)   %>%
       dplyr::filter(!is.na(!!as.name(colnameClassificationCur))) 
     
     
@@ -531,11 +531,11 @@
                         signif(cor.res.l[["pearson"]]$p.value,2),  "/", 
                         signif(cor.res.l[["spearman"]]$p.value,2), "\n(Pearson/Spearman, stringency: ", thresholdCur, ")")
       
-      g = ggplot(output.global.TFs.cur, aes(weighted_meanDifference, log2FoldChange)) + geom_point(aes(size = baseMeanNorm)) + 
-        geom_smooth(method = par.l$regressionMethod, color = par.l$internal$colorCategories[classificationCur]) + 
-        ggtitle(titleCur) + 
-        ylab("log2 fold-change RNA-seq") + 
-        theme_bw() + theme(plot.title = element_text(hjust = 0.5))
+      g = ggplot2::ggplot(output.global.TFs.cur, ggplot2::aes(.data$weighted_meanDifference, .data$log2FoldChange)) + ggplot2::geom_point(ggplot2::aes(size = .data$baseMeanNorm)) + 
+          ggplot2::geom_smooth(method = par.l$regressionMethod, color = par.l$internal$colorCategories[classificationCur]) + 
+          ggplot2::ggtitle(titleCur) + 
+          ggplot2::ylab("log2 fold-change RNA-seq") + 
+          ggplot2::theme_bw() + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
       plot(g)
       
     }
@@ -583,7 +583,7 @@
         
         plot(median.cor.tfs.non, seq_len(nTF),
              xlim = xlim, ylim = ylim, main=mainCur, xlab=xlab, ylab=ylab,
-             col = grDevices::adjustcolor("darkgrey",alpha=1), pch = 16, cex = 0.5,axes = FALSE)
+             col = grDevices::adjustcolor("darkgrey",alpha.f=1), pch = 16, cex = 0.5, axes = FALSE)
         points(median.cor.tfs, seq_len(nTF),
                pch=16,  cex = 0.5, 
                col= dplyr::case_when(median.cor.tfs > thresCur.v[2] ~ par.l$internal$colorCategories["activator"],
@@ -640,7 +640,7 @@
     
     missingGenes = which(!HOCOMOCO_mapping.df.exp$HOCOID %in% colnames(sort.cor.m))
     if (length(missingGenes) > 0) {
-        HOCOMOCO_mapping.df.exp = dplyr::filter(HOCOMOCO_mapping.df.exp, HOCOID %in% colnames(sort.cor.m))
+        HOCOMOCO_mapping.df.exp = dplyr::filter(HOCOMOCO_mapping.df.exp, .data$HOCOID %in% colnames(sort.cor.m))
     }
     
     if (!is.null(file)) {

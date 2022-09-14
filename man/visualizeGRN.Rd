@@ -13,6 +13,7 @@ visualizeGRN(
   pdf_height = 12,
   title = NULL,
   maxRowsToPlot = 500,
+  nCommunitiesMax = 8,
   graph = "TF-gene",
   colorby = "type",
   layout = "fr",
@@ -40,6 +41,8 @@ visualizeGRN(
 \item{title}{NULL or Character. Default NULL. Title to be assigned to the plot.}
 
 \item{maxRowsToPlot}{Numeric. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.}
+
+\item{nCommunitiesMax}{Integer > 0. Default 8. Maximum number of communities that get a distinct coloring. All additional communities will be colored with the same (gray) color.}
 
 \item{graph}{Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.}
 

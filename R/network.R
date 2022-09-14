@@ -36,22 +36,22 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     # If set to TRUE, the new default, self-loops can happen and the graph is not strictly tripartite anymore
     if (model_TF_gene_nodes_separately) {
       TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
-        dplyr::filter(!is.na(gene.ENSEMBL)) %>% 
+        dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>% 
         dplyr::select(c("TF.name", "peak.ID", "TF.ENSEMBL", "TF_peak.r")) %>%
         stats::na.omit() %>% 
         dplyr::mutate(V2_name = NA) %>%
         unique() %>%
-        dplyr::rename(V1 = TF.name, V2 = peak.ID, V1_name = TF.ENSEMBL, r = TF_peak.r) %>%
+        dplyr::rename(V1 = .data$TF.name, V2 = .data$peak.ID, V1_name = .data$TF.ENSEMBL, r = .data$TF_peak.r) %>%
         dplyr::mutate_at(c("V1","V2"), as.vector)
     } else {
       # Get Ensembl ID for TFs here to make a clean join and force a TF that is regulated by a peak to be the same node
       TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
-        dplyr::filter(!is.na(gene.ENSEMBL)) %>% 
+        dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>% 
         dplyr::select(c("TF.ENSEMBL", "peak.ID", "TF.name", "TF_peak.r")) %>%
         stats::na.omit() %>% 
         dplyr::mutate(V2_name = NA) %>%
         unique() %>%
-        dplyr::rename(V1 = TF.ENSEMBL, V2 = peak.ID, V1_name = TF.name, r = TF_peak.r) %>%
+        dplyr::rename(V1 = .data$TF.ENSEMBL, V2 = .data$peak.ID, V1_name = .data$TF.name, r = .data$TF_peak.r) %>%
         dplyr::mutate_at(c("V1","V2"), as.vector)
     }
     
@@ -60,15 +60,15 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
       stats::na.omit() %>% 
       dplyr::mutate(V1_name = NA) %>%
       unique() %>%
-      dplyr::rename(V1 = peak.ID, V2 = gene.ENSEMBL, V2_name = gene.name, r = peak_gene.r) %>%
+      dplyr::rename(V1 = .data$peak.ID, V2 = .data$gene.ENSEMBL, V2_name = .data$gene.name, r = .data$peak_gene.r) %>%
       dplyr::mutate_at(c("V1","V2"), as.vector)
     
     TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak`=TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
-      dplyr::select(V1, V2, V1_name, V2_name, r, connectionType)
+      dplyr::select(.data$V1, .data$V2, .data$V1_name, .data$V2_name, .data$r, .data$connectionType)
     
     TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2"="V1"), suffix = c(".TF_peak", ".peak_gene")) %>% 
-      dplyr::select(V1, V2.peak_gene, V1_name.TF_peak, V2_name.peak_gene) %>%
-      dplyr::rename(V1_name = V1_name.TF_peak, V2 = V2.peak_gene, V2_name = V2_name.peak_gene) %>%
+      dplyr::select(.data$V1, .data$V2.peak_gene, .data$V1_name.TF_peak, .data$V2_name.peak_gene) %>%
+      dplyr::rename(V1_name = .data$V1_name.TF_peak, V2 = .data$V2.peak_gene, V2_name = .data$V2_name.peak_gene) %>%
       dplyr::distinct() %>%
       dplyr::mutate(connectionType = "tf-gene") 
     
@@ -105,23 +105,23 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 .buildGraph <- function(df, directed, allowLoops, removeMultiple = FALSE, silent = FALSE) {
   
   # Remove V1_name and V2_name as igraph treats additional columns as edge attribute, which can become messed up as it here refers to vertice attribute
-  df_mod = df %>% dplyr::select(-V1_name, -V2_name)
+  df_mod = df %>% dplyr::select(-.data$V1_name, -.data$V2_name)
   
   TF_vertices = df %>%
-    dplyr::select(V1, V1_name) %>% 
-    dplyr::rename(nodeID = V1) %>%
+    dplyr::select(.data$V1, .data$V1_name) %>% 
+    dplyr::rename(nodeID = .data$V1) %>%
     dplyr::distinct() %>%
-    dplyr::group_by(nodeID) %>%
-    dplyr::summarise(names_TF_all = paste0(V1_name, collapse="|"),
+    dplyr::group_by(.data$nodeID) %>%
+    dplyr::summarise(names_TF_all = paste0(.data$V1_name, collapse="|"),
                      nTF = dplyr::n(),
                      isTF = TRUE, .groups = "keep") %>%
     dplyr::ungroup()
   
   gene_vertices = df %>%
-    dplyr::select(V2, V2_name) %>% 
+    dplyr::select(.data$V2, .data$V2_name) %>% 
     dplyr::distinct() %>%
     dplyr::mutate(isGene = TRUE) %>%
-    dplyr::rename(names_gene = V2_name, nodeID = V2) %>%
+    dplyr::rename(names_gene = .data$V2_name, nodeID = .data$V2) %>%
     dplyr::ungroup()
   
   # Combine vertex metadata
@@ -147,7 +147,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     
   }
   
-  .printGraphSummary(GRN, graph, silent = silent)
+  .printGraphSummary(graph, silent = silent)
   
   if (!silent) futile.logger::flog.info(paste0(" Done. Graphs are saved in GRN@graph"))
   
@@ -157,9 +157,9 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 .printLoopsGraph <- function(graph_table, silent = FALSE) {
   
   loop_vertices = graph_table %>%
-    dplyr::filter(V1 == V2) %>%
-    dplyr::mutate(V1_name_combined = paste0(V1, " (", V1_name, ")")) %>%
-    dplyr::pull(V1_name_combined)
+    dplyr::filter(.data$V1 == .data$V2) %>%
+    dplyr::mutate(V1_name_combined = paste0(.data$V1, " (", .data$V1_name, ")")) %>%
+    dplyr::pull(.data$V1_name_combined)
   
   if (length(loop_vertices) > 0) {
     if (!silent) futile.logger::flog.info(paste0(" The following nodes / vertices have loop edges (TF regulating itself):\n", paste0(loop_vertices, collapse = ", ")))
@@ -171,7 +171,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   
   
   multipleEdges = graph_table %>%
-    dplyr::group_by(V1,V2) %>% 
+    dplyr::group_by(.data$V1, .data$V2) %>% 
     dplyr::summarize(n = dplyr::n(), .groups = "keep") %>% 
     dplyr::ungroup() %>%
     dplyr::filter(.data$n>1)
@@ -183,7 +183,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 }
 
 
-.printGraphSummary <- function(GRN, graph, silent = FALSE) {
+.printGraphSummary <- function(graph, silent = FALSE) {
   if (!silent) futile.logger::flog.info(paste0(" Graph summary:"))
   nVertices = length(igraph::V(graph))
   nEdges = length(igraph::E(graph))
@@ -275,33 +275,47 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 
 
 # Retrieve set of background genes (as vector) used for enrichment analyses from a GRN object
-.getBackgroundGenes <-function(GRN, type = "neighborhood") {
+.getBackgroundGenes <-function(GRN, type = "neighborhood", gene.types = "all") {
   
-  checkmate::assertChoice(type, c("all_annotated", "all_RNA", "neighborhood"), empty.ok = FALSE)
+  checkmate::assertChoice(type, c("all_annotated", "all_RNA", "all_RNA_filtered", "neighborhood"))
   
   if (type == "all_annotated") {
     
-    backgroundGenes = geneAnnotation[[GRN@config$parameters$genomeAssembly]]$gene.ENSEMBL
-    
+    backgroundGenes = GRN@annotation$genes$gene.ENSEMBL
+
   } else if (type == "all_RNA") {
     
-    if (checkmate::testClass(GRN@data$RNA$counts_orig, "DESeqDataSet")) {
-      backgroundGenes = rownames(GRN@data$RNA$counts_orig)
-    } else {
-      backgroundGenes = GRN@data$RNA$counts_orig$ENSEMBL
-    }
+      backgroundGenes = GRN@data$RNA$counts_norm.l[["0"]] %>%
+          dplyr::pull(.data$ENSEMBL)
     
     
+  } else if (type == "all_RNA_filtered") {
+      
+      backgroundGenes = GRN@data$RNA$counts_norm.l[["0"]] %>%
+          dplyr::filter(!.data$isFiltered) %>%
+          dplyr::pull(.data$ENSEMBL)
+      
+      
   } else if (type == "neighborhood") {
     
     # Retrieve only those who are in the neighborhood of genes
     backgroundGenes = levels(GRN@connections$peak_genes[["0"]]$gene.ENSEMBL)
+  }
+    
+   
+  # Filter genes by gene.type.  
+  if (gene.types != "all") {
+      backgroundGenes = dplyr::filter(GRN@annotation$genes, 
+                                      .data$gene.ENSEMBL %in% backgroundGenes,
+                                      .data$gene.type %in% gene.types) %>%
+                        dplyr::pull(.data$gene.ENSEMBL)
   }
   
   
   backgroundGenes 
   
 }
+
 
 
 #' Run an enrichment analysis for the genes in the whole network in the filtered \code{\linkS4class{GRN}} object
@@ -323,7 +337,10 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' As they are listed under \code{Suggests}, they may not yet be installed, and the function will throw an error if they are missing.
 #' @param algorithm Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library.
 #' @param statistic Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher. 
-#' @param background Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (all_annotated), all differentially expressed genes (all_RNA), or all the genes that are within the neighborhood of a peak in the GRN (neighborhood)
+#' @param background Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"all_RNA_filtered"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (\code{all_annotated}), all genes from the provided RNA data (\code{all_RNA}), all genes from the provided RNA data excluding those marked as filtered after executing \code{filterData} (\code{all_RNA_filtered}), or all the genes that are within the neighborhood of any peak (before applying any filters except for the user-defined \code{promoterRange} value in \code{addConnections_peak_gene}) (\code{neighborhood}).
+#' @param background_geneTypes Character vector of gene types that should be considered for the background. Default \code{"all"}. 
+#' Only gene types as defined in the \code{\linkS4class{GRN}} object, slot \code{GRN@annotation$genes$gene.type} are allowed. 
+#' The special keyword \code{"all"} means no filter on gene type.
 #' @param pAdjustMethod Character. Default \code{"BH"}. One of: \code{"holm"}, \code{"hochberg"}, \code{"hommel"}, \code{"bonferroni"}, \code{"BH"}, \code{"BY"}, \code{"fdr"}. This parameter is only relevant for the following ontologies: KEGG, DO, Reactome. For the other ontologies, the algorithm serves as an adjustment.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$general} slot.
@@ -336,13 +353,10 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' GRN =  loadExampleObject()
 #' GRN =  calculateGeneralEnrichment(GRN, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
-# #' @importFrom topGO whichAlgorithms whichTests
-
-# Deactivated temporarily
-# @import BiocManager
 calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"), 
                                        algorithm = "weight01", statistic = "fisher",
-                                       background = "neighborhood",  pAdjustMethod = "BH", forceRerun = FALSE) {
+                                       background = "neighborhood",  background_geneTypes = "all",
+                                       pAdjustMethod = "BH", forceRerun = FALSE) {
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
@@ -352,7 +366,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   .checkPackage_topGO_and_arguments(ontology, algorithm, statistic)
 
-  checkmate::assertChoice(background, c("all_annotated", "all_RNA", "neighborhood"))
+  checkmate::assertChoice(background, c("all_annotated", "all_RNA", "all_RNA_filtered", "neighborhood"))
+  checkmate::assertSubset(background_geneTypes, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertChoice(pAdjustMethod, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   checkmate::assertFlag(forceRerun)
   
@@ -360,7 +375,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   
   mapping = .getGenomeObject(GRN@config$parameters$genomeAssembly, type = "packageName")
-  backgroundGenes = .getBackgroundGenes(GRN, type = background)
+  backgroundGenes = .getBackgroundGenes(GRN, type = background, gene.types = background_geneTypes)
   
   futile.logger::flog.info(paste0("Calculating general enrichment statistics. This may take a while"))
   
@@ -375,7 +390,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
       # run general enrichment analysis and store tabulated results in GRN object
       # Only use the "targets", i.e., genes as foreground because it would artificially enrich for TF terms, such as "DNA-binding" "transcription activation" type terms.
       GRN@stats[["Enrichment"]][["general"]][[ontologyCur]] =
-        .runEnrichment(foreground = GRN@graph$TF_gene$table$V2, 
+        .runEnrichment(GRN,
+                       foreground = GRN@graph$TF_gene$table$V2, 
                        background = backgroundGenes,
                        backgroundStr = background, 
                        ontology = ontologyCur, algorithm = algorithm, statistic = statistic,
@@ -401,25 +417,6 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 }
 
 
-.getBackgroundGenes <-function(GRN, type = "neighborhood") {
-  # Retrieve set of background genes (as vector) used for enrichment analyses from a GRN object
-  checkmate::assertChoice(type, c("all_annotated", "all_RNA", "neighborhood"))
-  if (type == "all_annotated") {
-    backgroundGenes = geneAnnotation[[GRN@config$parameters$genomeAssembly]]$gene.ENSEMBL
-  } else if (type == "all_RNA") {
-    if (checkmate::testClass(GRN@data$RNA$counts_orig, "DESeqDataSet")) {
-      backgroundGenes = rownames(GRN@data$RNA$counts_orig)
-    } else {
-      backgroundGenes = GRN@data$RNA$counts_orig$ENSEMBL
-    }
-  } else if (type == "neighborhood") {
-    # Retrieve only those who are in the neighborhood of genes
-    backgroundGenes = levels(GRN@connections$peak_genes[["0"]]$gene.ENSEMBL)
-  }
-  backgroundGenes 
-}
-
-
 .combineEnrichmentResults <- function(GRN, type, ontology, p, nSignificant, display_pAdj) {
   
   if (type == "byCommunity") {
@@ -433,7 +430,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
                                           lapply(function(x) {x[[ontology]]$results}) %>%
                                           dplyr::bind_rows(.id = idMerge) %>%
                                           dplyr::select(-tidyselect::starts_with("topG")) %>%
-                                          dplyr::mutate(pval = as.numeric(pval)) %>%
+                                          dplyr::mutate(pval = as.numeric(.data$pval)) %>%
                                           tibble::as_tibble())
   
   # p-adjust only available for non-GO ontologies
@@ -454,18 +451,18 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   # get enriched terms from general enrichment and make sure it is kept for the community enrichment
   enrichedTermsGeneral = enrichmentGeneral %>% 
-    dplyr::filter(pval <= p, Found >= nSignificant) %>% 
-    dplyr::pull(ID)
+    dplyr::filter(.data$pval <= p, .data$Found >= nSignificant) %>% 
+    dplyr::pull(.data$ID)
   
   enrichedTermsGrouped = resultsCombined.df %>% 
-    dplyr::filter(pval <= p, Found >= nSignificant) %>% 
-    dplyr::pull(ID)
+    dplyr::filter(.data$pval <= p, .data$Found >= nSignificant) %>% 
+    dplyr::pull(.data$ID)
   
   all.df = resultsCombined.df %>%
     rbind(enrichmentGeneral) %>%
-    dplyr::mutate(ID = as.factor(ID),
-                  pval =as.numeric(gsub(">|<", "", pval))) %>%
-    dplyr::filter(pval <= p & (Found >= nSignificant | ID %in% c(enrichedTermsGeneral, enrichedTermsGrouped)))
+    dplyr::mutate(ID = as.factor(.data$ID),
+                  pval =as.numeric(gsub(">|<", "", .data$pval))) %>%
+    dplyr::filter(.data$pval <= p & (.data$Found >= nSignificant | .data$ID %in% c(enrichedTermsGeneral, enrichedTermsGrouped)))
   
   all.df[, idMerge] = as.factor(all.df[, idMerge, drop = TRUE])
   
@@ -493,7 +490,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 }
 
 #' @importFrom biomaRt useEnsembl getBM
-.runEnrichment <- function(foreground, background, backgroundStr, database = "GO", ontology, 
+.runEnrichment <- function(GRN, foreground, background, backgroundStr, database = "GO", ontology, 
                            description = "Enrichment Analysis",
                            algorithm="weight01", statistic = "fisher", mapping, pAdjustMethod = "BH", minGSSize = 0, maxGSSize = 5000){
   
@@ -591,8 +588,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     # Dont trim GO terms here, happens later when plotting
     result.tbl = unique(topGO::GenTable(go_enrichment, pval = result, orderBy = "pval", numChar = 1000, 
                                         topNodes = length(topGO::score(result))) ) %>%
-      dplyr::rename(ID = GO.ID, Found = Significant)  %>%      # make it more clear what Significant refers to here
-      dplyr::mutate(GeneRatio = Found / nForeground)
+      dplyr::rename(ID = .data$GO.ID, Found = .data$Significant)  %>%      # make it more clear what Significant refers to here
+      dplyr::mutate(GeneRatio = .data$Found / nForeground)
     
     
     result.list[["results"]] = result.tbl
@@ -720,7 +717,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   if (!is.null(enrichmentObj)) {
     
     result.tbl = enrichmentObj@result %>%
-      dplyr::rename(Term = Description, pval = .data$pvalue, Found = Count) %>%
+      dplyr::rename(Term = .data$Description, pval = .data$pvalue, Found = .data$Count) %>%
       dplyr::mutate(GeneRatio = sapply(parse (text = enrichmentObj@result$GeneRatio), eval))
     
   } else {
@@ -867,7 +864,8 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
 # #' @importFrom topGO whichAlgorithms whichTests
 calculateCommunitiesEnrichment <- function(GRN, 
                                            ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 
-                                           statistic = "fisher", background = "neighborhood", 
+                                           statistic = "fisher", 
+                                           background = "neighborhood", background_geneTypes = "all",
                                            selection = "byRank", communities = seq_len(10),
                                            pAdjustMethod = "BH",
                                            forceRerun = FALSE) {
@@ -881,7 +879,8 @@ calculateCommunitiesEnrichment <- function(GRN,
  
   .checkPackage_topGO_and_arguments(ontology, algorithm, statistic)
   
-  checkmate::assertChoice(background, c("all_annotated", "all_RNA", "neighborhood"))
+  checkmate::assertChoice(background, c("all_annotated", "all_RNA", "all_RNA_filtered", "neighborhood"))
+  checkmate::assertSubset(background_geneTypes, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertChoice(selection, c("byRank", "byLabel"))
   checkmate::assertChoice(pAdjustMethod, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   checkmate::assertFlag(forceRerun)
@@ -914,7 +913,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   
   
   mapping = .getGenomeObject(GRN@config$parameters$genomeAssembly, type = "packageName")
-  backgroundGenes = .getBackgroundGenes(GRN, type = background)
+  backgroundGenes = .getBackgroundGenes(GRN, type = background, gene.types = background_geneTypes)
   
   if (is.null(GRN@stats[["Enrichment"]][["byCommunity"]])) {
     GRN@stats[["Enrichment"]][["byCommunity"]] = list()
@@ -930,15 +929,16 @@ calculateCommunitiesEnrichment <- function(GRN,
     
     
     foregroundCur = vertexMetadata %>%
-      dplyr::filter(community == communityCur) %>%
-      dplyr::pull(name)
+      dplyr::filter(.data$community == communityCur) %>%
+      dplyr::pull(.data$name)
     
     for (ontologyCur in ontology) {
       
       if (is.null(GRN@stats[["Enrichment"]][["byCommunity"]][[communityCur]][[ontologyCur]]) | forceRerun) {
         
         GRN@stats[["Enrichment"]][["byCommunity"]][[communityCur]][[ontologyCur]] = 
-          .runEnrichment(foreground = foregroundCur, 
+          .runEnrichment(GRN,
+                         foreground = foregroundCur, 
                          background = backgroundGenes, 
                          backgroundStr = background,
                          ontology = ontologyCur, 
@@ -967,7 +967,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   
   df = igraph::vertex.attributes(GRN@graph[[graph]]$graph) %>%
     as.data.frame() %>% 
-    dplyr::count(community)
+    dplyr::count(.data$community)
   
   
   if (is.null(communities)) {
@@ -976,7 +976,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   selCommunities = df %>% 
     dplyr::arrange(dplyr::desc(.data$n)) %>%
     dplyr::slice(communities) %>%
-    dplyr::pull(community) %>%
+    dplyr::pull(.data$community) %>%
     as.character()
   
   if (length(selCommunities) == 0) {
@@ -1049,22 +1049,22 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
   if (rankType == "degree"){
     col = dplyr::if_else(nodeType == "gene", "V2", "V1")
     topNodes = graph.df %>%
-      dplyr::filter(connectionType == link) %>%
+      dplyr::filter(.data$connectionType == link) %>%
       dplyr::count(!!as.name(col), sort = TRUE) %>%
       # dplyr::rename(!!slot := V1, Connections = n) %>%
       dplyr::rename(Connections = n) %>%
-      dplyr::arrange(dplyr::desc(Connections)) %>%
+      dplyr::arrange(dplyr::desc(.data$Connections)) %>%
       dplyr::slice(seq_len(top.n)) 
     
     # TODO: change column names
     if (nodeType == "gene") {
       topNodes = topNodes  %>%
-        dplyr::left_join(graph.df %>% dplyr::select(V2, V2_name) %>% dplyr::distinct(), by = "V2") %>%
-        dplyr::rename(gene.ENSEMBL = V2, gene.name = V2_name)
+        dplyr::left_join(graph.df %>% dplyr::select(.data$V2, .data$V2_name) %>% dplyr::distinct(), by = "V2") %>%
+        dplyr::rename(gene.ENSEMBL = .data$V2, gene.name = .data$V2_name)
     } else {
       topNodes = topNodes  %>%
-        dplyr::left_join(graph.df %>% dplyr::select(V1, V1_name) %>% dplyr::distinct(), by = "V1") %>%
-        dplyr::rename(TF.ENSEMBL = V1, TF.name = V1_name)
+        dplyr::left_join(graph.df %>% dplyr::select(.data$V1, .data$V1_name) %>% dplyr::distinct(), by = "V1") %>%
+        dplyr::rename(TF.ENSEMBL = .data$V1, TF.name = .data$V1_name)
     }
     
     
@@ -1076,7 +1076,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
   
   # Remove unnecessary extra column
   if ("name_plot" %in% colnames(topNodes)) {
-      topNodes = dplyr::select(topNodes, -name_plot)
+      topNodes = dplyr::select(topNodes, -.data$name_plot)
   }
 
   .printExecutionTime(start)
@@ -1108,7 +1108,8 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 # #' @importFrom topGO whichAlgorithms whichTests
 calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NULL,
                                   ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 
-                                  statistic = "fisher", background = "neighborhood",
+                                  statistic = "fisher", 
+                                  background = "neighborhood", background_geneTypes = "all",
                                   pAdjustMethod = "BH",
                                   forceRerun = FALSE){
   
@@ -1122,7 +1123,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
   
   .checkPackage_topGO_and_arguments(ontology, algorithm, statistic)
 
-  checkmate::assertChoice(background, c("all_annotated", "all_RNA", "neighborhood"))
+  checkmate::assertChoice(background, c("all_annotated", "all_RNA", "all_RNA_filtered", "neighborhood"))
+  checkmate::assertSubset(background_geneTypes, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertChoice(pAdjustMethod, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   checkmate::assertFlag(forceRerun)
   
@@ -1138,7 +1140,7 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
   } else{
     
     # TF.name is always there, irrespective of whether ENSEMBL ID or TF name is used as primary ID type
-    TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n, use_TF_gene_network = TRUE) %>% dplyr::pull(TF.name)
+    TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n, use_TF_gene_network = TRUE) %>% dplyr::pull(.data$TF.name)
   }
   
   # TODO: Continue working on the TF.name level or switch to Ensembl? Should be in concordance with the graph!
@@ -1165,12 +1167,12 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
     
     # get the genes associated with current top TF
     curGenes = GRN@connections$all.filtered$`0` %>% 
-      dplyr::filter(TF.name == TF) %>% 
-      dplyr::pull(gene.ENSEMBL) %>%
+      dplyr::filter(.data$TF.name == TF) %>% 
+      dplyr::pull(.data$gene.ENSEMBL) %>%
       unique()
     
     
-    backgroundGenes = .getBackgroundGenes(GRN, type = background)
+    backgroundGenes = .getBackgroundGenes(GRN, type = background, gene.types = background_geneTypes)
     
     for (ontologyCur in ontology) {
       
@@ -1184,7 +1186,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
         
         
         GRN@stats[["Enrichment"]][["byTF"]][[TF]][[ontologyCur]] =  
-          .runEnrichment(foreground = curGenes,
+          .runEnrichment(GRN,
+                         foreground = curGenes,
                          background = backgroundGenes, 
                          backgroundStr = background,
                          ontology = ontologyCur, 

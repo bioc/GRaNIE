@@ -56,7 +56,7 @@ This function plots the results of the general enrichment analysis for every spe
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE)
+GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE, pages = 1)
 }
 \seealso{
 \code{\link{plotCommunitiesEnrichment}}

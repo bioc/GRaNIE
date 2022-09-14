@@ -41,7 +41,7 @@ This function generates graphical summaries about the structure and connectivity
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotGeneralGraphStats(GRN, plotAsPDF = FALSE)
+GRN = plotGeneralGraphStats(GRN, plotAsPDF = FALSE, pages = 1)
 }
 \seealso{
 \code{\link{plotGeneralEnrichment}}

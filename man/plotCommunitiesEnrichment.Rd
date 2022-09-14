@@ -68,7 +68,7 @@ Second, a summary heatmap of all significantly enriched terms across all communi
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE)
+GRN = plotCommunitiesEnrichment(GRN, plotAsPDF = FALSE, pages = 1)
 }
 \seealso{
 \code{\link{plotGeneralEnrichment}}

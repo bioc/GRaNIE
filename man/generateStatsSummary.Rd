@@ -9,7 +9,6 @@ generateStatsSummary(
   TF_peak.fdr = c(0.001, 0.01, 0.05, 0.1, 0.2),
   TF_peak.connectionTypes = "all",
   peak_gene.fdr = c(0.001, 0.01, 0.05, 0.1, 0.2),
-  peak_gene.p_raw = NULL,
   peak_gene.r_range = c(0, 1),
   gene.types = c("protein_coding"),
   allowMissingGenes = c(FALSE, TRUE),
@@ -25,8 +24,6 @@ generateStatsSummary(
 \item{TF_peak.connectionTypes}{Character vector. Default \code{all}. TF-peak connection types to consider. The special keyword \code{all} denotes all connection types (e.g., \code{expression} and \code{TFActivity}) that are found in the \code{\linkS4class{GRN}} object. By default, only \code{expression} is present in the object, so \code{all} and \code{expression} are usually equivalent unless calculation of TF-peak links based on TF activity has also been enabled.}
 
 \item{peak_gene.fdr}{Numeric vector[0,1]. Default \code{c(0.001, 0.01, 0.05, 0.1, 0.2)}. Peak-gene FDR values to iterate over.}
-
-\item{peak_gene.p_raw}{Numeric vector[0,1]. Default \code{NULL}. Peak-gene raw p-value values to iterate over. Skipped if set to NULL.}
 
 \item{peak_gene.r_range}{Numeric vector of length 2[-1,1]. Default \code{c(0,1)}. The correlation range of peak-gene connections to keep.}
 

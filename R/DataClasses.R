@@ -202,7 +202,7 @@ setMethod("show",
                 cat(" Communities (TF-gene):\n")
                 df = igraph::vertex.attributes(GRN@graph[["TF_gene"]]$graph)
                 if (!is.null(df) & "community" %in% names(df)) {
-                    communities = df %>% as.data.frame() %>% dplyr::count(community) %>% dplyr::arrange(dplyr::desc(.data$n))
+                    communities = df %>% as.data.frame() %>% dplyr::count(.data$community) %>% dplyr::arrange(dplyr::desc(.data$n))
                     cat("  Communities, sorted by size (n = Number of nodes): ", paste0(communities$community, " (n=", communities$n, collapse = "), "), ")\n", sep = "")
                 } else {
                     cat("  None found\n")
@@ -265,7 +265,7 @@ nPeaks <- function(GRN, filter = TRUE) {
   }
   
   if (filter) {
-    nPeaks = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!isFiltered) %>% nrow()
+    nPeaks = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!.data$isFiltered) %>% nrow()
   } else {
     nPeaks = GRN@data$peaks$consensusPeaks %>% nrow()
   }
@@ -301,7 +301,7 @@ nGenes <- function(GRN, filter = TRUE) {
   }
   
   if (filter) {
-    nGenes = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::filter(!isFiltered) %>% nrow()
+    nGenes = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::filter(!.data$isFiltered) %>% nrow()
   } else {
     nGenes = GRN@data$RNA$counts_norm.l[["0"]] %>% nrow()
   }

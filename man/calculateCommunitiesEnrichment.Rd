@@ -10,6 +10,7 @@ calculateCommunitiesEnrichment(
   algorithm = "weight01",
   statistic = "fisher",
   background = "neighborhood",
+  background_geneTypes = "all",
   selection = "byRank",
   communities = seq_len(10),
   pAdjustMethod = "BH",
@@ -30,7 +31,11 @@ As they are listed under \code{Suggests}, they may not yet be installed, and the
 
 \item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher.}
 
-\item{background}{Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (all_annotated), all differentially expressed genes (all_RNA), or all the genes that are within the neighborhood of a peak in the GRN (neighborhood)}
+\item{background}{Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"all_RNA_filtered"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (\code{all_annotated}), all genes from the provided RNA data (\code{all_RNA}), all genes from the provided RNA data excluding those marked as filtered after executing \code{filterData} (\code{all_RNA_filtered}), or all the genes that are within the neighborhood of any peak (before applying any filters except for the user-defined \code{promoterRange} value in \code{addConnections_peak_gene}) (\code{neighborhood}).}
+
+\item{background_geneTypes}{Character vector of gene types that should be considered for the background. Default \code{"all"}. 
+Only gene types as defined in the \code{\linkS4class{GRN}} object, slot \code{GRN@annotation$genes$gene.type} are allowed. 
+The special keyword \code{"all"} means no filter on gene type.}
 
 \item{selection}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities enrichment will by calculated based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.}
 

@@ -469,7 +469,6 @@ It is often useful to get a grasp of the general connectivity of a network and t
 GRN = generateStatsSummary(GRN,
                            TF_peak.fdr = c(0.05, 0.1, 0.2), 
                            TF_peak.connectionTypes = "all",
-                           peak_gene.p_raw = NULL,
                            peak_gene.fdr = c(0.1, 0.2),
                            peak_gene.r_range = c(0,1),
                            allowMissingGenes = c(FALSE, TRUE),

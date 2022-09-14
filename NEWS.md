@@ -2,16 +2,15 @@
 
 ## Major changes
 
-- many Documentation and R help updates, Package Details Vignette is online
+- many Documentation and R help updates, the [Package Details Vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation) is online
 - The workflow vignette is now improved: better figure resolution, figure aspect ratios are optimized, and a few other changes
 - the eGRN graph structure as built by `build_eGRN_graph()` in the `GRaNIE` object is now reset whenever the function `filterGRNAndConnectGenes()` is successfully executed to make sure that enrichment functions etc are not using an outdated graph structure. 
 - the landing page of the website has been extended and overhauled
-- removed some dependency packages and moved others into `Suggests` to lower the installation burden of the package. In addition, removed `topGO` from the `Depends` section (now in `Suggests`) and removed `tidyverse` altogether (before in `Depends`). Detailed explanations when and how the packages listed under `Suggests` are needed can now be found in the new [Package Details Vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation).
-- new helper function `installSuggestedPackages()` to install all packages listed under `Suggests`
+- removed some dependency packages and moved others into `Suggests` to lower the installation burden of the package. In addition, removed `topGO` from the `Depends` section (now in `Suggests`) and removed `tidyverse` altogether (before in `Depends`). Detailed explanations when and how the packages listed under `Suggests` are needed can now be found in the new [Package Details Vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation) and are clearly given to the user when executing the respective functions
 
 ## Minor changes
 
-- many small changes in the code, better argument checking, and preparing rigorous unit test inclusion
+- many small changes in the code, updated argument checking, and preparing rigorous unit test inclusion
 - internally renaming the (recently changed / renamed) gene type `lncRNA` from `biomaRt` to `lincRNA` to be compatible with older versions of `GRaNIE`
 
 

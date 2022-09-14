@@ -71,7 +71,7 @@ Third, a subset of the aforementioned heatmap, showing only the top most signifi
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotTFEnrichment(GRN, n = 5, plotAsPDF = FALSE)
+GRN = plotTFEnrichment(GRN, n = 5, plotAsPDF = FALSE, pages = 1)
 }
 \seealso{
 \code{\link{plotGeneralEnrichment}}

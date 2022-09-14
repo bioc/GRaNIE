@@ -88,5 +88,5 @@ License: Artistic-2.0
 LazyData: false
 URL: https://grp-zaugg.embl-community.io/GRaNIE
 BugReports: https://git.embl.de/grp-zaugg/GRaNIE/issues
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1
 Config/testthat/edition: 3
