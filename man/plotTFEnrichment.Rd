@@ -37,9 +37,9 @@ plotTFEnrichment(
 
 \item{p}{Numeric. Default 0.05. p-value threshold to determine significance.}
 
-\item{nSignificant}{Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
+\item{nSignificant}{Numeric >0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
 
-\item{nID}{Numeric. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
+\item{nID}{Numeric >0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
 
 \item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
 

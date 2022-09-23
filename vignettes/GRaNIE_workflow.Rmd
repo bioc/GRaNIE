@@ -425,15 +425,19 @@ saveRDS(GRN, GRN_file_outputRDS)
         
 ## Retrieve filtered connections
 
-We are now ready to retrieve the connections and the additional data we added to them. This can be done with the helper function `getGRNConnections()` that retrieves a data frame from a `GRaNIE` object from a particular slot. Here, we specify `all.filtered`, as we want to retrieve all filtered connections. For more parameter details, see the R help (`getGRNConnections`). Note that the first time, we assign a different variable to the return of the function (i.e., `GRN_connections.all` and NOT `GRN` as before). Importantly, we have to select a new variable as we would otherwise overwrite our `GRN` object altogether! All `get` functions from the `GRaNIE` package return an element from within the object and NOT the object itself, so please keep that in mind and always check what the functions returns before running it. You can simply do so in the R help (`?getGRNConnections`). 
+We are now ready to retrieve the filtered connections, along with adding various additional metadata (optional). This can be done with the helper function `getGRNConnections()` that retrieves the filtered eGRN as a data frame from a `GRaNIE` object. Here, we specify `all.filtered`, as we want to retrieve all filtered connections (i.e., the eGRN). For more parameter details, see the R help (`getGRNConnections`). 
+
+Here, for example, we add various additional information to the resulting data frame: TF-gene correlations, and gene metadata. We could also add TF and peak metadata as well as the results from running the `variancePartition` package, but this is not done here and we leave this as an exercise to the reader!
+
+Note that the first time, we assign a different variable to the return of the function (i.e., `GRN_connections.all` and NOT `GRN` as before). Importantly, we have to select a new variable as we would otherwise overwrite our `GRN` object altogether! All `get` functions from the `GRaNIE` package return an element from within the object and NOT the object itself, so please keep that in mind and always check what the functions returns before running it. You can simply do so in the R help (`?getGRNConnections`). 
 
 ```{r, include=TRUE, eval = TRUE, class.output="scroll-200"}
-GRN_connections.all = getGRNConnections(GRN, type = "all.filtered", include_TF_gene_correlations = TRUE)
+GRN_connections.all = getGRNConnections(GRN, type = "all.filtered", include_TF_gene_correlations = TRUE, include_geneMetadata = TRUE)
 
 GRN_connections.all
 ```
 
-The table contains many columns, and the prefix of each column name indicates the part of the *eGRN* network that the column refers to (e.g., TFs, TF-enhancers, enhancers, enhancer-genes or genes, or TF-gene if the function `add_TF_gene_correlation()` has been run before). Data are stored in a format that minimizes the memory footprint (e.g., each character column is stored as a factor). This table can now be used for any downstream analysis, as it is just a normal data frame.
+The table contains many columns, and the prefix of each column name indicates the part of the *eGRN* network that the column refers to (e.g., TFs, TF-peaks, peaks, peaks-genes or genes, or TF-gene if the function `add_TF_gene_correlation()` has been run before). Data are stored in a format that minimizes the memory footprint (e.g., each character column is stored as a factor). This table can now be used for any downstream analysis, as it is just a normal data frame.
 
 
 ## Construct the eGRN graph

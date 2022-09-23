@@ -80,12 +80,14 @@ keeping backwards compatibility with \code{\linkS4class{GRN}} objects.}
 \item{silent}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object, with additional information added from this function. The filtered and merged TF-peak and peak-gene connections in the slot \code{GRN@connections$all.filtered}.
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 
+The filtered and merged TF-peak and peak-gene connections in the slot \code{GRN@connections$all.filtered} and can be retrieved (along with other feature metadata) using the function \code{\link{getGRNConnections}}.
 }
 \description{
 This is one of the main integrative functions of the \code{GRaNIE} package. It has two main functions: 
 First, filtering both TF-peak and peak-gene connections according to different criteria such as FDR and other properties 
 Second, joining the three major elements that an eGRN consist of (TFs, peaks, genes) into one data frame, with one row per unique TF-peak-gene connection.
+\strong{After successful execution, the connections (along with additional feature metadata) can be retrieved with the function \code{\link{getGRNConnections}}.}
 \strong{Note that the eGRN graph is reset upon successful execution of this function, and re-running the function \code{\link{build_eGRN_graph}} 
 is necessary when any of the network functions of the package shall be executed.}
 Internally, before joining them, both TF-peak links and peak-gene connections are filtered separately for reasons of memory and computational efficacy:
@@ -106,4 +108,6 @@ GRN = filterGRNAndConnectGenes(GRN)
 \code{\link{addConnections_peak_gene}}
 
 \code{\link{build_eGRN_graph}}
+
+\code{\link{getGRNConnections}}
 }

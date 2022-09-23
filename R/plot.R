@@ -33,6 +33,8 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
+  GRN = .makeObjectCompatible(GRN)
+  
   checkmate::assertSubset(data , c("rna", "peaks", "all"), empty.ok = FALSE)
   checkmate::assertSubset(type , c("raw", "normalized", "all"), empty.ok = FALSE)
   checkmate::assertFlag(plotAsPDF)
@@ -337,7 +339,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     
   }
   
-  .printWarningPageNumber(pages, pageCounter)
+  .checkPageNumberValidity(pages, pageCounter)
   if (plotAsPDF) grDevices::dev.off()
   
 }
@@ -515,6 +517,8 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
@@ -857,7 +861,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     
   } # end allTF
   
-  .printWarningPageNumber(pages, pageCounter)
+  .checkPageNumberValidity(pages, pageCounter)
   
   if (!is.null(file)) dev.off()
   
@@ -907,6 +911,8 @@ plotDiagnosticPlots_peakGene <- function(GRN,
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
@@ -1553,7 +1559,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       }
       pageCounter = pageCounter + 1
       
-      .printWarningPageNumber(pages, pageCounter)
+      .checkPageNumberValidity(pages, pageCounter)
       if (!is.null(fileBase)) {
         grDevices::dev.off()
       }
@@ -1611,6 +1617,8 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   start = Sys.time()     
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   
   checkmate::assertChoice(type, c("heatmap", "boxplot", "density"))
@@ -1764,7 +1772,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
       }
     }
     
-    .printWarningPageNumber(pages, pageCounter)
+    .checkPageNumberValidity(pages, pageCounter)
     if (!is.null(file)) {
       grDevices::dev.off()
     }
@@ -1911,7 +1919,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
       
     } # end for TF_peak.fdr_cur
     
-    .printWarningPageNumber(pages, pageCounter)
+    .checkPageNumberValidity(pages, pageCounter)
     if (!is.null(file)) {
       grDevices::dev.off()
     }
@@ -1953,6 +1961,8 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
@@ -2113,7 +2123,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
       
     }
     
-    .printWarningPageNumber(pages, pageCounter)
+    .checkPageNumberValidity(pages, pageCounter)
     
     if (plotAsPDF) {grDevices::dev.off()}
     
@@ -2127,11 +2137,11 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   
 }
 
-.printWarningPageNumber <- function(pages, pageCounter) {
+.checkPageNumberValidity <- function(pages, pageCounter) {
   
   if(any(pages > pageCounter)) {
-    message = paste0("At least one page could not be plotted because the total number of plots is only ", pageCounter, " while a larger page number has been requested")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+    message = paste0("At least one page could not be plotted because the total number of plots is only ", pageCounter, " while a larger page number has been requested. To fix this, re-adjust the page number(s) and execute the function again.")
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
 }
 
@@ -2171,6 +2181,8 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   
   ontologiesFound = names(GRN@stats$Enrichment$general)
@@ -2230,7 +2242,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
       
     }
     
-    .printWarningPageNumber(pages, pageCounter)
+    .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
   } else {
@@ -2349,6 +2361,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
+  GRN = .makeObjectCompatible(GRN)
   
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
@@ -2505,7 +2518,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
       
     }
     
-    .printWarningPageNumber(pages, pageCounter)
+    .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
   } else {
@@ -2522,13 +2535,13 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' Similarly to \code{\link{plotGeneralEnrichment}} and \code{\link{plotTFEnrichment}}, the results of the community-based enrichment analysis are plotted.
 #' This function produces multiple plots. First, one plot per community to summarize the community-specific enrichment.
 #' Second, a summary heatmap of all significantly enriched terms across all communities and for the whole eGRN. The latter allows to compare the results with the general network enrichment.
-#' #' Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per community and for the whole eGRN (as specified by \code{nID}) for improved visibility 
+#' Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per community and for the whole eGRN (as specified by \code{nID}) for improved visibility 
 #' 
 #' @inheritParams plotGeneralEnrichment
 #' @param display Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will be displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
 #' @param communities \code{NULL} or numeric vector. Default \code{NULL}. If set to \code{NULL}, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities are plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} are plotted. 
-#' @param nSignificant Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
-#' @param nID Numeric. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.
+#' @param nSignificant Numeric >0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
+#' @param nID Numeric >0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.
 #' @template maxWidth_nchar_plot
 #' @return  The same \code{\linkS4class{GRN}} object, without modifications.
 #' @seealso \code{\link{plotGeneralEnrichment}}
@@ -2550,6 +2563,8 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   checkmate::assertChoice(display , c("byRank", "byLabel"))
   checkmate::assert(checkmate::checkNull(communities), checkmate::checkNumeric(communities, lower = 1, any.missing = FALSE, min.len = 1))
@@ -2791,7 +2806,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
     }
     
     
-    .printWarningPageNumber(pages, pageCounter)
+    .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
   } else {
@@ -2895,6 +2910,8 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
 
   checkmate::assertChoice(rankType, c("degree", "EV", "custom"))
   checkmate::assert(checkmate::checkNull(n), checkmate::checkNumeric(n))
@@ -2958,10 +2975,10 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
     nodeDegree = igraph::degree(GRN@graph$TF_gene$graph)
     
-    # nodeDegree_TFset = sort(nodeDegree[GRN@data$TFs$translationTable %>% dplyr::filter(TF.name %in% as.character(TFset)) %>% 
+    # nodeDegree_TFset = sort(nodeDegree[GRN@annotation$TFs %>% dplyr::filter(TF.name %in% as.character(TFset)) %>% 
     #                                      dplyr::pull(TF.ENSEMBL)], decreasing = TRUE)
     
-    nodeDegree_TFset = dplyr::left_join(GRN@data$TFs$translationTable, 
+    nodeDegree_TFset = dplyr::left_join(GRN@annotation$TFs, 
                                         as.data.frame(nodeDegree) %>% tibble::rownames_to_column("ENSEMBL"), by = "ENSEMBL") %>%
       dplyr::filter(.data$TF.name %in% as.character(TFset))
     
@@ -2981,7 +2998,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
         
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
           
-          TF.ENSEMBL = GRN@data$TFs$translationTable %>% dplyr::filter(.data$TF.name == TFCur) %>% dplyr::pull(TF.ENSEMBL)
+          TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.name == TFCur) %>% dplyr::pull(TF.ENSEMBL)
           
           TF.name.full = paste0(TFCur, " (", TF.ENSEMBL, ")")
           
@@ -3115,7 +3132,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
       
     }
     
-    .printWarningPageNumber(pages, pageCounter)
+    .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
   } else {
@@ -3304,9 +3321,9 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 
 ############### GRN visualization ###############
 
-#' Visualize a filtered GRN in a flexible manner. 
+#' Visualize a filtered eGRN in a flexible manner. 
 #' 
-#' This function requires a filtered set of connections in the \code{\linkS4class{GRN}} object as generated by \code{\link{filterGRNAndConnectGenes}}
+#' This function can visualize a filtered eGRN in a very flexible manner and requires a filtered set of connections in the \code{\linkS4class{GRN}} object as generated by \code{\link{filterGRNAndConnectGenes}}. 
 #'
 #' @template GRN 
 #' @template outputFolder
@@ -3314,11 +3331,11 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' @template plotAsPDF
 #' @template pdf_width
 #' @template pdf_height
-#' @param title NULL or Character. Default NULL. Title to be assigned to the plot.
-#' @param maxRowsToPlot Numeric. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.
+#' @param title \code{NULL} or Character. Default \code{NULL}. Title to be assigned to the plot.
+#' @param maxRowsToPlot Integer > 0. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.
 #' @param nCommunitiesMax Integer > 0. Default 8. Maximum number of communities that get a distinct coloring. All additional communities will be colored with the same (gray) color.
 #' @param graph Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.
-#' @param colorby Character. Default \code{type}. One of \code{type}, code \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}
+#' @param colorby Character. Default \code{type}. Either \code{type} or \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}
 #' @param layout Character. Default \code{fr}. One of \code{star}, \code{fr}, \code{sugiyama}, \code{kk}, \code{lgl}, \code{graphopt}, \code{mds}, \code{sphere}
 #' @param vertice_color_TFs Named list. Default \code{list(h = 10, c = 85, l = c(25, 95))}. The list must specify the color in hcl format (hue, chroma, luminence). See the \code{colorspace} package for more details and examples
 #' @param vertice_color_peaks Named list. Default \code{list(h = 135, c = 45, l = c(35, 95))}.
@@ -3343,10 +3360,12 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     checkmate::assertClass(GRN, "GRN")
     GRN = .addFunctionLogToObject(GRN)
     
+    GRN = .makeObjectCompatible(GRN)
+    
     checkmate::assertFlag(plotAsPDF)
     checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
     checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-    checkmate::assertNumeric(maxRowsToPlot)
+    checkmate::assertIntegerish(maxRowsToPlot, lower = 1)
     checkmate::assertIntegerish(nCommunitiesMax,lower = 1)
     checkmate::assertChoice(graph, c("TF-gene", "TF-peak-gene"))
     checkmate::assertChoice(colorby, c("type", "community"))
@@ -3354,10 +3373,13 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     checkmate::assertChoice(layout, c("star", "fr", "sugiyama", "kk", "lgl", "graphopt", "mds", "sphere"))
     checkmate::assertList(vertice_color_TFs)
     checkmate::assertNames(names(vertice_color_TFs), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertIntegerish(unlist(vertice_color_TFs), lower = 0, upper = 360)
     checkmate::assertList(vertice_color_peaks)
     checkmate::assertNames(names(vertice_color_peaks), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertIntegerish(unlist(vertice_color_peaks), lower = 0, upper = 360)
     checkmate::assertList(vertice_color_genes)
     checkmate::assertNames(names(vertice_color_genes), must.include = c("h", "c", "l"), subset.of = c("h", "c", "l"))
+    checkmate::assertIntegerish(unlist(vertice_color_genes), lower = 0, upper = 360)
     checkmate::assertNumeric(vertexLabel_cex)
     checkmate::assertNumeric(vertexLabel_dist)
     checkmate::assertFlag(forceRerun)
@@ -3390,10 +3412,9 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
         
         edges_final = grn.merged %>%
-            dplyr::mutate(R = as.vector(stats::na.omit(c(.data$TF_peak.r, .data$peak_gene.r))),
-                          weight = as.vector(stats::na.omit(c(1- .data$TF_peak.fdr, .data$peak_gene.r))),
+            dplyr::mutate(weight = .data$r,
                           linetype = "solid") %>%
-            dplyr::rename(from = .data$V1, to = .data$V2) 
+            dplyr::rename(from = .data$V1, to = .data$V2, R =  .data$r) 
         
     }
     
@@ -3730,7 +3751,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
                 community_colors = rbind(community_colors, fillercolors)
                 
             }else{
-                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[seq_len(nCommunitiesMax)]),
+                community_colors = data.frame(community = names(sort(table(GRN@graph$TF_gene$clusterGraph$membership), decreasing = TRUE)[seq_len(ncommunities)]),
                                               color = grDevices::rainbow(ncommunities))
             }
             
@@ -3958,3 +3979,36 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
   checkmate::assertDataFrame(vertice_color_list[[1]])
   checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]), empty.ok = FALSE)
 }
+
+
+
+
+# **dist**
+#     ```{r}
+# # sort cols by median fraction of the variance explained (default) and plot
+# plotVarPart( sortCols(varPart) )
+# ```
+# 
+# **sex**
+#     ```{r}
+# # plot top 10
+# head(df_varPart[order( dplyr::pull(df_varPart, c("sex")), decreasing = T),],10) %>% 
+#     plotPercentBars()
+# ```
+# 
+# **cell_subset**
+#     ```{r}
+# # plot top 10
+# head(df_varPart[order( dplyr::pull(df_varPart, c("cell_subset")), decreasing = T),],10) %>% 
+#     plotPercentBars()
+# ```
+# 
+# **sample_loc**
+#     ```{r}
+# # plot top 10 for sample_loc
+# head(df_varPart[order( dplyr::pull(df_varPart, c("sample_loc")), decreasing = T),],10) %>% 
+#     plotPercentBars()
+# ```
+# 
+# 
+# }

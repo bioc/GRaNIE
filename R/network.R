@@ -21,6 +21,9 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   start = Sys.time()  
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
+  
   checkmate::assertFlag(model_TF_gene_nodes_separately)
   checkmate::assertFlag(allowLoops)
   checkmate::assertFlag(removeMultiple)
@@ -234,7 +237,11 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
                                       forceRerun = FALSE) {
   
   start = Sys.time()
+  
+  checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   GRN = build_eGRN_graph(GRN, model_TF_gene_nodes_separately = FALSE, allowLoops = FALSE, directed = FALSE, removeMultiple = FALSE)
   
@@ -361,6 +368,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
   
   checkmate::assertSubset(ontology , c("GO_BP", "GO_MF", "GO_CC", "KEGG", "DO", "Reactome"), empty.ok = FALSE)
   
@@ -490,7 +499,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 }
 
 #' @importFrom biomaRt useEnsembl getBM
-.runEnrichment <- function(GRN, foreground, background, backgroundStr, database = "GO", ontology, 
+.runEnrichment <- function(GRN, foreground, background, backgroundStr, ontology, 
                            description = "Enrichment Analysis",
                            algorithm="weight01", statistic = "fisher", mapping, pAdjustMethod = "BH", minGSSize = 0, maxGSSize = 5000){
   
@@ -509,7 +518,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   
   if (ontology %in% c("KEGG", "DO", "Reactome")) {
-    # the ENSEMBL IDs will need to be mapped to Enntrez IDs for these ontologies
+    # the ENSEMBL IDs will need to be mapped to Entrez IDs for these ontologies
     
     if (statistic != "fisher") {
       statistic = "fisher"
@@ -759,7 +768,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' @param clustering Character. Default \code{louvain}. One of: \code{louvain}, \code{leiden}, \code{leading_eigen}, \code{fast_greedy}, \code{optimal}, \code{walktrap}. The community detection algorithm to be used. Please bear in mind the robustness and time consumption of the algorithms when opting for an alternative to the default. 
 #' @param ... Additional parameters for the used clustering method, see the \code{igraph::cluster_*} methods for details on the specific parameters and what they do. For \code{leiden} clustering, for example, you may add a \code{resolution_parameter} to control the granularity of the community detection or \code{n_iterations} to modify the number of iterations.
 #' @template forceRerun
-#' @return An updated \code{\linkS4class{GRN}} object, with a table that consists of the connections clustered into communities stored in the \code{stats$communities} slot.
+#' @return An updated \code{\linkS4class{GRN}} object, with a table that consists of the connections clustered into communities stored in the 
+#' \code{GRN@graph$TF_gene$clusterGraph} slot as well as within the \code{igraph} object in \code{GRN@graph$TF_gene$graph} (retrievable via \code{igraph} using \code{igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community}, for example.)
 #' @seealso \code{\link{plotCommunitiesStats}}
 #' @seealso \code{\link{calculateCommunitiesEnrichment}}
 #' @import patchwork
@@ -774,6 +784,7 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
+  GRN = .makeObjectCompatible(GRN)
   
   checkmate::assertChoice(clustering, c("louvain", "leading_eigen", "fast_greedy", "optimal", "walktrap", "leiden"))
   checkmate::assertFlag(forceRerun)
@@ -850,7 +861,8 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
 #' 
 #' @inheritParams calculateGeneralEnrichment
 #' @param selection Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities enrichment will by calculated based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
-#' @param communities Numeric vector. Default \code{c(1:10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the GO enrichment for the first and fourth largest communities will be calculated if \code{display = "byLabel"}, the results for the communities labeled "1", and "4" will be plotted.
+#' @param communities Numeric vector. Default \code{c(1:10)}. Depending on what was specified in the \code{display} parameter, 
+#' this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the GO enrichment for the first and fourth largest communities will be calculated if \code{display = "byLabel"}, the results for the communities labeled "1", and "4" will be plotted.
 #' @return An updated \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byCommunity} slot.
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @seealso \code{\link{plotGeneralEnrichment}}
@@ -874,6 +886,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
+  GRN = .makeObjectCompatible(GRN)
 
   checkmate::assertSubset(ontology , c("GO_BP", "GO_MF", "GO_CC", "KEGG", "DO", "Reactome"), empty.ok = FALSE)
  
@@ -981,7 +994,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   
   if (length(selCommunities) == 0) {
       existingCommunities = unique(df$community)
-      message = paste0("None of the requested communities (", paste0(communities, collapse = ",", ") were found. Only the following communities are available: ", paste0(existingCommunities, collapse = ",")))
+      message = paste0("None of the requested communities (", paste0(communities, collapse = ","), ") were found. Only the following communities are available: ", paste0(existingCommunities, collapse = ","))
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
@@ -1012,6 +1025,9 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
+  
+  GRN = .makeObjectCompatible(GRN)
+  
   checkmate::assertChoice(nodeType, c("gene", "TF"))
   checkmate::assertChoice(rankType, c("degree", "EV"))
   checkmate::assertFlag(use_TF_gene_network)
@@ -1117,6 +1133,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)
   
+  GRN = .makeObjectCompatible(GRN)
+  
   checkmate::assertChoice(rankType, c("degree", "EV", "custom"))
   checkmate::assert(checkmate::checkNumeric(n, lower = 0.0001, upper = 0.999999), checkmate::checkIntegerish(n, lower = 1))
   checkmate::assertSubset(ontology , c("GO_BP", "GO_MF", "GO_CC", "KEGG", "Reactome", "DO"), empty.ok = FALSE)
@@ -1133,10 +1151,14 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
       futile.logger::flog.error("To calculate the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.names' parameter.")
     }
     wrongTFs = setdiff(TF.names, unique(GRN@connections$all.filtered$`0`$TF.name))
-    if (length(wrongTFs)>0){
-      futile.logger::flog.warn(paste0("The following TFs are not in the filtered GRN and will be ommited from the analysis: ",  paste0(wrongTFs, collapse = ", ")))
-    }
+
     TFset = setdiff(TF.names, wrongTFs) 
+    
+    if (length(wrongTFs) > 0 & length(TFset) > 0){
+        message = paste0("The following TFs are not in the filtered GRN and will be ommited from the analysis: ",  paste0(wrongTFs, collapse = ", "))
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+    }
+    
   } else{
     
     # TF.name is always there, irrespective of whether ENSEMBL ID or TF name is used as primary ID type
@@ -1158,7 +1180,7 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
     
   } else {
     message = paste0("No TF fulfills the chosen criteria. Try increasing the value of the parameter n")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
   for (TF in as.character(TFset)){

@@ -1,4 +1,6 @@
-# GRaNIE 1.1.12 (2022-09-13)
+
+
+# GRaNIE 1.1.12 and 1.1.13 (2022-09-13)
 
 ## Major changes
 
@@ -7,9 +9,12 @@
 - the eGRN graph structure as built by `build_eGRN_graph()` in the `GRaNIE` object is now reset whenever the function `filterGRNAndConnectGenes()` is successfully executed to make sure that enrichment functions etc are not using an outdated graph structure. 
 - the landing page of the website has been extended and overhauled
 - removed some dependency packages and moved others into `Suggests` to lower the installation burden of the package. In addition, removed `topGO` from the `Depends` section (now in `Suggests`) and removed `tidyverse` altogether (before in `Depends`). Detailed explanations when and how the packages listed under `Suggests` are needed can now be found in the new [Package Details Vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation) and are clearly given to the user when executing the respective functions
+- major updates to the function `getGRNConnections`, which now has more arguments allowing a more fine-tuned and rich retrieval of eGRN connections, features and feature metadata
+- a new function `add_featureVariation` to quantify and interpret multiple sources of biological and technical variation for features (TFs, peaks, and genes) in a GRN object, see the R help for more information 
+- `filterGRNAndConnectGenes` now doesnt include feature metadata columns to save space in the result data frame that is created. The help has been updated to make clear that `getGRNConnections` includes these features now.
 
 ## Minor changes
-
+- small changes in the GRN object structure, moved `GRN@data$TFs@translationTable` to `GRN@annotation@TFs`. All exported functions run automatically a small helper function to make this change for any GRN object automatically to adapt to the new structure
 - many small changes in the code, updated argument checking, and preparing rigorous unit test inclusion
 - internally renaming the (recently changed / renamed) gene type `lncRNA` from `biomaRt` to `lincRNA` to be compatible with older versions of `GRaNIE`
 

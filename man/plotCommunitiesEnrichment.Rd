@@ -38,9 +38,9 @@ plotCommunitiesEnrichment(
 
 \item{p}{Numeric. Default 0.05. p-value threshold to determine significance.}
 
-\item{nSignificant}{Numeric. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
+\item{nSignificant}{Numeric >0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
 
-\item{nID}{Numeric. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
+\item{nID}{Numeric >0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
 
 \item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 
@@ -63,7 +63,7 @@ The same \code{\linkS4class{GRN}} object, without modifications.
 Similarly to \code{\link{plotGeneralEnrichment}} and \code{\link{plotTFEnrichment}}, the results of the community-based enrichment analysis are plotted.
 This function produces multiple plots. First, one plot per community to summarize the community-specific enrichment.
 Second, a summary heatmap of all significantly enriched terms across all communities and for the whole eGRN. The latter allows to compare the results with the general network enrichment.
-#' Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per community and for the whole eGRN (as specified by \code{nID}) for improved visibility
+Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per community and for the whole eGRN (as specified by \code{nID}) for improved visibility
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

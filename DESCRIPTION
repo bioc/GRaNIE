@@ -1,6 +1,6 @@
 Package: GRaNIE
 Title: GRaNIE: Reconstruction cell type specific gene regulatory networks including enhancers using chromatin accessibility and RNA-seq data
-Version: 1.1.12
+Version: 1.1.13
 Encoding: UTF-8
 Authors@R: c(person("Christian", "Arnold", email =
         "chrarnold@web.de", role = c("cre","aut")),
@@ -81,7 +81,9 @@ Suggests:
     csaw,
     BiocParallel,
     topGO,
-    robust
+    robust,
+    variancePartition,
+    purrr
 VignetteBuilder: knitr
 biocViews: Software, GeneExpression, GeneRegulation, NetworkInference, GeneSetEnrichment, BiomedicalInformatics, Genetics, Transcriptomics, ATACSeq, RNASeq, GraphAndNetwork, Regression, Transcription, ChIPSeq
 License: Artistic-2.0

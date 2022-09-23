@@ -16,7 +16,8 @@ calculateCommunitiesStats(GRN, clustering = "louvain", forceRerun = FALSE, ...)
 \item{...}{Additional parameters for the used clustering method, see the \code{igraph::cluster_*} methods for details on the specific parameters and what they do. For \code{leiden} clustering, for example, you may add a \code{resolution_parameter} to control the granularity of the community detection or \code{n_iterations} to modify the number of iterations.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object, with a table that consists of the connections clustered into communities stored in the \code{stats$communities} slot.
+An updated \code{\linkS4class{GRN}} object, with a table that consists of the connections clustered into communities stored in the 
+\code{GRN@graph$TF_gene$clusterGraph} slot as well as within the \code{igraph} object in \code{GRN@graph$TF_gene$graph} (retrievable via \code{igraph} using \code{igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community}, for example.)
 }
 \description{
 The results can subsequently be visualized with the function \code{\link{plotCommunitiesStats}}

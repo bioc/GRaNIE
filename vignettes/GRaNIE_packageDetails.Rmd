@@ -34,13 +34,6 @@ opts_chunk$set(
 # Motivation and Necessity  {#motivation}
 
 
-<center>
-```{r logo, echo=FALSE, fig.cap="<i>Macrophages eGRN as constructed by the `GRaNIE` package</i>", out.width = '50%', fig.align="center"}
-knitr::include_graphics("../man/figures/logo.png")
-```
-</center>
-
-
 Genetic variants associated with diseases often affect non-coding regions, thus likely having a regulatory role. To understand the effects of genetic variants in these regulatory regions, identifying genes that are modulated by specific regulatory elements (REs) is crucial. The effect of gene regulatory elements, such as enhancers, is often cell-type specific, likely because the combinations of transcription factors (TFs) that are regulating a given enhancer have cell-type specific activity. This TF activity can be quantified with existing tools such as `diffTF` and captures differences in binding of a TF in open chromatin regions. Collectively, this forms a enhancer-mediated gene regulatory network (*eGRN*) with cell-type and data-specific TF-RE and RE-gene links. Here, we reconstruct such a *eGRN* using bulk RNA-seq and open chromatin (e.g., using ATAC-seq or ChIP-seq for open chromatin marks) and optionally TF activity data. Our network contains different types of links, connecting TFs to regulatory elements, the latter of which is connected to genes in the vicinity or within the same chromatin domain (*TAD*). We use a statistical framework to assign empirical FDRs and weights to all links using a permutation-based approach.
 
 In summary, we present a framework to reconstruct predictive enhancer-mediated regulatory network models that are based on integrating of expression and chromatin accessibility/activity pattern across individuals, and provide a comprehensive resource of cell-type specific gene regulatory networks for particular cell types.
@@ -68,6 +61,7 @@ The basic installation installs all required packages but not necessarily those 
     - `IHW`: Needed only for the function `filterGRNAndConnectGenes` for p-value adjustment of the raw peak-gene p-values when using the `IHW` framework (parameter `peak_gene.fdr.method`)
     - `robust`: Needed only when setting `addRobustRegression = TRUE` in the functions `addConnections_peak_gene()` and `add_TF_gene_correlation()` for enabling robust regression (an experimental, largely undocumented feature so far). 
     - `csaw`: Needed only for a *cyclic LOESS* normalization, which is the default normalization currently for adding TF activity data via `addData_TFActivity()`
+    - `variancePartition`:  Needed only for the function `add_featureVariation` to quantify multiple sources of biological and technical variation for features (TFs, peaks, and genes)
 - **Enrichment-associated packages**
     - `topGO`, `ReactomePA`, `DOSE`, `clusterProfiler`: Needed only for all enrichment functions for `GO`, `Reactome`, `DO`, and `KEGG` respectively
 - **Computational efficacy**

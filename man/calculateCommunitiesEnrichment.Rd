@@ -39,7 +39,8 @@ The special keyword \code{"all"} means no filter on gene type.}
 
 \item{selection}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities enrichment will by calculated based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.}
 
-\item{communities}{Numeric vector. Default \code{c(1:10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the GO enrichment for the first and fourth largest communities will be calculated if \code{display = "byLabel"}, the results for the communities labeled "1", and "4" will be plotted.}
+\item{communities}{Numeric vector. Default \code{c(1:10)}. Depending on what was specified in the \code{display} parameter, 
+this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the GO enrichment for the first and fourth largest communities will be calculated if \code{display = "byLabel"}, the results for the communities labeled "1", and "4" will be plotted.}
 
 \item{pAdjustMethod}{Character. Default \code{"BH"}. One of: \code{"holm"}, \code{"hochberg"}, \code{"hommel"}, \code{"bonferroni"}, \code{"BH"}, \code{"BY"}, \code{"fdr"}. This parameter is only relevant for the following ontologies: KEGG, DO, Reactome. For the other ontologies, the algorithm serves as an adjustment.}
 

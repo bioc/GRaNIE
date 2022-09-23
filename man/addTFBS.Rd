@@ -30,7 +30,7 @@ addTFBS(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object, with additional information added from this function (\code{GRN@data$TFs$translationTable} in particular)
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function (\code{GRN@annotation$TFs} in particular)
 }
 \description{
 Add TFBS to a \code{\linkS4class{GRN}} object
