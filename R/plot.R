@@ -2166,6 +2166,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @return The same \code{\linkS4class{GRN}} object, without modifications.
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @seealso \code{\link{plotTFEnrichment}}
+#' @seealso \code{\link{calculateGeneralEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2194,6 +2195,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   checkmate::assertNumeric(p, lower = 0, upper = 1)
   checkmate::assertIntegerish(topn_pvalue, lower = 1)
   checkmate::assertFlag(display_pAdj)
+  checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
@@ -2546,6 +2548,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @return  The same \code{\linkS4class{GRN}} object, without modifications.
 #' @seealso \code{\link{plotGeneralEnrichment}}
 #' @seealso \code{\link{plotTFEnrichment}}
+#' @seealso \code{\link{calculateCommunitiesEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2574,7 +2577,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   checkmate::assertNumeric(nID, lower = 1)
   checkmate::assertFlag(display_pAdj)
   checkmate::assertFlag(plotAsPDF)
-  checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10, upper = 500)
+  checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
   checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
@@ -2891,6 +2894,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' @return The same \code{\linkS4class{GRN}} object, without modifications.
 #' @seealso \code{\link{plotGeneralEnrichment}}
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
+#' @seealso \code{\link{calculateTFEnrichment}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -2924,6 +2928,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
   checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
   checkmate::assertFlag(display_pAdj)
+  checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertFlag(forceRerun)

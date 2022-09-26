@@ -77,4 +77,6 @@ GRN = plotTFEnrichment(GRN, n = 5, plotAsPDF = FALSE, pages = 1)
 \code{\link{plotGeneralEnrichment}}
 
 \code{\link{plotCommunitiesEnrichment}}
+
+\code{\link{calculateTFEnrichment}}
 }

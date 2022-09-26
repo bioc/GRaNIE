@@ -62,4 +62,6 @@ GRN = plotGeneralEnrichment(GRN, plotAsPDF = FALSE, pages = 1)
 \code{\link{plotCommunitiesEnrichment}}
 
 \code{\link{plotTFEnrichment}}
+
+\code{\link{calculateGeneralEnrichment}}
 }

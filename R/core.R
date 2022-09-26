@@ -3966,6 +3966,7 @@ generateStatsSummary <- function(GRN,
                 
                 futile.logger::flog.debug(paste0("    TF_peak.connectionType = ", TF_peak.connectionTypeCur))
                 
+                futile.logger::flog.threshold(futile.logger::WARN)
                 GRN = filterGRNAndConnectGenes(GRN, 
                                                TF_peak.fdr.threshold = TF_peak.fdr_cur, 
                                                TF_peak.connectionTypes = TF_peak.connectionTypeCur, 
@@ -3976,7 +3977,10 @@ generateStatsSummary <- function(GRN,
                                                allowMissingTFs = allowMissingTFsCur,
                                                peak_gene.r_range = peak_gene.r_range,
                                                filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL,
-                                               silent = TRUE)
+                                               silent = FALSE)
+                
+                futile.logger::flog.threshold(futile.logger::INFO)
+                
                 
                 results.l = .addStats(GRN@stats$connections, GRN@connections$all.filtered[[permIndex]], 
                                       perm = permutationCur, 
@@ -4216,6 +4220,11 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
   GRN@config$files$output_log = "GRN.log"
   
   GRN = .makeObjectCompatible(GRN)
+  
+  # TODO remove once done already in the object
+  GRN = add_TF_gene_correlation(GRN)
+  
+  # GRN = add_featureVariation(GRN, formula = "auto", metadata = "mt_frac")
   
   GRN
   
