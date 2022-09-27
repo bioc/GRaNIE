@@ -9,7 +9,7 @@ plotCommunitiesStats(
   outputFolder = NULL,
   basenameOutput = NULL,
   display = "byRank",
-  communities = seq_len(10),
+  communities = seq_len(5),
   topnGenes = 20,
   topnTFs = 20,
   plotAsPDF = TRUE,
@@ -30,9 +30,9 @@ plotCommunitiesStats(
 
 \item{communities}{Numeric vector. Default \code{seq_len(10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities will be plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} will be plotted. If set to \code{NULL}, all communities will be plotted}
 
-\item{topnGenes}{Integer. Default 20. Number of genes to plot, sorted by their rank or label.}
+\item{topnGenes}{Integer > 0. Default 20. Number of genes to plot, sorted by their rank or label.}
 
-\item{topnTFs}{Integer. Default 20. Number of TFs to plot, sorted by their rank or label.}
+\item{topnTFs}{Integer > 0. Default 20. Number of TFs to plot, sorted by their rank or label.}
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 

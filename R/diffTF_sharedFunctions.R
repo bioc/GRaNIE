@@ -160,7 +160,9 @@
     countsRNA.df  = dplyr::select(countsRNA,  tidyselect::all_of(c(idColumn_RNA,  sharedColumns)))
     countsPeaks.df = dplyr::select(countsPeaks, tidyselect::all_of(c(idColumn_peaks, sharedColumns)))
     
-    futile.logger::flog.info(paste0(" ", length(sharedColumns), " samples (", paste0(sharedColumns, collapse = ","), ") are shared between the peaks and RNA-Seq data"))
+    futile.logger::flog.info(paste0(" ", length(sharedColumns), " samples (", 
+                                    dplyr::if_else(length(sharedColumns) > 100, "names omitted here", paste0(sharedColumns, collapse = ",")), 
+                                    ") are shared between the peaks and RNA-Seq data"))
     
     notIntersecting_peaks = setdiff(colnames(countsPeaks),c(sharedColumns,idColumn_peaks))
     notIntersecting_RNA  = setdiff(colnames(countsRNA),c(sharedColumns,idColumn_RNA))

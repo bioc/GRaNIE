@@ -998,6 +998,12 @@ calculateCommunitiesEnrichment <- function(GRN,
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
+  if (length(selCommunities) < length(communities)) {
+      missingCommunities = setdiff(communities, selCommunities)
+      message = paste0("Some of the requested communities (", paste0(missingCommunities , collapse = ","), ") were not found. Only the following communities are available: ", paste0(selCommunities, collapse = ","))
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+  }
+  
   selCommunities
   
 }

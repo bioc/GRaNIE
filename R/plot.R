@@ -326,7 +326,9 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
           plot(g)
           
         }, error = function(e) {
-          futile.logger::flog.warn(paste0(" Could not plot PCA with variable ", varCur))
+          message = paste0(" Could not plot PCA with variable ", varCur)
+          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)   
+            
           plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
           message = paste0(" Could not plot PCA with variable ", varCur)
           text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
@@ -493,7 +495,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 #' @template basenameOutput
 #' @template plotDetails
 #' @param dataType Character vector. One of, or both of, \code{"real"} or \code{"permuted"}. For which data type, real or permuted data, to produce the diagnostic plots?
-#' @param nTFMax \code{NULL} or Integer. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)
+#' @param nTFMax \code{NULL} or Integer > 0. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)
 #' @template plotAsPDF
 #' @template pdf_width
 #' @param pdf_height_base  Number. Default 8. Base height of the PDF, in cm, per connection type. The total height is automatically determined based on the number of connection types that are found in the object (e.g., expression or TF activity). For example, when two connection types are found, the base height is multiplied by 2.
@@ -524,7 +526,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertFlag(plotDetails)
   checkmate::assertSubset(dataType, c("real", "permuted"), empty.ok = FALSE)
-  checkmate::assert(checkmate::checkNull(nTFMax), checkmate::checkIntegerish(nTFMax))
+  checkmate::assert(checkmate::checkNull(nTFMax), checkmate::checkIntegerish(nTFMax, lower = 1))
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height_base, lower = 5, upper = 99)
@@ -917,6 +919,10 @@ plotDiagnosticPlots_peakGene <- function(GRN,
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertList(gene.types, any.missing = FALSE, min.len = 1, types = "character")
+  for (geneTypesCur in gene.types) {
+      checkmate::assertSubset(geneTypesCur, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
+  }  
+
   checkmate::assertFlag(useFiltered)
   checkmate::assertFlag(plotDetails)
   checkmate::assertFlag(plotPerTF)
@@ -1122,6 +1128,9 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         filenameCur = paste0(fileBase, paste0(geneTypesSelected, collapse = "+"), filteredStr, ".pdf")
         .checkOutputFile(filenameCur)
         grDevices::pdf(file = filenameCur, width = pdf_width, height = pdf_height)
+        
+        futile.logger::flog.info(paste0(" Plotting to file ", filenameCur))
+        
       }
       
       if (plotPerTF) {
@@ -2342,8 +2351,8 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @inheritParams plotCommunitiesEnrichment
 #' @param communities Numeric vector. Default \code{seq_len(10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities will be plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} will be plotted. If set to \code{NULL}, all communities will be plotted
 #' @template forceRerun
-#' @param topnGenes Integer. Default 20. Number of genes to plot, sorted by their rank or label.
-#' @param topnTFs Integer. Default 20. Number of TFs to plot, sorted by their rank or label.
+#' @param topnGenes Integer > 0. Default 20. Number of genes to plot, sorted by their rank or label.
+#' @param topnTFs Integer > 0. Default 20. Number of TFs to plot, sorted by their rank or label.
 #' @return The same \code{\linkS4class{GRN}} object, without modifications.
 #' @seealso \code{\link{plotGeneralGraphStats}}
 #' @seealso \code{\link{calculateCommunitiesStats}}
@@ -2354,7 +2363,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' GRN = plotCommunitiesStats(GRN, plotAsPDF = FALSE, pages = 1)
 #' @export
 plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
-                                 display = "byRank", communities = seq_len(10), 
+                                 display = "byRank", communities = seq_len(5), 
                                  topnGenes = 20, topnTFs = 20, 
                                  plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                  forceRerun = FALSE){
@@ -2368,8 +2377,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   
-  checkmate::assertIntegerish(topnGenes)
-  checkmate::assertIntegerish(topnTFs)
+  checkmate::assertIntegerish(topnGenes, lower = 1)
+  checkmate::assertIntegerish(topnTFs, lower = 1)
   checkmate::assertChoice(display , c("byRank", "byLabel"))
   checkmate::assert(checkmate::checkNull(communities), checkmate::checkNumeric(communities, lower = 1, any.missing = FALSE, min.len = 1))
   checkmate::assertFlag(plotAsPDF)
@@ -2542,8 +2551,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @inheritParams plotGeneralEnrichment
 #' @param display Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will be displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
 #' @param communities \code{NULL} or numeric vector. Default \code{NULL}. If set to \code{NULL}, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities are plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} are plotted. 
-#' @param nSignificant Numeric >0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
-#' @param nID Numeric >0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.
+#' @param nSignificant Numeric > 0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
+#' @param nID Numeric > 0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.
 #' @template maxWidth_nchar_plot
 #' @return  The same \code{\linkS4class{GRN}} object, without modifications.
 #' @seealso \code{\link{plotGeneralEnrichment}}
@@ -2921,8 +2930,8 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   checkmate::assert(checkmate::checkNull(n), checkmate::checkNumeric(n))
   checkmate::assertNumeric(p, lower = 0, upper = 1)
   checkmate::assertNumeric(topn_pvalue, lower = 1)
-  checkmate::assertNumeric(nSignificant, lower = 0)
-  checkmate::assertNumeric(nID, lower = 0)
+  checkmate::assertNumeric(nSignificant, lower = 1)
+  checkmate::assertNumeric(nID, lower = 1)
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
@@ -2938,13 +2947,16 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   
   
-  if (rankType == "custom"){
+  if (rankType == "custom") {
     if(is.null(TF.names)){
-      futile.logger::flog.error("To plot the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.names' parameter.")
+      message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.names' parameter."
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     wrongTFs = setdiff(TF.names, unique(GRN@connections$all.filtered$`0`$TF.name))
     if (length(wrongTFs)>0){
-      futile.logger::flog.warn(paste0("The TFs ",  paste0(wrongTFs, collapse = " + "), " are not in the filtered GRN. They will be ommited from the results."))
+       message = paste0("The TFs ",  paste0(wrongTFs, collapse = " + "), " are not in the filtered GRN. They will be ommited from the results.")
+       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+
     }
     TFset = setdiff(TF.names, wrongTFs) 
   } else{ #rankType = "degree"
@@ -3467,7 +3479,8 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     
     if (nrow(grn.merged) == 0) {
         
-        futile.logger::flog.warn(paste0("No rows left in the GRN. Creating empty plot."))
+        message = paste0("No rows left in the GRN. Creating empty plot.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         
         plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
         message = paste0(title, "\n\nThe GRN has no edges that pass the filter criteria.")

@@ -43,9 +43,9 @@ As they are listed under \code{Suggests}, they may not yet be installed, and the
 
 \item{display}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will be displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.}
 
-\item{topnGenes}{Integer. Default 20. Number of genes to plot, sorted by their rank or label.}
+\item{topnGenes}{Integer > 0. Default 20. Number of genes to plot, sorted by their rank or label.}
 
-\item{topnTFs}{Integer. Default 20. Number of TFs to plot, sorted by their rank or label.}
+\item{topnTFs}{Integer > 0. Default 20. Number of TFs to plot, sorted by their rank or label.}
 
 \item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 

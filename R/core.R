@@ -39,8 +39,14 @@ initializeGRN <- function(objectMetadata = list(),
   .checkAndLoadPackagesGenomeAssembly(genomeAssembly)
   
   # Create the folder first if not yet existing
+  checkmate::assertCharacter(outputFolder, min.chars = 1, len = 1)
   if (!dir.exists(outputFolder)) {
-    dir.create(outputFolder)
+    res = dir.create(outputFolder)
+    if (!res) {
+        message = paste0("Could not create the output directory ", outputFolder, ". Check the path /and/or access rights.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    checkmate::assertDirectoryExists(outputFolder, access = "w")
   }
   
   # Create an absolute path out of the given outputFolder now that it exists
@@ -108,6 +114,9 @@ initializeGRN <- function(objectMetadata = list(),
   #.printParametersLog(par.l)
   
   futile.logger::flog.info(paste0("Empty GRN object created successfully. Type the object name (e.g., GRN) to retrieve summary information about it at any time."))
+  
+  futile.logger::flog.info(paste0(" Default output folder: ", GRN@config$directories$outputRoot))
+  futile.logger::flog.info(paste0(" Genome assembly: ", genomeAssembly))
   
   .printExecutionTime(start, prefix = "")
   
@@ -187,11 +196,17 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     # Normalize ID column names
     if (idColumn_peaks != "peakID") {
       counts_peaks = dplyr::rename(counts_peaks, peakID = !!(idColumn_peaks))
+      idColumn_peaks ="peakID"
     }
     if (idColumn_RNA != "ENSEMBL") {
       counts_rna = dplyr::rename(counts_rna, ENSEMBL = !!(idColumn_RNA))
+      idColumn_RNA = "ENSEMBL"
     }
-    
+      
+    # Check existence of correct ID column now
+    checkmate::assertSubset(idColumn_peaks, colnames(counts_peaks))
+    checkmate::assertSubset(idColumn_RNA, colnames(counts_rna))
+
     # Check ID columns for missing values and remove
     rna_missing_ID =  which(is.na(counts_rna$ENSEMBL))
     if (length(rna_missing_ID) > 0) {
@@ -257,8 +272,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     GRN@data$peaks$counts_norm = data.l[["peaks"]] %>% dplyr::mutate(isFiltered = FALSE)
     countsRNA.norm.df = data.l[["RNA"]]  %>% dplyr::mutate(isFiltered = FALSE)
     
+    futile.logger::flog.info(paste0( "Final dimensions of data:"))
+    futile.logger::flog.info(paste0( " RNA  : ", nrow(countsRNA.norm.df)  , " x ", ncol(countsRNA.norm.df)   - 2, " (rows x columns)"))
+    futile.logger::flog.info(paste0( " peaks: ", nrow(countsPeaks.norm.df), " x ", ncol(countsPeaks.norm.df) - 1, " (rows x columns)"))
     # Create permutations for RNA
-    futile.logger::flog.info(paste0( "Produce ", .getMaxPermutation(GRN), " permutations of RNA-counts"))
+    futile.logger::flog.info(paste0( "Generate ", .getMaxPermutation(GRN), " permutations of RNA-counts"))
     GRN@data$RNA$counts_norm.l = .shuffleColumns(countsRNA.norm.df, .getMaxPermutation(GRN), returnUnshuffled = TRUE, returnAsList = TRUE)
     
     if (!is.null(sampleMetadata)) {
@@ -341,7 +359,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     
     overlappingPeaks = which(GenomicRanges::countOverlaps(consensus.gr ,consensus.gr) >1)
     
-    if (length(overlappingPeaks) > 0){
+    if (length(overlappingPeaks) > 0) {
       
       ids = (consensus.gr[overlappingPeaks] %>% as.data.frame())$peakID
       
@@ -574,10 +592,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 }
 
 .populateGeneAnnotation <- function (GRN) {
-  
-  futile.logger::flog.info(paste0(" Calculate statistics for each gene (mean and CV)"))
-  
+
+
   countsRNA.clean  = getCounts(GRN, type = "rna", norm = TRUE, permuted = FALSE)
+  
+  futile.logger::flog.info(paste0(" Calculate statistics for each of the ", nrow(countsRNA.clean), " genes that were provided with the RNA-seq data (mean and CV)"))
   
   countsRNA.m = as.matrix(dplyr::select(countsRNA.clean, -.data$ENSEMBL))
   
@@ -591,7 +610,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
                                 gene.mean = rowMeans_rna, 
                                 gene.median = rowMedians_rna, 
                                 gene.CV = CV_rna) %>%
-    dplyr::full_join(genomeAnnotation.df, by = c("gene.ENSEMBL")) %>%
+    dplyr::left_join(genomeAnnotation.df, by = c("gene.ENSEMBL")) %>%
     dplyr::mutate(gene.type = forcats::fct_explicit_na(.data$gene.type, na_level = "unknown/missing"))
   
   GRN@annotation$genes = metadata_rna
@@ -704,6 +723,8 @@ filterData <- function (GRN,
   checkmate::assertNumber(maxNormalizedMean_peaks, lower = minNormalizedMean_peaks , null.ok = TRUE)
   checkmate::assertNumber(maxNormalizedMeanRNA, lower = minNormalizedMeanRNA, null.ok = TRUE)
   checkmate::assertCharacter(chrToKeep_peaks, min.len = 1, any.missing = FALSE, null.ok = TRUE)
+  checkmate::assertSubset(chrToKeep_peaks, GRN@data$peaks$consensusPeaks %>% dplyr::pull(.data$chr) %>% unique() %>% as.character())
+  
   checkmate::assertIntegerish(minSize_peaks, lower = 1, null.ok = TRUE)
   checkmate::assertIntegerish(maxSize_peaks, lower = dplyr::if_else(is.null(minSize_peaks), 1, minSize_peaks), null.ok = TRUE)
   checkmate::assertNumber(minCV_peaks, lower = 0, null.ok = TRUE)
@@ -739,6 +760,11 @@ filterData <- function (GRN,
     futile.logger::flog.info(paste0("Collectively, filter ", nPeaksBefore -length(peaks_toKeep), " out of ", nPeaksBefore, " peaks."))
     futile.logger::flog.info(paste0("Number of remaining peaks: ", length(peaks_toKeep)))
     
+    if (length(peaks_toKeep) < 1000) {
+        message = paste0("Too few peaks (", length(peaks_toKeep), ") remain after filtering. At least 1000 peaks must remain. Adjust the filtering settings.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
     GRN@data$peaks$consensusPeaks$isFiltered  = ! GRN@data$peaks$consensusPeaks$peakID  %in% peaks_toKeep
     #GRN@data$peaks$counts_raw$isFiltered = ! GRN@data$peaks$counts_raw$peakID  %in% peaks_toKeep
     GRN@data$peaks$counts_norm$isFiltered = ! GRN@data$peaks$counts_norm$peakID  %in% peaks_toKeep
@@ -757,7 +783,12 @@ filterData <- function (GRN,
                                     minMean = minNormalizedMeanRNA, maxMean = maxNormalizedMeanRNA, 
                                     minCV = minCV_genes, maxCV = maxCV_genes) 
     
-    futile.logger::flog.info(paste0(" Number of rows in total: ", nrow(GRN@data$RNA$counts_norm.l[["0"]])))
+    
+    if (length(genes.CV) < 100) {
+        message = paste0("Too few genes (", length(genes.CV), ") remain after filtering. At least 100 genes must remain. Adjust the filtering settings.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
     for (permutationCur in c(0)) {
       permIndex = as.character(permutationCur)
       rowMeans = rowMeans(dplyr::select(GRN@data$RNA$counts_norm.l[[permIndex]], -.data$ENSEMBL))
@@ -767,8 +798,6 @@ filterData <- function (GRN,
     
     # Raw counts are left untouched and filtered where needed only
     futile.logger::flog.info(paste0(" Flagged ", nRowsFlagged, " rows because the row mean was smaller than ", minNormalizedMeanRNA))
-    
-    # TODO: Filter genes by CV
     
     GRN@config$isFiltered = TRUE
   } 
@@ -1093,7 +1122,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   if (is.null(GRN@data$TFs$TF_peak_overlap) | forceRerun) {
     
     
-    futile.logger::flog.info(paste0("Overlap peaks and TFBS using ", nCores, " cores. This may take a few minutes..."))
+    futile.logger::flog.info(paste0("Overlap peaks and TFBS using ", nCores, " cores. This may take a while, particularly if the number of samples is large..."))
     
     genomeAssembly = GRN@config$parameters$genomeAssembly
     seqlengths = .getChrLengths(genomeAssembly)
@@ -1254,17 +1283,25 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   
   start = Sys.time()
   
+  # Set the column name to just ENSEMBL to avoid column mismatch issues
+  HOCOMOCO_mapping$ENSEMBL = HOCOMOCO_mapping$TF.ENSEMBL
+  
   # Filter to only the TFs
   # In addition, the no of TF because multiple TFs can map to the same gene/ ENSEMBL ID
   # Also filter 0 count genes because they otherwise cause errors downstream
   rowSums = rowSums(dplyr::select(matrix1, -.data$ENSEMBL))
   
   # Keep only Ensembl IDs from TFs we have data from
-  matrix1.norm.TFs.df = dplyr::filter(matrix1, .data$ENSEMBL %in% HOCOMOCO_mapping$ENSEMBL, rowSums != 0)
+  matrix1.norm.TFs.df = dplyr::filter(matrix1, .data$ENSEMBL %in% HOCOMOCO_mapping$TF.ENSEMBL, rowSums != 0)
+  
+  nFiltered1 = dplyr::filter(matrix1, ! .data$ENSEMBL %in% HOCOMOCO_mapping$TF.ENSEMBL) %>% nrow()
+  nFiltered2 = dplyr::filter(matrix1, rowSums == 0) %>% nrow()
   
   diff = nrow(matrix1) - nrow(matrix1.norm.TFs.df)
   if (diff > 0) {
-    message = paste0(whitespacePrefix, "Retain ", nrow(matrix1.norm.TFs.df), " rows from TF/gene data out of ", nrow(matrix1), " (filter non-TF genes and TF genes with 0 counts throughout and keep only unique ENSEMBL IDs).")
+    message = paste0(whitespacePrefix, "Retain ", nrow(matrix1.norm.TFs.df), " unique genes from TF/gene data out of ", nrow(matrix1), 
+                     " (filter ",  nFiltered1, " non-TF genes and ", nFiltered2, 
+                     " TF genes with 0 counts throughout).")
     futile.logger::flog.info(message)
   }
   
@@ -1273,7 +1310,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
-  HOCOMOCO_mapping.exp = dplyr::filter(HOCOMOCO_mapping, .data$ENSEMBL %in% matrix1.norm.TFs.df$ENSEMBL)
+  HOCOMOCO_mapping.exp = dplyr::filter(HOCOMOCO_mapping, .data$TF.ENSEMBL %in% matrix1.norm.TFs.df$ENSEMBL)
   futile.logger::flog.info(paste0(whitespacePrefix, "Correlate TF/gene data for ", nrow(matrix1.norm.TFs.df), " unique Ensembl IDs (TFs) and peak counts for ", nrow(matrix_peaks), " peaks."))
   futile.logger::flog.info(paste0(whitespacePrefix, "Note: For subsequent steps, the same gene may be associated with multiple TF, depending on the translation table."))
   # Correlate TF gene counts with peak counts 
@@ -1301,10 +1338,10 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   # Reorder to make sure the order is the same. Due to the duplication ID issue, the number of columns may increase after the column selection
   
   # Some columns may be removed here due to zero standard deviation
-  HOCOMOCO_mapping.exp.filt = HOCOMOCO_mapping.exp %>% dplyr::filter(.data$ENSEMBL %in% colnames(sort.cor.m))
+  HOCOMOCO_mapping.exp.filt = HOCOMOCO_mapping.exp %>% dplyr::filter(.data$TF.ENSEMBL %in% colnames(sort.cor.m))
   
   sort.cor.m = sort.cor.m[,as.character(HOCOMOCO_mapping.exp.filt$ENSEMBL)] 
-  colnames(sort.cor.m) = as.character(HOCOMOCO_mapping.exp.filt$HOCOID)
+  colnames(sort.cor.m) = as.character(HOCOMOCO_mapping.exp.filt$TF.HOCOID)
   
   .printExecutionTime(start, prefix = whitespacePrefix)
   sort.cor.m
@@ -2007,14 +2044,16 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                                      corMethod,
                                      whitespacePrefix = "  ")
     
-    # TODO:Check here for the TFs
+    # TODO:Check here for the TFs BMAL1.0.A
     allTF = intersect(colnames(peak_TF_overlap.df), colnames(peaksCor.m))
+    checkmate::assertIntegerish(length(allTF), lower = 1)
+    
     futile.logger::flog.info(paste0(" Run FDR calculations for ", length(allTF), " TFs for which TFBS predictions and ",
                                     connectionTypeCur, " data for the corresponding gene are available."))
     if (length(allTF) < ncol(peak_TF_overlap.df) | length(allTF) < ncol(peaksCor.m)) {
       
       TF_missing = setdiff(colnames(peak_TF_overlap.df), colnames(peaksCor.m))
-      if (length(TF_missing) > 0) futile.logger::flog.info(paste0("  Skip the following ", length(TF_missing), " TF due to missing data: ", paste0(TF_missing, collapse = ",")))
+      if (length(TF_missing) > 0) futile.logger::flog.info(paste0("  Skip the following ", length(TF_missing), " TF due to missing dataor because they are marked as filtered: ", paste0(TF_missing, collapse = ",")))
     }
     
     stopifnot(nrow(peaksCor.m) == nrow(peak_TF_overlap.df))
