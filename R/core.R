@@ -1110,7 +1110,6 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
     
   }
   
-  nTF = length(allTF)
   futile.logger::flog.info(paste0("Running the pipeline for ", nTF, " TF in total."))
   
   HOCOMOCO_mapping.df.exp = dplyr::filter(HOCOMOCO_mapping.df, .data$HOCOID %in% allTF)
@@ -5205,6 +5204,18 @@ add_featureVariation <- function (GRN,
         GRN@annotation$TFs = GRN@data$TFs$translationTable
         GRN@data$TFs$translationTable = NULL
     }
+    
+    if (!"TF.ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
+        GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ENSEMBL = .data$ENSEMBL)
+    }
+    if (!"TF.HOCOID" %in% colnames(GRN@annotation$TFs)) {
+        GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.HOCOID = .data$HOCOID)
+    }
+    
+    if (!"ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
+        GRN@annotation$TFs = dplyr::select(GRN@annotation$TFs, -.data$ENSEMBL)
+    }
+   
     
     
     # Temporary fix: Replace lincRNA with lncRNA due to a recent change in biomaRt until we update the object directly
