@@ -10,6 +10,7 @@
 #' @param directed \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should the network be directed?
 #' @template forceRerun
 #' @export
+#' @seealso \code{\link{filterGRNAndConnectGenes}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()

@@ -4,16 +4,27 @@
 \alias{getCounts}
 \title{Get counts for the various data defined in a \code{\linkS4class{GRN}} object}
 \usage{
-getCounts(GRN, type, norm, permuted = FALSE)
+getCounts(
+  GRN,
+  type,
+  norm = FALSE,
+  permuted = FALSE,
+  asMatrix = FALSE,
+  includeIDColumn = TRUE
+)
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
 \item{type}{Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.}
 
-\item{norm}{Logical. \code{TRUE} or \code{FALSE}. Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?}
+\item{norm}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?}
 
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
+
+\item{asMatrix}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, counts are returned as a data frame with or without an ID column (see \code{includeIDColumn}). If set to \code{TRUE}, counts are returned as a matrix with the ID column as row names.}
+
+\item{includeIDColumn}{Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Only relevant if \code{asMatrix = FALSE}. If set to \code{TRUE}, an explicit ID column is returned (no row names). If set to \code{FALSE}, the IDs are in the row names instead.}
 }
 \value{
 Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.

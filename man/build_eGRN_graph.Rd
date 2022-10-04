@@ -37,3 +37,6 @@ This function requires a filtered set of connections in the \code{\linkS4class{G
 GRN = loadExampleObject()
 GRN = build_eGRN_graph(GRN, forceRerun = FALSE)
 }
+\seealso{
+\code{\link{filterGRNAndConnectGenes}}
+}

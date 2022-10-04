@@ -119,9 +119,9 @@ setMethod("show",
             if (!is.null(GRN@data$peaks$consensusPeaks)) {
               nPeaks_filt  = nPeaks(GRN, filter = TRUE)
               nPeaks_all   = nPeaks(GRN, filter = FALSE)
-              cat(" Number of peaks (filtered, all): ", nPeaks_filt, ", ",  nPeaks_all, "\n", sep = "")
+              cat(" # peaks (filtered, all): ", nPeaks_filt, ", ",  nPeaks_all, "\n", sep = "")
             } else {
-              cat (" Number of peaks: No peak data found.\n")
+              cat (" # peaks: No peak data found.\n")
             }
             
             if (!is.null(GRN@data$RNA$counts_orig)) {
@@ -135,15 +135,29 @@ setMethod("show",
                 
               }
              
-              cat(" Number of genes (filtered, all): ", nGenes_filt, ", ",  nGenes_all, "\n", sep = "")
+              cat(" # genes (filtered, all): ", nGenes_filt, ", ",  nGenes_all, "\n", sep = "")
             } else {
-              cat (" Number of genes: No RNA-seq data found.\n")
+              cat (" # genes: No RNA-seq data found.\n")
             }
+            
+            if (!is.null(GRN@data$RNA$counts_orig) & !is.null(GRN@data$peaks$consensusPeaks)) {
+                
+                cat(" # shared samples: ", nrow(GRN@data$metadata), "\n", sep = "")
+            } 
+            
+            if (!is.null(GRN@annotation$TFs)) {
+                
+                cat(" # TFs (with expression data): ", nrow(GRN@annotation$TFs), "\n", sep = "")
+            } 
+            
             
             cat("Parameters:\n")
             if (!is.null(GRN@config$metadata$genomeAsembly)) {
               cat(" Genome assembly: ", GRN@config$parameters$genomeAssembly, "\n")
             }
+            
+            cat(" Output directory: ",  GRN@config$directories$outputRoot, "\n")
+           
             
             cat("Provided metadata:\n")
             
@@ -203,7 +217,7 @@ setMethod("show",
                 df = igraph::vertex.attributes(GRN@graph[["TF_gene"]]$graph)
                 if (!is.null(df) & "community" %in% names(df)) {
                     communities = df %>% as.data.frame() %>% dplyr::count(.data$community) %>% dplyr::arrange(dplyr::desc(.data$n))
-                    cat("  Communities, sorted by size (n = Number of nodes): ", paste0(communities$community, " (n=", communities$n, collapse = "), "), ")\n", sep = "")
+                    cat("  Communities, sorted by size (n = # nodes): ", paste0(communities$community, " (n=", communities$n, collapse = "), "), ")\n", sep = "")
                 } else {
                     cat("  None found\n")
                 }

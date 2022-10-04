@@ -269,7 +269,7 @@ For more parameter details, see the R help (`?filterData`).
 
 ```{r filterData, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold'}
 # Chromosomes to keep for peaks. This should be a vector of chromosome names
-chrToKeep_peaks = c(paste0("chr", 1:22), "chrX", "chrY")
+chrToKeep_peaks = c(paste0("chr", 1:22), "chrX")
 GRN = filterData(GRN, minNormalizedMean_peaks = 5, minNormalizedMeanRNA = 1, chrToKeep_peaks = chrToKeep_peaks, maxSize_peaks = 10000, forceRerun = TRUE)
 ```
 We can see from the output that no peaks have been filtered due to their size and almost 11,000 have been filtered due to their small mean read counts, which collectively leaves around 64,000 peaks out of 75,000 originally. For the RNA data, almost half of the data has been filtered (16,211 out of around 35,000 genes). 

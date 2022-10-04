@@ -627,14 +627,21 @@
 
 
 isIntegerMatrix <- function(df) {
-  
-  res = all.equal(unlist(df), as.integer(unlist(df)), check.attributes = FALSE)
-  
-  if (is.logical(res)) {
-    return(TRUE)
+    
+  # Quick test first: test only first row.
+  res = all.equal(unlist(df[1,]), as.integer(unlist(df[1,])), check.attributes = FALSE)  
+  if (!is.logical(res)) {
+      return(FALSE)
   } else {
-    return(FALSE)
+      res = all.equal(unlist(df), as.integer(unlist(df)), check.attributes = FALSE)
+      if (is.logical(res)) {
+          return(TRUE)
+      } else {
+          return(FALSE)
+      }
   }
+
+  
 }
 
 .findSuitableColumnsToPlot <- function(metadataTable, remove1LevelFactors = TRUE, verbose = TRUE) {

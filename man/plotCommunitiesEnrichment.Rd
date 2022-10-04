@@ -38,9 +38,9 @@ plotCommunitiesEnrichment(
 
 \item{p}{Numeric. Default 0.05. p-value threshold to determine significance.}
 
-\item{nSignificant}{Numeric >0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
+\item{nSignificant}{Numeric > 0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes.}
 
-\item{nID}{Numeric >0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
+\item{nID}{Numeric > 0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.}
 
 \item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 

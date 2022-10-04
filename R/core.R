@@ -323,7 +323,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     rownames(counts_rna)  = counts_rna$ENSEMBL
     
     
-    
+    futile.logger::flog.info("Storing count matrices...")
     # Store the raw peaks data efficiently as DESeq object only if it contains only integers, otherwise store as normal matrix
     
     if (isIntegerMatrix(counts_peaks[, GRN@config$sharedSamples])) {
@@ -331,8 +331,21 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
                                                                   colData = dplyr::filter(GRN@data$metadata, .data$has_both) %>% tibble::column_to_rownames("sampleID"),
                                                                   design = ~1)
     } else {
+        
+      # Store as sparse matrix if enough 0s
+      rowSample = min(100, nrow(counts_peaks))
+      zeroEntries = length(which(counts_peaks[1:rowSample, GRN@config$sharedSamples] %>% unlist(use.names = FALSE)  == 0))
+      fractionZero = zeroEntries / (rowSample * length(GRN@config$sharedSamples)) 
+      if (fractionZero> 0.1) {
+          futile.logger::flog.info(paste0("Storing GRN@data$peaks$counts_orig matrix as sparse matrix because fraction of 0s is > 0.1 (", fractionZero, ")"))
+          GRN@data$peaks$counts_orig = .asSparseMatrix(as.matrix(counts_peaks %>% dplyr::select(-.data$peakID)), 
+                                                       convertNA_to_zero = FALSE, 
+                                                       dimnames = list(counts_peaks$peakID, colnames(GRN@config$sharedSamples)))
+      } else {
+          GRN@data$peaks$counts_orig = as.matrix(counts_peaks[, GRN@config$sharedSamples])
+      }
       
-      GRN@data$peaks$counts_orig = as.matrix(counts_peaks[, GRN@config$sharedSamples])
+     
     }
     
     if (isIntegerMatrix(counts_rna[, GRN@config$sharedSamples])) {
@@ -340,17 +353,30 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
                                                                 colData = dplyr::filter(GRN@data$metadata, .data$has_both) %>% tibble::column_to_rownames("sampleID"),
                                                                 design = ~1)   
     } else {
-      GRN@data$RNA$counts_orig = as.matrix(counts_rna[, GRN@config$sharedSamples])
+      
+      
+      # Store as sparse matrix if enough 0s
+      rowSample = min(100, nrow(counts_rna))
+      zeroEntries = length(which(counts_rna[1:rowSample, GRN@config$sharedSamples] %>% unlist(use.names = FALSE)  == 0))
+      fractionZero = zeroEntries / (rowSample * length(GRN@config$sharedSamples)) 
+      if (fractionZero> 0.1) {
+          futile.logger::flog.info(paste0("Storing GRN@data$RNA$counts_orig matrix as sparse matrix because fraction of 0s is > 0.1 (", fractionZero, ")"))
+          GRN@data$RNA$counts_orig = .asSparseMatrix(as.matrix(counts_rna %>% dplyr::select(-.data$ENSEMBL)), 
+                                                       convertNA_to_zero = FALSE, 
+                                                       dimnames = list(counts_rna$ENSEMBL, colnames(GRN@config$sharedSamples)))
+      } else {
+          GRN@data$RNA$counts_orig = as.matrix(counts_rna[, GRN@config$sharedSamples])
+      }
     }
     
-    
+    futile.logger::flog.info(paste0("Creating consensus peaks and check for overlapping peaks..."))
     
     # Consensus peaks
     GRN@data$peaks$consensusPeaks = .createConsensusPeaksDF(getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)) 
     GRN@data$peaks$consensusPeaks = GRN@data$peaks$consensusPeaks[match(getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)$peakID, GRN@data$peaks$consensusPeaks$peakID), ]
     stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$consensusPeaks))
     
-    futile.logger::flog.info(paste0("Check for overlapping peaks..."))
+    
     
     # Assume 0-based exclusive format, see https://arnaudceol.wordpress.com/2014/09/18/chromosome-coordinate-systems-0-based-1-based/ and http://genome.ucsc.edu/FAQ/FAQformat.html#format1 for details
     consensus.gr   = .constructGRanges(GRN@data$peaks$consensusPeaks, seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), GRN@config$parameters$genomeAssembly, zeroBased = TRUE)
@@ -381,6 +407,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     }
     
   }
+  futile.logger::flog.info(paste0("Adding peak and gene annotation..."))
   
   # Add peak annotation once
   GRN = .populatePeakAnnotation(GRN)
@@ -632,7 +659,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   futile.logger::flog.info(paste0("Calculate GC-content for peaks. This may take a while"))
   start = Sys.time()
   genomeAssembly = GRN@config$parameters$genomeAssembly
-  #TODO: GC content for all peaks
+
   genome = .getGenomeObject(genomeAssembly, type = "BSgenome")
   
   # Get peaks as GRanges object
@@ -1351,7 +1378,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   
   peak_TF_overlapCur.df = .asMatrixFromSparse(GRN@data$TFs$TF_peak_overlap, convertZero_to_NA = FALSE) %>% 
     tibble::as_tibble() %>%
-    dplyr::filter(!.data$isFiltered) %>% 
+    dplyr::filter(!.data$isFiltered) %>%  # Works because 1 / 0 is interpreted here as logical and not 1/0
     dplyr::select(-.data$isFiltered) 
   
   if (perm > 0 & shuffle) {
@@ -1401,6 +1428,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     counts.df = getCounts(GRN, type = "peaks", norm = FALSE, permuted = FALSE) %>%
       tibble::as_tibble()
     
+    # TODO replace by getter
     countsPeaks = .normalizeNewDataWrapper(GRN@data$peaks$counts_orig, normalization = normalization)
     
     stopifnot(identical(nrow(countsPeaks), nrow(GRN@data$TFs$TF_peak_overlap)))
@@ -2044,7 +2072,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                                      corMethod,
                                      whitespacePrefix = "  ")
     
-    # TODO:Check here for the TFs BMAL1.0.A
+
     allTF = intersect(colnames(peak_TF_overlap.df), colnames(peaksCor.m))
     checkmate::assertIntegerish(length(allTF), lower = 1)
     
@@ -2053,7 +2081,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     if (length(allTF) < ncol(peak_TF_overlap.df) | length(allTF) < ncol(peaksCor.m)) {
       
       TF_missing = setdiff(colnames(peak_TF_overlap.df), colnames(peaksCor.m))
-      if (length(TF_missing) > 0) futile.logger::flog.info(paste0("  Skip the following ", length(TF_missing), " TF due to missing dataor because they are marked as filtered: ", paste0(TF_missing, collapse = ",")))
+      if (length(TF_missing) > 0) futile.logger::flog.info(paste0("  Skip the following ", length(TF_missing), " TF due to missing data or because they are marked as filtered: ", paste0(TF_missing, collapse = ",")))
     }
     
     stopifnot(nrow(peaksCor.m) == nrow(peak_TF_overlap.df))
@@ -3755,8 +3783,8 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
         }
         
       } else {
-        message =paste0(" Nothing to do, skip.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+        futile.logger::flog.info(paste0(" Nothing to do, skip."))
+       
           
         if (addRobustRegression) {
           res.df = tibble::tribble(~TF.name, ~TF.ENSEMBL, ~gene.ENSEMBL, ~TF_gene.r, ~TF_gene.p_raw, ~TF_gene.p_raw.robust, 
@@ -4277,7 +4305,9 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
 #' 
 #' @template GRN 
 #' @param type Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.
-#' @param norm Logical. \code{TRUE} or \code{FALSE}. Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?
+#' @param norm Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?
+#' @param asMatrix Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, counts are returned as a data frame with or without an ID column (see \code{includeIDColumn}). If set to \code{TRUE}, counts are returned as a matrix with the ID column as row names.
+#' @param includeIDColumn Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Only relevant if \code{asMatrix = FALSE}. If set to \code{TRUE}, an explicit ID column is returned (no row names). If set to \code{FALSE}, the IDs are in the row names instead.
 #' @template permuted
 #' @export
 #' @import tibble
@@ -4287,7 +4317,8 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
 #' counts.df = getCounts(GRN, type = "peaks", norm = TRUE, permuted = FALSE)
 #' @return Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 
-getCounts <- function(GRN, type, norm, permuted = FALSE) {
+# TODO document and implement two new arguments here
+getCounts <- function(GRN, type, norm = FALSE, permuted = FALSE, asMatrix = FALSE, includeIDColumn = TRUE) {
   
   checkmate::assertClass(GRN, "GRN")
   GRN = .addFunctionLogToObject(GRN)     
@@ -4307,36 +4338,50 @@ getCounts <- function(GRN, type, norm, permuted = FALSE) {
         result = GRN@data$peaks$counts_norm
         
       } else {
-        # Handle case when this is null due to already norm. counts as input
-        countsOrig = GRN@data$peaks$counts_orig
-        if (checkmate::testClass(countsOrig, "DESeqDataSet")) {
-          result = DESeq2::counts(countsOrig, norm = FALSE) %>% as.data.frame() %>% tibble::rownames_to_column("peakID")
-        } else {
-          result = countsOrig %>% dplyr::select(-.data$isFiltered) %>% as.data.frame()
+            # Handle case when this is null due to already norm. counts as input
+          
+           # TODO: Unify the annotation column 
+            classPeaks = class(GRN@data$peaks$counts_orig)
+            if ("DESeqDataSet" %in% classPeaks) {
+              result = DESeq2::counts(GRN@data$peaks$counts_orig, norm = FALSE) %>% as.data.frame() %>% tibble::rownames_to_column("peakID")
+            } else if ("matrix" %in% classPeaks) {
+                result = GRN@data$peaks$counts_orig %>% dplyr::select(-.data$isFiltered) %>% as.data.frame()
+            } else if ("dgCMatrix" %in% classPeaks) {
+                result = .asMatrixFromSparse(GRN@data$peaks$counts_orig, convertZero_to_NA = FALSE) %>% dplyr::select(-.data$isFiltered) %>% as.data.frame()
+            } else {
+                message = paste0("Unsupported class for GRN@data$peaks$counts_orig. Contact the authors.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
         }
-        
-      }
-      
+
       
     } else if (type == "rna") {
       
       if (norm) {
-        result = GRN@data$RNA$counts_norm.l[[permIndex]]
+            result = GRN@data$RNA$counts_norm.l[[permIndex]]
         
       } else {
-        
-        # Handle case when this is null due to already norm. counts as input
-        countsOrig = GRN@data$RNA$counts_orig
-        if (checkmate::testClass(countsOrig, "DESeqDataSet")) {
-          result = DESeq2::counts(countsOrig, norm = FALSE) %>% as.data.frame() %>% tibble::rownames_to_column("ENSEMBL")
-        } else {
-          result = countsOrig %>% dplyr::select(-.data$isFiltered) %>% as.data.frame()
-          # TODO: isFiltered column?
-        }
+            # TODO: Unify the annotation column 
+            classRNA = class(GRN@data$RNA$counts_orig)
+            if ("DESeqDataSet" %in% classRNA) {
+                result = DESeq2::counts(GRN@data$RNA$counts_orig, norm = FALSE) %>% 
+                    as.data.frame() %>% tibble::rownames_to_column("ENSEMBL")
+            } else if ("matrix" %in% classRNA) {
+                result = GRN@data$RNA$counts_orig %>% 
+                    dplyr::select(-.data$isFiltered) %>% as.data.frame()
+            } else if ("dgCMatrix" %in% classRNA) {
+                result = .asMatrixFromSparse(GRN@data$RNA$counts_orig, convertZero_to_NA = FALSE) %>% 
+                    dplyr::select(-.data$isFiltered) %>% as.data.frame() %>% tibble::rownames_to_column("ENSEMBL")
+            } else {
+                message = paste0("Unsupported class for GRN@data$RNA$counts_orig. Contact the authors.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
         
       }
-      
+        
     }
+      
   } else { # permutation 1
     
     if (type == "peaks") {
@@ -4540,7 +4585,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE,
     }
   } else {
     
-    # TODO: Re-create the output folder here nd adjust to the OS-specific path separator, do not rely on what is stored in the object
+    #  Re-create the output folder here and adjust to the OS-specific path separator, do not rely on what is stored in the object
     if (.Platform$OS.type == "windows") {
       GRN@config$directories$output_plots = gsub('/', ('\\'), GRN@config$directories$output_plots, fixed = TRUE)
     } else {

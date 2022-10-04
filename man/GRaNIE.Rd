@@ -9,7 +9,7 @@ Genetic variants associated with diseases often affect non-coding regions, thus 
 }
 \section{Package functions}{
 
-See the Vignettes for a workflow example and more generally \url{https://grp-zaugg.embl-community.io/GRaNIE/articles/} for all project-related information.
+See the Vignettes for a workflow example and more generally \url{https://grp-zaugg.embl-community.io/GRaNIE} for all project-related information.
 }
 
 \section{GRN object}{
