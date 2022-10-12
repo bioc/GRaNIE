@@ -4,6 +4,7 @@ utils::globalVariables("where")
 
 ############### PCA ###############
 
+# TODO: Currently, the "standard PCA workflow with vst transform based on raw counts is not possible anymore, the normalized counts are taken as they are
 
 #' Produce a PCA plot of the data from a \code{\linkS4class{GRN}} object
 #'
@@ -11,7 +12,8 @@ utils::globalVariables("where")
 #' @template outputFolder
 #' @param data Character. Either \code{"peaks"} or \code{"rna"} or \code{"all"}. Default \code{c("rna", "peaks")}. Type of data to plot a PCA for. \code{"peaks"} corresponds to the the open chromatin data, while \code{"rna"} refers to the RNA-seq counts. If set to \code{"all"}, PCA will be done for both data modalities. In any case, PCA will be based on the original provided data before any additional normalization has been run (i.e., usually the raw data).
 #' @param topn Integer vector. Default \code{c(500,1000,5000)}. Number of top variable features to do PCA for. Can be a vector of different numbers (see default).
-#' @param type Character. One of or a combination of \code{"raw"}, \code{"normalized"}, \code{"all"}. Default \code{c("raw", "normalized")}. Should the PCA plots be done based on the raw or normalized data, respectively?
+#' @param type Character. Must be \code{"normalized"}. On which data type (raw or normalized) should the PCA plots be done? We removed support for \code{raw} and currently only support \code{normalized}.
+#' @param removeFiltered Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should features marked as filtered as determined by \code{filterData} be removed?
 #' @template forceRerun
 #' @template basenameOutput
 #' @template plotAsPDF
@@ -22,10 +24,10 @@ utils::globalVariables("where")
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotPCA_all(GRN, topn = 500, data = "rna", type = "raw", plotAsPDF = FALSE, pages = 1)
+#' GRN = plotPCA_all(GRN, topn = 500, data = "rna", type = "normalized", plotAsPDF = FALSE, pages = 1)
 #' @export
 plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
-                        data = c("rna", "peaks"), topn = c(500,1000,5000), type = c("raw", "normalized"), 
+                        data = c("rna", "peaks"), topn = c(500,1000,5000), type = "normalized", removeFiltered = TRUE,
                         plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                         forceRerun = FALSE) {
   
@@ -36,7 +38,9 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   GRN = .makeObjectCompatible(GRN)
   
   checkmate::assertSubset(data , c("rna", "peaks", "all"), empty.ok = FALSE)
-  checkmate::assertSubset(type , c("raw", "normalized", "all"), empty.ok = FALSE)
+  checkmate::assertChoice(type , c("normalized"))
+  #checkmate::assertSubset(type , c("raw", "normalized", "all"), empty.ok = FALSE)
+  checkmate::assertFlag(removeFiltered)
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
@@ -56,106 +60,53 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   # Initialize the page counter
   pageCounter = 1 
   
+  # For normalized data, we do not do any other transformation currently and plot the normalized data "as is"
+  # Changed on 08.02.22: We now never do a(nother) log transform, as the input for the density plot is already transformed counts. 
+  transformationCur = "none"
+  logTransformDensity = FALSE
+  
   if ("rna" %in% data | "all" %in% data) {
     
-    # Check if we have raw integer counts. Ust vst transform if, otherwise "regular log2
-    transformation = dplyr::if_else(checkmate::testClass(GRN@data$RNA$counts_orig, "DESeqDataSet"), "vst", "log2")
-    
-    normVector = c("raw", "normalized")
-    # If data is pre-normalized, dont do any transformation, as "raw" and "normalized" are supposed to be identical
-    if (GRN@config$parameters$normalization_rna == "none") {
-      normVector = c("normalized")
-    }
-    
-    for (norm in normVector) {
-      
-      if (!(norm %in% type | "all" %in% type)) {
-        next
-      }
-      
-      # Only do a transformation if this is raw counts, already normalized counts dont need another transformation
-      transformationCur = dplyr::if_else(norm == "raw", transformation, "none")
-      
-      # Changed on 08.02.22: We now never do a(nother) log transform, as the input for the density plot is already transformed counts. 
-      # logTransformDensity = dplyr::if_else(norm == "raw", TRUE, FALSE)
-      logTransformDensity = FALSE
-      
-      # Get filtered rows from normalized version always, this is correct, as isFiltered is missing in raw counts
-      nonFilteredRows = which(! GRN@data$RNA$counts_norm.l[["0"]]$isFiltered)
-      
-      if (norm == "raw") {
+    matrixCur = getCounts(GRN, type = "rna", asMatrix = TRUE, includeFiltered = !removeFiltered)
+
+    fileCur = paste0(outputFolder, 
+                     dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput),
+                     "_RNA.", type, ".pdf")
+    if (!file.exists(fileCur) | forceRerun) {
         
-        matrixCur = GRN@data$RNA$counts_orig[nonFilteredRows, uniqueSamples]
-        
-      } else {
-        
-        matrixCur = GRN@data$RNA$counts_norm.l[["0"]][nonFilteredRows, uniqueSamples] %>% as.matrix()
-        rownames(matrixCur) = GRN@data$RNA$counts_norm.l[["0"]]$ENSEMBL[nonFilteredRows]
-      }
-      
-      fileCur = paste0(outputFolder, 
-                       dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput),
-                       "_RNA.", norm, ".pdf")
-      if (!file.exists(fileCur) | forceRerun) {
-        
-        futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", norm, 
+        futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
                                         " RNA data for all shared samples to file ", fileCur , 
                                         "... This may take a few minutes"))
         
         .plot_PCA_wrapper(GRN, matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
         
-      } else {
+    } else {
         futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
         
-      }
     }
+    
     
   } # end if plot RNA PCA
   
   if ("peaks" %in% data | "all" %in% data) {
     
-    # Check if we have raw integer counts
-    transformation = dplyr::if_else(checkmate::testClass(GRN@data$peaks$counts_orig, "DESeqDataSet"), "vst", "log2")
+    matrixCur = getCounts(GRN, type = "peaks", asMatrix = TRUE, includeFiltered = !removeFiltered)
     
-    normVector = c("raw", "normalized")
-    # If data is pre-normalized, dont do any transformation, as "raw" and "normalized" are supposed to be identical
-    if (GRN@config$parameters$normalization_peaks == "none") {
-      normVector = c("normalized")
-    }
+    fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), 
+                                                  .getOutputFileName("plot_pca"), basenameOutput), "_peaks.", type, ".pdf")
     
-    for (norm in normVector) {
-      
-      transformationCur = dplyr::if_else(norm == "raw", transformation, "none")
-      logTransformDensity = dplyr::if_else(norm == "raw", TRUE, FALSE)
-      
-      nonFilteredRows = which(! GRN@data$peaks$counts_norm$isFiltered)
-      
-      if (norm == "raw") {
+    if (!file.exists(fileCur) | forceRerun) {
         
-        matrixCur = GRN@data$peaks$counts_orig[nonFilteredRows, uniqueSamples]
-        
-      } else {
-        
-        matrixCur = GRN@data$peaks$counts_norm[nonFilteredRows, uniqueSamples] %>% as.matrix()
-        rownames(matrixCur) = GRN@data$peaks$counts_norm$peakID[nonFilteredRows]
-      }
-      
-      fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput), "_peaks.", norm, ".pdf")
-      
-      if (!file.exists(fileCur) | forceRerun) {
-        
-        futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", norm, 
+        futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
                                         " peaks data for all shared samples to file ", fileCur , 
                                         "... This may take a few minutes"))
         
         .plot_PCA_wrapper(GRN, matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
         
-      } else {
+    } else {
         futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
         
-      }
-      
-    } # end for raw and norm
+    }
     
   }
   
@@ -934,7 +885,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
   
   
   # For compatibility reasons, re-create the genes and peaks annotation if not present in the object
-  if (! "peak.annotation" %in% colnames(GRN@annotation$consensusPeaks)) {
+  if (! "peak.annotation" %in% colnames(GRN@annotation$peaks)) {
     GRN = .populatePeakAnnotation(GRN)
   }
   if (! "gene.CV" %in% colnames(GRN@annotation$genes)) {
@@ -1038,7 +989,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
             dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
         dplyr::left_join(dplyr::select(GRN@annotation$genes, .data$gene.ENSEMBL, .data$gene.type, .data$gene.mean, .data$gene.median, .data$gene.CV), by = "gene.ENSEMBL") %>%
-        dplyr::left_join(GRN@annotation$consensusPeaks %>% 
+        dplyr::left_join(GRN@annotation$peaks %>% 
                            dplyr::select(-dplyr::starts_with("peak.gene."), -.data$peak.GC.perc), by = "peak.ID") %>%
         dplyr::select(-.data$gene.ENSEMBL)
       
@@ -1276,19 +1227,19 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       
       
       
-      if (!is.null(GRN@annotation$consensusPeaks_obj) & is.installed("ChIPseeker")) {
-        #plot(ChIPseeker::plotAnnoBar(GRN@annotation$consensusPeaks_obj))
+      if (!is.null(GRN@annotation$peaks_obj) & is.installed("ChIPseeker")) {
+        #plot(ChIPseeker::plotAnnoBar(GRN@annotation$peaks_obj))
         
         # no plot, as this is somehow just a list and no ggplot object
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
           
-          ChIPseeker::plotAnnoPie(GRN@annotation$consensusPeaks_obj, 
-                                  main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$consensusPeaks), ")"))
+          ChIPseeker::plotAnnoPie(GRN@annotation$peaks_obj, 
+                                  main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$peaks), ")"))
         }
         pageCounter = pageCounter + 1
         
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          plot(ChIPseeker::plotDistToTSS(GRN@annotation$consensusPeaks_obj))
+          plot(ChIPseeker::plotDistToTSS(GRN@annotation$peaks_obj))
         }
         
         pageCounter = pageCounter + 1
@@ -1994,6 +1945,8 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
       futile.logger::flog.info(paste0("Plotting directly"))   
     }
     
+    .checkGraphExistance(GRN)
+    
     TF_peak_gene.df = GRN@graph$TF_peak_gene$table
     TF_gene.df = GRN@graph$TF_gene$table
     
@@ -2211,6 +2164,8 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
   checkmate::assertFlag(forceRerun)
   
+  .checkGraphExistance(GRN)
+  
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   
   if (length(ontologiesFound) == 0) {
@@ -2386,6 +2341,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
   checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
   checkmate::assertFlag(forceRerun)
+  
+  .checkGraphExistance(GRN)
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_communityStats"), basenameOutput), ".pdf")
@@ -2594,6 +2551,8 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   
+  .checkGraphExistance(GRN)
+  
   if (is.null(GRN@stats$Enrichment$byCommunity)) {
     message = "No communities found, cannot calculate enrichment. Run the functioncalculateCommunitiesStats first. If you did already, it looks like no communities could be identified before"
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
@@ -2605,16 +2564,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   futile.logger::flog.info(paste0("Including terms only if overlap is at least ", nSignificant, " genes."))
   
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
-    
-    if (plotAsPDF) {
-      .checkOutputFile(fileCur)
-      grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
-      futile.logger::flog.info(paste0("Plotting to file ", fileCur))
-    } else {
-      futile.logger::flog.info(paste0("Plotting directly"))
-    }
-    
-    
+
     if (is.null(GRN@stats$Enrichment$general)){
       message = paste0("Could not find general enrichment analysis. Please run the function calculateGeneralEnrichment first.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
@@ -2659,14 +2609,23 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
       dplyr::count(.data$community)
     
     
-    allOntologies = .checkEnrichmentCongruence_general_community(GRN, type = "community")
+    allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "community")
     
     # Reset, as this is created anew and otherwise raises a warning due to the missing "result" slot
     GRN@stats$Enrichment$byCommunity[["combined"]] = list()
     
+    
+    if (plotAsPDF) {
+        .checkOutputFile(fileCur)
+        grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
+        futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+    } else {
+        futile.logger::flog.info(paste0("Plotting directly"))
+    }
+    
     pageCounter = 1
     
-    for (ontologyCur in allOntologies) {
+    for (ontologyCur in allOntologies.l$community) {
       
       futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
       
@@ -2704,118 +2663,127 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
       
       # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
       # Currently assumes that the general enrichment has been run
-      
-      # Take one community as example for which ontologies have been produced
-      GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] = 
-        .combineEnrichmentResults(GRN, type = "byCommunity", ontologyCur, 
-                                  p = p, nSignificant = nSignificant, display_pAdj) %>%
-        dplyr::filter(.data$community %in% c("all", as.character(communitiesDisplay)))
-      
-      # It can happen that some TFs are filtered out here because all terms are not significant. Thus, even though
-      # 5 TFs have been requested only 4 actually show any enriched terms
-      
-      if (nrow(GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]) == 0) {
-        message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        next
-      }
-      
+      if (identical(allOntologies.l$community, allOntologies.l$all)) {
+          
+          
+          # Take one community as example for which ontologies have been produced
+          GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] = 
+              .combineEnrichmentResults(GRN, type = "byCommunity", ontologyCur, 
+                                        p = p, nSignificant = nSignificant, display_pAdj) %>%
+              dplyr::filter(.data$community %in% c("all", as.character(communitiesDisplay)))
+          
+          # It can happen that some TFs are filtered out here because all terms are not significant. Thus, even though
+          # 5 TFs have been requested only 4 actually show any enriched terms
+          
+          if (nrow(GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]) == 0) {
+              message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
+              .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+              next
+          }
+          
+          
+          
+          # Convert to wide format and filter those terms that are significant at least once
+          all.df.wide = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
+              dplyr::select(.data$community, .data$ID, .data$pval) %>%
+              tidyr::pivot_wider(names_from = .data$community, values_from = .data$pval) %>%
+              dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
+              dplyr::rowwise() %>%
+              dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>% # In how many columns significant?
+              dplyr::ungroup() %>%
+              dplyr::filter(.data$nSig > 0)
+          
+          # In extreme cases, it could happen that the "all" community is missing because there are no enrichments whatsoever.
+          # In this case, we need to add it back here 
+          if (! "all" %in% colnames(all.df.wide)){
+              all.df.wide =dplyr::mutate(all.df.wide, all = NA)
+          }
 
+          # sort by community size
+          communities.order = c("all", intersect(.selectCommunitesByRank(GRN , communities = NULL), colnames(all.df.wide)))
+          
+          
+          matrix.m = all.df.wide %>%
+              dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
+              dplyr::filter(!is.na(.data$Term)) %>%
+              dplyr::select(.data$Term, dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
+              dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
+              tibble::column_to_rownames("Term") %>%
+              as.matrix()
+          
+          
+          geneCounts_communities = geneCounts %>%
+              dplyr::filter(.data$community %in% as.character(colnames(matrix.m)),
+                            .data$community %in% geneCounts$community) %>%
+              dplyr::arrange(dplyr::desc(.data$n))
+          
+          # Sanity check: Except for the first item "all", they should all be identical
+          stopifnot(identical(as.character(geneCounts_communities$community), colnames(matrix.m)[-1]))
+          
+          # Common heatmap parameters for both p1 and p2
+          top_annotation = ComplexHeatmap::HeatmapAnnotation(
+              nGenes = ComplexHeatmap::anno_barplot(
+                  x = c(sum(geneCounts$n), geneCounts_communities$n), 
+                  border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
+              annotation_name_gp = grid::gpar(fontsize=9), annotation_name_side = "left", annotation_name_rot = 90)
+          
+          axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
+          colors_pvalue = viridis::viridis(n=30, direction = -1)
+          
+          
+          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+              
+              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full summary heatmap and " , ncol(matrix.m), " columns"))
+              
+              p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
+                                        name = axixStr, 
+                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                        colors_pvalue = colors_pvalue, 
+                                        column_title = paste0("Summary of all significantly enriched terms\nacross all communities and overall (Ontology: ", ontologyCur,")"),
+                                        top_annotation = top_annotation)
+              
+              print(p1)
+              
+          }
+          pageCounter = pageCounter + 1
+          
+          
+          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+              
+              # Now focus on the top X only per community
+              ID_subset =  GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
+                  dplyr::group_by(.data$community) %>% 
+                  dplyr::arrange(.data$pval) %>% 
+                  dplyr::slice(seq_len(nID)) %>%
+                  dplyr::pull(.data$ID) %>% as.character()
+              
+              
+              matrix.m = all.df.wide %>%
+                  dplyr::filter(.data$ID %in% ID_subset) %>%
+                  dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
+                  dplyr::filter(!is.na(.data$Term)) %>%
+                  dplyr::select(-.data$nSig, -.data$ID) %>%
+                  tibble::column_to_rownames("Term") %>%
+                  dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
+                  dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
+                  as.matrix()
+              
+              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
+              
+              
+              p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
+                                        name = axixStr, 
+                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                        colors_pvalue = colors_pvalue, 
+                                        column_title = paste0("Summary of top ", nID, " enriched terms\nper community and overall (Ontology: ", ontologyCur,")"),
+                                        top_annotation = top_annotation)
+              print(p2)
+          } 
+          pageCounter = pageCounter + 1
+      } # end if (identical(allOntologies.l$community, allOntologies.l$all)) {
       
-      # Convert to wide format and filter those terms that are significant at least once
-      all.df.wide = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
-        dplyr::select(.data$community, .data$ID, .data$pval) %>%
-        tidyr::pivot_wider(names_from = .data$community, values_from = .data$pval) %>%
-        dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
-        dplyr::rowwise() %>%
-        dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>% # In how many columns significant?
-        dplyr::ungroup() %>%
-        dplyr::filter(.data$nSig > 0)
       
-      
-      # sort by community size
-      communities.order = c("all", intersect(.selectCommunitesByRank(GRN , communities = NULL), colnames(all.df.wide)))
-      
-      
-      matrix.m = all.df.wide %>%
-        dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
-        dplyr::filter(!is.na(.data$Term)) %>%
-        dplyr::select(.data$Term, dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
-        dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
-        tibble::column_to_rownames("Term") %>%
-        as.matrix()
-      
-      
-      geneCounts_communities = geneCounts %>%
-        dplyr::filter(.data$community %in% as.character(colnames(matrix.m)),
-                      .data$community %in% geneCounts$community) %>%
-        dplyr::arrange(dplyr::desc(.data$n))
-      
-      # Sanity check
-      stopifnot(identical(as.character(geneCounts_communities$community), colnames(matrix.m)[-1]))
-      
-      # Common heatmap parameters for both p1 and p2
-      top_annotation = ComplexHeatmap::HeatmapAnnotation(
-        nGenes = ComplexHeatmap::anno_barplot(
-          x = c(sum(geneCounts$n), geneCounts_communities$n), 
-          border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
-        annotation_name_gp = grid::gpar(fontsize=9), annotation_name_side = "left", annotation_name_rot = 90)
-      
-      axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
-      colors_pvalue = viridis::viridis(n=30, direction = -1)
-      
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full summary heatmap and " , ncol(matrix.m), " columns"))
-        
-        p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
-                                  name = axixStr, 
-                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                  colors_pvalue = colors_pvalue, 
-                                  column_title = paste0("Summary of all significantly enriched terms\nacross all communities and overall (Ontology: ", ontologyCur,")"),
-                                  top_annotation = top_annotation)
-        
-        print(p1)
-        
-      }
-      pageCounter = pageCounter + 1
-      
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        # Now focus on the top X only per community
-        ID_subset =  GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
-          dplyr::group_by(.data$community) %>% 
-          dplyr::arrange(.data$pval) %>% 
-          dplyr::slice(seq_len(nID)) %>%
-          dplyr::pull(.data$ID) %>% as.character()
-        
-        
-        matrix.m = all.df.wide %>%
-          dplyr::filter(.data$ID %in% ID_subset) %>%
-          dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
-          dplyr::filter(!is.na(.data$Term)) %>%
-          dplyr::select(-.data$nSig, -.data$ID) %>%
-          tibble::column_to_rownames("Term") %>%
-          dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
-          dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
-          as.matrix()
-        
-        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
-        
-        
-        p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
-                                  name = axixStr, 
-                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                  colors_pvalue = colors_pvalue, 
-                                  column_title = paste0("Summary of top ", nID, " enriched terms\nper community and overall (Ontology: ", ontologyCur,")"),
-                                  top_annotation = top_annotation)
-        print(p2)
-      } 
-      pageCounter = pageCounter + 1
-      
-    }
+    } # end for all ontologies
     
     
     .checkPageNumberValidity(pages, pageCounter)
@@ -2942,7 +2910,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertFlag(forceRerun)
   
-  
+  .checkGraphExistance(GRN)
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   
@@ -2974,34 +2942,29 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
                    ".pdf")
   
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
-    
-    if (plotAsPDF) {
-      .checkOutputFile(fileCur)
-      grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
-      futile.logger::flog.info(paste0("Plotting to file ", fileCur))
-    } else {
-      futile.logger::flog.info(paste0("Plotting directly"))
-    }
-    
-    
-    # Reset, as this is created anew and otherwise raises a warning due to the missing "result" slot
-    GRN@stats$Enrichment$byCommunity[["combined"]] = NULL
-    
+  
+    allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "TF")
     
     # Get the number of vertexes per TF as additional annotation column for the heatmap
     vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
     nodeDegree = igraph::degree(GRN@graph$TF_gene$graph)
-    
-    # nodeDegree_TFset = sort(nodeDegree[GRN@annotation$TFs %>% dplyr::filter(TF.name %in% as.character(TFset)) %>% 
-    #                                      dplyr::pull(TF.ENSEMBL)], decreasing = TRUE)
-    
+
     nodeDegree_TFset = dplyr::left_join(GRN@annotation$TFs, 
-                                        as.data.frame(nodeDegree) %>% tibble::rownames_to_column("ENSEMBL"), by = "ENSEMBL") %>%
-      dplyr::filter(.data$TF.name %in% as.character(TFset))
+                                        as.data.frame(nodeDegree) %>% tibble::rownames_to_column("TF.ENSEMBL"), by = "TF.ENSEMBL") %>%
+                       dplyr::filter(.data$TF.name %in% as.character(TFset))
     
     pageCounter = 1  
-    allOntologies = .checkEnrichmentCongruence_general_community(GRN, type = "TF")
-    for (ontologyCur in allOntologies) {
+    
+    
+    if (plotAsPDF) {
+        .checkOutputFile(fileCur)
+        grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
+        futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+    } else {
+        futile.logger::flog.info(paste0("Plotting directly"))
+    }
+    
+    for (ontologyCur in allOntologies.l$TF) {
       
       futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
       
@@ -3041,113 +3004,123 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
         
       }
       
-      # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
-      # Currently assumes that the general enrichment has been run
+      if (identical(allOntologies.l$TF, allOntologies.l$all)) {
+          
+          
+          # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
+          # Currently assumes that the general enrichment has been run
+          
+          # Take one community as example for which ontologies have been produced
+          GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] = 
+              .combineEnrichmentResults(GRN, type = "byTF", ontologyCur, 
+                                        p = p, nSignificant = nSignificant, display_pAdj) %>%
+              dplyr::filter(.data$TF.name %in% c("all", as.character(TFset)))
+          
+          if (nrow(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]) == 0) {
+              message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
+              .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+              next
+          }
+          
+          
+          # Convert to wide format and filter those terms that are significant at least once
+          all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
+              dplyr::select(.data$TF.name, .data$ID, .data$pval) %>%
+              tidyr::pivot_wider(names_from = .data$TF.name, values_from = .data$pval) %>%
+              dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
+              dplyr::rowwise() %>%
+              dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>%
+              dplyr::ungroup() %>%
+              dplyr::filter(.data$nSig > 0)
+          
+          # In extreme cases, it could happen that the "all" community is missing because there are no enrichments whatsoever.
+          # In this case, we need to add it back here 
+          if (! "all" %in% colnames(all.df.wide)){
+              all.df.wide =dplyr::mutate(all.df.wide, all = NA)
+          }
+          
+          
+          TF.order = c("all", setdiff(unique(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$TF.name), "all"))
+          
+          
+          matrix.m = all.df.wide %>%
+              dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
+              dplyr::filter(!is.na(.data$Term)) %>%
+              dplyr::select(.data$Term, dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
+              dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
+              # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
+              tibble::column_to_rownames("Term") %>%
+              as.matrix()
+          
+          
+          # Make sure the top annotation has the same dimensionality as the resulting matrix
+          nodeDegree_TFset_numbers =  nodeDegree_TFset %>%
+              dplyr::filter(.data$TF.name %in% colnames(matrix.m)) %>%
+              dplyr::arrange(dplyr::desc(nodeDegree)) %>%
+              dplyr::pull(nodeDegree)
+          
+          top_annotation = ComplexHeatmap::HeatmapAnnotation(
+              nodeDegree = ComplexHeatmap::anno_barplot(
+                  x = c("all" = nrow(vertexMetadata),  nodeDegree_TFset_numbers ), 
+                  border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
+              annotation_name_gp = grid::gpar(fontsize=5), annotation_name_side = "left", annotation_name_rot = 90)
+          
+          axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
+          
+          colors_pvalue = viridis::viridis(n=30, direction = -1)
+          # Why colors here like this
+          #colors_pvalue = c("#3B9AB2", "#9EBE91", "#E4B80E", "#F21A00")
+          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+              
+              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full heatmap and " , ncol(matrix.m), " columns"))
+              
+              p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
+                                        name = axixStr, 
+                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                        colors_pvalue = colors_pvalue, 
+                                        column_title = paste0("Summary of all significantly enriched terms\nacross all TFs and overall (Ontology: ", ontologyCur,")"),
+                                        top_annotation = top_annotation)
+              
+              print(p1)
+          }
+          pageCounter = pageCounter + 1
+          
+          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+              
+              # Now focus on the top X only per community
+              ID_subset =  GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
+                  dplyr::group_by(.data$TF.name) %>% 
+                  dplyr::arrange(.data$pval) %>% 
+                  dplyr::slice(seq_len(nID)) %>%
+                  dplyr::pull(.data$ID) %>% as.character()
+              
+              
+              matrix.m = all.df.wide %>%
+                  dplyr::filter(.data$ID %in% ID_subset) %>%
+                  dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
+                  dplyr::filter(!is.na(.data$Term)) %>%
+                  dplyr::select(-.data$nSig, -.data$ID) %>%
+                  tibble::column_to_rownames("Term") %>%
+                  dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
+                  dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
+                  as.matrix()
+              
+              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
+              
+              p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
+                                        name = axixStr, 
+                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                        colors_pvalue = colors_pvalue, 
+                                        column_title = paste0("Summary of top ", nID, " enriched terms\n per TF and overall (Ontology: ", ontologyCur,")"),
+                                        top_annotation = top_annotation)
+              
+              print(p2)
+          }
+          pageCounter = pageCounter + 1
+          
+      } # end if (identical(allOntologies.l$TF, allOntologies.l$all)) {
       
-      # Take one community as example for which ontologies have been produced
-      GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] = 
-        .combineEnrichmentResults(GRN, type = "byTF", ontologyCur, 
-                                  p = p, nSignificant = nSignificant, display_pAdj) %>%
-        dplyr::filter(.data$TF.name %in% c("all", as.character(TFset)))
-      
-      if (nrow(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]) == 0) {
-        message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        next
-      }
-      
-      
-      # Convert to wide format and filter those terms that are significant at least once
-      all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-        dplyr::select(.data$TF.name, .data$ID, .data$pval) %>%
-        tidyr::pivot_wider(names_from = .data$TF.name, values_from = .data$pval) %>%
-        dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
-        dplyr::rowwise() %>%
-        dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>%
-        dplyr::ungroup() %>%
-        dplyr::filter(.data$nSig > 0)
-      
-      
-      TF.order = c("all", setdiff(unique(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$TF.name), "all"))
-      
-      
-      matrix.m = all.df.wide %>%
-        dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
-        dplyr::filter(!is.na(.data$Term)) %>%
-        dplyr::select(.data$Term, dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
-        dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
-        # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
-        tibble::column_to_rownames("Term") %>%
-        as.matrix()
-      
-      
-      # Make sure the top annotation has the same dimensionality as the resulting matrix
-      nodeDegree_TFset_numbers =  nodeDegree_TFset %>%
-        dplyr::filter(.data$TF.name %in% colnames(matrix.m)) %>%
-        dplyr::arrange(dplyr::desc(nodeDegree)) %>%
-        dplyr::pull(nodeDegree)
-      
-      top_annotation = ComplexHeatmap::HeatmapAnnotation(
-        nodeDegree = ComplexHeatmap::anno_barplot(
-          x = c("all" = nrow(vertexMetadata),  nodeDegree_TFset_numbers ), 
-          border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
-        annotation_name_gp = grid::gpar(fontsize=5), annotation_name_side = "left", annotation_name_rot = 90)
-      
-      axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
-      
-      colors_pvalue = viridis::viridis(n=30, direction = -1)
-      # Why colors here like this
-      #colors_pvalue = c("#3B9AB2", "#9EBE91", "#E4B80E", "#F21A00")
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full heatmap and " , ncol(matrix.m), " columns"))
-        
-        p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
-                                  name = axixStr, 
-                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                  colors_pvalue = colors_pvalue, 
-                                  column_title = paste0("Summary of all significantly enriched terms\nacross all TFs and overall (Ontology: ", ontologyCur,")"),
-                                  top_annotation = top_annotation)
-        
-        print(p1)
-      }
-      pageCounter = pageCounter + 1
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        # Now focus on the top X only per community
-        ID_subset =  GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-          dplyr::group_by(.data$TF.name) %>% 
-          dplyr::arrange(.data$pval) %>% 
-          dplyr::slice(seq_len(nID)) %>%
-          dplyr::pull(.data$ID) %>% as.character()
-        
-        
-        matrix.m = all.df.wide %>%
-          dplyr::filter(.data$ID %in% ID_subset) %>%
-          dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
-          dplyr::filter(!is.na(.data$Term)) %>%
-          dplyr::select(-.data$nSig, -.data$ID) %>%
-          tibble::column_to_rownames("Term") %>%
-          dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
-          dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
-          as.matrix()
-        
-        futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
-        
-        p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
-                                  name = axixStr, 
-                                  maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                  colors_pvalue = colors_pvalue, 
-                                  column_title = paste0("Summary of top ", nID, " enriched terms\n per TF and overall (Ontology: ", ontologyCur,")"),
-                                  top_annotation = top_annotation)
-        
-        print(p2)
-      }
-      pageCounter = pageCounter + 1
-      
-      
-    }
+    } # end for all ontologies
     
     .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
@@ -3410,7 +3383,8 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
-    metadata_visualization.l = getBasic_metadata_visualization(GRN)
+    # Construct GRN@visualization$metadata
+    GRN = getBasic_metadata_visualization(GRN, forceRerun = forceRerun)
     # if (useDefaultMetadata) {
     #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
     #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
@@ -3528,7 +3502,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
         colors_categories.l[["TF"]]  = color_gradient 
         symbols_categories.l[["TF"]] = c(15,NA,15)
-        vertice_color_TFs   = append(list(metadata_visualization.l[["RNA_expression_TF"]],    "TF.HOCOID",     "baseMean_log"), vertice_color_TFs)
+        vertice_color_TFs   = append(list(GRN@visualization$metadata[["RNA_expression_TF"]],    "TF.HOCOID",     "baseMean_log"), vertice_color_TFs)
         #}
         
         if(graph == "TF-peak-gene"){
@@ -3537,7 +3511,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
             colors_categories.l[["PEAK"]] = c(color_gradient[1], color_gradient[nBins_real])
             colors_categories.l[["PEAK"]] = color_gradient
             symbols_categories.l[["PEAK"]] = c(21,NA,21)
-            vertice_color_peaks = append(list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log"), vertice_color_peaks)
+            vertice_color_peaks = append(list(GRN@visualization$metadata[["Peaks_accessibility"]],   "peakID",     "mean_log"), vertice_color_peaks)
             # }
         }
         
@@ -3546,7 +3520,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         colors_categories.l[["GENE"]] = c(color_gradient[1], color_gradient[nBins_real]) 
         colors_categories.l[["GENE"]] = color_gradient
         symbols_categories.l[["GENE"]] = c(21,NA,21)
-        vertice_color_genes = append(list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"), vertice_color_genes)
+        vertice_color_genes = append(list(GRN@visualization$metadata[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log"), vertice_color_genes)
         #}
         
         ## VERTICES ##
@@ -4006,33 +3980,141 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
 
 
 
+plotCorrelations <- function(GRN, TF_peak.fdr.threshold = 0.2, TF_peak.r.abs.threshold = 0.3, sortby = "TF_peak.r",
+                             topn = 100, TF.names = NULL, peak.IDs = NULL,
+                             corMethod = "pearson") {
+    
+    checkmate::assertChoice(sortby, colnames(GRN@connections$TF_peaks$`0`$main))
+    
+    con.filt = GRN@connections$TF_peaks$`0`$main %>%
+        dplyr::filter(.data$TF_peak.fdr <= TF_peak.fdr.threshold,
+                      abs(.data$TF_peak.r) >= TF_peak.r.abs.threshold)
+      
+    
+    if (!is.null(TF.names)) {
+        con.filt = dplyr::filter(con.filt, .data$Tf.name %in% TF.names)
+    }
+    
+    if (!is.null(peak.IDs)) {
+        con.filt = dplyr::filter(con.filt, .data$peak.ID %in% peak.IDs)
+    }
+    
+    
+    con.filt = con.filt %>%
+        dplyr::arrange_at(sortby) %>%
+        dplyr::slice_head(n = topn)
+    
+    
+    for (i in seq_len(topn)) {
+        
+        TF.name = con.filt$TF.name[i]
+        TF.ENSEMBL = GRN@annotation$TFs$TF.ENSEMBL[which(GRN@annotation$TFs$TF.name == TF.name)]
+        peak.peakID = con.filt$peak.ID[i]
+        corCalc = con.filt$TF_peak.r[i]
+        fdrCur = con.filt$TF_peak.fdr[i]
+        
+        cor_cur = cor(GRN@data$RNA$counts[TF.ENSEMBL, ], GRN@data$peaks$counts[peak.peakID,], method = corMethod)
+        
+        data.df = tibble(TF.exp.norm = GRN@data$RNA$counts[TF.ENSEMBL, ], peak.acc.norm = GRN@data$peaks$counts[peak.peakID,])
+        
+        # For testing only
+        stopifnot(abs(cor_cur - corCalc) < 0.01)
+        
+        colorscale = scale_fill_gradientn(
+            colors = RColorBrewer::brewer.pal(9, "YlGnBu"),
+            values = c(0, exp(seq(-5, 0, length.out = 100))))
+        
+        g1 = ggplot(data.df, aes(.data$TF.exp.norm, .data$peak.acc.norm)) + 
+            geom_smooth(method = "lm", formula = "y ~ x", col = "black") + 
+            geom_hex(bins = 50) + colorscale  +
+            xlim(-0.01,NA) + ylim(-0.01,NA) + 
+            ggtitle(paste0("n = ", nrow(data.df), " (all), Cor = ", round(corCalc,2)))
+        
+        # Remove entries with pure zeroes
+        data.filt.df = dplyr::filter(data.df, .data$TF.exp.norm > 0, .data$peak.acc.norm > 0)
+        
+        cor_cur = cor(dplyr::pull(data.filt.df, .data$TF.exp.norm), dplyr::pull(data.filt.df, .data$peak.acc.norm), method = corMethod)
 
-# **dist**
-#     ```{r}
-# # sort cols by median fraction of the variance explained (default) and plot
-# plotVarPart( sortCols(varPart) )
-# ```
-# 
-# **sex**
-#     ```{r}
-# # plot top 10
-# head(df_varPart[order( dplyr::pull(df_varPart, c("sex")), decreasing = T),],10) %>% 
-#     plotPercentBars()
-# ```
-# 
-# **cell_subset**
-#     ```{r}
-# # plot top 10
-# head(df_varPart[order( dplyr::pull(df_varPart, c("cell_subset")), decreasing = T),],10) %>% 
-#     plotPercentBars()
-# ```
-# 
-# **sample_loc**
-#     ```{r}
-# # plot top 10 for sample_loc
-# head(df_varPart[order( dplyr::pull(df_varPart, c("sample_loc")), decreasing = T),],10) %>% 
-#     plotPercentBars()
-# ```
-# 
-# 
-# }
+        g2 = ggplot(data.filt.df, aes(TF.exp.norm, peak.acc.norm)) + 
+            geom_smooth(method = "lm", formula = "y ~ x", col = "black") + 
+            geom_hex(bins = 50) + colorscale  +
+            xlim(-0.01,NA) + ylim(-0.01,NA) + 
+            ggtitle(paste0("n = ", nrow(data.filt.df), " (only >0 for both TF expr. & peak acc.), Cor = ", round(cor_cur,2)))    
+        
+        data.filt2.df = dplyr::filter(data.df, TF.exp.norm > 0 | peak.acc.norm > 0)
+        
+        cor_cur = cor(dplyr::pull(data.filt2.df, .data$TF.exp.norm), dplyr::pull(data.filt2.df, .data$peak.acc.norm), method = corMethod)
+
+        g3 = ggplot(data.filt2.df, aes(TF.exp.norm, peak.acc.norm)) + 
+            geom_smooth(method = "lm", formula = "y ~ x", col = "black") + 
+            geom_hex(bins = 50) + colorscale  +
+            xlim(-0.01,NA) + ylim(-0.01,NA) + 
+            ggtitle(paste0("n = ", nrow(data.filt2.df), " (only excluding (0,0) for both TF expr. & peak acc.), Cor = ", round(cor_cur,2)))    
+
+ 
+        mainTitle = paste0("TF: ", TF.name, "(", TF.ENSEMBL, "), peak: ", peak.peakID, " (FDR: ",  round(fdrCur, 2), ")")
+
+        plots_all =  g1 / g2 / g3 + 
+            patchwork::plot_annotation(title = mainTitle, theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+        plot(plots_all)
+        # 
+        # r1 = rnorm(1000)
+        # r2 = rnorm(1000, sd = 1)
+        # plot(r1,r2, main = paste0("Cor = ", round(cor(r1,r2, method = corMethod), 2)))
+        # 
+        # r1 = c(r1, rep(0,5000))
+        # r2 = c(r2, rep(0,5000))
+        # plot(r1,r2, main = paste0("Cor = ", round(cor(r1,r2, method = corMethod), 2)))
+    }
+    
+    con.filt = GRN@connections$TF_peaks$`0`$main
+    
+    res.df = tribble(~TF.name, ~peak.peakID, ~cor_all, ~cor_nonZeroAll, ~cor_nonZero)
+    for (i in seq_len(nrow(con.filt))) {
+        
+        if (i %% 100 == 0) futile.logger::flog.info(paste0("Row ", i, " out of ", nrow(con.filt)))
+        TF.name = con.filt$TF.name[i]
+        TF.ENSEMBL = GRN@annotation$TFs$TF.ENSEMBL[which(GRN@annotation$TFs$TF.name == TF.name)]
+        peak.peakID = con.filt$peak.ID[i]
+        corCalc = con.filt$TF_peak.r[i]
+        fdrCur = con.filt$TF_peak.fdr[i]
+        
+        cor_cur1 = cor(GRN@data$RNA$counts[TF.ENSEMBL, ], GRN@data$peaks$counts[peak.peakID,], method = corMethod)
+        
+        data.df = tibble(TF.exp.norm = GRN@data$RNA$counts[TF.ENSEMBL, ], peak.acc.norm = GRN@data$peaks$counts[peak.peakID,])
+        
+        data.filt.df = dplyr::filter(data.df, .data$TF.exp.norm > 0, .data$peak.acc.norm > 0)
+        
+        cor_cur2 = cor(dplyr::pull(data.filt.df, .data$TF.exp.norm), dplyr::pull(data.filt.df, .data$peak.acc.norm), method = corMethod)
+        
+        data.filt2.df = dplyr::filter(data.df, .data$TF.exp.norm > 0 | peak.acc.norm > 0)
+        
+        cor_cur3 = cor(dplyr::pull(data.filt2.df, .data$TF.exp.norm), dplyr::pull(data.filt2.df, .data$peak.acc.norm), method = corMethod)
+        
+        res.df = add_row(res.df, 
+                         TF.name = TF.name, peak.peakID = peak.peakID, 
+                         cor_all = cor_cur1, cor_nonZeroAll = cor_cur2, cor_nonZero = cor_cur3)
+    }
+    cor(res.df$cor_all, res.df$cor_nonZeroAll)
+    cor(res.df$cor_all, res.df$cor_nonZero)
+    
+    res.df = res.df %>%
+        dplyr::mutate(diff_all_nonZeroAll = cor_all - cor_nonZeroAll,
+                      diff_all_nonZero = cor_all - cor_nonZero)
+    
+    ggplot(res.df, aes(.data$diff_all_nonZeroAll)) + geom_histogram(binwidth = 0.05)
+    ggplot(res.df, aes(.data$diff_all_nonZero)) + geom_histogram(binwidth = 0.05)
+    
+    GRN
+  
+}
+
+.checkGraphExistance <- function (GRN) {
+  
+  if (is.null(GRN@graph$TF_peak_gene) | is.null(GRN@graph$TF_gene)) {
+    message = paste0("Could not find graph slot in the object. (Re)run the function build_eGRN_graph")
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+  }
+
+  
+}

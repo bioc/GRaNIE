@@ -1,4 +1,15 @@
+# GRaNIE 1.1.14 to 1.1.19 (2022-12-13)
 
+## Major changes
+- major object changes and optimizations, particularly related to storing the count matrices in an optimized and simpler format. In short, the count matrices are now stored either as normal or sparse matrices, depending on the amount of zeros present. In addition, only the counts after normalization are saved, the raw counts before applying normalization are not stored anymore. If no normalization is wished by the user, as before, the "normalized" counts are equal to the raw counts. `GRaNIE` is now more readily applicable for larger analyses and single-cell analysis even though we just started actively optimizing for it, so we cannot yet recommend applying our framework in a single-cell manner. Older GRN objects are automatically changed internally when executing the major functions upon the first invocation.
+- various Documentation and R help updates
+- the function `generateStatsSummary` now doesnt alter the stored filtered connections in the object anymore. This makes its usage more intuitive and it can be used anywhere in the workflow.
+- removed redundant `biomaRt` calls in the code. This saves time and makes the code less vulnerable to timeout issues caused by remote services
+- due to the changes described above, the function `plotPCA_all` now can only plot the normalized counts and not the raw counts anymore (except when no normalization is wanted)
+- the GO enrichments are now also storing, for each GO term, the ENSEMBL IDs of the genes that were found in the foreground. This facilitates further exploration of the enrichment results.
+
+## Minor changes
+- many small changes in the code
 
 # GRaNIE 1.1.12 and 1.1.13 (2022-09-13)
 

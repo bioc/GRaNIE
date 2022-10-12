@@ -511,7 +511,7 @@
     
     output.global.TFs.merged = output.global.TFs %>%
       dplyr::filter(!!as.name(colnameClassificationCur) != "not-expressed")  %>%
-      dplyr::full_join(TF.specific, by = c( "TF" = "HOCOID"))  %>%
+      dplyr::full_join(TF.specific, by = c( "TF" = "TF.HOCOID"))  %>%
       dplyr::mutate(baseMeanNorm = (.data$baseMean - min(.data$baseMean, na.rm = TRUE)) / (max(.data$baseMean, na.rm = TRUE) - min(.data$baseMean, na.rm = TRUE)) + par.l$minPointSize)   %>%
       dplyr::filter(!is.na(!!as.name(colnameClassificationCur))) 
     
@@ -640,22 +640,22 @@
     futile.logger::flog.info(paste0("Plotting AR heatmap", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
     
     
-    missingGenes = which(!HOCOMOCO_mapping.df.exp$HOCOID %in% colnames(sort.cor.m))
+    missingGenes = which(!HOCOMOCO_mapping.df.exp$TF.HOCOID %in% colnames(sort.cor.m))
     if (length(missingGenes) > 0) {
-        HOCOMOCO_mapping.df.exp = dplyr::filter(HOCOMOCO_mapping.df.exp, .data$HOCOID %in% colnames(sort.cor.m))
+        HOCOMOCO_mapping.df.exp = dplyr::filter(HOCOMOCO_mapping.df.exp, .data$TF.HOCOID %in% colnames(sort.cor.m))
     }
     
     if (!is.null(file)) {
          grDevices::pdf(file, ...)
     }
     
-    cor.r.filt.m <- sort.cor.m[,as.character(HOCOMOCO_mapping.df.exp$HOCOID)]
+    cor.r.filt.m <- sort.cor.m[,as.character(HOCOMOCO_mapping.df.exp$TF.HOCOID)]
     
-    stopifnot(identical(colnames( cor.r.filt.m), as.character(HOCOMOCO_mapping.df.exp$HOCOID)))
+    stopifnot(identical(colnames( cor.r.filt.m), as.character(HOCOMOCO_mapping.df.exp$TF.HOCOID)))
     
     BREAKS = seq(-1,1,0.05)
     diffDensityMat = matrix(NA, nrow = ncol( cor.r.filt.m), ncol = length(BREAKS) - 1)
-    rownames(diffDensityMat) = HOCOMOCO_mapping.df.exp$HOCOID
+    rownames(diffDensityMat) = HOCOMOCO_mapping.df.exp$TF.HOCOID
     
     TF_Peak_all.m <- TF.peakMatrix.df
     TF_Peak.m <- TF_Peak_all.m
@@ -675,7 +675,7 @@
     
     ## check to what extent the number of TF motifs affects the density values
     n_min = dplyr::if_else(colSums(TF_Peak.m) < nrow(TF_Peak.m),colSums(TF_Peak.m), nrow(TF_Peak.m) - colSums(TF_Peak.m))
-    names(n_min) = HOCOMOCO_mapping.df.exp$HOCOID#[match(names(n_min), as.character(tf2ensg$ENSEMBL))]
+    names(n_min) = HOCOMOCO_mapping.df.exp$TF.HOCOID#[match(names(n_min), as.character(tf2ensg$ENSEMBL))]
     n_min <- sapply(split(n_min,names(n_min)),sum)
     
     # Make sure n_min and diffDenityMat are compatible because some NA rows may have been filtered out for diffDensityMat

@@ -10,7 +10,8 @@ plotPCA_all(
   basenameOutput = NULL,
   data = c("rna", "peaks"),
   topn = c(500, 1000, 5000),
-  type = c("raw", "normalized"),
+  type = "normalized",
+  removeFiltered = TRUE,
   plotAsPDF = TRUE,
   pdf_width = 12,
   pdf_height = 12,
@@ -29,7 +30,9 @@ plotPCA_all(
 
 \item{topn}{Integer vector. Default \code{c(500,1000,5000)}. Number of top variable features to do PCA for. Can be a vector of different numbers (see default).}
 
-\item{type}{Character. One of or a combination of \code{"raw"}, \code{"normalized"}, \code{"all"}. Default \code{c("raw", "normalized")}. Should the PCA plots be done based on the raw or normalized data, respectively?}
+\item{type}{Character. Must be \code{"normalized"}. On which data type (raw or normalized) should the PCA plots be done? We removed support for \code{raw} and currently only support \code{normalized}.}
+
+\item{removeFiltered}{Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should features marked as filtered as determined by \code{filterData} be removed?}
 
 \item{plotAsPDF}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}.Should the plots be printed to a PDF file? If set to \code{TRUE}, a PDF file is generated, the name of which depends on the value of \code{basenameOutput}. If set to \code{FALSE}, all plots are printed to the currently active device. Note that most functions print more than one plot, which means you may only see the last plot depending on your active graphics device.}
 
@@ -50,5 +53,5 @@ Produce a PCA plot of the data from a \code{\linkS4class{GRN}} object
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotPCA_all(GRN, topn = 500, data = "rna", type = "raw", plotAsPDF = FALSE, pages = 1)
+GRN = plotPCA_all(GRN, topn = 500, data = "rna", type = "normalized", plotAsPDF = FALSE, pages = 1)
 }

@@ -14,19 +14,18 @@ The class \code{\linkS4class{GRN}} stores data and information related to our \c
 \itemize{
 \item \code{peaks}:
  \itemize{
- \item \code{counts_norm}:
- \item \code{counts_orig}:
- \item \code{consensusPeaks}:
+ \item \code{counts}:
+ \item \code{counts_metadata}:
  }
 \item \code{RNA}: 
  \itemize{
- \item \code{counts_norm.l}:
- \item \code{counts_orig}:
+ \item \code{counts}:
+ \item \code{counts_metadata}:
+ \item \code{counts_permuted_index}:
  }
-\item \code{metadata}: 
 \item \code{TFs}: 
  \itemize{
- \item \code{translationTable}:
+ \item \code{TF_activity}:
  \item \code{TF_peak_overlap}:
  \item \code{classification}:
  }
@@ -40,9 +39,7 @@ The class \code{\linkS4class{GRN}} stores data and information related to our \c
 
 \item{\code{stats}}{Stores statistical and summary information for a \code{GRN} network. Currently, connection details are stored here.}
 
-\item{\code{visualization}}{Stores visualization results, currently always empty. Feature in development.}
-
-\item{\code{isDev}}{Flag whether this is an object from the development version of the package}
+\item{\code{graph}}{Stores the eGRN graph related information and data structures}
 }}
 
 \section{Constructors}{
@@ -54,9 +51,9 @@ Currently, a \code{\linkS4class{GRN}} object is created by executing the functio
 
 In the following code snippets, \code{GRN} is a \code{\linkS4class{GRN}} object.
 
-# Get general annotation of a GRaNIE object
+# Get general annotation of a GRN object from the GRaNIE package
 
-\code{nPeaks(GRN))} and  \code{nGenes(GRN))}: Retrieve the number of peaks and genes, respectively, that have been added to the object (both before and after filtering)
+\code{nPeaks(GRN))}, \code{nTFs(GRN))} and \code{nGenes(GRN))}: Retrieve the number of peaks, TFs and genes, respectively, that have been added to the object (both before and after filtering)
 }
 
 \keyword{GRN}

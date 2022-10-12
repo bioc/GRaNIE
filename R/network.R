@@ -293,13 +293,13 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 
   } else if (type == "all_RNA") {
     
-      backgroundGenes = GRN@data$RNA$counts_norm.l[["0"]] %>%
+      backgroundGenes = GRN@data$RNA$counts_metadata %>%
           dplyr::pull(.data$ENSEMBL)
     
     
   } else if (type == "all_RNA_filtered") {
       
-      backgroundGenes = GRN@data$RNA$counts_norm.l[["0"]] %>%
+      backgroundGenes = GRN@data$RNA$counts_metadata %>%
           dplyr::filter(!.data$isFiltered) %>%
           dplyr::pull(.data$ENSEMBL)
       
@@ -381,13 +381,13 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   checkmate::assertChoice(pAdjustMethod, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   checkmate::assertFlag(forceRerun)
   
-  
+  futile.logger::flog.info(paste0("Calculating general enrichment. This may take a while"))
   
   
   mapping = .getGenomeObject(GRN@config$parameters$genomeAssembly, type = "packageName")
   backgroundGenes = .getBackgroundGenes(GRN, type = background, gene.types = background_geneTypes)
   
-  futile.logger::flog.info(paste0("Calculating general enrichment statistics. This may take a while"))
+ 
   
   if (is.null(GRN@stats[["Enrichment"]][["general"]])) {
     GRN@stats[["Enrichment"]][["general"]] = list()
@@ -480,7 +480,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
 }
 
-.checkEnrichmentCongruence_general_community <-function(GRN, type = "community") {
+.checkEnrichmentCongruence_general <-function(GRN, type = "community") {
   
   allOntologiesGeneral = sort(names(GRN@stats$Enrichment$general))
   
@@ -491,13 +491,20 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   }
   
   if (!identical(allOntologiesGeneral, allOntologiesGroup1)) {
-    message = paste0("General enrichment and ", type, " enrichment do not have the same ontologies precalculated (",
-                     paste0(allOntologiesGeneral, collapse = " & "), " vs. ", paste0(allOntologiesGroup1, collapse = "&"), ")")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    message = paste0("General enrichment and ", type, " enrichment do not have the same ontologies precalculated (\"",
+                     paste0(allOntologiesGeneral, collapse = " & "), "\" vs. \"", paste0(allOntologiesGroup1, collapse = "&"), "\").",
+                     "Run the function calculateGeneralEnrichment to eliminate this warning")
+    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
   }
-  allOntologiesGeneral
+  
+  res.l = list(allOntologiesGroup1, allOntologiesGeneral)
+  names(res.l) = c(type, "all")
+  
+  res.l
   
 }
+
+
 
 #' @importFrom biomaRt useEnsembl getBM
 .runEnrichment <- function(GRN, foreground, background, backgroundStr, ontology, 
@@ -584,6 +591,19 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   
   if (ontology %in% c("GO_BP","GO_MF","GO_CC")){
+      
+      # go_enrichment =  
+      #     clusterProfiler::enrichGO(
+      #         gene = foreground_entrez,
+      #         OrgDb = 'org.Hs.eg.db', 
+      #         ont = sub("GO_", "", ontology),
+      #         universe = background_entrez,
+      #         keyType = "ENTREZID",
+      #         pvalueCutoff = 1,
+      #         qvalueCutoff = 1,
+      #         minGSSize = minGSSize,
+      #         maxGSSize = maxGSSize,
+      #         pAdjustMethod = pAdjustMethod)
     
     go_enrichment = suppressMessages(new("topGOdata",
                                          ontology = gsub("GO_", "", ontology),
@@ -594,12 +614,23 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
                                          mapping = mapping, 
                                          ID = "ensembl"))
     
+    # retrieve genes2GO list from the "expanded" annotation in GOdata
+    allGO = topGO::genesInTerm(go_enrichment)
+    allGO_inForeground = lapply(allGO, function(x) paste0(x[x %in% foreground], collapse = ",")) %>%
+        as.data.frame() %>% t() 
+    
+    allGO_inForeground.df = tibble::tibble(ID = rownames(allGO_inForeground), gene.ENSEMBL_foreground = allGO_inForeground[, 1]) %>%
+        dplyr::mutate(ID = sub(".", ":", .data$ID, fixed = TRUE))
+        
+
+    
     result = suppressMessages(topGO::runTest(go_enrichment, algorithm = algorithm, statistic = statistic))
     # Dont trim GO terms here, happens later when plotting
     result.tbl = unique(topGO::GenTable(go_enrichment, pval = result, orderBy = "pval", numChar = 1000, 
                                         topNodes = length(topGO::score(result))) ) %>%
       dplyr::rename(ID = .data$GO.ID, Found = .data$Significant)  %>%      # make it more clear what Significant refers to here
-      dplyr::mutate(GeneRatio = .data$Found / nForeground)
+      dplyr::mutate(GeneRatio = .data$Found / nForeground) %>%
+      dplyr::left_join(allGO_inForeground.df, by = "ID")
     
     
     result.list[["results"]] = result.tbl
@@ -727,8 +758,10 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   if (!is.null(enrichmentObj)) {
     
     result.tbl = enrichmentObj@result %>%
-      dplyr::rename(Term = .data$Description, pval = .data$pvalue, Found = .data$Count) %>%
-      dplyr::mutate(GeneRatio = sapply(parse (text = enrichmentObj@result$GeneRatio), eval))
+      dplyr::rename(Term = .data$Description, pval = .data$pvalue, Found = .data$Count) 
+    
+      # GeneRatio and BgRatio are reported as fractions like 5/83, leave it like this for now 
+      # %>% dplyr::mutate(GeneRatio = sapply(parse (text = enrichmentObj@result$GeneRatio), eval))
     
   } else {
     
@@ -1152,6 +1185,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
   checkmate::assertSubset(background_geneTypes, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertChoice(pAdjustMethod, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   checkmate::assertFlag(forceRerun)
+  
+  futile.logger::flog.info(paste0("Calculating TF enrichment. This may take a while"))
   
   if (rankType == "custom"){
     if(is.null(TF.names)){

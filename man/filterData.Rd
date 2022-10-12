@@ -55,7 +55,7 @@ This function marks genes and/or peaks as \code{filtered} depending on the chose
 disregarded when adding connections in subsequent steps via \code{\link{addConnections_TF_peak}} and  \code{\link{addConnections_peak_gene}}. \strong{This function does NOT (re)filter existing connections when the \code{\linkS4class{GRN}} object already contains connections. Thus, upon re-execution of this function with different filtering criteria, all downstream steps have to be re-run.}
 }
 \details{
-All this function does is setting (or modifying) the filtering flag in \code{GRN@data$peaks$counts_norm} and \code{GRN@data$RNA$counts_norm.l}, respectively.
+All this function does is setting (or modifying) the filtering flag in \code{GRN@data$peaks$counts_metadata} and \code{GRN@data$RNA$counts_metadata}, respectively.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

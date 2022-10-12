@@ -336,7 +336,7 @@
     hashesStrError = paste0(paste0(rep("#", nchar(lastPartError) - 1), collapse = ""), "\n")
     messageError    = paste0(objectPart, checkResult, "\n\n", hashesStrError, lastPartError, hashesStrError)
     
-    lastPartWarning = ". \nThis warning may or may not be ignored. Carefully check its significance and whether it may affect the results."
+    lastPartWarning = ". \nThis warning may or may not be ignored. Carefully check its significance and whether it may affect the results.\n"
     #hashesStrWarning = paste0(paste0(rep("#", nchar(lastPartWarning) - 1), collapse = ""), "\n")
     messageWarning  = paste0(objectPart, checkResult, lastPartWarning) # , hashesStrWarning)
     

@@ -9,27 +9,26 @@
 #' @section Accessors:
 #' In the following code snippets, \code{GRN} is a \code{\linkS4class{GRN}} object.
 #' 
-#'# Get general annotation of a GRaNIE object
+#'# Get general annotation of a GRN object from the GRaNIE package
 #' 
-#' \code{nPeaks(GRN))} and  \code{nGenes(GRN))}: Retrieve the number of peaks and genes, respectively, that have been added to the object (both before and after filtering)
+#' \code{nPeaks(GRN))}, \code{nTFs(GRN))} and \code{nGenes(GRN))}: Retrieve the number of peaks, TFs and genes, respectively, that have been added to the object (both before and after filtering)
 #'
 #' @slot data Currently stores 4 different types of data:\cr 
 #' \itemize{
 #' \item \code{peaks}:
 #'  \itemize{
-#'  \item \code{counts_norm}:
-#'  \item \code{counts_orig}:
-#'  \item \code{consensusPeaks}:
+#'  \item \code{counts}:
+#'  \item \code{counts_metadata}:
 #'  }
 #' \item \code{RNA}: 
 #'  \itemize{
-#'  \item \code{counts_norm.l}:
-#'  \item \code{counts_orig}:
+#'  \item \code{counts}:
+#'  \item \code{counts_metadata}:
+#'  \item \code{counts_permuted_index}:
 #'  }
-#' \item \code{metadata}: 
 #' \item \code{TFs}: 
 #'  \itemize{
-#'  \item \code{translationTable}:
+#'  \item \code{TF_activity}:
 #'  \item \code{TF_peak_overlap}:
 #'  \item \code{classification}:
 #'  }
@@ -43,9 +42,8 @@
 #' 
 #' @slot stats Stores statistical and summary information for a \code{GRN} network. Currently, connection details are stored here.
 #' 
-#' @slot visualization Stores visualization results, currently always empty. Feature in development.
-#' @slot isDev Flag whether this is an object from the development version of the package
-
+#' @slot graph Stores the eGRN graph related information and data structures
+#' 
 #' @keywords GRN-class, GRN
 #' @name GRN-class
 #' @aliases GRN-class
@@ -56,9 +54,8 @@ setClass("GRN", representation = representation(
   connections   = "list",
   data          = "list",
   stats         = "list",
-  visualization = "list",
   graph         = "list",
-  isDev         = "logical"
+  visualization = "list"
   )
 )
 
@@ -116,7 +113,7 @@ setMethod("show",
             #nGenes       = nGenes(GRN)
             
             cat("Data summary:\n")
-            if (!is.null(GRN@data$peaks$consensusPeaks)) {
+            if (!is.null(GRN@data$peaks$counts_metadata)) {
               nPeaks_filt  = nPeaks(GRN, filter = TRUE)
               nPeaks_all   = nPeaks(GRN, filter = FALSE)
               cat(" # peaks (filtered, all): ", nPeaks_filt, ", ",  nPeaks_all, "\n", sep = "")
@@ -124,25 +121,20 @@ setMethod("show",
               cat (" # peaks: No peak data found.\n")
             }
             
-            if (!is.null(GRN@data$RNA$counts_orig)) {
+            if (!is.null(GRN@data$RNA$counts_metadata)) {
                
               nGenes_filt = nGenes(GRN, filter = TRUE)
               nGenes_all  = nGenes(GRN, filter = FALSE)
-              
-              if (checkmate::testClass(GRN@data$RNA$counts_orig, "DESeqDataSet")) {
-                
-              } else {
-                
-              }
-             
+
               cat(" # genes (filtered, all): ", nGenes_filt, ", ",  nGenes_all, "\n", sep = "")
+              
             } else {
               cat (" # genes: No RNA-seq data found.\n")
             }
             
-            if (!is.null(GRN@data$RNA$counts_orig) & !is.null(GRN@data$peaks$consensusPeaks)) {
+            if (!is.null(GRN@data$RNA$counts_metadata) & !is.null(GRN@data$peaks$counts_metadata)) {
                 
-                cat(" # shared samples: ", nrow(GRN@data$metadata), "\n", sep = "")
+                cat(" # shared samples: ", length(GRN@config$sharedSamples), "\n", sep = "")
             } 
             
             if (!is.null(GRN@annotation$TFs)) {
@@ -223,14 +215,14 @@ setMethod("show",
                 }
                 
                 cat(" Enrichment (TF-gene):\n")
-                if (!is.null(GRN@stats$Enrichment$byTF)) {
+                if (!is.null(GRN@stats$Enrichment$general)) {
                     ontologies = names(GRN@stats$Enrichment$general)
                     cat("  Overall network: ", paste0(ontologies, collapse = " & "), "\n",sep = "")
                 } else {
                     cat("  Overall network: no enrichment results found\n")
                 }
                 
-                if (!is.null(GRN@stats$Enrichment$byTF)) {
+                if (!is.null(GRN@stats$Enrichment$byCommunity)) {
                     ontologies = names(GRN@stats$Enrichment$byCommunity[[1]])
                     cat("  Communities: ", paste0(ontologies, collapse = " & "), "\n",sep = "")
                 } else {
@@ -274,14 +266,14 @@ nPeaks <- function(GRN, filter = TRUE) {
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertFlag(filter)
   
-  if (is.null(GRN@data$peaks$consensusPeaks)) {
+  if (is.null(GRN@data$peaks$counts_metadata)) {
     return(NA)
   }
   
   if (filter) {
-    nPeaks = GRN@data$peaks$consensusPeaks %>% dplyr::filter(!.data$isFiltered) %>% nrow()
+    nPeaks = GRN@data$peaks$counts_metadata %>% dplyr::filter(!.data$isFiltered) %>% nrow()
   } else {
-    nPeaks = GRN@data$peaks$consensusPeaks %>% nrow()
+    nPeaks = GRN@data$peaks$counts_metadata %>% nrow()
   }
   
   nPeaks
@@ -310,14 +302,14 @@ nGenes <- function(GRN, filter = TRUE) {
   checkmate::assertClass(GRN, "GRN")
   checkmate::assertFlag(filter)
   
-  if (is.null(GRN@data$RNA$counts_norm.l)) {
+  if (is.null(GRN@data$RNA$counts_metadata)) {
     return(NA)
   }
   
   if (filter) {
-    nGenes = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::filter(!.data$isFiltered) %>% nrow()
+    nGenes = GRN@data$RNA$counts_metadata %>% dplyr::filter(!.data$isFiltered) %>% nrow()
   } else {
-    nGenes = GRN@data$RNA$counts_norm.l[["0"]] %>% nrow()
+    nGenes = GRN@data$RNA$counts_metadata %>% nrow()
   }
   
   nGenes
@@ -344,10 +336,10 @@ nTFs <- function(GRN) {
     
     checkmate::assertClass(GRN, "GRN")
     
-    if (is.null(GRN@data$TFs$translationTable)) {
+    if (is.null(GRN@annotation$TFs)) {
         return(NA)
     }
     
-    nrow(GRN@data$TFs$translationTable)
+    nrow(GRN@annotation$TFs)
     
 }

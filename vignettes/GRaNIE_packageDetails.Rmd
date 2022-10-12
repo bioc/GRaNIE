@@ -45,11 +45,31 @@ For the latest version of the paper, see the [References](#refs).
 ## *GRaNIE* package and required dependency packages
 `GRaNIE` is available on *Bioconductor*. [The package and installation instructions can be found here](https://bioconductor.org/packages/GRaNIE) and are very simple.
 
+The basic installation installs all required packages but not necessarily those that are listed under `Suggests` unless you installed the package with `BiocManager::install("GRaNIE", dependencies = TRUE)`.
+
+**Note that from the additional packages, only some of the genome annotation packages are actually also required, which of them, however, depends on your genome assembly version (see below).**
+
 ## Additional packages
 
-The basic installation installs all required packages but not necessarily those that are listed under `Suggests` unless you installed the package with `BiocManager::install("GRaNIE", dependencies = TRUE)`. *GRaNIE* has a number of packages that enhance the functionality for particular cases, may be required depending on certain parameters, only when using a particular functionality or that generally speed-up the computation. In detail, the following packages are currently optional and may be needed context-specifically:
+Overall, we tried to minimize the installation burden and only require packages if they are absolutely necessary for the main workflow. If you want to pre-install also all optional packages, please consider the following options:
 
-- **Genome assembly and annotation packages**
+  1. Use `BiocManager::install("GRaNIE", dependencies = TRUE)` which however installs all annotation packages for all supported genomes, which may take a longer time due to the overall download size of multiple Gb.
+  2. Install only the required annotation packages, along with all other optional packages. You may use the following for it: 
+     - Genome annotation packages (one of the four is required to run *GRaNIE*, which of them depends on your genome assembly version):
+     
+        - hg38: `BiocManager::install(c("org.Hs.eg.db", "BSgenome.Hsapiens.UCSC.hg38", "TxDb.Hsapiens.UCSC.hg38.knownGene"))`
+        - hg19: `BiocManager::install(c("org.Hs.eg.db", "BSgenome.Hsapiens.UCSC.hg19", "TxDb.Hsapiens.UCSC.hg19.knownGene"))`
+        - mm10: `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm10", "TxDb.Mmusculus.UCSC.mm10.knownGene"))`
+        - mm9   `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm9", "TxDb.Mmusculus.UCSC.mm9.knownGene"))`
+        
+     - For all other optional packages: 
+     `BiocManager::install(c("IHW", "robust", "csaw", "variancePartition", "topGO", "ReactomePA", "DOSE", "clusterProfiler", "BiocFileCache", "BiocParallel"))`
+
+## Detailed information about the scope of the optional packages
+
+*GRaNIE* has a number of packages that enhance the functionality for particular cases, may be required depending on certain parameters, only when using a particular functionality or that generally speed-up the computation. In detail, the following packages are currently optional and may be needed context-specifically:
+
+- **Genome assembly and annotation packages** (one of the four is required to run *GRaNIE*, which of them depends on your genome assembly version)
     - `org.Hs.eg.db`: Needed only when genome assembly version is `hg19` or `hg38` 
     - `org.Mm.eg.db`: Needed only when genome assembly version is `mm9` or `mm10`
     - `BSgenome.Hsapiens.UCSC.hg19`,  `TxDb.Hsapiens.UCSC.hg19.knownGene`: Needed only when genome assembly version is `hg19`  
