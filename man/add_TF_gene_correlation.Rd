@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{add_TF_gene_correlation}
 \alias{add_TF_gene_correlation}
-\title{Add TF-gene correlations to a \code{\linkS4class{GRN}} object. The information is currently stored in \code{GRN@connections$TF_genes.filtered}. Note that raw p-values are not adjusted.}
+\title{Add TF-gene correlations to a \code{\linkS4class{GRN}} object.}
 \usage{
 add_TF_gene_correlation(
   GRN,
@@ -30,7 +30,7 @@ A value >1 requires the \code{BiocParallel} package (as it is listed under \code
 An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 }
 \description{
-Add TF-gene correlations to a \code{\linkS4class{GRN}} object. The information is currently stored in \code{GRN@connections$TF_genes.filtered}. Note that raw p-values are not adjusted.
+The information is currently stored in \code{GRN@connections$TF_genes.filtered}. Note that raw p-values are not adjusted.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

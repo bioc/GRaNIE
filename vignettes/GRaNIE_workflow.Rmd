@@ -490,7 +490,7 @@ As you can see, some details about the TF-peak-gene and TF-gene are shown as out
 The `GRaNIE` package also offers a function to visualize a filtered *eGRN* network! It is very easy to invoke, but provides many options to customize the output and the way the graph is drawn. We recommend to explore the options in the R help (`?getGRNConnections`), and here just run the default visualization.
 
 
-```{r visualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, fig.cap="<i>eGRN example visualization</i>", fig.height = 10, class.output="scroll-200"}
+```{r visualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, fig.cap="<i>eGRN example visualization</i>", fig.height = 9, class.output="scroll-200"}
 GRN = visualizeGRN(GRN, plotAsPDF = FALSE)
 
 ```

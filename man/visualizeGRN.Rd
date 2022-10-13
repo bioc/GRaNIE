@@ -12,7 +12,7 @@ visualizeGRN(
   pdf_width = 12,
   pdf_height = 12,
   title = NULL,
-  maxRowsToPlot = 500,
+  maxEdgesToPlot = 500,
   nCommunitiesMax = 8,
   graph = "TF-gene",
   colorby = "type",
@@ -40,7 +40,7 @@ visualizeGRN(
 
 \item{title}{\code{NULL} or Character. Default \code{NULL}. Title to be assigned to the plot.}
 
-\item{maxRowsToPlot}{Integer > 0. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.}
+\item{maxEdgesToPlot}{Integer > 0. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.}
 
 \item{nCommunitiesMax}{Integer > 0. Default 8. Maximum number of communities that get a distinct coloring. All additional communities will be colored with the same (gray) color.}
 
@@ -70,7 +70,7 @@ This function can visualize a filtered eGRN in a very flexible manner and requir
 }
 \examples{
 GRN = loadExampleObject()
-GRN = visualizeGRN(GRN, maxRowsToPlot = 700, graph = "TF-gene", colorby = "type")
+GRN = visualizeGRN(GRN, maxEdgesToPlot = 700, graph = "TF-gene", colorby = "type")
 }
 \seealso{
 \code{\link{build_eGRN_graph}}

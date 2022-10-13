@@ -3000,7 +3000,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @param filterPeaks Character vector. Default \code{NULL}. Vector of peak IDs (as named in the GRN object) to retain. All peaks not listed will be filtered out.
 #' @param TF_peak_FDR_selectViaCorBins \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Use a modified procedure for selecting TF-peak links that is based on the user-specified FDR but that retains also links that may have a higher FDR but a more extreme correlation.
 #' @param silent \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.
-#' @param resetGraphAndStoreInternally \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. If set to \code{TRUE}, the stored eGRN graph slot graph) is reset due to the potentially changed connections that
+#' @param resetGraphAndStoreInternally \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. If set to \code{TRUE}, the stored eGRN graph (slot \code{graph}) is reset due to the potentially changed connections that
 #' would otherwise cause conflicts in the information stored in the object. Also, a GRN object is returned. If set to \code{FALSE}, only the new filtered connections are returned and the object is not altered.
 #' @param filterLoops  \code{TRUE} or \code{FALSE}. Default \code{TRUE}. If a TF regulates itself (i.e., the TF and the gene are the same entity), should such loops be filtered from the GRN?
 #' @template outputFolder
@@ -3619,7 +3619,9 @@ filterGRNAndConnectGenes <- function(GRN,
   
 }
 
-#' Add TF-gene correlations to a \code{\linkS4class{GRN}} object. The information is currently stored in \code{GRN@connections$TF_genes.filtered}. Note that raw p-values are not adjusted.
+#' Add TF-gene correlations to a \code{\linkS4class{GRN}} object. 
+#' 
+#' The information is currently stored in \code{GRN@connections$TF_genes.filtered}. Note that raw p-values are not adjusted.
 #' 
 #' @export
 #' @template GRN

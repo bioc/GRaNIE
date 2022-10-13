@@ -31,7 +31,8 @@ and \emph{Reactome Pathways}, respectively. \code{GO} ontologies require the \co
 \code{"KEGG"} the \code{clusterProfiler}, \code{"DO"} the \code{DOSE}, and \code{"Reactome"} the \code{ReactomePA} packages, respectively.
 As they are listed under \code{Suggests}, they may not yet be installed, and the function will throw an error if they are missing.}
 
-\item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library.}
+\item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library. 
+For general information about the algorithms, see \url{https://academic.oup.com/bioinformatics/article/22/13/1600/193669}. \code{weight01} is a mixture between the \code{elim} and the \code{weight} algorithms.}
 
 \item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher.}
 

@@ -3322,7 +3322,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' @template pdf_width
 #' @template pdf_height
 #' @param title \code{NULL} or Character. Default \code{NULL}. Title to be assigned to the plot.
-#' @param maxRowsToPlot Integer > 0. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.
+#' @param maxEdgesToPlot Integer > 0. Default 500. Refers to the maximum number of connections to be plotted. If the network size is above this limit, nothing will be drawn. In such a case, it may help to either increase the value of this parameter or set the filtering criteria for the network to be more stringent, so that the network becomes smaller.
 #' @param nCommunitiesMax Integer > 0. Default 8. Maximum number of communities that get a distinct coloring. All additional communities will be colored with the same (gray) color.
 #' @param graph Character. Default \code{TF-gene}. One of: \code{TF-gene}, \code{TF-peak-gene}. Whether to plot a graph with links from TFs to peaks to gene, or the graph with the inferred TF to gene connections.
 #' @param colorby Character. Default \code{type}. Either \code{type} or \code{community}. Color the vertices by either type (TF/peak/gene) or community. See \code{\link{calculateCommunitiesStats}}
@@ -3336,11 +3336,11 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 #' @seealso \code{\link{build_eGRN_graph}}
 #' @examples
 #' GRN = loadExampleObject()
-#' GRN = visualizeGRN(GRN, maxRowsToPlot = 700, graph = "TF-gene", colorby = "type")
+#' GRN = visualizeGRN(GRN, maxEdgesToPlot = 700, graph = "TF-gene", colorby = "type")
 #' @return The same \code{\linkS4class{GRN}} object, without modifications.
 #' @export
 visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12,
-                         title = NULL, maxRowsToPlot = 500, nCommunitiesMax = 8, graph = "TF-gene" , colorby = "type", layout = "fr",
+                         title = NULL, maxEdgesToPlot = 500, nCommunitiesMax = 8, graph = "TF-gene" , colorby = "type", layout = "fr",
                          vertice_color_TFs = list(h = 10, c = 85, l = c(25, 95)), vertice_color_peaks = list(h = 135, c = 45, l = c(35, 95)), 
                          vertice_color_genes = list(h = 260, c = 80, l = c(30, 90)),
                          vertexLabel_cex = 0.4, vertexLabel_dist = 0, forceRerun = FALSE
@@ -3356,7 +3356,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     checkmate::assertFlag(plotAsPDF)
     checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
     checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-    checkmate::assertIntegerish(maxRowsToPlot, lower = 1)
+    checkmate::assertIntegerish(maxEdgesToPlot, lower = 1)
     checkmate::assertIntegerish(nCommunitiesMax,lower = 1)
     checkmate::assertChoice(graph, c("TF-gene", "TF-peak-gene"))
     checkmate::assertChoice(colorby, c("type", "community"))
@@ -3406,6 +3406,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         
         grn.merged = GRN@graph$TF_peak_gene$table %>%
             dplyr::rename(TF.name = .data$V1_name) 
+        
         grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
         
         edges_final = grn.merged %>%
@@ -3416,22 +3417,22 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     }
     
     edges_final = edges_final %>%
-        dplyr::mutate(weight_transformed = dplyr::case_when(weight < 0.2 ~ 1,
-                                                            weight < 0.4 ~ 1.5,
-                                                            weight < 0.6 ~ 2,
-                                                            weight < 0.8 ~ 2.5,
-                                                            TRUE ~ 3),
+        dplyr::mutate(weight_transformed = dplyr::case_when(abs(weight) < 0.2 ~ 0.2,
+                                                            abs(weight) < 0.4 ~ 0.3,
+                                                            abs(weight) < 0.6 ~ 0.4,
+                                                            abs(weight) < 0.8 ~ 0.5,
+                                                            TRUE ~ 0.6),
                       R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
-                      color       = dplyr::case_when(R < 0 ~ "blue", TRUE ~ "grey")) %>%
+                      color       = dplyr::case_when(R < 0 ~ "gray90", TRUE ~ "gray50")) %>%
         dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
     
     
     
     nRows = nrow(edges_final)
     
-    futile.logger::flog.info(paste0("Number of rows: ",nRows))
-    if (maxRowsToPlot > 500 & nRows > 500) {
-        futile.logger::flog.info(paste0("Plotting many connections takes a lot of time and memory"))
+    futile.logger::flog.info(paste0("Number of edges for the ", graph, " eGRN graph: ",nRows))
+    if (maxEdgesToPlot > 500 & nRows > 500) {
+        futile.logger::flog.info(paste0("Plotting many connections may need a lot of time and memory"))
     }
     
     
@@ -3443,10 +3444,10 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         futile.logger::flog.info(paste0("Plotting GRN network"))
     }
     
-    if (nRows > maxRowsToPlot) { 
-        futile.logger::flog.info(paste0("Number of rows to plot (", nRows, ") exceeds limit of the maxRowsToPlot parameter. Plotting only empty page"))
+    if (nRows > maxEdgesToPlot) { 
+        futile.logger::flog.info(paste0("Number of edges to plot (", nRows, ") exceeds limit of the maxEdgesToPlot parameter. Plotting only empty page"))
         plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
-        message = paste0(title, "\n\nPlotting omitted.\n\nThe number of rows in the GRN (", nRows, ") exceeds the maximum of ", maxRowsToPlot, ".\nSee the maxRowsToPlot parameter to increase the limit")
+        message = paste0(title, "\n\nPlotting omitted.\n\nThe number of rows in the GRN (", nRows, ") exceeds the maximum of ", maxEdgesToPlot, ".\nSee the maxEdgesToPlot parameter to increase the limit")
         text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
         
         if (plotAsPDF) {
@@ -3525,8 +3526,14 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         
         ## VERTICES ##
         
-        shape_vertex = c("square","circle", "circle")
-        names(shape_vertex) = names(colors_categories.l)
+        if (graph == "TF-peak-gene"){
+            shape_vertex = c("square","circle", "circle")
+            names(shape_vertex) = names(colors_categories.l)
+        } else {
+            shape_vertex = c("square","circle")
+            names(shape_vertex) = names(colors_categories.l)
+        }
+        
         
         
         vertices = tibble::tribble(~id,
@@ -3778,7 +3785,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         # TODO: E(net)$lty = edges_final$linetype
         # TODO: E(net)$width <- 1+E(net)$weight/12
         #igraph::E(net)$width <- 1+igraph::E(net)$weight/12
-        igraph::E(net)$width <- igraph::E(net)$weight
+        igraph::E(net)$width <- igraph::E(net)$weight_transformed
         #igraph::E(net)$weight <- edges_final$weight_transformed # too block-y for large networks. stick to givren weight.
         
         
@@ -3882,7 +3889,8 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
             vertex.size= igraph::V(net)$vertex.size,
             vertex.color=igraph::V(net)$vertex.color,
             edge.color = igraph::E(net)$color,
-            edge.width = igraph::E(net)$weight,
+            edge.width = igraph::E(net)$weight_transformed,
+            #edge.width = 0.5,
             vertex.label=igraph::V(net)$label,
             vertex.label.font=1, 
             vertex.label.cex = vertexLabel_cex, 

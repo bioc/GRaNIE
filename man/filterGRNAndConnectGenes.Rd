@@ -78,7 +78,7 @@ keeping backwards compatibility with \code{\linkS4class{GRN}} objects.}
 
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 
-\item{resetGraphAndStoreInternally}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. If set to \code{TRUE}, the stored eGRN graph slot graph) is reset due to the potentially changed connections that
+\item{resetGraphAndStoreInternally}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. If set to \code{TRUE}, the stored eGRN graph (slot \code{graph}) is reset due to the potentially changed connections that
 would otherwise cause conflicts in the information stored in the object. Also, a GRN object is returned. If set to \code{FALSE}, only the new filtered connections are returned and the object is not altered.}
 
 \item{silent}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.}
