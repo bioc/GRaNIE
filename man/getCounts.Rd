@@ -25,8 +25,6 @@ getCounts(
 \item{includeIDColumn}{Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Only relevant if \code{asMatrix = FALSE}. If set to \code{TRUE}, an explicit ID column is returned (no row names). If set to \code{FALSE}, the IDs are in the row names instead.}
 
 \item{includeFiltered}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, genes or peaks marked as filtered (after running the function \code{filterData}) will not be returned. If set to \code{TRUE}, all elements are returned regardless of the currently active filter status.}
-
-\item{norm}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should original (often raw, but this may not necessarily be the case) or normalized counts be returned?}
 }
 \value{
 Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.

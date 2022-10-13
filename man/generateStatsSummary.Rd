@@ -44,7 +44,8 @@ keeping backwards compatibility with \code{\linkS4class{GRN}} objects.}
 An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 }
 \description{
-This functions calls \code{\link{filterGRNAndConnectGenes}} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. All arguments are identical to the ones in \code{\link{filterGRNAndConnectGenes}}, see the help for this function for details.
+This functions calls \code{\link{filterGRNAndConnectGenes}} repeatedly and stores the total number of connections and other statistics each time to summarize them afterwards. 
+All arguments are identical to the ones in \code{\link{filterGRNAndConnectGenes}}, see the help for this function for details.
 The function \code{\link{plot_stats_connectionSummary}} can be used afterwards for plotting.
 }
 \examples{
@@ -55,4 +56,6 @@ GRN = generateStatsSummary(GRN, TF_peak.fdr = c(0.01, 0.1), peak_gene.fdr = c(0.
 }
 \seealso{
 \code{\link{plot_stats_connectionSummary}}
+
+\code{\link{filterGRNAndConnectGenes}}
 }

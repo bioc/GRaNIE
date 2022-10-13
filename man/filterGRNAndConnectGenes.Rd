@@ -25,6 +25,7 @@ filterGRNAndConnectGenes(
   TF_peak_FDR_selectViaCorBins = FALSE,
   filterLoops = TRUE,
   outputFolder = NULL,
+  resetGraphAndStoreInternally = TRUE,
   silent = FALSE
 )
 }
@@ -77,6 +78,9 @@ keeping backwards compatibility with \code{\linkS4class{GRN}} objects.}
 
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 
+\item{resetGraphAndStoreInternally}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. If set to \code{TRUE}, the stored eGRN graph slot graph) is reset due to the potentially changed connections that
+would otherwise cause conflicts in the information stored in the object. Also, a GRN object is returned. If set to \code{FALSE}, only the new filtered connections are returned and the object is not altered.}
+
 \item{silent}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.}
 }
 \value{
@@ -88,8 +92,9 @@ This is one of the main integrative functions of the \code{GRaNIE} package. It h
 First, filtering both TF-peak and peak-gene connections according to different criteria such as FDR and other properties 
 Second, joining the three major elements that an eGRN consist of (TFs, peaks, genes) into one data frame, with one row per unique TF-peak-gene connection.
 \strong{After successful execution, the connections (along with additional feature metadata) can be retrieved with the function \code{\link{getGRNConnections}}.}
-\strong{Note that the eGRN graph is reset upon successful execution of this function, and re-running the function \code{\link{build_eGRN_graph}} 
-is necessary when any of the network functions of the package shall be executed.}
+\strong{Note that a previously stored eGRN graph is reset upon successful execution of this function along with printing a descriptive warning,
+ and re-running the function \code{\link{build_eGRN_graph}} is necessary when any of the network functions of the package shall be executed. 
+If the filtered connections changed, all network related enrichment functions also have to be rerun.}
 Internally, before joining them, both TF-peak links and peak-gene connections are filtered separately for reasons of memory and computational efficacy:
 First filtering out unwanted links dramatically reduces the memory needed for the full eGRN. Peak-gene p-value adjustment is only done after all filtering steps on the remaining set of
 connections to lower the statistical burden of multiple-testing adjustment; therefore, this may lead to initially counter-intuitive effects such as a particular connections not being included anymore as compared to a 
