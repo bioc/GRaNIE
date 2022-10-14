@@ -180,8 +180,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 
   checkmate::assertDataFrame(counts_peaks, min.rows = 1, min.cols = 2)
   checkmate::assertDataFrame(counts_rna, min.rows = 1, min.cols = 2)
-  checkmate::assertCharacter(idColumn_peaks, min.chars = 1, len = 1)
-  checkmate::assertCharacter(idColumn_RNA, min.chars = 1, len = 1)
+  checkmate::assertChoice(idColumn_peaks, colnames(counts_peaks))
+  checkmate::assertChoice(idColumn_RNA, colnames(counts_rna))
   checkmate::assertChoice(normalization_peaks, c("none", "DESeq_sizeFactor", "quantile"))
   checkmate::assertChoice(normalization_rna, c("none", "DESeq_sizeFactor", "quantile"))  
   checkmate::assertFlag(allowOverlappingPeaks)
