@@ -315,14 +315,16 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     GRN@data$peaks$counts = .storeAsMatrixOrSparseMatrix(GRN, df = data.l[["peaks"]], ID_column = "peakID", slotName = "GRN@data$peaks$counts")
 
     # includeFiltered = TRUE here as it doesnt make a difference and because getCounts requires counts_metadata$isFiltered to be set already
-    GRN@data$peaks$counts_metadata = .createConsensusPeaksDF(getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = FALSE, includeFiltered = TRUE)) 
+    GRN@data$peaks$counts_metadata = .createConsensusPeaksDF(rownames(GRN@data$peaks$counts)) 
     stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
     
     GRN@data$RNA$counts   = .storeAsMatrixOrSparseMatrix(GRN, df =  data.l[["RNA"]], ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
       
     GRN@data$RNA$counts_metadata = tibble::tibble(ID = data.l[["RNA"]]$ENSEMBL, isFiltered = FALSE)
     
-    GRN@data$RNA$counts_permuted_index = .shuffleColumns(countsRNA.norm.df %>% dplyr::select(-.data$ENSEMBL), .getMaxPermutation(GRN), returnUnshuffled = FALSE, returnAsList = FALSE)
+    GRN@data$RNA$counts_permuted_index = sample.int(ncol(GRN@data$RNA$counts), ncol(GRN@data$RNA$counts))
+    
+    
     
     futile.logger::flog.info(paste0( "Final dimensions of data:"))
     futile.logger::flog.info(paste0( " RNA  : ", nrow(countsRNA.norm.df)  , " x ", ncol(countsRNA.norm.df)   - 2, " (rows x columns)"))
@@ -402,11 +404,10 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     
 }
 
-.createConsensusPeaksDF <- function(countsPeaks, idColumn = "peakID") {
+.createConsensusPeaksDF <- function(peakIDs) {
   
-  checkmate::assertChoice(idColumn, colnames(countsPeaks))
-  
-  ids.split = strsplit(countsPeaks %>% dplyr::pull(!!(idColumn)), split = "[:-]+")
+
+  ids.split = strsplit(peakIDs, split = "[:-]+")
   ids.split.length = sapply(ids.split, length)
   if (!all(ids.split.length == 3)) {
     message = paste0(" At least one of the IDs in the peaks data has an unsupported format. Make sure all peakIDs are in the format \"chr:start-end\"")
@@ -4182,8 +4183,8 @@ generateStatsSummary <- function(GRN,
 }
 
 
+####### Retrieve GRN objects or parts of it #########
 
-####### Misc functions #########
 
 #' Load example GRN dataset
 #' 
@@ -4199,58 +4200,58 @@ generateStatsSummary <- function(GRN,
 #' GRN = loadExampleObject()
 #' @return An small example \code{\linkS4class{GRN}} object
 loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl.de/download/zaugg/GRaNIE/GRN.rds") {
-  
-  checkmate::assertFlag(forceDownload)
-  options(timeout=200)
     
-  if (!is.installed("BiocFileCache")) {
-      
-      message = paste0("The package BiocFileCache is not installed, but recommended if you want to speed-up the retrieval of the GRN example object ",
-      "via this function when using it multiple times. If not installed, the example object has to be downloaded anew every time you use this function.")
-      .checkPackageInstallation("BiocFileCache", message, isWarning = TRUE)
-      
-      GRN = readRDS(url(fileURL))
-
-  } else {
-      
-      
-      # Taken and modified from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
-      
-      bfc <- .get_cache()
-      
-      rid <- BiocFileCache::bfcquery(bfc, "GRaNIE_object_example")$rid
-      if (!length(rid)) {
-          rid <- names(BiocFileCache::bfcadd(bfc, "GRaNIE_object_example", fileURL))
-      }
-      if (!isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
-          messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
-          message(messageStr)
-          filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
-      }
-      
-      
-      filePath = BiocFileCache::bfcrpath(bfc, rids = rid)
-      
-      # Now we can read in the locally stored file
-      GRN = readRDS(filePath)
-  }
-
-  
-  # Change the default path to the current working directory
-  GRN@config$directories$outputRoot = "."
-  GRN@config$directories$output_plots = "."
-  GRN@config$directories$motifFolder = "."
-  GRN@config$files$output_log = "GRN.log"
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  # TODO remove once done already in the object
-  GRN = add_TF_gene_correlation(GRN)
-  
-  # GRN = add_featureVariation(GRN, formula = "auto", metadata = "mt_frac")
-  
-  GRN
-  
+    checkmate::assertFlag(forceDownload)
+    options(timeout=200)
+    
+    if (!is.installed("BiocFileCache")) {
+        
+        message = paste0("The package BiocFileCache is not installed, but recommended if you want to speed-up the retrieval of the GRN example object ",
+                         "via this function when using it multiple times. If not installed, the example object has to be downloaded anew every time you use this function.")
+        .checkPackageInstallation("BiocFileCache", message, isWarning = TRUE)
+        
+        GRN = readRDS(url(fileURL))
+        
+    } else {
+        
+        
+        # Taken and modified from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
+        
+        bfc <- .get_cache()
+        
+        rid <- BiocFileCache::bfcquery(bfc, "GRaNIE_object_example")$rid
+        if (!length(rid)) {
+            rid <- names(BiocFileCache::bfcadd(bfc, "GRaNIE_object_example", fileURL))
+        }
+        if (!isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
+            messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
+            message(messageStr)
+            filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
+        }
+        
+        
+        filePath = BiocFileCache::bfcrpath(bfc, rids = rid)
+        
+        # Now we can read in the locally stored file
+        GRN = readRDS(filePath)
+    }
+    
+    
+    # Change the default path to the current working directory
+    GRN@config$directories$outputRoot = "."
+    GRN@config$directories$output_plots = "."
+    GRN@config$directories$motifFolder = "."
+    GRN@config$files$output_log = "GRN.log"
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    # TODO remove once done already in the object
+    GRN = add_TF_gene_correlation(GRN)
+    
+    # GRN = add_featureVariation(GRN, formula = "auto", metadata = "mt_frac")
+    
+    GRN
+    
 }
 
 
@@ -4273,90 +4274,90 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl
 #' counts.df = getCounts(GRN, type = "peaks", permuted = FALSE)
 #' @return Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDColumn = TRUE, includeFiltered = FALSE) {
-  
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)     
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assertChoice(type, c("peaks", "rna"))
-  checkmate::assertFlag(permuted)
-  
-  permIndex = dplyr::if_else(permuted, "1", "0")
-  
-  if (type == "peaks") {
+    
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)     
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertChoice(type, c("peaks", "rna"))
+    checkmate::assertFlag(permuted)
+    
+    permIndex = dplyr::if_else(permuted, "1", "0")
+    
+    if (type == "peaks") {
+        
+        if (permuted) {
+            message = "Could not find permuted peak counts in GRN object. Peaks are not stored as permuted, set permuted = FALSE for type = \"peaks\""
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+        classPeaks = class(GRN@data$peaks$counts)
+        if ("matrix" %in% classPeaks) {
+            result = GRN@data$peaks$counts
+        } else if ("dgCMatrix" %in% classPeaks) {
+            result = .asMatrixFromSparse(GRN@data$peaks$counts, convertZero_to_NA = FALSE)
+        } else {
+            message = paste0("Unsupported class for GRN@data$peaks$counts. Contact the authors.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+        
+    } else if (type == "rna") {
+        
+        classRNA = class(GRN@data$RNA$counts)
+        if ("matrix" %in% classRNA) {
+            result = GRN@data$RNA$counts
+        } else if ("dgCMatrix" %in% classRNA) {
+            result = .asMatrixFromSparse(GRN@data$RNA$counts, convertZero_to_NA = FALSE)
+        } else {
+            message = paste0("Unsupported class for GRN@data$RNA$counts. Contact the authors.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+    }
+    
     
     if (permuted) {
-      message = "Could not find permuted peak counts in GRN object. Peaks are not stored as permuted, set permuted = FALSE for type = \"peaks\""
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    classPeaks = class(GRN@data$peaks$counts)
-    if ("matrix" %in% classPeaks) {
-      result = GRN@data$peaks$counts
-    } else if ("dgCMatrix" %in% classPeaks) {
-      result = .asMatrixFromSparse(GRN@data$peaks$counts, convertZero_to_NA = FALSE)
-    } else {
-      message = paste0("Unsupported class for GRN@data$peaks$counts. Contact the authors.")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    
-  } else if (type == "rna") {
-    
-    classRNA = class(GRN@data$RNA$counts)
-    if ("matrix" %in% classRNA) {
-      result = GRN@data$RNA$counts
-    } else if ("dgCMatrix" %in% classRNA) {
-      result = .asMatrixFromSparse(GRN@data$RNA$counts, convertZero_to_NA = FALSE)
-    } else {
-      message = paste0("Unsupported class for GRN@data$RNA$counts. Contact the authors.")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-  }
-  
-  
-  if (permuted) {
-    
-    if (type == "rna") {
-      
-      # Columns are shuffled so that non-matching samples are compared throughout the pipeline for all correlation-based analyses
-      colnames(result) = colnames(result)[GRN@data$RNA$counts_permuted_index]
-    }
-  } 
-  
-  if (!includeFiltered) {
-    
-    if (type == "rna") {
-      nonFiltered = which(! GRN@data$RNA$counts_metadata$isFiltered)
-    } else {
-      nonFiltered = which(! GRN@data$peaks$counts_metadata$isFiltered)
-    }
-    
-    result = result[nonFiltered,]
-  }
-
-  
-  
-  if (!asMatrix) {
- 
-    result.df =  result %>%
-      as.data.frame()
-    
-    if (includeIDColumn)  {
-      
-      ID_column = dplyr::if_else(type == "rna", "ENSEMBL", "peakID")
-      
-      result.df = result.df %>%
-        tibble::rownames_to_column(ID_column) 
+        
+        if (type == "rna") {
+            
+            # Columns are shuffled so that non-matching samples are compared throughout the pipeline for all correlation-based analyses
+            colnames(result) = colnames(result)[GRN@data$RNA$counts_permuted_index]
+        }
     } 
     
-    return(result.df)
-
-  }
-  
-  result
+    if (!includeFiltered) {
+        
+        if (type == "rna") {
+            nonFiltered = which(! GRN@data$RNA$counts_metadata$isFiltered)
+        } else {
+            nonFiltered = which(! GRN@data$peaks$counts_metadata$isFiltered)
+        }
+        
+        result = result[nonFiltered,]
+    }
+    
+    
+    
+    if (!asMatrix) {
+        
+        result.df =  result %>%
+            as.data.frame()
+        
+        if (includeIDColumn)  {
+            
+            ID_column = dplyr::if_else(type == "rna", "ENSEMBL", "peakID")
+            
+            result.df = result.df %>%
+                tibble::rownames_to_column(ID_column) 
+        } 
+        
+        return(result.df)
+        
+    }
+    
+    result
 }
 
 
@@ -4391,121 +4392,585 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE,
                               include_peakMetadata = FALSE,
                               include_geneMetadata = FALSE,
                               include_variancePartitionResults = FALSE) {
-  
-  checkmate::assertClass(GRN, "GRN")  
-  GRN = .addFunctionLogToObject(GRN)
-  
-  GRN = .makeObjectCompatible(GRN)
-   
-  checkmate::assertChoice(type, c("TF_peaks", "peak_genes", "TF_genes", "all.filtered"))
-  checkmate::assertFlag(permuted)
-  #checkmate::assertIntegerish(permutation, lower = 0, upper = .getMaxPermutation(GRN))
-  checkmate::assertFlag(include_TF_gene_correlations)
-  checkmate::assertFlag(include_variancePartitionResults)
-  checkmate::assertFlag(include_TFMetadata)
-  checkmate::assertFlag(include_peakMetadata)
-  checkmate::assertFlag(include_geneMetadata)
-  
-  permIndex = dplyr::if_else(permuted, "1", "0")
-  
-  if (type == "all.filtered") {
-      
-    merged.df = GRN@connections$all.filtered[[permIndex]]
-
-    if (include_TF_gene_correlations) {
+    
+    checkmate::assertClass(GRN, "GRN")  
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertChoice(type, c("TF_peaks", "peak_genes", "TF_genes", "all.filtered"))
+    checkmate::assertFlag(permuted)
+    #checkmate::assertIntegerish(permutation, lower = 0, upper = .getMaxPermutation(GRN))
+    checkmate::assertFlag(include_TF_gene_correlations)
+    checkmate::assertFlag(include_variancePartitionResults)
+    checkmate::assertFlag(include_TFMetadata)
+    checkmate::assertFlag(include_peakMetadata)
+    checkmate::assertFlag(include_geneMetadata)
+    
+    permIndex = dplyr::if_else(permuted, "1", "0")
+    
+    if (type == "all.filtered") {
+        
+        merged.df = GRN@connections$all.filtered[[permIndex]]
+        
+        if (include_TF_gene_correlations) {
+            
+            if (is.null(GRN@connections$TF_genes.filtered)) {
+                message = "Please run the function add_TF_gene_correlation first. "
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            # Merge with TF-gene table
+            merged.df = merged.df %>%
+                dplyr::left_join(GRN@connections$TF_genes.filtered[[permIndex]], 
+                                 by = c("TF.name", "TF.ENSEMBL", "gene.ENSEMBL")) 
+        }
+        
+        if (include_variancePartitionResults) {
+            
+            if (ncol(GRN@annotation$genes %>% dplyr::select(tidyselect::starts_with("variancePartition"))) == 0 |
+                ncol(GRN@annotation$peaks %>% dplyr::select(tidyselect::starts_with("variancePartition"))) == 0) {
+                message = "Please run the function add_featureVariation first. "
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            merged.df = merged.df %>%
+                dplyr::left_join(GRN@annotation$TFs %>% 
+                                     dplyr::select(.data$TF.ENSEMBL, tidyselect::starts_with("TF.variancePartition")), 
+                                 by = "TF.ENSEMBL")  %>%
+                dplyr::left_join(GRN@annotation$genes %>% 
+                                     dplyr::select(.data$gene.ENSEMBL, tidyselect::starts_with("gene.variancePartition")), 
+                                 by = "gene.ENSEMBL")  %>%
+                dplyr::left_join(GRN@annotation$peaks %>% 
+                                     dplyr::select(.data$peak.ID, tidyselect::starts_with("peak.variancePartition")), 
+                                 by = "peak.ID")
+            
+        }
+        
+        if (include_TFMetadata) {
+            
+            colsMissing = setdiff(colnames(GRN@annotation$TFs), colnames(merged.df))
+            if (length(colsMissing) > 0) {
+                merged.df = merged.df %>%
+                    dplyr::left_join(GRN@annotation$TFs, by = c("TF.name", "TF.ENSEMBL"))
+            }
+        }
+        
+        if (include_peakMetadata) {
+            
+            colsMissing = setdiff(colnames(GRN@annotation$peaks), colnames(merged.df))
+            if (length(colsMissing) > 0) {
+                merged.df = merged.df %>%
+                    dplyr::left_join(GRN@annotation$peaks, by = "peak.ID")
+            }
+        }
+        
+        if (include_geneMetadata) {
+            
+            colsMissing = setdiff(colnames(GRN@annotation$genes), colnames(merged.df))
+            if (length(colsMissing) > 0) {
+                merged.df = merged.df %>%
+                    dplyr::left_join(GRN@annotation$genes, by = "gene.ENSEMBL")
+            }
+        }
+        
+        
+        merged.df = merged.df %>%
+            dplyr::select(tidyselect::starts_with("TF."), 
+                          tidyselect::starts_with("peak."), 
+                          tidyselect::starts_with("TF_peak."), 
+                          tidyselect::starts_with("gene."), 
+                          tidyselect::starts_with("peak_gene."), 
+                          tidyselect::starts_with("TF_gene."), 
+                          tidyselect::everything()) %>%
+            tibble::as_tibble()
+        
+        return(merged.df)
+        
+    } else if (type == "TF_peaks") {
+        
+        return(tibble::as_tibble(GRN@connections$TF_peaks[[permIndex]]$main))
+        
+    } else if (type == "peak_genes") {
+        
+        return(tibble::as_tibble(GRN@connections$peak_genes[[permIndex]]))
+        
+    } else if (type == "TF_genes") {
         
         if (is.null(GRN@connections$TF_genes.filtered)) {
             message = "Please run the function add_TF_gene_correlation first. "
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
         
-        # Merge with TF-gene table
-        merged.df = merged.df %>%
-            dplyr::left_join(GRN@connections$TF_genes.filtered[[permIndex]], 
-                             by = c("TF.name", "TF.ENSEMBL", "gene.ENSEMBL")) 
-    }
-    
-    if (include_variancePartitionResults) {
+        return(tibble::as_tibble(GRN@connections$TF_genes.filtered[[permIndex]]))
         
-        if (ncol(GRN@annotation$genes %>% dplyr::select(tidyselect::starts_with("variancePartition"))) == 0 |
-            ncol(GRN@annotation$peaks %>% dplyr::select(tidyselect::starts_with("variancePartition"))) == 0) {
-            message = "Please run the function add_featureVariation first. "
+    } 
+    
+}
+
+
+#' Get counts for the various data defined in a \code{\linkS4class{GRN}} object
+#' 
+#' Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
+#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
+#' 
+#' @template GRN 
+#' @param type Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.
+#' @param asMatrix Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, counts are returned as a data frame with or without an ID column (see \code{includeIDColumn}). If set to \code{TRUE}, counts are returned as a matrix with the ID column as row names.
+#' @param includeIDColumn Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Only relevant if \code{asMatrix = FALSE}. If set to \code{TRUE}, an explicit ID column is returned (no row names). If set to \code{FALSE}, the IDs are in the row names instead.
+#' @param includeFiltered  Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, genes or peaks marked as filtered (after running the function \code{filterData}) will not be returned. If set to \code{TRUE}, all elements are returned regardless of the currently active filter status.
+#' @template permuted
+#' @export
+#' @import tibble
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' counts.df = getCounts(GRN, type = "peaks", permuted = FALSE)
+#' @return Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
+getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDColumn = TRUE, includeFiltered = FALSE) {
+    
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)     
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertChoice(type, c("peaks", "rna"))
+    checkmate::assertFlag(permuted)
+    
+    permIndex = dplyr::if_else(permuted, "1", "0")
+    
+    if (type == "peaks") {
+        
+        if (permuted) {
+            message = "Could not find permuted peak counts in GRN object. Peaks are not stored as permuted, set permuted = FALSE for type = \"peaks\""
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
         
-        merged.df = merged.df %>%
-            dplyr::left_join(GRN@annotation$TFs %>% 
-                                 dplyr::select(.data$TF.ENSEMBL, tidyselect::starts_with("TF.variancePartition")), 
-                             by = "TF.ENSEMBL")  %>%
-            dplyr::left_join(GRN@annotation$genes %>% 
-                                 dplyr::select(.data$gene.ENSEMBL, tidyselect::starts_with("gene.variancePartition")), 
-                             by = "gene.ENSEMBL")  %>%
-            dplyr::left_join(GRN@annotation$peaks %>% 
-                                 dplyr::select(.data$peak.ID, tidyselect::starts_with("peak.variancePartition")), 
-                             by = "peak.ID")
-        
-    }
-    
-    if (include_TFMetadata) {
-        
-        colsMissing = setdiff(colnames(GRN@annotation$TFs), colnames(merged.df))
-        if (length(colsMissing) > 0) {
-            merged.df = merged.df %>%
-                dplyr::left_join(GRN@annotation$TFs, by = c("TF.name", "TF.ENSEMBL"))
+        classPeaks = class(GRN@data$peaks$counts)
+        if ("matrix" %in% classPeaks) {
+            result = GRN@data$peaks$counts
+        } else if ("dgCMatrix" %in% classPeaks) {
+            result = .asMatrixFromSparse(GRN@data$peaks$counts, convertZero_to_NA = FALSE)
+        } else {
+            message = paste0("Unsupported class for GRN@data$peaks$counts. Contact the authors.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
-    }
-    
-    if (include_peakMetadata) {
         
-        colsMissing = setdiff(colnames(GRN@annotation$peaks), colnames(merged.df))
-        if (length(colsMissing) > 0) {
-            merged.df = merged.df %>%
-                dplyr::left_join(GRN@annotation$peaks, by = "peak.ID")
-        }
-    }
-    
-    if (include_geneMetadata) {
         
-        colsMissing = setdiff(colnames(GRN@annotation$genes), colnames(merged.df))
-        if (length(colsMissing) > 0) {
-            merged.df = merged.df %>%
-                dplyr::left_join(GRN@annotation$genes, by = "gene.ENSEMBL")
+    } else if (type == "rna") {
+        
+        classRNA = class(GRN@data$RNA$counts)
+        if ("matrix" %in% classRNA) {
+            result = GRN@data$RNA$counts
+        } else if ("dgCMatrix" %in% classRNA) {
+            result = .asMatrixFromSparse(GRN@data$RNA$counts, convertZero_to_NA = FALSE)
+        } else {
+            message = paste0("Unsupported class for GRN@data$RNA$counts. Contact the authors.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
+        
     }
-
     
-    merged.df = merged.df %>%
-        dplyr::select(tidyselect::starts_with("TF."), 
-                      tidyselect::starts_with("peak."), 
-                      tidyselect::starts_with("TF_peak."), 
-                      tidyselect::starts_with("gene."), 
-                      tidyselect::starts_with("peak_gene."), 
-                      tidyselect::starts_with("TF_gene."), 
-                      tidyselect::everything()) %>%
-        tibble::as_tibble()
-
-    return(merged.df)
     
-  } else if (type == "TF_peaks") {
+    if (permuted) {
+        
+        if (type == "rna") {
+            
+            # Columns are shuffled so that non-matching samples are compared throughout the pipeline for all correlation-based analyses
+            colnames(result) = colnames(result)[GRN@data$RNA$counts_permuted_index]
+        }
+    } 
     
-    return(tibble::as_tibble(GRN@connections$TF_peaks[[permIndex]]$main))
-    
-  } else if (type == "peak_genes") {
-    
-    return(tibble::as_tibble(GRN@connections$peak_genes[[permIndex]]))
-    
-  } else if (type == "TF_genes") {
-      
-    if (is.null(GRN@connections$TF_genes.filtered)) {
-      message = "Please run the function add_TF_gene_correlation first. "
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    if (!includeFiltered) {
+        
+        if (type == "rna") {
+            nonFiltered = which(! GRN@data$RNA$counts_metadata$isFiltered)
+        } else {
+            nonFiltered = which(! GRN@data$peaks$counts_metadata$isFiltered)
+        }
+        
+        result = result[nonFiltered,]
     }
-      
-    return(tibble::as_tibble(GRN@connections$TF_genes.filtered[[permIndex]]))
-      
-  } 
-  
+    
+    
+    
+    if (!asMatrix) {
+        
+        result.df =  result %>%
+            as.data.frame()
+        
+        if (includeIDColumn)  {
+            
+            ID_column = dplyr::if_else(type == "rna", "ENSEMBL", "peakID")
+            
+            result.df = result.df %>%
+                tibble::rownames_to_column(ID_column) 
+        } 
+        
+        return(result.df)
+        
+    }
+    
+    result
 }
+
+
+#' Extract connections or links from a \code{\linkS4class{GRN}} object as da data frame.
+#' 
+#' Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
+#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
+#' 
+#' @export
+#' @template GRN 
+#' @template permuted
+#' @param type Character. One of \code{TF_peaks}, \code{peak_genes}, \code{TF_genes} or \code{all.filtered}. Default \code{all.filtered}. The type of connections to retrieve.
+#' @param include_TF_gene_correlations Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}. Only relevant for type = "all.filtered"
+#' @param include_TFMetadata Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TF metadata be returned as well? Only relevant for type = "all.filtered"
+#' @param include_peakMetadata Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should peak metadata be returned as well?  Only relevant for type = "all.filtered"
+#' @param include_geneMetadata Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should gene metadata be returned as well?  Only relevant for type = "all.filtered"
+#' @param include_variancePartitionResults Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. 
+#' Should the results from the function \code{\link{add_featureVariation}} be included? 
+#' If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_featureVariation}}; otherwise, an error is thrown.
+#' Only relevant for type = "all.filtered"
+#' @return A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object.
+#' @seealso \code{\link{filterGRNAndConnectGenes}}
+#' @seealso \code{\link{add_featureVariation}}
+#' @seealso \code{\link{add_TF_gene_correlation}}
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' GRN_con.all.df = getGRNConnections(GRN)
+getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, 
+                              include_TF_gene_correlations = FALSE, 
+                              include_TFMetadata = FALSE,
+                              include_peakMetadata = FALSE,
+                              include_geneMetadata = FALSE,
+                              include_variancePartitionResults = FALSE) {
+    
+    checkmate::assertClass(GRN, "GRN")  
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertChoice(type, c("TF_peaks", "peak_genes", "TF_genes", "all.filtered"))
+    checkmate::assertFlag(permuted)
+    #checkmate::assertIntegerish(permutation, lower = 0, upper = .getMaxPermutation(GRN))
+    checkmate::assertFlag(include_TF_gene_correlations)
+    checkmate::assertFlag(include_variancePartitionResults)
+    checkmate::assertFlag(include_TFMetadata)
+    checkmate::assertFlag(include_peakMetadata)
+    checkmate::assertFlag(include_geneMetadata)
+    
+    permIndex = dplyr::if_else(permuted, "1", "0")
+    
+    if (type == "all.filtered") {
+        
+        merged.df = GRN@connections$all.filtered[[permIndex]]
+        
+        if (include_TF_gene_correlations) {
+            
+            if (is.null(GRN@connections$TF_genes.filtered)) {
+                message = "Please run the function add_TF_gene_correlation first. "
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            # Merge with TF-gene table
+            merged.df = merged.df %>%
+                dplyr::left_join(GRN@connections$TF_genes.filtered[[permIndex]], 
+                                 by = c("TF.name", "TF.ENSEMBL", "gene.ENSEMBL")) 
+        }
+        
+        if (include_variancePartitionResults) {
+            
+            if (ncol(GRN@annotation$genes %>% dplyr::select(tidyselect::starts_with("variancePartition"))) == 0 |
+                ncol(GRN@annotation$peaks %>% dplyr::select(tidyselect::starts_with("variancePartition"))) == 0) {
+                message = "Please run the function add_featureVariation first. "
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            merged.df = merged.df %>%
+                dplyr::left_join(GRN@annotation$TFs %>% 
+                                     dplyr::select(.data$TF.ENSEMBL, tidyselect::starts_with("TF.variancePartition")), 
+                                 by = "TF.ENSEMBL")  %>%
+                dplyr::left_join(GRN@annotation$genes %>% 
+                                     dplyr::select(.data$gene.ENSEMBL, tidyselect::starts_with("gene.variancePartition")), 
+                                 by = "gene.ENSEMBL")  %>%
+                dplyr::left_join(GRN@annotation$peaks %>% 
+                                     dplyr::select(.data$peak.ID, tidyselect::starts_with("peak.variancePartition")), 
+                                 by = "peak.ID")
+            
+        }
+        
+        if (include_TFMetadata) {
+            
+            colsMissing = setdiff(colnames(GRN@annotation$TFs), colnames(merged.df))
+            if (length(colsMissing) > 0) {
+                merged.df = merged.df %>%
+                    dplyr::left_join(GRN@annotation$TFs, by = c("TF.name", "TF.ENSEMBL"))
+            }
+        }
+        
+        if (include_peakMetadata) {
+            
+            colsMissing = setdiff(colnames(GRN@annotation$peaks), colnames(merged.df))
+            if (length(colsMissing) > 0) {
+                merged.df = merged.df %>%
+                    dplyr::left_join(GRN@annotation$peaks, by = "peak.ID")
+            }
+        }
+        
+        if (include_geneMetadata) {
+            
+            colsMissing = setdiff(colnames(GRN@annotation$genes), colnames(merged.df))
+            if (length(colsMissing) > 0) {
+                merged.df = merged.df %>%
+                    dplyr::left_join(GRN@annotation$genes, by = "gene.ENSEMBL")
+            }
+        }
+        
+        
+        merged.df = merged.df %>%
+            dplyr::select(tidyselect::starts_with("TF."), 
+                          tidyselect::starts_with("peak."), 
+                          tidyselect::starts_with("TF_peak."), 
+                          tidyselect::starts_with("gene."), 
+                          tidyselect::starts_with("peak_gene."), 
+                          tidyselect::starts_with("TF_gene."), 
+                          tidyselect::everything()) %>%
+            tibble::as_tibble()
+        
+        return(merged.df)
+        
+    } else if (type == "TF_peaks") {
+        
+        return(tibble::as_tibble(GRN@connections$TF_peaks[[permIndex]]$main))
+        
+    } else if (type == "peak_genes") {
+        
+        return(tibble::as_tibble(GRN@connections$peak_genes[[permIndex]]))
+        
+    } else if (type == "TF_genes") {
+        
+        if (is.null(GRN@connections$TF_genes.filtered)) {
+            message = "Please run the function add_TF_gene_correlation first. "
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+        return(tibble::as_tibble(GRN@connections$TF_genes.filtered[[permIndex]]))
+        
+    } 
+    
+}
+
+
+
+#' Retrieve parameters for previously used function calls and general parameters for a \code{\linkS4class{GRN}} object. 
+#' 
+#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
+#' 
+#' @export
+#' @template GRN 
+#' @param name Character. Default \code{all}. Name of parameter or function name to retrieve. Set to the special keyword \code{all} to retrieve all parameters.
+#' @param type Character. Either \code{function} or \code{parameter}. Default \code{parameter}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. When set to \code{parameter}, in combination with \code{name}, returns a specific parameter (as specified in \code{GRN@config})).
+#' @return The requested parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' params.l = getParameters(GRN, type = "parameter", name = "all")
+getParameters <- function (GRN, type = "parameter", name = "all") {
+    
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertChoice(type, c("function", "parameter"))
+    
+    if (type == "function") {
+        
+        checkmate::assertCharacter(name, any.missing = FALSE, len = 1)
+        functionParameters = GRN@config$functionParameters[[name]]
+        if (is.null(functionParameters)) {
+            checkmate::assertChoice(name, ls(paste0("package:", utils::packageName())))
+        } 
+        
+        return(functionParameters)
+        
+    } else {
+        
+        if (name == "all") {
+            return(GRN@config)
+        } else {
+            parameters = GRN@config[[name]]
+            if (is.null(parameters)) {
+                checkmate::assertChoice(name, names(GRN@config$parameters))
+            } 
+            
+            return(parameters)
+        }
+        
+    }
+    
+}
+
+
+
+#' Optional convenience function to delete intermediate data from the function \code{\link{AR_classification_wrapper}} and summary statistics that may occupy a lot of space
+#' @export
+#' @template GRN
+#' @return An updated \code{\linkS4class{GRN}} object, with some slots being deleted (\code{GRN@data$TFs$classification} as well as \code{GRN@stats$connectionDetails.l})
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' GRN = deleteIntermediateData(GRN)
+deleteIntermediateData <- function(GRN) {
+    
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    for (permutationCur in 0:.getMaxPermutation(GRN)) {
+        
+        permIndex = as.character(permutationCur)
+        GRN@data$TFs$classification[[permIndex]]$TF_cor_median_foreground = NULL
+        GRN@data$TFs$classification[[permIndex]]$TF_cor_median_background = NULL
+        GRN@data$TFs$classification[[permIndex]]$TF_peak_cor_foreground = NULL
+        GRN@data$TFs$classification[[permIndex]]$TF_peak_cor_background = NULL
+        GRN@data$TFs$classification[[permIndex]]$act.rep.thres.l = NULL
+    }
+    
+    GRN@stats$connectionDetails.l = NULL
+    
+    GRN
+    
+    
+}
+
+#' Change the output directory of a GRN object
+#' 
+#' @export
+#' @template GRN
+#' @param outputDirectory Character. Default \code{.}. New output directory for all output files unless overwritten via the parameter \code{outputFolder}.
+#' @return An updated \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
+#' @examples 
+#' GRN = loadExampleObject()
+#' GRN = changeOutputDirectory(GRN, outputDirectory = ".")
+changeOutputDirectory <- function(GRN, outputDirectory = ".") {
+    
+    start = Sys.time()  
+    
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertCharacter(outputDirectory, len = 1, min.chars = 1)
+    
+    GRN@config$directories$outputRoot   = outputDirectory
+    GRN@config$directories$output_plots = paste0(outputDirectory, .Platform$file.sep, "plots", .Platform$file.sep)
+    GRN@config$files$output_log         = paste0(outputDirectory, .Platform$file.sep, "GRN.log")
+    
+    futile.logger::flog.info(paste0("Output directory changed in the object to " , outputDirectory))
+    
+    
+    GRN
+    
+}
+
+####### Internal functions #########
+
+
+
+# Converts from an older GRN object format to the most current one due to internal optimizations
+.makeObjectCompatible <- function(GRN) {
+    
+    if (is.null(GRN@annotation$TFs) & !is.null(GRN@data$TFs$translationTable)) {
+        GRN@annotation$TFs = GRN@data$TFs$translationTable
+        GRN@data$TFs$translationTable = NULL
+    }
+    
+    if (!is.null(GRN@annotation$TFs)) {
+        
+        if (!"TF.ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
+            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ENSEMBL = .data$ENSEMBL)
+        }
+        if (!"TF.HOCOID" %in% colnames(GRN@annotation$TFs)) {
+            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.HOCOID = .data$HOCOID)
+        }
+        
+        if ("ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
+            GRN@annotation$TFs = dplyr::select(GRN@annotation$TFs, -.data$ENSEMBL)
+        }
+    }
+    
+    
+    # Temporary fix: Replace lincRNA with lncRNA due to a recent change in biomaRt until we update the object directly
+    if ("lncRNA" %in% levels(GRN@annotation$genes$gene.type)) {
+        GRN@annotation$genes = dplyr::mutate(GRN@annotation$genes, gene.type = dplyr::recode_factor(.data$gene.type, lncRNA = "lincRNA")) 
+    }
+    
+    if (is.null(GRN@annotation$peaks) & !is.null(GRN@annotation$consensusPeaks)) {
+        GRN@annotation[["peaks"]] = GRN@annotation[["consensusPeaks"]]
+        GRN@annotation[["consensusPeaks"]] = NULL
+        GRN@annotation[["peaks_obj"]] = GRN@annotation[["consensusPeaks_obj"]]
+        GRN@annotation[["consensusPeaks_obj"]] = NULL
+        
+    }
+    
+    # Renamed count slots and their structure
+    # 1. peaks
+    if (!is.null(GRN@data$peaks[["counts_orig"]])) {
+        GRN@data$peaks[["counts_orig"]] = NULL
+    }
+    if (is.null(GRN@data$peaks[["counts"]])) {
+        GRN@data$peaks[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$peaks$counts_norm %>% dplyr::select(-.data$isFiltered), 
+                                                                  ID_column = "peakID", slotName = "GRN@data$peaks$counts")
+    }
+    if (!is.null(GRN@data$peaks[["counts_norm"]])) {
+        GRN@data$peaks[["counts_norm"]] = NULL
+    }
+    
+    if (is.null(GRN@data$peaks[["counts_metadata"]])) {
+        GRN@data$peaks[["counts_metadata"]] = .createConsensusPeaksDF(rownames(GRN@data$peaks[["counts"]])) 
+        stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
+    }
+    if (!is.null(GRN@data$peaks[["consensusPeaks"]])) {
+        GRN@data$peaks[["consensusPeaks"]] = NULL
+    }
+    
+    # 2. RNA
+    if (!is.null(GRN@data$RNA[["counts_orig"]])) {
+        GRN@data$RNA[["counts_orig"]] = NULL
+    }
+    if (is.null(GRN@data$RNA[["counts"]]) & !is.null(GRN@data$RNA$counts_norm.l[["0"]])) {
+        GRN@data$RNA[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::select(-.data$isFiltered), 
+                                                                ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
+    }
+    if (!is.null(GRN@data$RNA[["counts_norm.l"]])) {
+        GRN@data$RNA[["counts_norm.l"]] = NULL
+    }
+    if (is.null(GRN@data$RNA[["counts_metadata"]]) & !is.null(GRN@data$RNA$counts)) {
+        GRN@data$RNA[["counts_metadata"]] = tibble::tibble(ID = rownames(GRN@data$RNA$counts), isFiltered = FALSE)
+    }
+    
+    if (is.null(GRN@data$RNA[["counts_permuted_index"]]) & !is.null(GRN@data$RNA$counts)) {
+        GRN@data$RNA[["counts_permuted_index"]] = sample.int(ncol(GRN@data$RNA$counts), ncol(GRN@data$RNA$counts))
+    }
+    
+    
+    GRN
+}
+
+
+.checkExistanceFilteredConnections <- function(GRN) {
+    
+    if (is.null(GRN@connections$all.filtered[["0"]])) {
+        message = "Could not find filtered connections (the slot GRN@connections$all.filtered[[\"0\"]] is NULL). Run the function filterGRNAndConnectGenes."
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+}
+
 
 .getAll_TF_peak_connectionTypes <- function (GRN) {
   
@@ -4642,56 +5107,6 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE,
   GRN
 }
 
-
-#' Retrieve parameters for previously used function calls and general parameters for a \code{\linkS4class{GRN}} object. 
-#' 
-#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
-#' 
-#' @export
-#' @template GRN 
-#' @param name Character. Default \code{all}. Name of parameter or function name to retrieve. Set to the special keyword \code{all} to retrieve all parameters.
-#' @param type Character. Either \code{function} or \code{parameter}. Default \code{parameter}. When set to \code{function}, a valid \code{GRaNIE} function name must be given that has been run before. When set to \code{parameter}, in combination with \code{name}, returns a specific parameter (as specified in \code{GRN@config})).
-#' @return The requested parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
-#' @examples 
-#' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' params.l = getParameters(GRN, type = "parameter", name = "all")
-getParameters <- function (GRN, type = "parameter", name = "all") {
-  
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
-    
-  GRN = .makeObjectCompatible(GRN)
-    
-  checkmate::assertChoice(type, c("function", "parameter"))
-  
-  if (type == "function") {
-    
-    checkmate::assertCharacter(name, any.missing = FALSE, len = 1)
-    functionParameters = GRN@config$functionParameters[[name]]
-    if (is.null(functionParameters)) {
-      checkmate::assertChoice(name, ls(paste0("package:", utils::packageName())))
-    } 
-    
-    return(functionParameters)
-    
-  } else {
-    
-    if (name == "all") {
-      return(GRN@config)
-    } else {
-      parameters = GRN@config[[name]]
-      if (is.null(parameters)) {
-        checkmate::assertChoice(name, names(GRN@config$parameters))
-      } 
-      
-      return(parameters)
-    }
-    
-  }
-  
-}
-
 .getMaxPermutation <- function (GRN) {
   
   if (!is.null(GRN@config$parameters$internal$nPermutations)) {
@@ -4704,37 +5119,6 @@ getParameters <- function (GRN, type = "parameter", name = "all") {
 }
 
 
-#' Optional convenience function to delete intermediate data from the function \code{\link{AR_classification_wrapper}} and summary statistics that may occupy a lot of space
-#' @export
-#' @template GRN
-#' @return An updated \code{\linkS4class{GRN}} object, with some slots being deleted (\code{GRN@data$TFs$classification} as well as \code{GRN@stats$connectionDetails.l})
-#' @examples 
-#' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' GRN = deleteIntermediateData(GRN)
-deleteIntermediateData <- function(GRN) {
-  
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  for (permutationCur in 0:.getMaxPermutation(GRN)) {
-    
-    permIndex = as.character(permutationCur)
-    GRN@data$TFs$classification[[permIndex]]$TF_cor_median_foreground = NULL
-    GRN@data$TFs$classification[[permIndex]]$TF_cor_median_background = NULL
-    GRN@data$TFs$classification[[permIndex]]$TF_peak_cor_foreground = NULL
-    GRN@data$TFs$classification[[permIndex]]$TF_peak_cor_background = NULL
-    GRN@data$TFs$classification[[permIndex]]$act.rep.thres.l = NULL
-  }
-  
-  GRN@stats$connectionDetails.l = NULL
-  
-  GRN
-  
-  
-}
 
 .checkForbiddenNames <- function(name, forbiddenNames) {
   
@@ -4744,74 +5128,6 @@ deleteIntermediateData <- function(GRN) {
   }
 }
 
-
-getBasic_metadata_visualization <- function(GRN, forceRerun = FALSE) {
-  
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN) 
-  checkmate::assertFlag(forceRerun)
-  
-  # Get base mean expression for genes and TFs and mean accessibility from peaks
-  
-  
-  # TODO: Do we need this for the shuffled one?
-  
-  if (is.null(GRN@visualization$metadata) | forceRerun) {
-    
-    expMeans.m = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE)
-    
-    baseMean = rowMeans(expMeans.m)
-    expression.df = tibble::tibble(ENSEMBL_ID = getCounts(GRN, type = "rna", permuted = FALSE, includeIDColumn = TRUE)$ENSEMBL, baseMean = baseMean) %>%
-      dplyr::mutate(ENSEMBL_ID = gsub("\\..+", "", .data$ENSEMBL_ID, perl = TRUE),
-                    baseMean_log = log2(baseMean + 0.01))
-    
-    expression_TF.df = dplyr::filter(expression.df, .data$ENSEMBL_ID %in% GRN@annotation$TFs$TF.ENSEMBL) %>%
-      dplyr::left_join(GRN@annotation$TFs, by = c("ENSEMBL_ID" = "TF.ENSEMBL"))
-    
-    meanPeaks.df = tibble::tibble(peakID = getCounts(GRN, type = "peaks", permuted = FALSE)$peakID, 
-                                  mean = rowMeans(getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE))) %>%
-      dplyr::mutate(mean_log = log2(mean + 0.01))
-    
-    GRN@visualization$metadata = list("RNA_expression_genes" = expression.df,
-                    "RNA_expression_TF"    = expression_TF.df,
-                    "Peaks_accessibility"   = meanPeaks.df)
-    
-  } 
-  
-  GRN
-  
-}
-
-#' Change the output directory of a GRN object
-#' 
-#' @export
-#' @template GRN
-#' @param outputDirectory Character. Default \code{.}. New output directory for all output files unless overwritten via the parameter \code{outputFolder}.
-#' @return An updated \code{\linkS4class{GRN}} object, with the output directory being adjusted accordingly
-#' @examples 
-#' GRN = loadExampleObject()
-#' GRN = changeOutputDirectory(GRN, outputDirectory = ".")
-changeOutputDirectory <- function(GRN, outputDirectory = ".") {
-  
-    start = Sys.time()  
-    
-    checkmate::assertClass(GRN, "GRN")
-    GRN = .addFunctionLogToObject(GRN)
-    
-    GRN = .makeObjectCompatible(GRN)
-    
-    checkmate::assertCharacter(outputDirectory, len = 1, min.chars = 1)
-    
-    GRN@config$directories$outputRoot   = outputDirectory
-    GRN@config$directories$output_plots = paste0(outputDirectory, .Platform$file.sep, "plots", .Platform$file.sep)
-    GRN@config$files$output_log         = paste0(outputDirectory, .Platform$file.sep, "GRN.log")
-    
-    futile.logger::flog.info(paste0("Output directory changed in the object to " , outputDirectory))
-    
-    
-    GRN
-  
-}
 
 
 .createTables_peakGeneQC <- function(peakGeneCorrelations.all.cur, networkType_details, colors_vec, range) {
@@ -4920,6 +5236,45 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     paste0(names(tbl_freq), " (", tbl_freq, ")")
 }
 
+
+.getBasic_metadata_visualization <- function(GRN, forceRerun = FALSE) {
+    
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN) 
+    checkmate::assertFlag(forceRerun)
+    
+    # Get base mean expression for genes and TFs and mean accessibility from peaks
+    
+    
+    # TODO: Do we need this for the shuffled one?
+    
+    if (is.null(GRN@visualization$metadata) | forceRerun) {
+        
+        expMeans.m = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE)
+        
+        baseMean = rowMeans(expMeans.m)
+        expression.df = tibble::tibble(ENSEMBL_ID = getCounts(GRN, type = "rna", permuted = FALSE, includeIDColumn = TRUE)$ENSEMBL, baseMean = baseMean) %>%
+            dplyr::mutate(ENSEMBL_ID = gsub("\\..+", "", .data$ENSEMBL_ID, perl = TRUE),
+                          baseMean_log = log2(baseMean + 0.01))
+        
+        expression_TF.df = dplyr::filter(expression.df, .data$ENSEMBL_ID %in% GRN@annotation$TFs$TF.ENSEMBL) %>%
+            dplyr::left_join(GRN@annotation$TFs, by = c("ENSEMBL_ID" = "TF.ENSEMBL"))
+        
+        meanPeaks.df = tibble::tibble(peakID = getCounts(GRN, type = "peaks", permuted = FALSE)$peakID, 
+                                      mean = rowMeans(getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE))) %>%
+            dplyr::mutate(mean_log = log2(mean + 0.01))
+        
+        GRN@visualization$metadata = list("RNA_expression_genes" = expression.df,
+                                          "RNA_expression_TF"    = expression_TF.df,
+                                          "Peaks_accessibility"   = meanPeaks.df)
+        
+    } 
+    
+    GRN
+    
+}
+
+
 ######## Quantify source of variation ########
 
 #' Quantify and interpret multiple sources of biological and technical variation for features (TFs, peaks, and genes) in a \code{\linkS4class{GRN}} object
@@ -4946,8 +5301,8 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
 #' As noted above, the results are not added to \code{GRN@connections$all.filtered}; rerun the function \code{\link{getGRNConnections}} and set \code{include_variancePartitionResults} to \code{TRUE} to include the results in the eGRN output table.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
-#' GRN = loadExampleObject()
-#' GRN = add_featureVariation(GRN, metadata = c("mt_frac"), forceRerun = TRUE)
+#' # GRN = loadExampleObject()
+#' # GRN = add_featureVariation(GRN, metadata = c("mt_frac"), forceRerun = TRUE)
 #' @export
 add_featureVariation <- function (GRN, 
                                     formula = "auto", 
@@ -5034,7 +5389,7 @@ add_featureVariation <- function (GRN,
                 # Numeric variables are modeled as fixed effect
                 formulaElems2 = paste0(numericVariablesNames)
                 
-                message = paste0("Make sure that all variables from the metadata that are numeric are indeed really numeric and not (hidden) factors. The following variables will be treated as numeric: ", paste0(numericVariablesNames, collapse = ",", ". If one of these is in fact a factor, change the type in GRN@data$metadata and re-run, or provide the design formula manually"))
+                message = paste0("Make sure that all variables from the metadata that are numeric are indeed really numeric and not (hidden) factors. The following variables will be treated as numeric: ", paste0(numericVariablesNames, collapse = ","), ". If one of these is in fact a factor, change the type in GRN@data$metadata and re-run, or provide the design formula manually")
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                 
             } else {
@@ -5134,95 +5489,7 @@ add_featureVariation <- function (GRN,
 }
 
 
-.checkExistanceFilteredConnections <- function(GRN) {
-    
-    if (is.null(GRN@connections$all.filtered[["0"]])) {
-        message = "Could not find filtered connections (the slot GRN@connections$all.filtered[[\"0\"]] is NULL). Run the function filterGRNAndConnectGenes."
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-}
 
-# Converts from an older GRN object format to the most current one due to internal optimizations
-.makeObjectCompatible <- function(GRN) {
-    
-    if (is.null(GRN@annotation$TFs) & !is.null(GRN@data$TFs$translationTable)) {
-        GRN@annotation$TFs = GRN@data$TFs$translationTable
-        GRN@data$TFs$translationTable = NULL
-    }
-    
-    if (!is.null(GRN@annotation$TFs)) {
-    
-        if (!"TF.ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
-          GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ENSEMBL = .data$ENSEMBL)
-        }
-        if (!"TF.HOCOID" %in% colnames(GRN@annotation$TFs)) {
-          GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.HOCOID = .data$HOCOID)
-        }
-        
-        if ("ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
-          GRN@annotation$TFs = dplyr::select(GRN@annotation$TFs, -.data$ENSEMBL)
-        }
-    }
-
-    
-    # Temporary fix: Replace lincRNA with lncRNA due to a recent change in biomaRt until we update the object directly
-    if ("lncRNA" %in% levels(GRN@annotation$genes$gene.type)) {
-        GRN@annotation$genes = dplyr::mutate(GRN@annotation$genes, gene.type = dplyr::recode_factor(.data$gene.type, lncRNA = "lincRNA")) 
-    }
-    
-    if (is.null(GRN@annotation$peaks) & !is.null(GRN@annotation$consensusPeaks)) {
-        GRN@annotation[["peaks"]] = GRN@annotation[["consensusPeaks"]]
-        GRN@annotation[["consensusPeaks"]] = NULL
-        GRN@annotation[["peaks_obj"]] = GRN@annotation[["consensusPeaks_obj"]]
-        GRN@annotation[["consensusPeaks_obj"]] = NULL
-        
-    }
-    
-    # Renamed count slots and their structure
-    # 1. peaks
-    if (!is.null(GRN@data$peaks[["counts_orig"]])) {
-        GRN@data$peaks[["counts_orig"]] = NULL
-    }
-    if (is.null(GRN@data$peaks[["counts"]])) {
-        GRN@data$peaks[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$peaks$counts_norm %>% dplyr::select(-.data$isFiltered), 
-                                                                  ID_column = "peakID", slotName = "GRN@data$peaks$counts")
-    }
-    if (!is.null(GRN@data$peaks[["counts_norm"]])) {
-        GRN@data$peaks[["counts_norm"]] = NULL
-    }
-    
-    if (is.null(GRN@data$peaks[["counts_metadata"]])) {
-        GRN@data$peaks[["counts_metadata"]] = .createConsensusPeaksDF(GRN@data$peaks[["counts"]] %>% as.data.frame() %>% tibble::rownames_to_column("peakID")) 
-        stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
-    }
-    if (!is.null(GRN@data$peaks[["consensusPeaks"]])) {
-        GRN@data$peaks[["consensusPeaks"]] = NULL
-    }
-    
-    # 2. RNA
-    if (!is.null(GRN@data$RNA[["counts_orig"]])) {
-        GRN@data$RNA[["counts_orig"]] = NULL
-    }
-    if (is.null(GRN@data$RNA[["counts"]]) & !is.null(GRN@data$RNA$counts_norm.l[["0"]])) {
-        GRN@data$RNA[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::select(-.data$isFiltered), 
-                                                                ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
-    }
-    if (!is.null(GRN@data$RNA[["counts_norm.l"]])) {
-        GRN@data$RNA[["counts_norm.l"]] = NULL
-    }
-    
-    if (is.null(GRN@data$RNA[["counts_metadata"]]) & !is.null(GRN@data$RNA$counts)) {
-        GRN@data$RNA[["counts_metadata"]] = tibble::tibble(ID = GRN@data$RNA$counts %>% as.data.frame() %>% tibble::rownames_to_column("ENSEMBL"), isFiltered = FALSE)
-    }
-    
-    if (is.null(GRN@data$RNA[["counts_permuted_index"]]) & !is.null(GRN@data$RNA$counts)) {
-        GRN@data$RNA[["counts_permuted_index"]] = .shuffleColumns(as.data.frame(GRN@data$RNA$counts), 
-                                                             .getMaxPermutation(GRN), returnUnshuffled = FALSE, returnAsList = FALSE)
-    }
-
-    
-    GRN
-}
 
 
 

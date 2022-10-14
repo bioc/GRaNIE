@@ -46,8 +46,8 @@ The normalized count matrices are used as input for \code{fitExtractVarPartModel
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
-GRN = loadExampleObject()
-GRN = add_featureVariation(GRN, metadata = c("mt_frac"), forceRerun = TRUE)
+# GRN = loadExampleObject()
+# GRN = add_featureVariation(GRN, metadata = c("mt_frac"), forceRerun = TRUE)
 }
 \seealso{
 \code{\link{addData}}

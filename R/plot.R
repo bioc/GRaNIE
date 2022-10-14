@@ -3384,9 +3384,9 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     }
     
     # Construct GRN@visualization$metadata
-    GRN = getBasic_metadata_visualization(GRN, forceRerun = forceRerun)
+    GRN = .getBasic_metadata_visualization(GRN, forceRerun = forceRerun)
     # if (useDefaultMetadata) {
-    #   metadata_visualization.l = getBasic_metadata_visualization(GRN)
+    #   metadata_visualization.l = .getBasic_metadata_visualization(GRN)
     #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
     #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
     #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
@@ -3987,135 +3987,6 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
 }
 
 
-
-plotCorrelations <- function(GRN, TF_peak.fdr.threshold = 0.2, TF_peak.r.abs.threshold = 0.3, sortby = "TF_peak.r",
-                             topn = 100, TF.names = NULL, peak.IDs = NULL,
-                             corMethod = "pearson") {
-    
-    checkmate::assertChoice(sortby, colnames(GRN@connections$TF_peaks$`0`$main))
-    
-    con.filt = GRN@connections$TF_peaks$`0`$main %>%
-        dplyr::filter(.data$TF_peak.fdr <= TF_peak.fdr.threshold,
-                      abs(.data$TF_peak.r) >= TF_peak.r.abs.threshold)
-      
-    
-    if (!is.null(TF.names)) {
-        con.filt = dplyr::filter(con.filt, .data$Tf.name %in% TF.names)
-    }
-    
-    if (!is.null(peak.IDs)) {
-        con.filt = dplyr::filter(con.filt, .data$peak.ID %in% peak.IDs)
-    }
-    
-    
-    con.filt = con.filt %>%
-        dplyr::arrange_at(sortby) %>%
-        dplyr::slice_head(n = topn)
-    
-    
-    for (i in seq_len(topn)) {
-        
-        TF.name = con.filt$TF.name[i]
-        TF.ENSEMBL = GRN@annotation$TFs$TF.ENSEMBL[which(GRN@annotation$TFs$TF.name == TF.name)]
-        peak.peakID = con.filt$peak.ID[i]
-        corCalc = con.filt$TF_peak.r[i]
-        fdrCur = con.filt$TF_peak.fdr[i]
-        
-        cor_cur = cor(GRN@data$RNA$counts[TF.ENSEMBL, ], GRN@data$peaks$counts[peak.peakID,], method = corMethod)
-        
-        data.df = tibble(TF.exp.norm = GRN@data$RNA$counts[TF.ENSEMBL, ], peak.acc.norm = GRN@data$peaks$counts[peak.peakID,])
-        
-        # For testing only
-        stopifnot(abs(cor_cur - corCalc) < 0.01)
-        
-        colorscale = scale_fill_gradientn(
-            colors = RColorBrewer::brewer.pal(9, "YlGnBu"),
-            values = c(0, exp(seq(-5, 0, length.out = 100))))
-        
-        g1 = ggplot(data.df, aes(.data$TF.exp.norm, .data$peak.acc.norm)) + 
-            geom_smooth(method = "lm", formula = "y ~ x", col = "black") + 
-            geom_hex(bins = 50) + colorscale  +
-            xlim(-0.01,NA) + ylim(-0.01,NA) + 
-            ggtitle(paste0("n = ", nrow(data.df), " (all), Cor = ", round(corCalc,2)))
-        
-        # Remove entries with pure zeroes
-        data.filt.df = dplyr::filter(data.df, .data$TF.exp.norm > 0, .data$peak.acc.norm > 0)
-        
-        cor_cur = cor(dplyr::pull(data.filt.df, .data$TF.exp.norm), dplyr::pull(data.filt.df, .data$peak.acc.norm), method = corMethod)
-
-        g2 = ggplot(data.filt.df, aes(TF.exp.norm, peak.acc.norm)) + 
-            geom_smooth(method = "lm", formula = "y ~ x", col = "black") + 
-            geom_hex(bins = 50) + colorscale  +
-            xlim(-0.01,NA) + ylim(-0.01,NA) + 
-            ggtitle(paste0("n = ", nrow(data.filt.df), " (only >0 for both TF expr. & peak acc.), Cor = ", round(cor_cur,2)))    
-        
-        data.filt2.df = dplyr::filter(data.df, TF.exp.norm > 0 | peak.acc.norm > 0)
-        
-        cor_cur = cor(dplyr::pull(data.filt2.df, .data$TF.exp.norm), dplyr::pull(data.filt2.df, .data$peak.acc.norm), method = corMethod)
-
-        g3 = ggplot(data.filt2.df, aes(TF.exp.norm, peak.acc.norm)) + 
-            geom_smooth(method = "lm", formula = "y ~ x", col = "black") + 
-            geom_hex(bins = 50) + colorscale  +
-            xlim(-0.01,NA) + ylim(-0.01,NA) + 
-            ggtitle(paste0("n = ", nrow(data.filt2.df), " (only excluding (0,0) for both TF expr. & peak acc.), Cor = ", round(cor_cur,2)))    
-
- 
-        mainTitle = paste0("TF: ", TF.name, "(", TF.ENSEMBL, "), peak: ", peak.peakID, " (FDR: ",  round(fdrCur, 2), ")")
-
-        plots_all =  g1 / g2 / g3 + 
-            patchwork::plot_annotation(title = mainTitle, theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
-        plot(plots_all)
-        # 
-        # r1 = rnorm(1000)
-        # r2 = rnorm(1000, sd = 1)
-        # plot(r1,r2, main = paste0("Cor = ", round(cor(r1,r2, method = corMethod), 2)))
-        # 
-        # r1 = c(r1, rep(0,5000))
-        # r2 = c(r2, rep(0,5000))
-        # plot(r1,r2, main = paste0("Cor = ", round(cor(r1,r2, method = corMethod), 2)))
-    }
-    
-    con.filt = GRN@connections$TF_peaks$`0`$main
-    
-    res.df = tribble(~TF.name, ~peak.peakID, ~cor_all, ~cor_nonZeroAll, ~cor_nonZero)
-    for (i in seq_len(nrow(con.filt))) {
-        
-        if (i %% 100 == 0) futile.logger::flog.info(paste0("Row ", i, " out of ", nrow(con.filt)))
-        TF.name = con.filt$TF.name[i]
-        TF.ENSEMBL = GRN@annotation$TFs$TF.ENSEMBL[which(GRN@annotation$TFs$TF.name == TF.name)]
-        peak.peakID = con.filt$peak.ID[i]
-        corCalc = con.filt$TF_peak.r[i]
-        fdrCur = con.filt$TF_peak.fdr[i]
-        
-        cor_cur1 = cor(GRN@data$RNA$counts[TF.ENSEMBL, ], GRN@data$peaks$counts[peak.peakID,], method = corMethod)
-        
-        data.df = tibble(TF.exp.norm = GRN@data$RNA$counts[TF.ENSEMBL, ], peak.acc.norm = GRN@data$peaks$counts[peak.peakID,])
-        
-        data.filt.df = dplyr::filter(data.df, .data$TF.exp.norm > 0, .data$peak.acc.norm > 0)
-        
-        cor_cur2 = cor(dplyr::pull(data.filt.df, .data$TF.exp.norm), dplyr::pull(data.filt.df, .data$peak.acc.norm), method = corMethod)
-        
-        data.filt2.df = dplyr::filter(data.df, .data$TF.exp.norm > 0 | peak.acc.norm > 0)
-        
-        cor_cur3 = cor(dplyr::pull(data.filt2.df, .data$TF.exp.norm), dplyr::pull(data.filt2.df, .data$peak.acc.norm), method = corMethod)
-        
-        res.df = add_row(res.df, 
-                         TF.name = TF.name, peak.peakID = peak.peakID, 
-                         cor_all = cor_cur1, cor_nonZeroAll = cor_cur2, cor_nonZero = cor_cur3)
-    }
-    cor(res.df$cor_all, res.df$cor_nonZeroAll)
-    cor(res.df$cor_all, res.df$cor_nonZero)
-    
-    res.df = res.df %>%
-        dplyr::mutate(diff_all_nonZeroAll = cor_all - cor_nonZeroAll,
-                      diff_all_nonZero = cor_all - cor_nonZero)
-    
-    ggplot(res.df, aes(.data$diff_all_nonZeroAll)) + geom_histogram(binwidth = 0.05)
-    ggplot(res.df, aes(.data$diff_all_nonZero)) + geom_histogram(binwidth = 0.05)
-    
-    GRN
-  
-}
 
 .checkGraphExistance <- function (GRN) {
   

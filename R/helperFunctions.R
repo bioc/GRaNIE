@@ -472,46 +472,6 @@
   GenomeInfoDb::seqlengths(txdb)
 }
 
-.shuffleColumns <- function(df, nPermutations, returnUnshuffled = TRUE, returnAsList = TRUE, saveMemory = TRUE) {
-    
-    start = Sys.time()
-   
-    df.shuffled.l = list()
-    
-    futile.logger::flog.info(paste0("Shuffling columns ", nPermutations, " times"))
-    
-    # Shuffle RNA-Seq data for permutations
-    for (permutationCur in 0:nPermutations) {
-        
-        index = as.character(permutationCur)
-        
-        if (permutationCur == 0 & returnUnshuffled) {
-            df.shuffled.l[[index]]  = df
-        } else if (permutationCur > 0) {
-          
-            sampleOrder = sample(ncol(df))
-            
-            if (saveMemory) {
-              df.shuffled.l[[index]] =  sampleOrder
-            } else {
-              df.shuffled.l[[index]]  = df[,sampleOrder]
-            }
-            
-        } else {
-          # nothing to do
-        }
-        
-    }
-
-    .printExecutionTime(start)
-    
-    if (nPermutations == 1 & !returnAsList & !returnUnshuffled) {
-      df.shuffled.l[["1"]]
-    } else {
-      df.shuffled.l
-    }
-    
-}
 
 .shuffleRowsPerColumn <- function(df) {
   

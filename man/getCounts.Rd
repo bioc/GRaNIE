@@ -12,6 +12,15 @@ getCounts(
   includeIDColumn = TRUE,
   includeFiltered = FALSE
 )
+
+getCounts(
+  GRN,
+  type,
+  permuted = FALSE,
+  asMatrix = FALSE,
+  includeIDColumn = TRUE,
+  includeFiltered = FALSE
+)
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
@@ -28,12 +37,20 @@ getCounts(
 }
 \value{
 Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
+
+Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 }
 \description{
 Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
 \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
+
+Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
+\strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{
+# See the Workflow vignette on the GRaNIE website for examples
+GRN = loadExampleObject()
+counts.df = getCounts(GRN, type = "peaks", permuted = FALSE)
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 counts.df = getCounts(GRN, type = "peaks", permuted = FALSE)
