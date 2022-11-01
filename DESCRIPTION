@@ -1,6 +1,6 @@
 Package: GRaNIE
 Title: GRaNIE: Reconstruction cell type specific gene regulatory networks including enhancers using chromatin accessibility and RNA-seq data
-Version: 1.2.0
+Version: 1.3.0
 Encoding: UTF-8
 Authors@R: c(person("Christian", "Arnold", email =
         "chrarnold@web.de", role = c("cre","aut")),
