@@ -608,7 +608,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
       #         maxGSSize = maxGSSize,
       #         pAdjustMethod = pAdjustMethod)
       
-      # go.res.new = .createEnichmentTable(go_enrichment)
+      # go.res.new = .createEnrichmentTable(go_enrichment)
       
       # The need of p-value adjustment: https://bioconductor.org/packages/devel/bioc/vignettes/topGO/inst/doc/topGO.pdf
     
@@ -679,7 +679,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     }
     )
     
-    result.list[["results"]] = .createEnichmentTable(kegg_enrichment)
+    result.list[["results"]] = .createEnrichmentTable(kegg_enrichment)
     
   }
   
@@ -706,7 +706,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     }
     )
     
-    result.list[["results"]] = .createEnichmentTable(reactome_enrichment)
+    result.list[["results"]] = .createEnrichmentTable(reactome_enrichment)
     
   }
   
@@ -734,7 +734,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     }
     )
     
-    result.list[["results"]] = .createEnichmentTable(DO_enrichment)
+    result.list[["results"]] = .createEnrichmentTable(DO_enrichment)
     
   }
   
@@ -760,7 +760,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 }
 
 
-.createEnichmentTable <- function (enrichmentObj) {
+.createEnrichmentTable <- function (enrichmentObj) {
   
   if (!is.null(enrichmentObj)) {
     

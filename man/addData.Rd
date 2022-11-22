@@ -7,13 +7,15 @@
 addData(
   GRN,
   counts_peaks,
-  normalization_peaks = "DESeq_sizeFactor",
+  normalization_peaks = "DESeq2_sizeFactor",
   idColumn_peaks = "peakID",
   counts_rna,
   normalization_rna = "quantile",
   idColumn_RNA = "ENSEMBL",
   sampleMetadata = NULL,
+  additionalParams.l = list(),
   allowOverlappingPeaks = FALSE,
+  keepOriginalReadCounts = FALSE,
   forceRerun = FALSE
 )
 }
@@ -24,8 +26,9 @@ addData(
 In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. 
 Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
 
-\item{normalization_peaks}{Character. Default \code{DESeq_sizeFactor}. 
-Normalization procedure for peak data. Must be one of \code{DESeq_sizeFactor}, \code{none}, or \code{quantile}.}
+\item{normalization_peaks}{Character. Default \code{DESeq2_sizeFactor}. Normalization procedure for peak data. 
+Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, 
+\code{EDASeq_GC_peaks}, \code{gcqn_peaks}, \code{DESeq2_sizeFactors}, \code{none}.}
 
 \item{idColumn_peaks}{Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. 
 The required format must be {chr}:{start}-{end}", with {chr} denoting the abbreviated chromosome name, and {start} and {end} the begin and end 
@@ -36,15 +39,24 @@ In addition to the count data, it must also contain one ID column with a particu
 Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
 
 \item{normalization_rna}{Character. Default \code{quantile}. Normalization procedure for peak data. 
-Must be one of "DESeq_sizeFactor", "none", or "quantile". For "quantile", \code{limma::normalizeQuantiles} is used for normalization.}
+Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, \code{DESeq2_sizeFactors}, \code{none}.}
 
 \item{idColumn_RNA}{Character. Default \code{ENSEMBL}. Name of the column in the \code{counts_rna} data frame that contains Ensembl IDs.}
 
 \item{sampleMetadata}{Data frame. Default \code{NULL}. Optional, additional metadata for the samples, such as age, sex, gender etc. 
 If provided, the @seealso [plotPCA_all()] function can then incorporate and plot it. Sample names must match with those from both peak and RNA-Seq data. The first column is expected to contain the sample IDs, the actual column name is irrelevant.}
 
+\item{additionalParams.l}{Named list. Default \code{list()}. Additional parameters for the chosen normalization method. 
+Currently, only the GC-aware normalization methods \code{EDASeq_GC_peaks} and \code{gcqn_peaks} are supported here. 
+Both support the parameters \code{roundResults} (logical flag, \code{TRUE} or \code{FALSE}) and \code{nBins} (Integer > 0), and \code{EDASeq_GC_peaks} supports three additional parameters:
+\code{withinLane_method} (one of: "loess","median","upper","full") and \code{betweenLane_method}  (one of: "median","upper","full"). 
+For more information, see the EDASeq vignette.}
+
 \item{allowOverlappingPeaks}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping peaks be allowed (then only a warning is issued 
 when overlapping peaks are found) or (the default) should an error be raised?}
+
+\item{keepOriginalReadCounts}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the original read counts as provided to the function be kept in addition to
+storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
@@ -58,6 +70,9 @@ In addition, and highly recommended, sample metadata can be optionally provided.
 \details{
 If the \code{ChIPseeker} package is installed, additional peak annotation is provided in the annotation slot and a peak annotation QC plot is produced as part of peak-gene QC.
 This is fully optional, however, and has no consequences for downstream functions.
+Normalizing the data sensibly is very important. When \code{quantile}is chose, \code{limma::normalizeQuantiles} is used, which in essence does the following: 
+Each quantile of each column is set to the mean of that quantile across arrays. The intention is to make all the normalized columns have the same empirical distribution. 
+This will be exactly true if there are no missing values and no ties within the columns: the normalized columns are then simply permutations of one another.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

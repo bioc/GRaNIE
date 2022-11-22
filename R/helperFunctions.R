@@ -105,7 +105,7 @@
 # PACKAGE LOADING AND DETACHING FUNCTIONS #
 ###########################################
 
-.checkPackageInstallation <- function(pkg, message, isWarning = FALSE) {
+.checkPackageInstallation <- function(pkg, message, isWarning = FALSE, returnLogical = FALSE) {
     
     pkgMissing = c()
     for (packageCur in pkg) {
@@ -118,26 +118,40 @@
         message = paste0(message, "\n\nExecute the following line in R to install the missing package(s): `BiocManager::install(c(\"", 
                          paste0(pkgMissing, collapse = "\",\""), 
                          "\"))`")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = isWarning)
+        
+        # Normal behavior
+        if (!returnLogical) {
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = isWarning)
+        } else {
+            
+            # Make it just a warning but return FALSE
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            return(FALSE)
+        }
+        
+    } else {
+        if (returnLogical) return(TRUE)
     }
    
     
 }
 
 
-.checkAndLoadPackagesGenomeAssembly <- function(genomeAssembly) {
+.checkAndLoadPackagesGenomeAssembly <- function(genomeAssembly, returnLogical = FALSE) {
     
-    baseMessage = paste0("For the chosen genome assembly version, particular genome annotation packages are required but not installed. Please install and re-run this function.")
+    baseMessage = paste0("For the chosen genome assembly version and package function, particular genome annotation packages are required but not installed. Please install and re-run this function.")
 
     if (genomeAssembly == "hg38") {
-        .checkPackageInstallation(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg38.knownGene", "BSgenome.Hsapiens.UCSC.hg38"), baseMessage)
+        res = .checkPackageInstallation(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg38.knownGene", "BSgenome.Hsapiens.UCSC.hg38"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "hg19") {
-        .checkPackageInstallation(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg19.knownGene", "BSgenome.Hsapiens.UCSC.hg19"), baseMessage)
+        res = .checkPackageInstallation(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg19.knownGene", "BSgenome.Hsapiens.UCSC.hg19"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "mm10") {
-        .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene", "BSgenome.Mmusculus.UCSC.mm10"), baseMessage)
+        res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene", "BSgenome.Mmusculus.UCSC.mm10"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "mm9") {
-        .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene", "BSgenome.Mmusculus.UCSC.mm9"), baseMessage)
+        res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene", "BSgenome.Mmusculus.UCSC.mm9"), baseMessage, returnLogical = returnLogical)
     }
+    
+    if (returnLogical) return(res)
 
 }
 
@@ -415,7 +429,7 @@
 }
 
 
-
+# Only needed here: get CG content peaks (can be made optional), and .populatePeakAnnotation (within ChipSeeker)
 .getGenomeObject <- function(genomeAssembly, type = "txbd") {
     
     checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName"))
@@ -467,9 +481,22 @@
     obj
 }
 
+# .getChrLengths <- function(genomeAssembly) {
+#   txdb = .getGenomeObject(genomeAssembly)
+#   GenomeInfoDb::seqlengths(txdb)
+# }
+
+# Try an approach that is lighter and doesnt require large annotation packages
+
+#' @import GenomeInfoDb
 .getChrLengths <- function(genomeAssembly) {
-  txdb = .getGenomeObject(genomeAssembly)
-  GenomeInfoDb::seqlengths(txdb)
+    
+    chrSizes = GenomeInfoDb::getChromInfoFromUCSC(genomeAssembly)
+
+    chrSizes.vec = chrSizes$size
+    names(chrSizes.vec) = chrSizes$chrom
+    
+    chrSizes.vec
 }
 
 

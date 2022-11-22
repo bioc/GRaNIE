@@ -36,7 +36,6 @@ initializeGRN <- function(objectMetadata = list(),
   checkmate::assert(checkmate::checkNull(objectMetadata), checkmate::checkList(objectMetadata))
   checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
 
-  .checkAndLoadPackagesGenomeAssembly(genomeAssembly)
   
   # Create the folder first if not yet existing
   checkmate::assertCharacter(outputFolder, min.chars = 1, len = 1)
@@ -123,7 +122,7 @@ initializeGRN <- function(objectMetadata = list(),
   GRN
 }
 
-######## Add and filter data ########
+######## Add data and annotation ########
 
 #' Add data to a \code{\linkS4class{GRN}} object.
 #' 
@@ -132,14 +131,18 @@ initializeGRN <- function(objectMetadata = list(),
 #' 
 #' If the \code{ChIPseeker} package is installed, additional peak annotation is provided in the annotation slot and a peak annotation QC plot is produced as part of peak-gene QC.
 #' This is fully optional, however, and has no consequences for downstream functions.
+#' Normalizing the data sensibly is very important. When \code{quantile}is chose, \code{limma::normalizeQuantiles} is used, which in essence does the following: 
+#' Each quantile of each column is set to the mean of that quantile across arrays. The intention is to make all the normalized columns have the same empirical distribution. 
+#' This will be exactly true if there are no missing values and no ties within the columns: the normalized columns are then simply permutations of one another.
 #' 
 #' @export
 #' @template GRN 
 #' @param counts_peaks Data frame. No default. Counts for the peaks, with raw or normalized counts for each peak (rows) across all samples (columns). 
 #' In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. 
 #' Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
-#' @param normalization_peaks Character. Default \code{DESeq_sizeFactor}. 
-#' Normalization procedure for peak data. Must be one of \code{DESeq_sizeFactor}, \code{none}, or \code{quantile}.
+#' @param normalization_peaks Character. Default \code{DESeq2_sizeFactor}. Normalization procedure for peak data. 
+#' Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, 
+#' \code{EDASeq_GC_peaks}, \code{gcqn_peaks}, \code{DESeq2_sizeFactors}, \code{none}.
 #' @param idColumn_peaks Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. 
 #' The required format must be {chr}:{start}-{end}", with {chr} denoting the abbreviated chromosome name, and {start} and {end} the begin and end 
 #' of the peak coordinates, respectively. End must be bigger than start. Examples for valid peak IDs are \code{chr1:400-800} or \code{chrX:20-25}.
@@ -147,12 +150,19 @@ initializeGRN <- function(objectMetadata = list(),
 #' In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. 
 #' Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
 #' @param normalization_rna Character. Default \code{quantile}. Normalization procedure for peak data. 
-#' Must be one of "DESeq_sizeFactor", "none", or "quantile". For "quantile", \code{limma::normalizeQuantiles} is used for normalization.
+#' Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, \code{DESeq2_sizeFactors}, \code{none}.
 #' @param idColumn_RNA Character. Default \code{ENSEMBL}. Name of the column in the \code{counts_rna} data frame that contains Ensembl IDs.
 #' @param sampleMetadata Data frame. Default \code{NULL}. Optional, additional metadata for the samples, such as age, sex, gender etc. 
 #' If provided, the @seealso [plotPCA_all()] function can then incorporate and plot it. Sample names must match with those from both peak and RNA-Seq data. The first column is expected to contain the sample IDs, the actual column name is irrelevant.
+#' @param additionalParams.l Named list. Default \code{list()}. Additional parameters for the chosen normalization method. 
+#' Currently, only the GC-aware normalization methods \code{EDASeq_GC_peaks} and \code{gcqn_peaks} are supported here. 
+#' Both support the parameters \code{roundResults} (logical flag, \code{TRUE} or \code{FALSE}) and \code{nBins} (Integer > 0), and \code{EDASeq_GC_peaks} supports three additional parameters:
+#' \code{withinLane_method} (one of: "loess","median","upper","full") and \code{betweenLane_method}  (one of: "median","upper","full"). 
+#' For more information, see the EDASeq vignette.
 #' @param allowOverlappingPeaks \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping peaks be allowed (then only a warning is issued 
 #' when overlapping peaks are found) or (the default) should an error be raised?
+#' @param keepOriginalReadCounts \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the original read counts as provided to the function be kept in addition to
+#' storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with added data from this function (e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 #' @seealso \code{\link{plotPCA_all}}
@@ -166,11 +176,11 @@ initializeGRN <- function(objectMetadata = list(),
 #' # We omit sampleMetadata = meta.df in the following line, becomes too long otherwise
 #' # GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
 
-# TODO: add a isSingleCell argument or something similar
-
-addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor", idColumn_peaks = "peakID", 
+addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactor", idColumn_peaks = "peakID", 
                     counts_rna, normalization_rna = "quantile", idColumn_RNA = "ENSEMBL", sampleMetadata = NULL,
+                    additionalParams.l = list(),
                     allowOverlappingPeaks= FALSE,
+                    keepOriginalReadCounts = FALSE,
                     forceRerun = FALSE) {
   
   start = Sys.time()
@@ -182,8 +192,20 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   checkmate::assertDataFrame(counts_rna, min.rows = 1, min.cols = 2)
   checkmate::assertChoice(idColumn_peaks, colnames(counts_peaks))
   checkmate::assertChoice(idColumn_RNA, colnames(counts_rna))
-  checkmate::assertChoice(normalization_peaks, c("none", "DESeq_sizeFactor", "quantile"))
-  checkmate::assertChoice(normalization_rna, c("none", "DESeq_sizeFactor", "quantile"))  
+
+  checkmate::assertChoice(normalization_peaks, 
+                          choices = c("limma_cyclicloess", "limma_quantile", "limma_scale", 
+                                      "csaw_cyclicLoess_orig", "csaw_TMM", 
+                                      "EDASeq_GC_peaks", "gcqn_peaks",
+                                      "DESeq2_sizeFactors", 
+                                      "none"))
+  checkmate::assertChoice(normalization_rna, 
+                          choices = c("limma_cyclicloess", "limma_quantile", "limma_scale", 
+                                      "csaw_cyclicLoess_orig", "csaw_TMM", 
+                                      "DESeq2_sizeFactors", 
+                                      "none"))
+  
+  checkmate::assertFlag(keepOriginalReadCounts)
   checkmate::assertFlag(allowOverlappingPeaks)
   checkmate::assertFlag(forceRerun)
   
@@ -248,29 +270,49 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
       # dplyr::summarise_if(is.numeric, sum, .groups = 'drop') # the .drop caused an error with dplyr 1.0.5
     }
     
+    ## STORE COUNTS METADATA ##
     
-    # Normalize counts
-    countsPeaks.norm.df  = .normalizeCounts(counts_peaks, method = normalization_peaks, idColumn = "peakID")
-    countsRNA.norm.df  = .normalizeCounts(counts_rna, method = normalization_rna, idColumn = "ENSEMBL")
+    GRN@data$RNA$counts_metadata = tibble::tibble(ID = counts_rna$ENSEMBL, isFiltered = FALSE)
     
+    GRN@data$peaks$counts_metadata = .createConsensusPeaksDF(counts_peaks$peakID) 
+    stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
+    
+    #  Calculate GC content of peaks which we need before any normalization
+    
+    if (normalization_peaks %in% c("EDASeq_GC_peaks", "gcqn_peaks")) {
+        
+        # Now we need the genome annotation packages to calculate the GC content of the peak regions
+        .checkAndLoadPackagesGenomeAssembly(GRN@config$parameters$genomeAssembly)
+        
+        GC.data.df = .calcGCContentPeaks(GRN)
+        additionalParams.l[["GC_data"]] = GC.data.df
+    }
+   
+    
+    ## Normalize counts ##
+    countsPeaks.norm.df  = .normalizeCountMatrix(GRN, counts_peaks %>% tibble::column_to_rownames("peakID") %>% as.matrix(), 
+                                                 normalization = normalization_peaks,
+                                                 additionalParams = additionalParams.l
+                                            ) %>%
+                            as_tibble(rownames = "peakID") %>%
+                            dplyr::select(.data$peakID, tidyselect::everything())
+    
+    countsRNA.norm.df    = .normalizeCountMatrix(GRN, counts_rna %>% tibble::column_to_rownames("ENSEMBL") %>% as.matrix(), 
+                                                 normalization = normalization_rna,
+                                                 additionalParams = additionalParams.l) %>%
+                            as_tibble(rownames = "ENSEMBL") %>%
+                            dplyr::select(.data$ENSEMBL, tidyselect::everything())
+    
+
+    ## SAMPLE AND GRN METADATA ##
     GRN@config$parameters$normalization_rna = normalization_rna
     GRN@config$parameters$normalization_peaks = normalization_peaks
     
-    # We have our first connection type, the default one; more may be added later
-    GRN@config$TF_peak_connectionTypes = "expression"
+    samples_rna   = colnames(countsRNA.norm.df)
+    samples_peaks = colnames(countsPeaks.norm.df)
+    allSamples    = unique(c(samples_rna, samples_peaks)) %>% setdiff(c("ENSEMBL", "isFiltered", "peakID"))
     
-    # Make sure ENSEMBL is the first column
-    countsRNA.norm.df = dplyr::select(countsRNA.norm.df, .data$ENSEMBL, tidyselect::everything())
-    countsPeaks.norm.df = dplyr::select(countsPeaks.norm.df, .data$peakID, tidyselect::everything())
-    
-    samples_rna  = colnames(countsRNA.norm.df)
-    samples_peaks =  colnames(countsPeaks.norm.df)
-    allSamples =  unique(c(samples_rna, samples_peaks)) %>% setdiff(c("ENSEMBL", "isFiltered", "peakID"))
-    
-    # Subset data to retain only samples that appear in both RNA and peaks
-    data.l = .intersectData(countsRNA.norm.df, countsPeaks.norm.df)
-    
-    # Generate metadata first to determine the nmberof shared samples etc
+    # Generate metadata first to determine the number of shared samples etc
     if (!is.null(sampleMetadata)) {
       
       futile.logger::flog.info("Parsing provided metadata...")
@@ -308,23 +350,30 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
       )
     
     GRN@config$sharedSamples = dplyr::filter(GRN@data$metadata, .data$has_both) %>% dplyr::pull(.data$sampleID) %>% as.character()
+    # We have our first connection type, the default one; more may be added later
+    GRN@config$TF_peak_connectionTypes = "expression"
     
-    ### COUNT MATRICES
+    ## STORE FINAL COUNT MATRICES ##
+    
+    # Subset data to retain only samples that appear in both RNA and peaks
+    data.l = .intersectData(countsRNA.norm.df, countsPeaks.norm.df)
+    
     # Store the matrices either as normal or sparse matrix
-    
     GRN@data$peaks$counts = .storeAsMatrixOrSparseMatrix(GRN, df = data.l[["peaks"]], ID_column = "peakID", slotName = "GRN@data$peaks$counts")
-
-    # includeFiltered = TRUE here as it doesnt make a difference and because getCounts requires counts_metadata$isFiltered to be set already
-    GRN@data$peaks$counts_metadata = .createConsensusPeaksDF(rownames(GRN@data$peaks$counts)) 
-    stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
     
+    if (keepOriginalReadCounts) {
+        GRN@data$peaks$counts_raw = .storeAsMatrixOrSparseMatrix(GRN, df = counts_peaks %>% dplyr::select("peakID", tidyselect::one_of(GRN@config$sharedSamples)), 
+                                                                 ID_column = "peakID", slotName = "GRN@data$peaks$counts_raw")
+    }
+
     GRN@data$RNA$counts   = .storeAsMatrixOrSparseMatrix(GRN, df =  data.l[["RNA"]], ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
-      
-    GRN@data$RNA$counts_metadata = tibble::tibble(ID = data.l[["RNA"]]$ENSEMBL, isFiltered = FALSE)
+    
+    if (keepOriginalReadCounts) {
+        GRN@data$RNA$counts_raw = .storeAsMatrixOrSparseMatrix(GRN, df = counts_rna %>% dplyr::select("ENSEMBL", tidyselect::one_of(GRN@config$sharedSamples)), 
+                                                                 ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts_raw")
+    }
     
     GRN@data$RNA$counts_permuted_index = sample.int(ncol(GRN@data$RNA$counts), ncol(GRN@data$RNA$counts))
-    
-    
     
     futile.logger::flog.info(paste0( "Final dimensions of data:"))
     futile.logger::flog.info(paste0( " RNA  : ", nrow(countsRNA.norm.df)  , " x ", ncol(countsRNA.norm.df)   - 2, " (rows x columns)"))
@@ -332,51 +381,59 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     # Create permutations for RNA
     futile.logger::flog.info(paste0( "Generate ", .getMaxPermutation(GRN), " permutations of RNA-counts"))
     
+    futile.logger::flog.info(paste0("Check for overlapping peaks..."))
     
-    futile.logger::flog.info(paste0("Creating consensus peaks and check for overlapping peaks..."))
-    
-    # Consensus peaks
+    .checkOverlappingPeaks(GRN, allowOverlappingPeaks = allowOverlappingPeaks)
 
-    # Assume 0-based exclusive format, see https://arnaudceol.wordpress.com/2014/09/18/chromosome-coordinate-systems-0-based-1-based/ and http://genome.ucsc.edu/FAQ/FAQformat.html#format1 for details
-    consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), GRN@config$parameters$genomeAssembly, zeroBased = TRUE)
-
-    overlappingPeaks = which(GenomicRanges::countOverlaps(consensus.gr ,consensus.gr) >1)
+    ## PEAK AND GENE ANNOTATION ##
+    futile.logger::flog.info(paste0("Adding peak and gene annotation..."))
     
-    if (length(overlappingPeaks) > 0) {
-      
-      ids = (consensus.gr[overlappingPeaks] %>% as.data.frame())$peakID
-      
-      messageAll = paste0(" ", length(overlappingPeaks), 
-                          " overlapping peaks have been identified. The first ten are: ", paste0(ids[seq_len(min(10, length(ids)))], collapse = ","),
-                          ". This may not be what you want, since overlapping peaks may have a heigher weight in the network. "
-      )
-      
-      
-      if (allowOverlappingPeaks) {
-        
-        message = paste0(messageAll, "As allowOverlappingPeaks has been set to TRUE, this is only a warning and not an error.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      } else {
-        message = paste0(messageAll, "As allowOverlappingPeaks = FALSE (the default), this is an error and not a warning. You may want to regenerate the peak file, eliminate peak overlaps, and rerun this function")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-      }
-      
-    }
+    GRN = .populatePeakAnnotation(GRN)
+    GRN@annotation$peaks = dplyr::left_join(GRN@annotation$peaks, GC.data.df, by = "peak.ID") 
+    
+    # Additional GC statistics, not used at the moment currently
+    GRN = .calcAdditionalGCStatistics(GRN, GC.data.df)
+
+    GRN = .populateGeneAnnotation(GRN)
     
   }
-  futile.logger::flog.info(paste0("Adding peak and gene annotation..."))
   
-  # Add peak annotation once
-  GRN = .populatePeakAnnotation(GRN)
-  
-  # Add gene annotation once
-  GRN = .populateGeneAnnotation(GRN)
   
   .printExecutionTime(start, prefix = "")
   
   GRN
   
 }
+
+.checkOverlappingPeaks <- function (GRN, allowOverlappingPeaks) {
+    
+    # Assume 0-based exclusive format, see https://arnaudceol.wordpress.com/2014/09/18/chromosome-coordinate-systems-0-based-1-based/ and http://genome.ucsc.edu/FAQ/FAQformat.html#format1 for details
+    consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), GRN@config$parameters$genomeAssembly, zeroBased = TRUE)
+    
+    overlappingPeaks = which(GenomicRanges::countOverlaps(consensus.gr ,consensus.gr) >1)
+    
+    if (length(overlappingPeaks) > 0) {
+        
+        ids = (consensus.gr[overlappingPeaks] %>% as.data.frame())$peakID
+        
+        messageAll = paste0(" ", length(overlappingPeaks), 
+                            " overlapping peaks have been identified. The first ten are: ", paste0(ids[seq_len(min(10, length(ids)))], collapse = ","),
+                            ". This may not be what you want, since overlapping peaks may have a heigher weight in the network. "
+        )
+        
+        
+        if (allowOverlappingPeaks) {
+            
+            message = paste0(messageAll, "As allowOverlappingPeaks has been set to TRUE, this is only a warning and not an error.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+        } else {
+            message = paste0(messageAll, "As allowOverlappingPeaks = FALSE (the default), this is an error and not a warning. You may want to regenerate the peak file, eliminate peak overlaps, and rerun this function")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+    }
+}
+
 
 .storeAsMatrixOrSparseMatrix <- function (GRN, df, ID_column, slotName, threshold = 0.1) {
     
@@ -497,11 +554,18 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   
   GRN@annotation$peaks = metadata_peaks
 
-  if (!is.installed("ChIPseeker")) {
-      packageMessage = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
-                              " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
-      .checkPackageInstallation("ChIPseeker", packageMessage, isWarning = TRUE)
+  if (!is.installed("ChIPseeker") | !.checkAndLoadPackagesGenomeAssembly(GRN@config$parameters$genomeAssembly, returnLogical = TRUE)) {
+      if (!is.installed("ChIPseeker")) {
+          packageMessage = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
+                                  " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
+          .checkPackageInstallation("ChIPseeker", packageMessage, isWarning = TRUE)
+      } else {
+          
+          # annotation packages missing, message will already been thrown
+      }
+      
   } else {
+      
     
     futile.logger::flog.info(paste0(" Retrieve peak annotation using ChipSeeker. This may take a while"))
     genomeAssembly = GRN@config$parameters$genomeAssembly
@@ -555,12 +619,6 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
     
   }
   
-  
-  
-  
-  # Also add GC content as annotation columns
-  GRN = .calcGCContentPeaks(GRN)
-  
   GRN
   
 }
@@ -600,7 +658,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 }
 
 #' @importFrom rlang .data `:=`
-.calcGCContentPeaks <- function(GRN) {
+.calcGCContentPeaks <- function(GRN, nBins = 10) {
   
   futile.logger::flog.info(paste0("Calculate GC-content for peaks. This may take a while"))
   start = Sys.time()
@@ -616,58 +674,429 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
   # Get DNAStringSet object
   seqs_peaks = Biostrings::getSeq(genome, query)
   
-  GC_content.df = Biostrings::letterFrequency(seqs_peaks, "GC") / Biostrings::letterFrequency(seqs_peaks, "ACGT")
-  
-  GC_content.df = GC_content.df %>%
+  GC_content.df = (Biostrings::letterFrequency(seqs_peaks, "GC") / Biostrings::letterFrequency(seqs_peaks, "ACGT")) %>%
     tibble::as_tibble() %>%
-    dplyr::mutate(length = GenomicRanges::width(query),
+    dplyr::mutate(peak.width = GenomicRanges::width(query),
                   peak.ID = query$peakID,
-                  GC_class = cut(.data$`G|C`, breaks = seq(0,1,0.1), include.lowest = TRUE, ordered_result = TRUE))
+                  peak.GC.class = cut(.data$`G|C`, breaks = seq(0,1,1/nBins), include.lowest = TRUE, ordered_result = TRUE)) %>%
+    dplyr::rename(peak.GC.perc    = .data$`G|C`) %>%
+    dplyr::select(peak.ID, everything())
   
-  GC_classes.df = GC_content.df %>%
-    dplyr::group_by(.data$GC_class) %>%
-    dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(length), peak_width_sd = sd(length)) %>%
-    dplyr::ungroup() %>% 
-    tidyr::complete(.data$GC_class, fill = list(n = 0)) %>%
-    dplyr::mutate(n_rel = .data$n / length(query))
-  
-  # TODO: Put where
-  #ggplot2::ggplot(GC_content.df, ggplot2::aes(GC.class)) + geom_histogram(stat = "count") + ggplot2::theme_bw()
-  
-  #ggplot2::ggplot(GC_classes.df , ggplot2::aes(GC.class, n_rel)) + geom_bar(stat = "identity") + ggplot2::theme_bw()
-  
-  GRN@annotation$peaks = dplyr::left_join(GRN@annotation$peaks, GC_content.df, by = "peak.ID") %>%
-    dplyr::rename( peak.GC.perc    = .data$`G|C`,
-                   peak.width      = .data$length,
-                   peak.GC.class   = .data$GC_class)
-  
-  GRN@stats$peaks = list()
-  GRN@stats$peaks$GC = GC_classes.df
-  
+
   .printExecutionTime(start)
   
-  GRN
+  GC_content.df
 }
+
+.calcAdditionalGCStatistics <- function (GRN, GC.data) {
+    
+    GC_classes.df = GC.data %>%
+        dplyr::group_by(.data$peak.GC.class) %>%
+        dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
+        dplyr::ungroup() %>% 
+        tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
+        dplyr::mutate(n_rel = .data$n / length(query))
+    
+    # TODO: Put where
+    #ggplot2::ggplot(GC.data, ggplot2::aes(GC.class)) + geom_histogram(stat = "count") + ggplot2::theme_bw()
+    
+    #ggplot2::ggplot(GC_classes.df , ggplot2::aes(GC.class, n_rel)) + geom_bar(stat = "identity") + ggplot2::theme_bw()
+    
+    
+    GRN@stats$peaks = list()
+    GRN@stats$peaks$GC = GC_classes.df
+    
+    GRN
+}
+
+
+####### FILTER AND NORMALIZE DATA ############
+
+.normalizeCountMatrix <- function(GRN, data, normalization, additionalParams =list()) {
+    
+    checkmate::assertMatrix(data)
+    checkmate::assertChoice(normalization, 
+                            choices = c("limma_cyclicloess", "limma_quantile", "limma_scale", 
+                                        "csaw_cyclicLoess_orig", "csaw_TMM", 
+                                        "EDASeq_GC_peaks", "gcqn_peaks",
+                                        "DESeq2_sizeFactors",
+                                        "none"))
+    
+    # Create a DESeq2 object
+    if (normalization ==  "DESeq2_sizeFactors" | normalization == "csaw_cyclicLoess_orig" | normalization == "csaw_TMM") {
+
+        dd <- suppressMessages(DESeq2::DESeqDataSetFromMatrix(countData = data,
+                                             colData = data.frame( sampleID = colnames(data)),
+                                             design = stats::as.formula(" ~ 1")))
+    }
+    
+    # Common parameters
+    if (normalization ==  "EDASeq_GC_peaks" | normalization == "gcqn_peaks") {
+        
+        # After either within-lane or between-lane normalization, the expression values are not counts anymore. 
+        # However, their distribution still shows some typical features of counts distribution (e.g., the variance depends on the mean). 
+        # Hence, for most applications, it is useful to round the normalized values to recover count-like values, which we refer to as “pseudo-counts”.
+        # By default, both withinLaneNormalization and betweenLaneNormalization round the normalized values to the closest integer. 
+        # This behavior can be changed by specifying round=FALSE. This gives the user more flexibility and assures that rounding approximations do not affect subsequent computations (e.g., recovering the offset from the normalized counts).
+        if ("roundResults" %in% names(additionalParams)) {
+            roundResults = additionalParams$roundResults
+        } else {
+            roundResults = FALSE
+        }
+        
+        checkmate::assertFlag(roundResults)
+        
+        if ("GC_data" %in% names(additionalParams)) {
+            GC_data.df = additionalParams$GC_data
+        } else {
+            message = "GC_data is missing in additionalParams list."
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+
+    }
+    
+    if (normalization == "limma_cyclicloess" | normalization == "limma_quantile" | normalization == "limma_scale") {
+        
+        futile.logger::flog.info(paste0(" Normalizing data using the package limma with the following method: ", normalization))
+
+        dataNorm = limma::normalizeBetweenArrays(data, method= sub("limma_", replacement = "", normalization))  
+        
+    } else if (normalization == "csaw_cyclicLoess_orig" | normalization == "csaw_TMM")   {
+        
+        futile.logger::flog.info(paste0(" Normalizing data using the package csaw with the following method: ", normalization))
+        packageMessage = paste0("The package csaw is currently not installed, but however needed for the normalization methods \"csaw_cyclicLoess_orig\" and \"csaw_TMM\"")
+        .checkPackageInstallation("csaw", packageMessage, isWarning = TRUE)
+        
+        if (packageVersion("csaw") <= "1.14.1") {
+            message = "The version of the csaw package is too old, install at least version 1.14.1 or change the normalization method"
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+
+        object = SummarizedExperiment::SummarizedExperiment(list(counts=data))
+        object$totals = colSums(data)
+        
+        if (normalization == "csaw_cyclicLoess_orig") {
+            
+            # Perform a cyclic loess normalization
+            # We use a slighlty more complicated setup to derive size factors for library normalization
+            # Instead of just determining the size factors in DeSeq2 via cirtual samples, we use 
+            # a normalization from the csaw package (see https://www.rdocumentation.org/packages/csaw/versions/1.6.1/topics/normOffsets)
+            # and apply a non-linear normalization. 
+            # For each sample, a lowess curve is fitted to the log-counts against the log-average count. 
+            # The fitted value for each bin pair is used as the generalized linear model offset for that sample. 
+            # The use of the average count provides more stability than the average log-count when low counts are present for differentially bound regions.
+            
+            # since counts returns,by default, non-normalized counts, the following code should be fine and there is no need to also run estimateSizeFactors beforehand
+ 
+            normFacs  = csaw::normOffsets(object, se.out = FALSE)
+            
+            # the normalization factors matrix should not have 0's in it
+            # it should have geometric mean near 1 for each row
+            # exp(mean(log(normFacs[i,]))) for each row i
+            normFacs <- normFacs / exp(rowMeans(log(normFacs)))
+            
+            rownames(normFacs) = rownames(data)
+            colnames(normFacs) = colnames(data)
+            
+            futile.logger::flog.info(paste0("  Using the csaw-derived feature-specific normalization factors for DESeq, which will preempt sizeFactors"))
+            
+            
+            DESeq2::normalizationFactors(dd) <- normFacs
+            
+        
+        } else { # TMM
+            
+            # This function uses the trimmed mean of M-values (TMM) method to remove composition biases, typically in background regions of the genome. 
+            # The key difference from standard TMM is that precision weighting is turned off by default so as to avoid upweighting high-abundance regions. 
+            # These are more likely to be bound and thus more likely to be differentially bound. 
+            # Assigning excessive weight to such regions will defeat the purpose of trimming when normalizing the coverage of background regions.
+            sizeFactors  = csaw::normFactors(object, se.out = FALSE)
+            
+            futile.logger::flog.info(paste0("  Using the csaw-derived TMM-derived normalization factors as size factors, overriding the DESeq-default size factors."))
+            
+            sizeFactors(dd) <- sizeFactors
+        }
+        
+        dataNorm = DESeq2::counts(dd, normalized=TRUE)
+        
+    } else if (normalization == "EDASeq_GC_peaks") {
+        
+        packageMessage = paste0("The package EDASeq is currently not installed, but however needed for the normalization methods \"EDASeq_GC_peaks\"")
+        .checkPackageInstallation("EDASeq", packageMessage, isWarning = TRUE)
+        
+        futile.logger::flog.info(paste0(" Normalizing data using the package EDASeq with the following method: ", normalization, " with the GC content as covariate."))
+        # https://bioconductor.org/packages/release/bioc/vignettes/EDASeq/inst/doc/EDASeq.html#normalization
+
+        if ("nBins" %in% names(additionalParams)) {
+            nBins = additionalParams$nBins
+        } else {
+            nBins = 10 
+        }
+
+        # We implemented four within-lane normalization methods, namely: 
+        # 1. loess robust local regression of read counts (log) on a gene feature such as GC-content (loess),
+        # 2. global-scaling between feature strata using the median (median), 
+        # 3. global-scaling between feature strata using the upper-quartile (upper), 
+        # 4. and full-quantile normalization between feature strata (full). 
+        # For a discussion of these methods in context of GC-content normalization see (Risso et al. 2011).
+        if ("withinLane_method" %in% names(additionalParams)) {
+            withinLane_method = additionalParams$withinLane_method
+        } else {
+            withinLane_method = "full"
+        }
+        
+        # Regarding between-lane normalization, the package implements three of the methods introduced in (Bullard et al. 2010): 
+        # global-scaling using the median (median), global-scaling using the upper-quartile (upper), and full-quantile normalization (full).
+        if ("betweenLane_method" %in% names(additionalParams)) {
+            betweenLane_method = additionalParams$withinLane_method
+        } else {
+            betweenLane_method = "full"
+        }
+        
+        peaks_GC_fraction = GC_data.df$peak.GC.perc
+ 
+        
+        futile.logger::flog.info(paste0(" Using the following additional parameters for EDASeq: nBins = ", nBins, 
+                                        ", withinLane_method = ", withinLane_method, 
+                                        ", betweenLane_method = ", betweenLane_method,
+                                        ", roundResults = ", roundResults,
+                                        " as well as the automatically calculated peak GC content as covariate for withinLaneNormalization"))
+        
+        checkmate::assertNumeric(peaks_GC_fraction, lower = 0, upper = 1)
+        checkmate::assertIntegerish(nBins, lower = 1, upper = 100)
+        checkmate::assertChoice(withinLane_method, choices = c("loess","median","upper","full"))
+        checkmate::assertChoice(betweenLane_method, choices = c("median","upper","full"))
+        
+        # Following (Risso et al. 2011), we consider two main types of effects on gene-level counts: 
+        # (1) within-lane gene-specific (and possibly lane-specific) effects, e.g., related to gene length or GC-content, and 
+        # (2) effects related to between-lane distributional differences, e.g., sequencing depth. 
+        # Accordingly, withinLaneNormalization and betweenLaneNormalization adjust for the first and second type of effects, respectively. 
+        # We recommend to normalize for within-lane effects prior to between-lane normalization.
+        dataWithin <- withinLaneNormalization(data, y = peaks_GC_fraction, which= withinLane_method, num.bins = nBins, round = roundResults)
+        dataNorm <- betweenLaneNormalization(dataWithin, which=betweenLane_method, round = roundResults)
+        
+        
+    } else if (normalization == "gcqn_peaks") {
+       
+        futile.logger::flog.info(paste0(" Normalizing data using the GC-full-quantile (GC-FQ) normalization approach as described in Van den Berge et al. 2021 (https://doi.org/10.1101/2021.01.26.428252) using 50 bins."))
+
+        if ("nBins" %in% names(additionalParams)) {
+            nBins = additionalParams$nBins
+        } else {
+            # Use the recommended 50 bins as described in the paper as default
+            nBins = 50
+        }
+
+        peaks_GC_class = cut(GC_data.df$peak.GC.perc, breaks = seq(0,1,1/nBins), include.lowest = TRUE, ordered_result = TRUE)
+
+        dataNorm = .gcqn(data = data, 
+                         GC_class = peaks_GC_class,
+                         summary='mean', round = roundResults)
+        
+        
+    } else if (normalization == "DESeq2_sizeFactors") {
+        
+        futile.logger::flog.info(paste0(" Normalizing data using the package DESeq2 with a standard size factor normalization."))
+        
+        dd = DESeq2::estimateSizeFactors(dd)
+        dataNorm = DESeq2::counts(dd, normalized=TRUE)
+        
+    } else if (normalization == "none") {
+        dataNorm = data
+        futile.logger::flog.info(paste0(" Skip normalization."))
+        # Nothing to do, leave countsPeaks as they are
+    }
+    
+    dataNorm
+}
+
+
+#The following functions are taken from https://github.com/koenvandenberge/bulkATACGC/blob/master/methods/gcqn_validated.R
+
+### GCQN, first implementation
+FQnorm <- function(counts, type="mean"){
+    rk <- apply(counts,2,rank,ties.method='min')
+    counts.sort <- apply(counts,2,sort)
+    if(type=="mean"){
+        # refdist <- apply(counts.sort,1,mean)
+        refdist <- base::rowMeans(counts.sort)
+    } else if(type=="median"){
+        #refdist <- apply(counts.sort,1,median)
+        refdist <- matrixStats::rowMedians(counts.sort)
+    }
+    norm <- apply(rk,2,function(r){ refdist[r] })
+    rownames(norm) <- rownames(counts)
+    return(norm)
+}
+
+
+# GC-full-quantile (GC-FQ) normalization. GC-FQ is similar to FQ-FQ, but relies on the observation that, in
+# ATAC-seq, read count distributions are often more comparable between samples within a GC-content bin, than
+# between GC-content bins within a sample (Figure 2). It therefore applies between-sample FQ normalization for
+# each GC-content bin separately
+.gcqn <- function(data, GC_class, summary='mean', round=FALSE){
+    
+    gcBinNormCounts <- matrix(NA, nrow=nrow(data), ncol=ncol(data), dimnames=list(rownames(data),colnames(data)))
+    
+    for(ii in 1:nlevels(GC_class)){
+  
+        id <- which(GC_class==levels(GC_class)[ii])
+        if(length(id) == 0) next
+        if(length(id) == 1){
+            normCountBin <- data[id,]
+            if(round) normCountBin <- round(normCountBin)
+            gcBinNormCounts[id,] <- normCountBin
+            next
+        }
+        countBin <- data[id,,drop=FALSE]
+        if(summary=="mean"){
+            normCountBin <- FQnorm(countBin, type='mean')
+        } else if(summary=="median"){
+            normCountBin <- FQnorm(countBin, type='median')
+        }
+        if(round) normCountBin <- round(normCountBin)
+        normCountBin[normCountBin<0] <- 0
+        gcBinNormCounts[id,] <- normCountBin
+    }
+    return(gcBinNormCounts)
+}
+
+
+# peaksAnnotation = GRN@annotation$peaks
+# counts = getCounts(GRN, type = "peaks", asMatrix = TRUE, includeFiltered = TRUE)
+# Currently not applicable as we do not have different groups, qsmooth does not run with only one group
+# 
+# .gcqn_qsmooth_mod <- function(counts, peaksAnnotation){
+#     
+#     packageMessage = paste0("The package qsmooth is not installed, which is however needed for the chosen normalization method. Please install it and re-run this function or change the normalization method.")
+#     .checkPackageInstallation("qsmooth", packageMessage)
+#     
+#     groups_factors = factor(rep("A", length(GRN@config$sharedSamples)))
+#     
+#     gcBinNormCounts <- matrix(NA, nrow=nrow(counts), ncol=ncol(counts), dimnames=list(rownames(counts),colnames(counts)))
+#     for(ii in 1:nlevels(peaksAnnotation$peak.GC.class)){
+#         id <- which(peaksAnnotation$peak.GC.class==levels(peaksAnnotation$peak.GC.class)[ii])
+#         countBin <- counts[id,]
+#         qs <- qsmooth::qsmooth(countBin, group_factor=groups_factors)
+#         normCountBin <- qs@qsmoothData
+#         normCountBin <- round(normCountBin)
+#         normCountBin[normCountBin<0] <- 0
+#         gcBinNormCounts[id,] <- normCountBin
+#     }
+#     return(gcBinNormCounts)
+# }
+
+
+
+
+
+
+# 
+# # Needed
+# # Add DESeq2 normalization factors maybe? csaw stuff
+# .normalizeCounts <- function(rawCounts, method = "quantile", ) {
+#     
+#     checkmate::assertChoice(idColumn, colnames(rawCounts))
+#     start = Sys.time()
+#     
+#     futile.logger::flog.info(paste0("Normalize counts. Method: ", method, ", ID column: ", idColumn))
+#     
+#     
+#     if (method == "quantile") {
+#         
+#         if (length(rmCols) > 0) {
+#             input = as.matrix(rawCounts[,-rmCols])
+#         } else {
+#             input = as.matrix(rawCounts)
+#         }
+#         
+#         # We use limma for normalizing quantiles and NOT preprocessCore as before due to regression bugs for version >1.50
+#         counts.norm = limma::normalizeQuantiles(input)
+#         
+#     } else if (method == "DESeq_sizeFactor") {
+#         
+#         if (length(rmCols) > 0) {
+#             sampleData.df = data.frame( sampleID = colnames(rawCounts)[-rmCols], stringsAsFactors = FALSE)
+#             countDataNew = as.data.frame(rawCounts[, -rmCols])
+#         } else {
+#             sampleData.df = data.frame( sampleID = colnames(rawCounts))
+#             countDataNew = as.data.frame(rawCounts)
+#         }
+#         
+#         rownames(countDataNew) = ids
+#         
+#         stopifnot(identical(sampleData.df$sampleID, colnames(countDataNew)))
+#         
+#         dd <- DESeq2::DESeqDataSetFromMatrix(countData = countDataNew,
+#                                              colData = sampleData.df,
+#                                              design = stats::as.formula(" ~ 1"))
+#         
+#         dd = DESeq2::estimateSizeFactors(dd)
+#         counts.norm = DESeq2::counts(dd, normalized = TRUE)
+#         
+#         if (returnDESeqObj) {
+#             return(dd)
+#         }
+#         
+#         
+#     } else if (method == "none") {
+#         
+#         if (length(rmCols) > 0) {
+#             counts.norm = rawCounts[,-rmCols]
+#         } else {
+#             counts.norm = rawCounts
+#         }
+#         
+#     } else  {
+#         stop("Not implemented yet")
+#     }
+#     
+#     .printExecutionTime(start)
+#     
+#     counts.norm = counts.norm %>% 
+#         as.data.frame()  %>% 
+#         tibble::as_tibble() %>% 
+#         dplyr::mutate({{idColumn}} := ids) %>%
+#         dplyr::select({{idColumn}}, tidyselect::everything()) 
+#     
+#     colnames(counts.norm) = c(idColumn, colnames_samples)
+#     
+#     counts.norm
+#     
+# }
+
+
 
 #' Filter RNA-seq and/or peak data from a \code{\linkS4class{GRN}} object
 #' 
-#' This function marks genes and/or peaks as \code{filtered} depending on the chosen filtering criteria. Filtered genes / peaks will then be 
-#' disregarded when adding connections in subsequent steps via \code{\link{addConnections_TF_peak}} and  \code{\link{addConnections_peak_gene}}. \strong{This function does NOT (re)filter existing connections when the \code{\linkS4class{GRN}} object already contains connections. Thus, upon re-execution of this function with different filtering criteria, all downstream steps have to be re-run.}
+#' This function marks genes and/or peaks as \code{filtered} depending on the chosen filtering criteria and is based on the count data AFTER
+#' potential normalization as chosen when using the \code{\link{addData}} function. Most of the filters may not be meaningful and useful anymore to apply
+#' after using particular normalization schemes that can give rise to, for example, negative values such as cyclic loess normalization. If normalized counts do
+#' not represents counts anymore but rather a deviation from a mean or something a like, the filtering critieria usually do not make sense anymore.
+#' Filtered genes / peaks will then be disregarded when adding connections in subsequent steps via \code{\link{addConnections_TF_peak}} and  \code{\link{addConnections_peak_gene}}. \strong{This function does NOT (re)filter existing connections when the \code{\linkS4class{GRN}} object already contains connections. Thus, upon re-execution of this function with different filtering criteria, all downstream steps have to be re-run.}
 #' 
 #' All this function does is setting (or modifying) the filtering flag in \code{GRN@data$peaks$counts_metadata} and \code{GRN@data$RNA$counts_metadata}, respectively.
 #' 
 #' @template GRN 
 #' @param minNormalizedMean_peaks Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @param maxNormalizedMean_peaks Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @param minNormalizedMeanRNA Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @param maxNormalizedMeanRNA Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @param chrToKeep_peaks Character vector or \code{NULL}. Default \code{NULL}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example (e.g, \code{c(paste0("chr", 1:22), "chrX", "chrY")})
-#' @param minSize_peaks Integer[1,] or \code{NULL}. Default \code{NULL}. Minimum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+#' @param minSize_peaks Integer[1,] or \code{NULL}. Default 20. Minimum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
 #' @param maxSize_peaks Integer[1,] or \code{NULL}. Default 10000. Maximum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.
 #' @param minCV_peaks Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @param maxCV_peaks Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @param minCV_genes Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @param maxCV_genes Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
+#' Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with added data from this function.
 #' @examples 
@@ -676,10 +1105,10 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq_sizeFactor",
 #' GRN = filterData(GRN, forceRerun = FALSE)
 #' @export
 filterData <- function (GRN, 
-                        minNormalizedMean_peaks = 5, maxNormalizedMean_peaks = NULL, 
-                        minNormalizedMeanRNA = 1,  maxNormalizedMeanRNA = NULL,
+                        minNormalizedMean_peaks = NULL, maxNormalizedMean_peaks = NULL, 
+                        minNormalizedMeanRNA = NULL,  maxNormalizedMeanRNA = NULL,
                         chrToKeep_peaks = NULL,
-                        minSize_peaks = NULL, maxSize_peaks = 10000,
+                        minSize_peaks = 20, maxSize_peaks = 10000,
                         minCV_peaks = NULL, maxCV_peaks = NULL,
                         minCV_genes = NULL, maxCV_genes = NULL,
                         forceRerun = FALSE) {
@@ -761,13 +1190,13 @@ filterData <- function (GRN,
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
-    rowMeans = rowMeans(getCounts(GRN, type = "rna", asMatrix = TRUE, includeFiltered = TRUE))
-    GRN@data$RNA$counts_metadata$isFiltered = rowMeans < minNormalizedMeanRNA 
+
+    GRN@data$RNA$counts_metadata$isFiltered = ! GRN@data$RNA$counts_metadata$ID %in% genes.CV
 
     nRowsFlagged = length(which(GRN@data$RNA$counts_metadata$isFiltered))
     
     # Raw counts are left untouched and filtered where needed only
-    futile.logger::flog.info(paste0(" Flagged ", nRowsFlagged, " rows because the row mean was smaller than ", minNormalizedMeanRNA))
+    futile.logger::flog.info(paste0(" Flagged ", nRowsFlagged, " rows due to filtering criteria"))
     
     GRN@config$isFiltered = TRUE
   } 
@@ -793,7 +1222,7 @@ filterData <- function (GRN,
   }
   
 
-  futile.logger::flog.info(paste0("Filter and sort peaks by size and remain only those smaller than : ", maxSize_peaks))
+  futile.logger::flog.info(paste0("Filter and sort peaks by size and remain only those smaller than : ", maxSize_peaks, " and bigger than ", minSize_peaks))
   futile.logger::flog.info(paste0(" Number of peaks before filtering: ", nrow(GRN@data$peaks$counts_metadata)))
   
   countsPeaks.clean = GRN@data$peaks$counts_metadata %>%
@@ -1366,7 +1795,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
       tibble::as_tibble()
     
     # TODO replace by getter
-    countsPeaks = .normalizeNewDataWrapper(GRN@data$peaks$counts_orig, normalization = normalization)
+    countsPeaks = .normalizeCountMatrix(GRN@data$peaks$counts_orig, normalization = normalization)
     
     stopifnot(identical(nrow(countsPeaks), nrow(GRN@data$TFs$TF_peak_overlap)))
     
@@ -1403,9 +1832,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     
     # Store as data frame with both TF names and Ensembl IDs, in analogy to the other types of TF data that can be imported
     GRN@data$TFs[[name]] = TF.activity.m %>%
-      as.data.frame() %>% 
-      tibble::rownames_to_column("TF.name") %>%
-      tibble::as_tibble() %>%
+      tibble::as_tibble(rownames = "TF.name") %>%
       dplyr::left_join(GRN@annotation$TFs, by = "TF.name") %>%
       dplyr::select(.data$ENSEMBL, .data$TF.name, tidyselect::all_of(GRN@config$sharedSamples))
     
@@ -1425,77 +1852,6 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
   
 }
 
-.normalizeNewDataWrapper <- function(data, normalization, idColumn = "peakID") {
-  
-  if (checkmate::testClass(data, "DESeqDataSet")) {
-    
-    counts_raw = DESeq2::counts(data, normalized = FALSE)
-    
-  } else {
-    
-    # Capture incompatible cases
-    if (normalization == "cyclicLoess" | normalization == "sizeFactors") {
-      message = paste0("Selected normalization method for TF activity (", normalization, ") cannot be performed because the provided counts are not integer only. Select either \"quantile\" or \"none\" as normalization method for TF activity.")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    counts_raw = data
-  }
-  
-  
-  if (normalization == "cyclicLoess") {
-    
-    futile.logger::flog.info(paste0(" Normalizing data using cyclic LOESS"))
-      
-      
-    packageMessage = paste0("The package csaw is not installed but required for the cyclic LOESS normalization. Please install it and re-run this function or change the normalization type (if possible).")
-    .checkPackageInstallation("csaw", packageMessage)   
-      
-    # Perform a cyclic loess normalization
-    # We use a slighlty more complicated setup to derive size factors for library normalization
-    # Instead of just determining the size factors in DeSeq2 via cirtual samples, we use 
-    # a normalization from the csaw package (see https://www.rdocumentation.org/packages/csaw/versions/1.6.1/topics/normOffsets)
-    # and apply a non-linear normalization. 
-    # For each sample, a lowess curve is fitted to the log-counts against the log-average count. 
-    # The fitted value for each bin pair is used as the generalized linear model offset for that sample. 
-    # The use of the average count provides more stability than the average log-count when low counts are present for differentially bound regions.
-    
-    # since counts returns,by default, non-normalized counts, the following code should be fine and there is no need to also run estimateSizeFactors beforehand
-    
-    if (packageVersion("csaw") <= "1.14.1") {
-      normFacs = exp((csaw::normOffsets(data, lib.sizes = colSums(data), type = "loess")))
-    } else {
-      object = SummarizedExperiment::SummarizedExperiment(list(counts=counts_raw))
-      object$totals = colSums(counts_raw)
-      normFacs  = exp(csaw::normOffsets(object, se.out = FALSE))
-    }
-    
-    rownames(normFacs) = rownames(data)
-    colnames(normFacs) = colnames(data)
-    
-    # We now provide gene-specific normalization factors for each sample as a matrix, which will preempt sizeFactors
-    DESeq2::normalizationFactors(data) <- normFacs
-    dataNorm = DESeq2::counts(data, normalized=TRUE)
-    
-  } else if (normalization == "sizeFactors") {
-    
-    futile.logger::flog.info(paste0(" Normalizing data using DESeq size factors"))
-    data = DESeq2::estimateSizeFactors(data)
-    dataNorm = DESeq2::counts(data, normalized=TRUE)
-    
-  } else if (normalization == "quantile") {
-    
-    futile.logger::flog.info(paste0(" Normalizing data using quantile normalization"))
-    dataNorm = .normalizeCounts(data, method = "quantile",  idColumn = idColumn)
-    
-  } else if (normalization == "none") {
-    dataNorm = data
-    futile.logger::flog.info(paste0(" Skip normalization."))
-    # Nothing to do, leave countsPeaks as they are
-  }
-  
-  dataNorm
-}
 
 #' Import externally derived TF Activity data. EXPERIMENTAL.
 #' 
@@ -1565,7 +1921,8 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     # data = dplyr::select(data, -tidyselect::one_of(nameColumn))
     
     # Only TF.names are unique
-    countsNorm = .normalizeNewDataWrapper(data %>% dplyr::select(-.data$ENSEMBL), normalization = normalization, idColumn = "TF.name")
+    # TODO fix
+    countsNorm = .normalizeCountMatrix(data %>% dplyr::select(-.data$ENSEMBL), normalization = normalization)
     
     # Check overlap of ENSEMBL IDs
     countsNorm$ENSEMBL = data$ENSEMBL

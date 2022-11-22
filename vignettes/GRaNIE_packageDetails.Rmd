@@ -55,7 +55,7 @@ Overall, we tried to minimize the installation burden and only require packages 
 
   1. Use `BiocManager::install("GRaNIE", dependencies = TRUE)` which however installs all annotation packages for all supported genomes, which may take a longer time due to the overall download size of multiple Gb.
   2. Install only the required annotation packages, along with all other optional packages. You may use the following for it: 
-     - Genome annotation packages (one of the four is required to run *GRaNIE*, which of them depends on your genome assembly version):
+     - Genome annotation packages (only one of the four is optionally needed for some functions, see section below, which of them depends on your genome assembly version):
      
         - hg38: `BiocManager::install(c("org.Hs.eg.db", "BSgenome.Hsapiens.UCSC.hg38", "TxDb.Hsapiens.UCSC.hg38.knownGene"))`
         - hg19: `BiocManager::install(c("org.Hs.eg.db", "BSgenome.Hsapiens.UCSC.hg19", "TxDb.Hsapiens.UCSC.hg19.knownGene"))`
@@ -69,7 +69,9 @@ Overall, we tried to minimize the installation burden and only require packages 
 
 *GRaNIE* has a number of packages that enhance the functionality for particular cases, may be required depending on certain parameters, only when using a particular functionality or that generally speed-up the computation. In detail, the following packages are currently optional and may be needed context-specifically:
 
-- **Genome assembly and annotation packages** (one of the four is required to run *GRaNIE*, which of them depends on your genome assembly version)
+- **Genome assembly and annotation packages** (only one of the four is optionally needed, which of them depends on your genome assembly version)
+
+    - all of the following packages are ONLY needed for either additional peak annotation in combination with `ChIPseeker` (see below) or if the chosen peak normalization method is GC based: `EDASeq_GC_peaks`, `gcqn_peaks`
     - `org.Hs.eg.db`: Needed only when genome assembly version is `hg19` or `hg38` 
     - `org.Mm.eg.db`: Needed only when genome assembly version is `mm9` or `mm10`
     - `BSgenome.Hsapiens.UCSC.hg19`,  `TxDb.Hsapiens.UCSC.hg19.knownGene`: Needed only when genome assembly version is `hg19`  
