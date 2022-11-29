@@ -13,7 +13,10 @@ For the *GRaNPA* package, see [here](https://grp-zaugg.embl-community.io/GRaNPA)
 
 ### Installation and Documentation
 
-***GRaNIE* is now included on *Bioconductor*. The package and installation instructions can be found here: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE)**
+***GRaNIE* is now included on *Bioconductor*. The package and installation instructions can be found here and is suitable for the most users, which installs the package from the release branch of Bioconductor: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE)**
+
+To install the newest version of the package outside of the official Bioconductor release cycle (i.e., a devel version that however does not necessarily require even the latest Bioconductor version to be installed), you may also use the following line that will install the package directly from the Gitlab instance that also hosts the package website. Due to potential package conflicts with existing (Bioconductor) packages, we cannot guarantee this always works, though:
+`devtools::install_gitlab("grp-zaugg/GRaNIE", host = "git.embl.de", subdir = "src/GRaNIE", force = TRUE)`
 
 
 In addition, the full documentation for the development version is available at **[https://grp-zaugg.embl-community.io/GRaNIE](https://grp-zaugg.embl-community.io/GRaNIE)** and regularly updated and extended.
