@@ -7,10 +7,10 @@
 addData(
   GRN,
   counts_peaks,
-  normalization_peaks = "DESeq2_sizeFactor",
+  normalization_peaks = "DESeq2_sizeFactors",
   idColumn_peaks = "peakID",
   counts_rna,
-  normalization_rna = "quantile",
+  normalization_rna = "limma_quantile",
   idColumn_RNA = "ENSEMBL",
   sampleMetadata = NULL,
   additionalParams.l = list(),
@@ -26,7 +26,7 @@ addData(
 In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. 
 Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
 
-\item{normalization_peaks}{Character. Default \code{DESeq2_sizeFactor}. Normalization procedure for peak data. 
+\item{normalization_peaks}{Character. Default \code{DESeq2_sizeFactors}. Normalization procedure for peak data. 
 Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, 
 \code{EDASeq_GC_peaks}, \code{gcqn_peaks}, \code{DESeq2_sizeFactors}, \code{none}.}
 
@@ -38,7 +38,7 @@ of the peak coordinates, respectively. End must be bigger than start. Examples f
 In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. 
 Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.}
 
-\item{normalization_rna}{Character. Default \code{quantile}. Normalization procedure for peak data. 
+\item{normalization_rna}{Character. Default \code{limma_quantile}. Normalization procedure for peak data. 
 Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, \code{DESeq2_sizeFactors}, \code{none}.}
 
 \item{idColumn_RNA}{Character. Default \code{ENSEMBL}. Name of the column in the \code{counts_rna} data frame that contains Ensembl IDs.}

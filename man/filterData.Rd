@@ -6,9 +6,9 @@
 \usage{
 filterData(
   GRN,
-  minNormalizedMean_peaks = 5,
+  minNormalizedMean_peaks = NULL,
   maxNormalizedMean_peaks = NULL,
-  minNormalizedMeanRNA = 1,
+  minNormalizedMeanRNA = NULL,
   maxNormalizedMeanRNA = NULL,
   chrToKeep_peaks = NULL,
   minSize_peaks = 20,
@@ -23,13 +23,17 @@ filterData(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{minNormalizedMean_peaks}{Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.}
+\item{minNormalizedMean_peaks}{Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
-\item{maxNormalizedMean_peaks}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.}
+\item{maxNormalizedMean_peaks}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a peak to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
-\item{minNormalizedMeanRNA}{Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.}
+\item{minNormalizedMeanRNA}{Numeric[0,] or \code{NULL}. Default 5. Minimum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
-\item{maxNormalizedMeanRNA}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.}
+\item{maxNormalizedMeanRNA}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum mean across all samples for a gene to be retained for the normalized counts table. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
 \item{chrToKeep_peaks}{Character vector or \code{NULL}. Default \code{NULL}. Vector of chromosomes that peaks are allowed to come from. This filter can be used to filter sex chromosomes from the peaks, for example (e.g, \code{c(paste0("chr", 1:22), "chrX", "chrY")})}
 
@@ -37,13 +41,17 @@ filterData(
 
 \item{maxSize_peaks}{Integer[1,] or \code{NULL}. Default 10000. Maximum peak size (width, end - start) for a peak to be retained. Set to \code{NULL} for not applying the filter.}
 
-\item{minCV_peaks}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.}
+\item{minCV_peaks}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
-\item{maxCV_peaks}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.}
+\item{maxCV_peaks}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a peak to be retained. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
-\item{minCV_genes}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.}
+\item{minCV_genes}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Minimum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
-\item{maxCV_genes}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.}
+\item{maxCV_genes}{Numeric[0,] or \code{NULL}. Default \code{NULL}. Maximum CV (coefficient of variation, a unitless measure of variation) for a gene to be retained. Set to \code{NULL} for not applying the filter.
+Be aware that depending on the chosen normalization, this filter may not make sense and should NOT be applied. See the notes for this function.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
@@ -51,8 +59,11 @@ filterData(
 An updated \code{\linkS4class{GRN}} object, with added data from this function.
 }
 \description{
-This function marks genes and/or peaks as \code{filtered} depending on the chosen filtering criteria. Filtered genes / peaks will then be 
-disregarded when adding connections in subsequent steps via \code{\link{addConnections_TF_peak}} and  \code{\link{addConnections_peak_gene}}. \strong{This function does NOT (re)filter existing connections when the \code{\linkS4class{GRN}} object already contains connections. Thus, upon re-execution of this function with different filtering criteria, all downstream steps have to be re-run.}
+This function marks genes and/or peaks as \code{filtered} depending on the chosen filtering criteria and is based on the count data AFTER
+potential normalization as chosen when using the \code{\link{addData}} function. Most of the filters may not be meaningful and useful anymore to apply
+after using particular normalization schemes that can give rise to, for example, negative values such as cyclic loess normalization. If normalized counts do
+not represents counts anymore but rather a deviation from a mean or something a like, the filtering critieria usually do not make sense anymore.
+Filtered genes / peaks will then be disregarded when adding connections in subsequent steps via \code{\link{addConnections_TF_peak}} and  \code{\link{addConnections_peak_gene}}. \strong{This function does NOT (re)filter existing connections when the \code{\linkS4class{GRN}} object already contains connections. Thus, upon re-execution of this function with different filtering criteria, all downstream steps have to be re-run.}
 }
 \details{
 All this function does is setting (or modifying) the filtering flag in \code{GRN@data$peaks$counts_metadata} and \code{GRN@data$RNA$counts_metadata}, respectively.

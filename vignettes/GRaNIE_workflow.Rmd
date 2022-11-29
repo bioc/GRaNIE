@@ -105,6 +105,12 @@ library(GRaNIE)
 
 When installing *GRaNIE*, all required dependency packages are automatically installed. In addition, *GRaNIE* needs some additional packages for special functionality, packages that are not strictly necessary for the workflow but which enhance the functionality, may be required depending on certain parameters (such as your genome assembly version), or may be required only when using a particular functionality (such as the `robust` package for robust regression). The package will automatically check if any of these packages are missing during execution, and inform the user when a package is missing, along with a line to copy for pasting into R for installation.
 
+## Note on version compatibility and errors in the vignette
+
+**We are actively working on the package and regularly improve upon features, add features, or change features for increased clarity. This sometimes results in minor changes to the workflow, changed argument names or other small incompatibilities that may result in errors when running a version of the package that differs from the version this vignette has been run for.**
+
+**Thus, make sure to run a version of `GRaNIE` that is compatible with this vignette. If in doubt or when you receive errors, check the R help, which always contains the most up-to-date documentation.**
+
 
 
 ## General notes
@@ -193,7 +199,7 @@ At any time point, we can simply "print" a `GRaNIE` object by typing its name an
 
 We are now ready to fill our empty object with data! After preparing the data beforehand, we can now use the data import function `addData()` to import both enhancers and RNA-seq data to the `GRaNIE` object. In addition to the count tables, we explicitly specify the name of the ID columns. As mentioned before, the sample metadata is optional but recommended if available.
 
-An important consideration is data normalization for RNA and ATAC. We support many different choices of normalization, the selection of which also depends on whether RNA or peaks is considered, and possible choices are: `limma_quantile`, `DESeq2_sizeFactors` and `none` and refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin enhancer data, it is `DESeq2_sizeFactor2` (i.e., a "regular" `DESeq` size factor normalization). Importantly, `DESeq2_sizeFactors` requires raw data, while `quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or "none". 
+An important consideration is data normalization for RNA and ATAC. We support many different choices of normalization, the selection of which also depends on whether RNA or peaks is considered, and possible choices are: `limma_quantile`, `DESeq2_sizeFactors` and `none` and refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin enhancer data, it is `DESeq2_sizeFactors` (i.e., a "regular" `DESeq2` size factor normalization). Importantly, `DESeq2_sizeFactors` requires raw data, while `limma_quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or `none`. 
 
 
 ```{r addData, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}

@@ -71,7 +71,7 @@ Overall, we tried to minimize the installation burden and only require packages 
 
 - **Genome assembly and annotation packages** (only one of the four is optionally needed, which of them depends on your genome assembly version)
 
-    - all of the following packages are ONLY needed for either additional peak annotation in combination with `ChIPseeker` (see below) or if the chosen peak normalization method is GC based: `EDASeq_GC_peaks`, `gcqn_peaks`
+    - **all of the following packages are ONLY needed for either additional peak annotation in combination with `ChIPseeker` (see below) or if the chosen peak normalization method is GC based: `EDASeq_GC_peaks`, `gcqn_peaks`**
     - `org.Hs.eg.db`: Needed only when genome assembly version is `hg19` or `hg38` 
     - `org.Mm.eg.db`: Needed only when genome assembly version is `mm9` or `mm10`
     - `BSgenome.Hsapiens.UCSC.hg19`,  `TxDb.Hsapiens.UCSC.hg19.knownGene`: Needed only when genome assembly version is `hg19`  
@@ -162,7 +162,7 @@ In this section, we give methodological details and guidelines.
 
 ## Data normalization {#methods_dataNorm}
 
-An important consideration is data normalization for RNA and open chromatin data. We currently support three choices of normalization of either peak or RNA-Seq data: `quantile` (using `limma::normalizeQuantiles`), `DESeq_sizeFactor` and `none` and refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin peak data, it is `DESeq_sizeFactor` (i.e., a "regular" `DESeq` size factor normalization). Importantly, `DESeq_sizeFactor` requires raw data, while `quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or "none". 
+An important consideration is data normalization for RNA and open chromatin data. We currently support six choices of normalization of either peak or RNA-Seq data: `limma_quantile`, `DESeq2_sizeFactors`, `limma_cyclicloess`, `limma_scale`, `csaw_cyclicLoess_orig`, `csaw_TMM` plus `none` to skip normalization altogether. For peaks, two additional GC-based normalization schemes are offered: `EDASeq_GC_peaks` and `gcqn_peaks`. We refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin peak data, it is `DESeq2_sizeFactora` (i.e., a "regular" `DESeq2` size factor normalization). Importantly, `DESeq2_sizeFactora` requires raw data, while `limma_quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or `none`. 
 
 While we recommend raw counts for both peaks and RNA-Seq as input and offer several normalization choices in the pipeline, it is also possible to provide pre-normalized data. Note that the normalization method may have a large influence on the resulting *eGRN* network, so make sure the choice of normalization is reasonable. For more details, see the next sections.
 

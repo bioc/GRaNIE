@@ -28,6 +28,9 @@ GRaNIE and GRaNPA: Inference and evaluation of enhancer-mediated gene regulatory
 
 For issues, bugs, and feature request, please see the [Issue Tracker](https://git.embl.de/grp-zaugg/GRaNIE/issues). 
 
+**We are actively working on the package and regularly improve upon features, add features, or change features for increased clarity. This sometimes results in minor changes to the workflow, changed argument names or other small incompatibilities that may result in errors when running a version of the package that differs from the version this vignette has been run for.**
+**Thus, make sure to run a version of `GRaNIE` that is compatible with this vignette. If in doubt or when you receive errors, check the R help, which always contains the most up-to-date documentation.**
+
 If you have other questions or comments, feel free to contact us. We will be happy to answer any questions related to this project as well as questions related to the software implementation. For method-related questions, contact Judith B. Zaugg (judith.zaugg@embl.de). For technical questions, contact Christian Arnold (christian.arnold@embl.de). We will aim to respond in a timely manner.
 
  

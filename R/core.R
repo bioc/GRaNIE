@@ -685,7 +685,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                   peak.ID = query$peakID,
                   peak.GC.class = cut(.data$`G|C`, breaks = seq(0,1,1/nBins), include.lowest = TRUE, ordered_result = TRUE)) %>%
     dplyr::rename(peak.GC.perc    = .data$`G|C`) %>%
-    dplyr::select(peak.ID, everything())
+    dplyr::select(.data$peak.ID, tidyselect::everything())
   
 
   .printExecutionTime(start)
@@ -819,7 +819,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
             
             futile.logger::flog.info(paste0("  Using the csaw-derived TMM-derived normalization factors as size factors, overriding the DESeq-default size factors."))
             
-            sizeFactors(dd) <- sizeFactors
+            DESeq2::sizeFactors(dd) <- sizeFactors
         }
         
         dataNorm = DESeq2::counts(dd, normalized=TRUE)
@@ -877,8 +877,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         # (2) effects related to between-lane distributional differences, e.g., sequencing depth. 
         # Accordingly, withinLaneNormalization and betweenLaneNormalization adjust for the first and second type of effects, respectively. 
         # We recommend to normalize for within-lane effects prior to between-lane normalization.
-        dataWithin <- withinLaneNormalization(data, y = peaks_GC_fraction, which= withinLane_method, num.bins = nBins, round = roundResults)
-        dataNorm <- betweenLaneNormalization(dataWithin, which=betweenLane_method, round = roundResults)
+        dataWithin <- EDASeq::withinLaneNormalization(data, y = peaks_GC_fraction, which= withinLane_method, num.bins = nBins, round = roundResults)
+        dataNorm <- EDASeq::betweenLaneNormalization(dataWithin, which=betweenLane_method, round = roundResults)
         
         
     } else if (normalization == "gcqn_peaks") {
