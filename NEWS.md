@@ -1,4 +1,4 @@
-# GRaNIE 1.1.22 to 1.3.3 (2022-11-29)
+# GRaNIE 1.1.22-1.3.3 (2022-11-29)
 
 ## Major changes
 - additional normalization schemes have been implemented, including GC-aware normalization schemes for peaks, and existing normalization methods have been renamed for clarity. See `?addData` for details.
@@ -9,7 +9,7 @@
 - vignette updates
 
 
-# GRaNIE 1.1.14 to 1.1.21 (2022-11-13)
+# GRaNIE 1.1.14-1.1.21 (2022-11-13)
 
 ## Major changes
 - major object changes and optimizations, particularly related to storing the count matrices in an optimized and simpler format. In short, the count matrices are now stored either as normal or sparse matrices, depending on the amount of zeros present. In addition, only the counts after normalization are saved, the raw counts before applying normalization are not stored anymore. If no normalization is wished by the user, as before, the "normalized" counts are equal to the raw counts. `GRaNIE` is now more readily applicable for larger analyses and single-cell analysis even though we just started actively optimizing for it, so we cannot yet recommend applying our framework in a single-cell manner. Older GRN objects are automatically changed internally when executing the major functions upon the first invocation.
