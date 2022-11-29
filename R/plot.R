@@ -982,6 +982,10 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       
       class_levels = c(paste0("real_",range), paste0("random_",range))
       
+      if (! "peak.GC.perc" %in% colnames(GRN@annotation$peaks)) {
+          GRN@annotation$peaks$peak.GC.perc = NA
+      }
+      
       peakGeneCorrelations.all = 
         rbind(
           dplyr::select(GRN@connections$peak_genes[["0"]], tidyselect::all_of(cols_keep)) %>%
@@ -1250,13 +1254,12 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       xlabel = paste0("Correlation raw\np-value (binned)")
       mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ", .prettyNum(range), " bp promoter range)")
       
-      allVars = c("peak.GC.class",  "peak.width", "peak.mean","peak.median",
+      allVars = c("peak.annotation", "peak.GC.class", "peak.width", "peak.mean","peak.median",
                   "peak.CV", "gene.median",  "gene.mean", "gene.CV", "peak.gene.combined.CV")
       
-      # If ChIPseeker is not installed, remove peak.annotation from it
-      if ("peak.annotation" %in% colnames(peakGeneCorrelations.all)) {
-        allVars = c(allVars, "peak.annotation")
-      }
+      # Only use those actually available, as some packages may not be available
+      allVars = intersect(allVars, colnames(peakGeneCorrelations.all))
+
       
       
       for (varCur in allVars) {

@@ -67,12 +67,12 @@ Before we start with the package, let's retrieve some example data! For the purp
 * RNA-Seq data, raw counts (originally for around 35,000 genes, here filtered to around 19,000)
 * sample metadata with additional sample-specific information
 
-In general, the dataset is from human macrophages (both naive and IFNg primed) of healthy individuals and various stimulations / infections (naive vs primed and infected with SL1344 vs not), with 4 groups in total: control/infected(SL1344) and naive/primed(IFNg)
+In general, the dataset is from human macrophages (both naive and IFNg primed) of healthy individuals and various stimulations / infections (naive vs primed and infected with SL1344 vs not), with 4 groups in total: control/infected(SL1344) and naive/primed(IFNg). However, here for the example data, all ~30 samples are from IFNg primed and infected cells (as summarized as `IFNg_SL1344` in the sample metadata column `condition`).
 
 
 Furthermore, the example dataset is accompanied by the following files:
 
-* genome-wide transcription factor binding site predictions for 75 selected TFs, along with a translation table to link TF names to their corresponding Ensembl IDs. For each TF, a gzipped BED file has been created with predicted TF binding sites. The files have been generated with `PWMScan` and the `HOCOMOCO` database, see [2] for details.
+* genome-wide transcription factor binding site predictions for 6 selected TFs, along with a translation table to link TF names to their corresponding Ensembl IDs. For each TF, a gzipped BED file has been created with predicted TF binding sites. The files have been generated with `PWMScan` and the `HOCOMOCO` database, see [2] for details.
 
 # Example Workflow
 <a name="section1"></a>
@@ -193,13 +193,13 @@ At any time point, we can simply "print" a `GRaNIE` object by typing its name an
 
 We are now ready to fill our empty object with data! After preparing the data beforehand, we can now use the data import function `addData()` to import both enhancers and RNA-seq data to the `GRaNIE` object. In addition to the count tables, we explicitly specify the name of the ID columns. As mentioned before, the sample metadata is optional but recommended if available.
 
-An important consideration is data normalization for RNA and ATAC. We currently support three choices of normalization: `quantile`, `DESeq_sizeFactor` and `none` and refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin enhancer data, it is `DESeq_sizeFactor` (i.e., a "regular" `DESeq` size factor normalization). Importantly, `DESeq_sizeFactor` requires raw data, while `quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or "none". 
+An important consideration is data normalization for RNA and ATAC. We support many different choices of normalization, the selection of which also depends on whether RNA or peaks is considered, and possible choices are: `limma_quantile`, `DESeq2_sizeFactors` and `none` and refer to the R help for more details (`?addData`). The default for RNA-Seq is a quantile normalization, while for the open chromatin enhancer data, it is `DESeq2_sizeFactor2` (i.e., a "regular" `DESeq` size factor normalization). Importantly, `DESeq2_sizeFactors` requires raw data, while `quantile` does not necessarily. We nevertheless recommend raw data as input, although it is also possible to provide pre-normalized data as input and then topping this up with another normalization method or "none". 
 
 
 ```{r addData, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200"}
 GRN = addData(GRN, 
-              counts_peaks = countsPeaks.df, normalization_peaks = "DESeq_sizeFactor", idColumn_peaks = idColumn_peaks,
-              counts_rna = countsRNA.df, normalization_rna = "quantile", idColumn_RNA = idColumn_RNA,
+              counts_peaks = countsPeaks.df, normalization_peaks = "DESeq2_sizeFactors", idColumn_peaks = idColumn_peaks,
+              counts_rna = countsRNA.df, normalization_rna = "limma_quantile", idColumn_RNA = idColumn_RNA,
               sampleMetadata = sampleMetadata.df,
               forceRerun = TRUE)
 ```
@@ -235,10 +235,13 @@ For more parameter details, see the R help (`?addTFBS` and `?overlapPeaksAndTFBS
 
 ```{r addTFBS, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200", results='hold'}
 
-folder_TFBS_first50 = "https://www.embl.de/download/zaugg/GRaNIE/TFBS_selected.zip"
+folder_TFBS_6TFs = "https://www.embl.de/download/zaugg/GRaNIE/TFBS_selected.zip"
 # Download the zip of all TFBS files. Takes too long here, not executed therefore
-# download.file(folder_TFBS_first50, file.path("TFBS_selected.zip"), quiet = FALSE)
+
+# download.file(folder_TFBS_6TFs, file.path("TFBS_selected.zip"), quiet = FALSE)
+
 # unzip(file.path("TFBS_selected.zip"), overwrite = TRUE)
+
 # motifFolder = tools::file_path_as_absolute("TFBS_selected")
 
 GRN = addTFBS(GRN, motifFolder = motifFolder, TFs = "all", filesTFBSPattern = "_TFBS", fileEnding = ".bed.gz", forceRerun = TRUE)
@@ -307,7 +310,7 @@ This function may run a while, and each time-consuming step has a built-in progr
 For reasons of brevity and organization, we fully describe their interpretation and meaning in detail elsewhere, however. In summary, TF-enhancer diagnostic plots are available for each TF, and each page summarizes the QC for each TF in two plots:  
 
 
-```{r, echo=FALSE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold', fig.cap="<i>TF-enhancer diagnostic plots for EGR1.0.A</i>", results='hold', fig.height = 10}
+```{r, echo=TRUE, include=TRUE, eval = TRUE, class.output="scroll-200", results='hold', fig.cap="<i>TF-enhancer diagnostic plots for EGR1.0.A</i>", results='hold', fig.height = 10}
 GRN = plotDiagnosticPlots_TFPeaks(GRN, dataType = c("real", "permuted"), plotAsPDF = FALSE, pages = 4)
 ```
 

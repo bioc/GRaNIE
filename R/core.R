@@ -140,7 +140,7 @@ initializeGRN <- function(objectMetadata = list(),
 #' @param counts_peaks Data frame. No default. Counts for the peaks, with raw or normalized counts for each peak (rows) across all samples (columns). 
 #' In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_peaks} below. 
 #' Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
-#' @param normalization_peaks Character. Default \code{DESeq2_sizeFactor}. Normalization procedure for peak data. 
+#' @param normalization_peaks Character. Default \code{DESeq2_sizeFactors}. Normalization procedure for peak data. 
 #' Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, 
 #' \code{EDASeq_GC_peaks}, \code{gcqn_peaks}, \code{DESeq2_sizeFactors}, \code{none}.
 #' @param idColumn_peaks Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. 
@@ -149,7 +149,7 @@ initializeGRN <- function(objectMetadata = list(),
 #' @param counts_rna Data frame. No default. Counts for the RNA-seq data, with raw or normalized counts for each gene (rows) across all samples (columns). 
 #' In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. 
 #' Row names are ignored, column names must be set to the sample names and must match those from the RNA counts and the sample metadata table.
-#' @param normalization_rna Character. Default \code{quantile}. Normalization procedure for peak data. 
+#' @param normalization_rna Character. Default \code{limma_quantile}. Normalization procedure for peak data. 
 #' Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scale}, \code{csaw_cyclicLoess_orig}, \code{csaw_TMM}, \code{DESeq2_sizeFactors}, \code{none}.
 #' @param idColumn_RNA Character. Default \code{ENSEMBL}. Name of the column in the \code{counts_rna} data frame that contains Ensembl IDs.
 #' @param sampleMetadata Data frame. Default \code{NULL}. Optional, additional metadata for the samples, such as age, sex, gender etc. 
@@ -176,8 +176,8 @@ initializeGRN <- function(objectMetadata = list(),
 #' # We omit sampleMetadata = meta.df in the following line, becomes too long otherwise
 #' # GRN = addData(GRN, counts_peaks = peaks.df, counts_rna = rna.df, forceRerun = FALSE)
 
-addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactor", idColumn_peaks = "peakID", 
-                    counts_rna, normalization_rna = "quantile", idColumn_RNA = "ENSEMBL", sampleMetadata = NULL,
+addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors", idColumn_peaks = "peakID", 
+                    counts_rna, normalization_rna = "limma_quantile", idColumn_RNA = "ENSEMBL", sampleMetadata = NULL,
                     additionalParams.l = list(),
                     allowOverlappingPeaks= FALSE,
                     keepOriginalReadCounts = FALSE,
@@ -389,10 +389,15 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactor"
     futile.logger::flog.info(paste0("Adding peak and gene annotation..."))
     
     GRN = .populatePeakAnnotation(GRN)
-    GRN@annotation$peaks = dplyr::left_join(GRN@annotation$peaks, GC.data.df, by = "peak.ID") 
     
-    # Additional GC statistics, not used at the moment currently
-    GRN = .calcAdditionalGCStatistics(GRN, GC.data.df)
+    if (normalization_peaks %in% c("EDASeq_GC_peaks", "gcqn_peaks")) {
+        GRN@annotation$peaks = dplyr::left_join(GRN@annotation$peaks, GC.data.df, by = "peak.ID") 
+        
+        # Additional GC statistics, not used at the moment currently
+        GRN = .calcAdditionalGCStatistics(GRN, GC.data.df)
+    }
+    
+
 
     GRN = .populateGeneAnnotation(GRN)
     
