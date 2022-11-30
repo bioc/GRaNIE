@@ -131,9 +131,9 @@ However, you may also use your own TFBS data, and we provide full flexibility in
 - a folder that contains one TFBS file per TF in `bed` or `bed.gz` format, 6 columns
 - file names must be `{TF}{suffix}.{fileEnding}`, where `{TF}` specifies the name of the TF, `{suffix}` an optional and arbitrary string (we use `_TFBS`, for example), and `{fileEnding}` the file type (supported are `bed` and `bed.gz`).
 - the folder must also contain a so-called translation table that must be called `translationTable.csv`. This file must have the following structure: 3 columns (tab-separated), called `SYMBOL`, `ENSEMBL`, and `HOCOID`. The first column denotes a symbol or shortcut for the TF that is used throughout the pipeline (e.g., `AHR`), the second the ENSEMBL ID (without the dot suffix; e.g., `ENSG00000106546`) and the third column the prefix of how the file is called with the TFBS (e.g., `AHR.0.B` if the file for `AHR` is called `AHR.0.B_TFBS.bed.gz`).
-- we provide example files [here](https://www.embl.de/download/zaugg/GRN/hg19_hg38_mm10_PWMScan.zip) for all supported genome assemblies (beware of the file size: 7.5 GB)
+- we provide example files for all supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with `GRaNIE` as separate downloads. For more information, check [here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs).
 
-For more methodological details, details on how to construct these files, their exact format etc we refer to `diffTF` paper for details.
+For more methodological details, details on how to construct these files, their exact format etc we refer to `diffTF` paper and [website](https://difftf.readthedocs.io/) for details.
 
 ## Sample metadata (optional but highly recommended) {#input_metadata}
 
