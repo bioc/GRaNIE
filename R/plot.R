@@ -3390,7 +3390,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     GRN = .getBasic_metadata_visualization(GRN, forceRerun = forceRerun)
     # if (useDefaultMetadata) {
     #   metadata_visualization.l = .getBasic_metadata_visualization(GRN)
-    #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
+    #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "ID",     "baseMean_log")
     #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
     #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
     # }
@@ -3506,7 +3506,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
         colors_categories.l[["TF"]]  = color_gradient 
         symbols_categories.l[["TF"]] = c(15,NA,15)
-        vertice_color_TFs   = append(list(GRN@visualization$metadata[["RNA_expression_TF"]],    "TF.HOCOID",     "baseMean_log"), vertice_color_TFs)
+        vertice_color_TFs   = append(list(GRN@visualization$metadata[["RNA_expression_TF"]],    "TF.ID",     "baseMean_log"), vertice_color_TFs)
         #}
         
         if(graph == "TF-peak-gene"){

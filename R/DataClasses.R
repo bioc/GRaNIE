@@ -176,10 +176,12 @@ setMethod("show",
                 
                 
                 if (!is.null(GRN@connections$all.filtered$`0`)) {
+                    
                     nRows = nrow(GRN@connections$all.filtered$`0`)
-                    max_TF_peak_FDR = round(max(GRN@connections$all.filtered$`0`$TF_peak.fdr), 1)
-                    max_peak_gene_FDR = round(max(GRN@connections$all.filtered$`0`$peak_gene.p_adj), 1)
+                    max_TF_peak_FDR = GRN@config$functionParameters$`GRaNIE::filterGRNAndConnectGenes`$parameters$TF_peak.fdr.threshold
+                    max_peak_gene_FDR = GRN@config$functionParameters$`GRaNIE::filterGRNAndConnectGenes`$parameters$peak_gene.fdr.threshold
                     cat(" TF-peak-gene links (", nRows," with TF-peak FDR ", max_TF_peak_FDR, " and peak-gene FDR ",  max_peak_gene_FDR , ")\n", sep = "")
+                    
                     
                 } else {
                     cat(" TF-peak-gene links (filtered): none found\n")

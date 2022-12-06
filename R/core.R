@@ -700,7 +700,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
         dplyr::ungroup() %>% 
         tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
-        dplyr::mutate(n_rel = .data$n / length(query))
+        dplyr::mutate(n_rel = .data$n / nrow(GC.data))
     
     # TODO: Put where
     #ggplot2::ggplot(GC.data, ggplot2::aes(GC.class)) + geom_histogram(stat = "count") + ggplot2::theme_bw()
@@ -1359,14 +1359,17 @@ filterData <- function (GRN,
 }
 
 
-
 ######## TFBS ########
 
-#' Add TFBS to a \code{\linkS4class{GRN}} object
+#' Add TFBS to a \code{\linkS4class{GRN}} object. 
+#' 
+#' For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. We provide example files for all supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.
 #' 
 #' @template GRN 
-#' @param motifFolder Character. No default. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details.
+#' @param motifFolder Character. No default. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details. The folder must also contain a so-called translation table, see the argument \code{translationTable} for details.
 #' @param TFs Character vector. Default \code{all}. Vector of TF names to include. The special keyword \code{all} can be used to include all TF found in the folder as specified by \code{motifFolder}. If \code{all} is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.
+#' @param translationTable Character. Default \code{translationTable.csv}. Name of the translation table file that is also located in the folder along with the TFBS files. This file must have the following structure: at least 2 columns, called \code{ENSEMBL} and \code{ID}. \code{ID} denotes the ID for the TF that is used throughout the pipeline (e.g., AHR) and the prefix of how the corresponding file is called (e.g., \code{AHR.0.B} if the file for AHR is called \code{AHR.0.B_TFBS.bed.gz}), while \code{ENSEMBL} denotes the ENSEMBL ID (dot suffix; e.g., ENSG00000106546, are removed automatically if present). 
+#' @param translationTable_sep Character. Default \code{" "} (whitespace character). The column separator for the \code{translationTable} file.
 #' @param filesTFBSPattern Character. Default \code{"_TFBS"}. Suffix for the file names in the TFBS folder that is not part of the TF name. Can be empty. For example, for the TF CTCF, if the file is called \code{CTCF.all.TFBS.bed}, set this parameter to \code{".all.TFBS"}.
 #' @param fileEnding Character. Default \code{".bed"}. File ending for the files from the motif folder.
 #' @param nTFMax \code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
@@ -1375,7 +1378,7 @@ filterData <- function (GRN,
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' @export
-addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPattern = "_TFBS", fileEnding = ".bed", forceRerun = FALSE) {
+addTFBS <- function(GRN, motifFolder, TFs = "all", translationTable = "translationTable.csv",  translationTable_sep = " ", nTFMax = NULL, filesTFBSPattern = "_TFBS", fileEnding = ".bed", forceRerun = FALSE) {
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
@@ -1388,19 +1391,21 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
   checkmate::assert(checkmate::testNull(nTFMax), checkmate::testIntegerish(nTFMax, lower = 1))
   checkmate::assertCharacter(filesTFBSPattern, len = 1, min.chars = 0)
   checkmate::assertCharacter(fileEnding, len = 1, min.chars = 1)
+  checkmate::assertFileExists(paste0(motifFolder, .Platform$file.sep, translationTable))
+  checkmate::assertCharacter(translationTable_sep, len = 1, min.chars = 1)
   checkmate::assertFlag(forceRerun)
   
   if (is.null(GRN@annotation$TFs) | is.null(GRN@annotation$TFs) | is.null(GRN@config$allTF)  | is.null(GRN@config$directories$motifFolder) | forceRerun) {
     
     GRN@config$TFBS_fileEnding  = fileEnding
     GRN@config$TFBS_filePattern = filesTFBSPattern
-    GRN@annotation$TFs = .getFinalListOfTFs(motifFolder, filesTFBSPattern, fileEnding, TFs, nTFMax, getCounts(GRN, type = "rna", permuted = FALSE))
-    
+    GRN@annotation$TFs = .getFinalListOfTFs(motifFolder, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, getCounts(GRN, type = "rna", permuted = FALSE))
+
     
     GRN@annotation$TFs = GRN@annotation$TFs %>%
-      dplyr::rename(TF.ENSEMBL = .data$ENSEMBL, TF.HOCOID = .data$HOCOID)  %>% 
-      dplyr::mutate(TF.name = .data$TF.HOCOID)  %>%
-      dplyr::select(.data$TF.name, .data$TF.ENSEMBL, .data$TF.HOCOID)
+      dplyr::rename(TF.ENSEMBL = .data$ENSEMBL, TF.ID = .data$ID)  %>% 
+      dplyr::mutate(TF.name = .data$TF.ID)  %>%
+      dplyr::select(.data$TF.name, .data$TF.ENSEMBL, .data$TF.ID)
     
     # TODO: Change here and make it more logical what to put where
     GRN@config$allTF = GRN@annotation$TFs$TF.name
@@ -1420,7 +1425,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
 }
 
 
-.getFinalListOfTFs <- function(folder_input_TFBS, filesTFBSPattern, fileEnding, TFs, nTFMax, countsRNA) {
+.getFinalListOfTFs <- function(folder_input_TFBS, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, countsRNA) {
   
   futile.logger::flog.info(paste0("Checking database folder for matching files: ", folder_input_TFBS))
   files = .createFileList(folder_input_TFBS, "*.bed*", recursive = FALSE, ignoreCase = FALSE, verbose = FALSE)
@@ -1448,19 +1453,19 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
     
   }
   
-  file_input_HOCOMOCO = paste0(folder_input_TFBS, .Platform$file.sep, "translationTable.csv")
-  HOCOMOCO_mapping.df = .readHOCOMOCOTable(file_input_HOCOMOCO, delim = " ")
+  file_input_translationTable = paste0(folder_input_TFBS, .Platform$file.sep, translationTable)
+  mapping.df = .readTranslationTable(file_input_translationTable, delim = translationTable_sep)
   
-  TF_notExpressed = sort(dplyr::filter(HOCOMOCO_mapping.df, ! .data$ENSEMBL %in% countsRNA$ENSEMBL, .data$HOCOID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$HOCOID))
+  TF_notExpressed = sort(dplyr::filter(mapping.df, ! .data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
   
   if (length(TF_notExpressed) > 0) {
     futile.logger::flog.info(paste0("Filtering the following ", length(TF_notExpressed), " TFs as they are not present in the RNA-Seq data: ", paste0(TF_notExpressed, collapse = ",")))
     
   }
   
-  allTF = sort(dplyr::filter(HOCOMOCO_mapping.df, 
+  allTF = sort(dplyr::filter(mapping.df, 
                              .data$ENSEMBL %in% countsRNA$ENSEMBL, 
-                             .data$HOCOID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$HOCOID))
+                             .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
   
   nTF = length(allTF)
   if (nTF == 0) {
@@ -1480,14 +1485,14 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", nTFMax = NULL, filesTFBSPatte
   
   futile.logger::flog.info(paste0("Running the pipeline for ", nTF, " TF in total."))
   
-  HOCOMOCO_mapping.df.exp = dplyr::filter(HOCOMOCO_mapping.df, .data$HOCOID %in% allTF)
-  if (nrow(HOCOMOCO_mapping.df.exp) == 0) {
-    message = paste0("Number of rows of HOCOMOCO_mapping.df.exp is 0. Something is wrong with the mapping table or the filtering")
+  mapping.df.exp = dplyr::filter(mapping.df, .data$ID %in% allTF)
+  if (nrow(mapping.df.exp) == 0) {
+    message = paste0("Number of rows of mapping.df.exp is 0. Something is wrong with the mapping table or the filtering")
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
   
-  HOCOMOCO_mapping.df.exp
+  mapping.df.exp
 }
 
 #' Overlap peaks and TFBS for a \code{\linkS4class{GRN}} object
@@ -1559,7 +1564,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     
     if (!all(colnames(TFBS_bindingMatrix.df) %in% GRN@config$allTF)) {
       
-      message = paste0("Internal mismatch detected between the TF names and the TF names derived from the translation file (see log, column HOCOID).", 
+      message = paste0("Internal mismatch detected between the TF names and the TF names derived from the translation file (see log, column ID).", 
                        "This may happen if the genome assembly version has been changed, but intermediate files have not been properly recreated. ",
                        "Set the parameter forceRerun to TRUE and rerun the script.")
       
@@ -1602,7 +1607,16 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   # Intersect consensusPeaks GR with bed file GR 
   TFBS.df = .readTFBSFile(file_tfbs_in) 
   
-  subject.gr  = .constructGRanges(TFBS.df, seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), GRN@config$parameters$genomeAssembly)
+  # make sure we do not have any sequence names that are not in our assembly
+  seqLengths = .getChrLengths(GRN@config$parameters$genomeAssembly)
+  missingSeq = which(!TFBS.df$chr %in% names(seqLengths))
+  if (length(missingSeq) > 0) {
+      message = paste0("A total of ", length(missingSeq), " out of ", nrow(TFBS.df), " entries in the file ", file_tfbs_in, " contain sequence names that cannot be found in the public databases to retrieve chromosome lengths. The following sequence names are unsupported and will be removed: ", paste0(unique(TFBS.df$chr[missingSeq]), collapse = ","))
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      TFBS.df = TFBS.df[-missingSeq,]
+  }
+  
+  subject.gr  = .constructGRanges(TFBS.df, seqlengths = seqLengths, GRN@config$parameters$genomeAssembly)
   
   intersect.gr = GenomicRanges::intersect(subject.gr, consensusPeaks, ignore.strand=TRUE)
   
@@ -1735,7 +1749,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   HOCOMOCO_mapping.exp.filt = HOCOMOCO_mapping.exp %>% dplyr::filter(.data$TF.ENSEMBL %in% colnames(sort.cor.m))
   
   sort.cor.m = sort.cor.m[,as.character(HOCOMOCO_mapping.exp.filt$ENSEMBL)] 
-  colnames(sort.cor.m) = as.character(HOCOMOCO_mapping.exp.filt$TF.HOCOID)
+  colnames(sort.cor.m) = as.character(HOCOMOCO_mapping.exp.filt$TF.ID)
   
   .printExecutionTime(start, prefix = whitespacePrefix)
   sort.cor.m
@@ -1807,7 +1821,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     #Select a maximum set of TFs to run this for
     allTF = GRN@annotation$TFs$TF.name
     
-    # rownamesTFs = GRN@annotation$TFs$ENSEMBL[match(allTF, GRN@annotation$TFs$HOCOID)] 
+    # rownamesTFs = GRN@annotation$TFs$ENSEMBL[match(allTF, GRN@annotation$TFs$ID)] 
     
     # Calculating TF activity is done for all TF that are available
     TF.activity.m = matrix(NA, nrow = length(allTF), ncol = length(GRN@config$sharedSamples), 
@@ -2022,7 +2036,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   
   GRN@data$TFs$classification$TF.translation.orig = GRN@annotation$TFs %>%
-    dplyr::mutate(TF.name = .data$TF.HOCOID)
+    dplyr::mutate(TF.name = .data$TF.ID)
   
   if (is.null(GRN@data$TFs$TF_peak_overlap)) {
     message = paste0("Could not find peak - TF matrix. Run the function overlapPeaksAndTFBS first / again")
@@ -2151,7 +2165,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
           TF_peak_cor = GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor
           peak_TF_overlapCur.df = .filterSortAndShuffle_peakTF_overlapTable(GRN, permutationCur, TF_peak_cor)
           .plot_heatmapAR(TF.peakMatrix.df = peak_TF_overlapCur.df, 
-                          HOCOMOCO_mapping.df.exp = GRN@annotation$TFs %>% dplyr::mutate(TF = .data$TF.name), 
+                          mapping.df.exp = GRN@annotation$TFs %>% dplyr::mutate(TF = .data$TF.name), 
                           sort.cor.m = TF_peak_cor, 
                           par.l = GRN@config$parameters, 
                           corMethod = corMethod,
@@ -5257,8 +5271,11 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         if (!"TF.ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
             GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ENSEMBL = .data$ENSEMBL)
         }
-        if (!"TF.HOCOID" %in% colnames(GRN@annotation$TFs)) {
+        if (!"TF.HOCOID" %in% colnames(GRN@annotation$TFs) & "HOCOID" %in% colnames(GRN@annotation$TFs)) {
             GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.HOCOID = .data$HOCOID)
+        }
+        if (!"TF.ID" %in% colnames(GRN@annotation$TFs)) {
+            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ID = .data$TF.HOCOID)
         }
         
         if ("ENSEMBL" %in% colnames(GRN@annotation$TFs)) {

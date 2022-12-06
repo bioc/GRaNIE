@@ -35,6 +35,8 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   # tf-peak-gene graph is weighted (r), tf-gene graph is unweighted
   
   if (is.null(GRN@graph$TF_gene) | is.null(GRN@graph$TF_peak_gene) | forceRerun) {
+      
+   .checkConnections(GRN, throwError = TRUE)
     
     # Should the TF nodes and gene nodes represent the same or different nodes? 
     # If set to TRUE, the new default, self-loops can happen and the graph is not strictly tripartite anymore
@@ -104,6 +106,24 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   
   GRN
   
+}
+
+.checkConnections <- function (GRN, throwError = TRUE) {
+    
+    if (is.null(GRN@connections$all.filtered$`0`)) {
+        message = "Slot GRN@connections$all.filtered not found. Run the function filterGRNAndConnectGenes first."
+        
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    
+    if (nrow(GRN@connections$all.filtered$`0`) == 0) {
+        
+        message = "There are no connections in the filtered GRN. Make sure you run the function filterGRNAndConnectGenes and that the final eGRN has connections."
+        
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = !throwError)
+    }
+    
 }
 
 .buildGraph <- function(df, directed, allowLoops, removeMultiple = FALSE, silent = FALSE) {
@@ -381,6 +401,9 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   checkmate::assertSubset(background_geneTypes, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertChoice(pAdjustMethod, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   checkmate::assertFlag(forceRerun)
+  
+  .checkConnections(GRN, throwError = TRUE)
+  .checkGraphExistance(GRN)
   
   futile.logger::flog.info(paste0("Calculating general enrichment. This may take a while"))
   
@@ -830,6 +853,8 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
   checkmate::assertChoice(clustering, c("louvain", "leading_eigen", "fast_greedy", "optimal", "walktrap", "leiden"))
   checkmate::assertFlag(forceRerun)
   
+  .checkGraphExistance(GRN)
+  
   if (is.null(igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community) | forceRerun) {
     
     futile.logger::flog.info(paste0("Calculating communities for clustering type ", clustering, "..."))
@@ -928,6 +953,8 @@ calculateCommunitiesEnrichment <- function(GRN,
   GRN = .addFunctionLogToObject(GRN)
   
   GRN = .makeObjectCompatible(GRN)
+  
+  .checkGraphExistance(GRN)
 
   checkmate::assertSubset(ontology , c("GO_BP", "GO_MF", "GO_CC", "KEGG", "DO", "Reactome"), empty.ok = FALSE)
  
@@ -1083,6 +1110,8 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 
   checkmate::assert(checkmate::checkNumeric(n, lower = 0.0001, upper = 0.999999), checkmate::checkIntegerish(n, lower = 1))
   
+  .checkGraphExistance(GRN)
+  
   if (nodeType == "gene") {
     slot = "gene.ENSEMBL"
     link = dplyr::if_else(use_TF_gene_network, "tf-gene", "peak-gene")
@@ -1194,6 +1223,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
   checkmate::assertFlag(forceRerun)
   
   futile.logger::flog.info(paste0("Calculating TF enrichment. This may take a while"))
+  
+  .checkGraphExistance(GRN)
   
   if (rankType == "custom"){
     if(is.null(TF.names)){
