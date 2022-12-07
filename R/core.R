@@ -15,7 +15,8 @@
 #' 
 #' @export
 #' @param objectMetadata List. Default \code{list()}. Optional (named) list with an arbitrary number of elements, all of which 
-#' capture metadata for the object. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.
+#' capture metadata for the object. \strong{Only atomic data types are allowed for each list element
+#' (see ?is.atomic for more help: logical, integer, numeric, complex, character, raw, and NULL), and this slot is not supposed to store real data}. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.
 #' @param outputFolder Output folder, either absolute or relative to the current working directory. Default \code{"."}. 
 #' Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. 
 #' Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.
@@ -35,6 +36,15 @@ initializeGRN <- function(objectMetadata = list(),
     
   checkmate::assert(checkmate::checkNull(objectMetadata), checkmate::checkList(objectMetadata))
   checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
+  
+  # Check individual metadata components that they are only characters but not actual data objects
+  for (i in seq_len(length(objectMetadata))) {
+      if (!checkmate::testAtomic(objectMetadata[[i]])) {
+          message = paste0("For the objectMetadata argument, only atomic types (logical, integer, numeric, complex, character, raw, and NULL; see ?is.atomic for more information) are allowed for each list element. However, this is not the case for the element ", i, ". Real data should not be stored in this slot.")
+          .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      }
+  
+  }
 
   
   # Create the folder first if not yet existing
@@ -5261,6 +5271,9 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
 # Converts from an older GRN object format to the most current one due to internal optimizations
 .makeObjectCompatible <- function(GRN) {
     
+    # Remove the GRaNIE:: prefix in case it is present, this has been changed only in version 1.3.7
+    names(GRN@config$functionParameters) = gsub("GRaNIE::", "", names(GRN@config$functionParameters), fixed = TRUE)
+    
     if (is.null(GRN@annotation$TFs) & !is.null(GRN@data$TFs$translationTable)) {
         GRN@annotation$TFs = GRN@data$TFs$translationTable
         GRN@data$TFs$translationTable = NULL
@@ -5469,8 +5482,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   #listName = gsub("\\(|\\)", "", match.call()[1], perl = TRUE)
   functionName = evalq(match.call(), parent.frame(1))[1]
   listName = gsub("\\(|\\)", "", functionName, perl = TRUE)
-  listName = gsub("GRNdev::", "", listName, fixed = TRUE)
-  listName = gsub("GRN::", "", listName, fixed = TRUE)
+  listName = gsub("GRaNIE::", "", listName, fixed = TRUE)
   
   # Compatibility with old objects
   if (is.null(GRN@config$functionParameters)) {

@@ -163,7 +163,7 @@ setMethod("show",
             if (!is.null(GRN@connections)) {
 
                 if (!is.null(GRN@connections$TF_peaks$`0`$main)) {
-                    maxFDR = round(max(GRN@connections$TF_peaks$`0`$main$TF_peak.fdr), 1)
+                    maxFDR = GRN1@config$functionParameters$addConnections_TF_peak$parameters$maxFDRToStore
                     cat(" TF-peak links (", nrow(GRN@connections$TF_peaks$`0`$main), " with FDR < ", maxFDR, ")\n", sep = "")
                 } else {
                     cat(" TF-peak links: none found\n")
@@ -178,8 +178,8 @@ setMethod("show",
                 if (!is.null(GRN@connections$all.filtered$`0`)) {
                     
                     nRows = nrow(GRN@connections$all.filtered$`0`)
-                    max_TF_peak_FDR = GRN@config$functionParameters$`GRaNIE::filterGRNAndConnectGenes`$parameters$TF_peak.fdr.threshold
-                    max_peak_gene_FDR = GRN@config$functionParameters$`GRaNIE::filterGRNAndConnectGenes`$parameters$peak_gene.fdr.threshold
+                    max_TF_peak_FDR = GRN@config$functionParameters$filterGRNAndConnectGenes$parameters$TF_peak.fdr.threshold
+                    max_peak_gene_FDR = GRN@config$functionParameters$filterGRNAndConnectGenes$parameters$peak_gene.fdr.threshold
                     cat(" TF-peak-gene links (", nRows," with TF-peak FDR ", max_TF_peak_FDR, " and peak-gene FDR ",  max_peak_gene_FDR , ")\n", sep = "")
                     
                     

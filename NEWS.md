@@ -1,8 +1,19 @@
+# GRaNIE 1.3.4-1.3.8 (2022-12-06)
+
+## Major changes
+- the `topGO` package is now  required package and not optional anymore. The reasoning for this is that the standard vignette should run through with the default arguments, and `GO` annotation is the default ontology so `topGO` is needed for this. Despite this package still being optional from a strict workflow point of view, we feel this is a better way and improves user friendliness by not having to install another package in the middle of the workflow.
+
+## Minor changes
+- in `initializeGRN`, the `objectMetadata` argument is now checked whether it contains only atomic elements, and an error is thrown if this is not the case. As this list is not supposed to contain real data, checking this prevents the print(GRN) function to unnecessarily print the whole content of the provided object metadata, thereby breaking the original purpose.
+- `addTFBS` got two more arguments to make it more flexible. Now, it is possible to specify the file name of the translation table to be used via the argument `translationTable`, which makes it more flexible than the previously hard-coded name `"translationTable.csv`. In addition, the column separator for this file can now be specified via the argument `translationTable_sep`
+- Overlapping TFBS data with the peak is now more error-tolerant and does not error out in case that some chromosome or contig names from the TFBS BED files contain elements the size of which cannot be retrieved online. This was the case for some contig names with the suffix `decoy`, for example. If such elements are found, a warning is now thrown and they are ignored as they are usually not wanted anyway.
+- in case a GRN objects contains 0 connections (e..g, because of too strict filtering), subsequent functions as well as the `print` function now give a more user-friendly warning / error message.
+
 # GRaNIE 1.1.22-1.3.3 (2022-11-29)
 
 ## Major changes
 - additional normalization schemes have been implemented, including GC-aware normalization schemes for peaks, and existing normalization methods have been renamed for clarity. See `?addData` for details.
-- further reduced the package burden; the large genome annotation packages are now more or less fully optional and only needed when a GC-aware normalization has been chosen or when additional peak annotation is wanted. However, in contrast to before, none of these annotation packages are strictly required anywhere anymore
+- further reduced the package burden; the large genome annotation packages are now more or less fully optional and only needed when a GC-aware normalization has been chosen or when additional peak annotation is wanted. However, in contrast to before, none of these annotation packages are strictly required anywhere anymore. The vignettes have been updated accordingly.
 
 ## Minor changes
 - various small changes in the code
