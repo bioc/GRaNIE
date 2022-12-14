@@ -70,10 +70,10 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
       dplyr::mutate_at(c("V1","V2"), as.vector)
     
     TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak`=TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
-      dplyr::select(.data$V1, .data$V2, .data$V1_name, .data$V2_name, .data$r, .data$connectionType)
+      dplyr::select("V1", "V2", "V1_name", "V2_name", "r", "connectionType")
     
     TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2"="V1"), suffix = c(".TF_peak", ".peak_gene")) %>% 
-      dplyr::select(.data$V1, .data$V2.peak_gene, .data$V1_name.TF_peak, .data$V2_name.peak_gene) %>%
+      dplyr::select("V1", "V2.peak_gene", "V1_name.TF_peak", "V2_name.peak_gene") %>%
       dplyr::rename(V1_name = .data$V1_name.TF_peak, V2 = .data$V2.peak_gene, V2_name = .data$V2_name.peak_gene) %>%
       dplyr::distinct() %>%
       dplyr::mutate(connectionType = "tf-gene") 
@@ -134,7 +134,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   df_mod = df %>% dplyr::select(-.data$V1_name, -.data$V2_name)
   
   TF_vertices = df %>%
-    dplyr::select(.data$V1, .data$V1_name) %>% 
+    dplyr::select("V1", "V1_name") %>% 
     dplyr::rename(nodeID = .data$V1) %>%
     dplyr::distinct() %>%
     dplyr::group_by(.data$nodeID) %>%
@@ -144,7 +144,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     dplyr::ungroup()
   
   gene_vertices = df %>%
-    dplyr::select(.data$V2, .data$V2_name) %>% 
+    dplyr::select("V2", "V2_name") %>% 
     dplyr::distinct() %>%
     dplyr::mutate(isGene = TRUE) %>%
     dplyr::rename(names_gene = .data$V2_name, nodeID = .data$V2) %>%
@@ -1151,11 +1151,11 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
     # TODO: change column names
     if (nodeType == "gene") {
       topNodes = topNodes  %>%
-        dplyr::left_join(graph.df %>% dplyr::select(.data$V2, .data$V2_name) %>% dplyr::distinct(), by = "V2") %>%
+        dplyr::left_join(graph.df %>% dplyr::select("V2", "V2_name") %>% dplyr::distinct(), by = "V2") %>%
         dplyr::rename(gene.ENSEMBL = .data$V2, gene.name = .data$V2_name)
     } else {
       topNodes = topNodes  %>%
-        dplyr::left_join(graph.df %>% dplyr::select(.data$V1, .data$V1_name) %>% dplyr::distinct(), by = "V1") %>%
+        dplyr::left_join(graph.df %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), by = "V1") %>%
         dplyr::rename(TF.ENSEMBL = .data$V1, TF.name = .data$V1_name)
     }
     

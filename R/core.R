@@ -305,13 +305,13 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                                                  additionalParams = additionalParams.l
                                             ) %>%
                             as_tibble(rownames = "peakID") %>%
-                            dplyr::select(.data$peakID, tidyselect::everything())
+                            dplyr::select("peakID", tidyselect::everything())
     
     countsRNA.norm.df    = .normalizeCountMatrix(GRN, counts_rna %>% tibble::column_to_rownames("ENSEMBL") %>% as.matrix(), 
                                                  normalization = normalization_rna,
                                                  additionalParams = additionalParams.l) %>%
                             as_tibble(rownames = "ENSEMBL") %>%
-                            dplyr::select(.data$ENSEMBL, tidyselect::everything())
+                            dplyr::select("ENSEMBL", tidyselect::everything())
     
 
     ## SAMPLE AND GRN METADATA ##
@@ -615,7 +615,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     
     GRN@annotation$peaks = dplyr::left_join(GRN@annotation$peaks, 
                                                      peaks.annotated.df  %>% 
-                                                       dplyr::select(.data$peakID, .data$annotation, tidyselect::starts_with("gene"), -.data$geneId, .data$distanceToTSS, .data$ENSEMBL, .data$SYMBOL, .data$GENENAME) %>%
+                                                       dplyr::select("peakID", "annotation", tidyselect::starts_with("gene"), "geneId", "distanceToTSS", "ENSEMBL", "SYMBOL", "GENENAME") %>%
                                                        dplyr::mutate(annotation  = as.factor(.data$annotation), 
                                                                      ENSEMBL = as.factor(.data$ENSEMBL), 
                                                                      GENENAME = as.factor(.data$GENENAME),
@@ -697,7 +697,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                   peak.ID = query$peakID,
                   peak.GC.class = cut(.data$`G|C`, breaks = seq(0,1,1/nBins), include.lowest = TRUE, ordered_result = TRUE)) %>%
     dplyr::rename(peak.GC.perc    = .data$`G|C`) %>%
-    dplyr::select(.data$peak.ID, tidyselect::everything())
+    dplyr::select("peak.ID", tidyselect::everything())
   
 
   .printExecutionTime(start)
@@ -1244,8 +1244,8 @@ filterData <- function (GRN,
     dplyr::filter(.data$chr %in% chrToKeep, .data$size <= maxSize_peaks, .data$size >= minSize_peaks) %>%
     # arrange(chr, start) %>%
     dplyr::rename(peakID = !!(idColumn)) %>%
-    dplyr::select(-.data$chr,-.data$start, -.data$end, -.data$size) %>%
-    dplyr::select(.data$peakID, tidyselect::everything())
+    dplyr::select(-"chr",-"start", -"end", -"size") %>%
+    dplyr::select("peakID", tidyselect::everything())
   
   futile.logger::flog.info(paste0(" Number of peaks after filtering : ", nrow(countsPeaks.clean)))
   
@@ -1414,7 +1414,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", translationTable = "translati
     GRN@annotation$TFs = GRN@annotation$TFs %>%
       dplyr::rename(TF.ENSEMBL = .data$ENSEMBL, TF.ID = .data$ID)  %>% 
       dplyr::mutate(TF.name = .data$TF.ID)  %>%
-      dplyr::select(.data$TF.name, .data$TF.ENSEMBL, .data$TF.ID)
+      dplyr::select("TF.name", "TF.ENSEMBL", "TF.ID")
     
     # TODO: Change here and make it more logical what to put where
     GRN@config$allTF = GRN@annotation$TFs$TF.name
@@ -1589,7 +1589,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
       dplyr::mutate(peakID = GRN@data$peaks$counts_metadata$peakID,
                     isFiltered = .data$peakID %in% filteredPeaks) %>%
       dplyr::mutate_if(is.logical, as.numeric) %>%
-      dplyr::select(tidyselect::all_of(sort(GRN@config$allTF)), .data$isFiltered)
+      dplyr::select(tidyselect::all_of(sort(GRN@config$allTF)), "isFiltered")
     
     GRN@data$TFs$TF_peak_overlap = .asSparseMatrix(as.matrix(GRN@data$TFs$TF_peak_overlap), 
                                                    convertNA_to_zero = FALSE, 
@@ -1655,7 +1655,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   query_overlap_df$peak_end    = end(query.gr)  [query_row_ids]
   
   final.df = cbind.data.frame(query_overlap_df, subject_overlap_df) %>%
-    dplyr::select(-.data$score, -.data$annotation) %>%
+    dplyr::select(-"score", -"annotation") %>%
     dplyr::mutate(tfbsID = paste0(.data$tfbs_chr, ":", .data$tfbs_start, "-", .data$tfbs_end),
                   coordCentTfbs = round((.data$tfbs_start + .data$tfbs_end)/2, 0),
                   coordSummit   = round((.data$peak_start + .data$peak_end)/2, 0),
@@ -1710,7 +1710,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   # Filter to only the TFs
   # In addition, the no of TF because multiple TFs can map to the same gene/ ENSEMBL ID
   # Also filter 0 count genes because they otherwise cause errors downstream
-  rowSums = rowSums(dplyr::select(matrix1, -.data$ENSEMBL))
+  rowSums = rowSums(dplyr::select(matrix1, -"ENSEMBL"))
   
   # Keep only Ensembl IDs from TFs we have data from
   matrix1.norm.TFs.df = dplyr::filter(matrix1, .data$ENSEMBL %in% HOCOMOCO_mapping$TF.ENSEMBL, rowSums != 0)
@@ -1742,7 +1742,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   # counts for peaks may be 0 throughout, then a warning is thrown
   
   #If the sd is zero, a warning is issued. We suppress it here to not confuse users as this is being dealt with later by ignoring the NA entries
-  cor.m = suppressWarnings(t(cor(t(dplyr::select(matrix1.norm.TFs.df, -.data$ENSEMBL)), t(dplyr::select(matrix_peaks, -.data$peakID)), method = corMethod)))
+  cor.m = suppressWarnings(t(cor(t(dplyr::select(matrix1.norm.TFs.df, -"ENSEMBL")), t(dplyr::select(matrix_peaks, -"peakID")), method = corMethod)))
   
   colnames(cor.m) = matrix1.norm.TFs.df$ENSEMBL
   rownames(cor.m) = matrix_peaks$peakID
@@ -1773,7 +1773,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   peak_TF_overlapCur.df = .asMatrixFromSparse(GRN@data$TFs$TF_peak_overlap, convertZero_to_NA = FALSE) %>% 
     tibble::as_tibble() %>%
     dplyr::filter(!.data$isFiltered) %>%  # Works because 1 / 0 is interpreted here as logical and not 1/0
-    dplyr::select(-.data$isFiltered) 
+    dplyr::select(-"isFiltered") 
   
   if (perm > 0 & shuffle) {
     peak_TF_overlapCur.df = .shuffleRowsPerColumn(peak_TF_overlapCur.df)
@@ -1866,7 +1866,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     GRN@data$TFs[[name]] = TF.activity.m %>%
       tibble::as_tibble(rownames = "TF.name") %>%
       dplyr::left_join(GRN@annotation$TFs, by = "TF.name") %>%
-      dplyr::select(.data$ENSEMBL, .data$TF.name, tidyselect::all_of(GRN@config$sharedSamples))
+      dplyr::select("ENSEMBL", "TF.name", tidyselect::all_of(GRN@config$sharedSamples))
     
     # Update available connection types
     GRN@config$TF_peak_connectionTypes = unique(c(GRN@config$TF_peak_connectionTypes, name))
@@ -1953,7 +1953,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     
     # Only TF.names are unique
     # TODO fix
-    countsNorm = .normalizeCountMatrix(data %>% dplyr::select(-.data$ENSEMBL), normalization = normalization)
+    countsNorm = .normalizeCountMatrix(data %>% dplyr::select(-"ENSEMBL"), normalization = normalization)
     
     # Check overlap of ENSEMBL IDs
     countsNorm$ENSEMBL = data$ENSEMBL
@@ -1989,7 +1989,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     # Therefore, use TF names as row names, same as with the TF Activity matrix
     
     GRN@data$TFs[[name]] = countsNorm.subset %>%
-      dplyr::select(.data$ENSEMBL, .data$TF.name, tidyselect::all_of(GRN@config$sharedSamples)) %>%
+      dplyr::select("ENSEMBL", "TF.name", tidyselect::all_of(GRN@config$sharedSamples)) %>%
       tibble::as_tibble()
     
     # Update available connection types
@@ -2095,7 +2095,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
           
           # TF activity data
           counts1 = GRN@data$TFs[[connectionTypeCur]] %>% 
-            dplyr::select(-.data$TF.name)
+            dplyr::select(-"TF.name")
           
         } 
         
@@ -2387,7 +2387,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       
       # Keep only Ensembl ID here
       counts_connectionTypeCur = GRN@data$TFs[[connectionTypeCur]] %>% 
-        dplyr::select(-.data$TF.name)
+        dplyr::select(-"TF.name")
       
     } 
     
@@ -2695,11 +2695,11 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                         nBackground_orig         = nPeaksBackground,
                         percBackgroundUsed       = minPerc,
                         background_match_success = background_match_success) %>%
-          dplyr::select(.data$TF.name, .data$TF_peak.r_bin, 
-                        .data$n, .data$tpvalue, .data$fpvalue, .data$fpvalue_norm, 
-                        .data$TF_peak.fdr, 
-                        .data$TF_peak.fdr_orig, .data$TF_peak.fdr_direction, 
-                        .data$TF_peak.connectionType,
+          dplyr::select("TF.name", "TF_peak.r_bin", 
+                        "n", "tpvalue", "fpvalue", "fpvalue_norm", 
+                        "TF_peak.fdr", 
+                        "TF_peak.fdr_orig", "TF_peak.fdr_direction", 
+                        "TF_peak.connectionType",
                         tidyselect::contains("ground")) %>%
           dplyr::rename(n_tp = .data$tpvalue, n_fp = .data$fpvalue, n_fp_norm = .data$fpvalue_norm) %>%
           dplyr::distinct() %>%
@@ -2713,9 +2713,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         # Left join here is what we want, as we need this df only for "real" data
         tblFilt.df = dplyr::left_join(cor.peak.tf, fdr.curve, by = "TF_peak.r_bin") %>%
           dplyr::filter(.data$TF_peak.fdr <= maxFDRToStore) %>%
-          dplyr::select(.data$TF.name, .data$TF_peak.r_bin, .data$TF_peak.r, .data$TF_peak.fdr, 
-                        .data$TF_peak.fdr_orig, .data$peak.ID, .data$TF_peak.fdr_direction, 
-                        .data$TF_peak.connectionType, tidyselect::contains("value"))
+          dplyr::select("TF.name", "TF_peak.r_bin", "TF_peak.r", "TF_peak.fdr", 
+                        "TF_peak.fdr_orig", "peak.ID", "TF_peak.fdr_direction", 
+                        "TF_peak.connectionType", tidyselect::contains("value"))
         
         
         if (!plotDetails) {
@@ -2988,7 +2988,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   query = GenomicRanges::trim(query)
 
   subject = GRN@annotation$genes %>%
-      dplyr::select(-.data$gene.mean, -.data$gene.median, -.data$gene.CV) %>%
+      dplyr::select(-"gene.mean", -"gene.median", -"gene.CV") %>%
       dplyr::filter(!is.na(.data$gene.start), !is.na(.data$gene.end))
   
   if (!is.null(gene.types)) {
@@ -3260,7 +3260,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                               # Add gene annotation and distance
                               dplyr::left_join(overlaps.sub.filt.df, by = c("gene.ENSEMBL", "peak.ID")) %>%
                               # Integrate TAD IDs also
-                              dplyr::left_join(dplyr::select(peak.TADs.df, .data$peak.ID, .data$tad.ID), by = c("peak.ID")) %>%
+                              dplyr::left_join(dplyr::select(peak.TADs.df, "peak.ID", "tad.ID"), by = c("peak.ID")) %>%
                               
                               dplyr::select(tidyselect::all_of(selectColumns))) %>%
     dplyr::mutate(peak.ID = as.factor(.data$peak.ID),
@@ -3278,7 +3278,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
   
   if (is.null(TADs)) {
-    res.df = dplyr::select(res.df, -.data$tad.ID)
+    res.df = dplyr::select(res.df, -"tad.ID")
   }
   
   futile.logger::flog.info(paste0(" Finished. Final number of rows: ", nrow(res.df)))
@@ -3515,7 +3515,7 @@ filterGRNAndConnectGenes <- function(GRN,
     # Only select the absolute necessary here, no additional metadata
     ann.gene.red = GRN@annotation$genes %>%
         dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
-        dplyr::select(.data$gene.ENSEMBL, .data$gene.name, .data$gene.type)
+        dplyr::select("gene.ENSEMBL", "gene.name", "gene.type")
     
     peakGeneCorrelations = GRN@connections$peak_genes[[permIndex]] %>%
       dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
@@ -3526,8 +3526,8 @@ filterGRNAndConnectGenes <- function(GRN,
     # Add TF Ensembl IDs
     grn.filt = GRN@connections$TF_peaks[[permIndex]]$main  %>% 
       tibble::as_tibble() %>%
-      dplyr::left_join(GRN@annotation$TFs %>% dplyr::select(.data$TF.name, .data$TF.ENSEMBL), by = c("TF.name")) %>%
-      dplyr::select(-.data$TF_peak.fdr_orig) %>%
+      dplyr::left_join(GRN@annotation$TFs %>% dplyr::select("TF.name", "TF.ENSEMBL"), by = c("TF.name")) %>%
+      dplyr::select(-"TF_peak.fdr_orig") %>%
       dplyr::mutate(TF.ENSEMBL = as.factor(.data$TF.ENSEMBL))
     
     if (is.null(grn.filt)) {
@@ -3578,7 +3578,7 @@ filterGRNAndConnectGenes <- function(GRN,
                                                     right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
                 
                 binThresholdNeg = grn.filt.TF.dir  %>% 
-                  dplyr::select(.data$TF_peak.r_bin, .data$TF_peak.fdr) %>% 
+                  dplyr::select("TF_peak.r_bin", "TF_peak.fdr") %>% 
                   dplyr::distinct() %>% 
                   dplyr::arrange(.data$TF_peak.r_bin)
                 
@@ -3602,7 +3602,7 @@ filterGRNAndConnectGenes <- function(GRN,
                                                     right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
                 
                 binThresholdNeg = grn.filt.TF.dir  %>% 
-                  dplyr::select(.data$TF_peak.r_bin, .data$TF_peak.fdr) %>% 
+                  dplyr::select("TF_peak.r_bin", "TF_peak.fdr") %>% 
                   dplyr::distinct() %>% 
                   dplyr::arrange(.data$TF_peak.r_bin)
                 
@@ -3622,7 +3622,7 @@ filterGRNAndConnectGenes <- function(GRN,
         
         grn.filt = grn.filt %>%
           dplyr::filter(.data$row.ID %in% idsRowsKeep) %>%
-          dplyr::select(-.data$row.ID)
+          dplyr::select(-"row.ID")
         
         futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
         
@@ -4083,7 +4083,7 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
       permIndex = as.character(permutationCur)
       TF_genePairs = GRN@connections$all.filtered[[permIndex]] %>%
         dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>%
-        dplyr::select(.data$TF.name, .data$gene.ENSEMBL) %>%
+        dplyr::select("TF.name", "gene.ENSEMBL") %>%
         dplyr::distinct() %>%
         dplyr::left_join(GRN@annotation$TFs, by = c("TF.name"), suffix = c("", ".transl")) # %>%
       # dplyr::distinct(ENSEMBL, ENSEMBL.transl)
@@ -4139,7 +4139,7 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
                         TF.name           = as.factor(.data$TF.name)) %>%
           dplyr::rename(TF_gene.r     = .data$r, 
                         TF_gene.p_raw = .data$p.raw) %>%
-          dplyr::select(.data$TF.name, .data$TF.ENSEMBL, .data$gene.ENSEMBL, tidyselect::everything())
+          dplyr::select("TF.name", "TF.ENSEMBL", "gene.ENSEMBL", tidyselect::everything())
         
         
         if (addRobustRegression) {
@@ -4224,7 +4224,7 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
   SNPData.mod$end = as.numeric(SNPData.mod[, col_pos])
   SNPData.mod$start = as.numeric(SNPData.mod[, col_pos])
   
-  SNPs.gr = .constructGRanges(dplyr::select(SNPData.mod, .data$chr, {{col_pos}}, .data$end), seqlengths = GenomeInfoDb::seqlengths(txdb), genomeAssembly_SNP,  
+  SNPs.gr = .constructGRanges(dplyr::select(SNPData.mod, "chr", {{col_pos}}, "end"), seqlengths = GenomeInfoDb::seqlengths(txdb), genomeAssembly_SNP,  
                               start.field = col_pos, seqnames.field = col_chr)
   
   
@@ -4254,7 +4254,7 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
   
   if (addAllColumns) {
     
-    overlaps.df = dplyr::left_join(overlaps.df, SNPData.mod, by = c("SNP_chr" = "chr", "SNP_start" = "start")) %>% dplyr::select(-end)
+    overlaps.df = dplyr::left_join(overlaps.df, SNPData.mod, by = c("SNP_chr" = "chr", "SNP_start" = "start")) %>% dplyr::select(-"end")
   }
   
   
@@ -4500,11 +4500,11 @@ generateStatsSummary <- function(GRN,
                       gene.types,
                       allowMissingGenes, allowMissingTFs) {
   
-  TF.stats   = dplyr::select(connections.df, .data$TF.name, .data$peak.ID)   %>% dplyr::filter(!is.na(.data$peak.ID)) %>% dplyr::pull(.data$TF.name)   %>% as.character() %>% table() 
-  gene.stats = dplyr::select(connections.df, .data$peak.ID, .data$gene.ENSEMBL) %>% dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>% dplyr::pull(.data$gene.ENSEMBL) %>% as.character() %>% table() 
+  TF.stats   = dplyr::select(connections.df, "TF.name", "peak.ID")   %>% dplyr::filter(!is.na(.data$peak.ID)) %>% dplyr::pull(.data$TF.name)   %>% as.character() %>% table() 
+  gene.stats = dplyr::select(connections.df, "peak.ID", "gene.ENSEMBL") %>% dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>% dplyr::pull(.data$gene.ENSEMBL) %>% as.character() %>% table() 
   
-  peak_gene.stats = dplyr::select(connections.df, .data$peak.ID, .data$gene.ENSEMBL) %>% dplyr::filter(!is.na(.data$gene.ENSEMBL),!is.na(.data$peak.ID)) %>% dplyr::pull(.data$peak.ID) %>% as.character() %>% table() 
-  peak.TF.stats   = dplyr::select(connections.df, .data$peak.ID, .data$TF.name)      %>% dplyr::filter(!is.na(.data$TF.name),     !is.na(.data$peak.ID)) %>% dplyr::pull(.data$peak.ID) %>% as.character() %>% table() 
+  peak_gene.stats = dplyr::select(connections.df, "peak.ID", "gene.ENSEMBL") %>% dplyr::filter(!is.na(.data$gene.ENSEMBL),!is.na(.data$peak.ID)) %>% dplyr::pull(.data$peak.ID) %>% as.character() %>% table() 
+  peak.TF.stats   = dplyr::select(connections.df, "peak.ID", "TF.name")      %>% dplyr::filter(!is.na(.data$TF.name),     !is.na(.data$peak.ID)) %>% dplyr::pull(.data$peak.ID) %>% as.character() %>% table() 
   
   if (length(TF.stats) > 0){
     TF.connections = c(min(TF.stats, na.rm = TRUE), 
@@ -4851,13 +4851,13 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE,
             
             merged.df = merged.df %>%
                 dplyr::left_join(GRN@annotation$TFs %>% 
-                                     dplyr::select(.data$TF.ENSEMBL, tidyselect::starts_with("TF.variancePartition")), 
+                                     dplyr::select("TF.ENSEMBL", tidyselect::starts_with("TF.variancePartition")), 
                                  by = "TF.ENSEMBL")  %>%
                 dplyr::left_join(GRN@annotation$genes %>% 
-                                     dplyr::select(.data$gene.ENSEMBL, tidyselect::starts_with("gene.variancePartition")), 
+                                     dplyr::select("gene.ENSEMBL", tidyselect::starts_with("gene.variancePartition")), 
                                  by = "gene.ENSEMBL")  %>%
                 dplyr::left_join(GRN@annotation$peaks %>% 
-                                     dplyr::select(.data$peak.ID, tidyselect::starts_with("peak.variancePartition")), 
+                                     dplyr::select("peak.ID", tidyselect::starts_with("peak.variancePartition")), 
                                  by = "peak.ID")
             
         }
@@ -5105,13 +5105,13 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE,
             
             merged.df = merged.df %>%
                 dplyr::left_join(GRN@annotation$TFs %>% 
-                                     dplyr::select(.data$TF.ENSEMBL, tidyselect::starts_with("TF.variancePartition")), 
+                                     dplyr::select("TF.ENSEMBL", tidyselect::starts_with("TF.variancePartition")), 
                                  by = "TF.ENSEMBL")  %>%
                 dplyr::left_join(GRN@annotation$genes %>% 
-                                     dplyr::select(.data$gene.ENSEMBL, tidyselect::starts_with("gene.variancePartition")), 
+                                     dplyr::select("gene.ENSEMBL", tidyselect::starts_with("gene.variancePartition")), 
                                  by = "gene.ENSEMBL")  %>%
                 dplyr::left_join(GRN@annotation$peaks %>% 
-                                     dplyr::select(.data$peak.ID, tidyselect::starts_with("peak.variancePartition")), 
+                                     dplyr::select("peak.ID", tidyselect::starts_with("peak.variancePartition")), 
                                  by = "peak.ID")
             
         }
@@ -5330,7 +5330,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         }
         
         if ("ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
-            GRN@annotation$TFs = dplyr::select(GRN@annotation$TFs, -.data$ENSEMBL)
+            GRN@annotation$TFs = dplyr::select(GRN@annotation$TFs, -"ENSEMBL")
         }
     }
     
@@ -5354,7 +5354,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         GRN@data$peaks[["counts_orig"]] = NULL
     }
     if (is.null(GRN@data$peaks[["counts"]])) {
-        GRN@data$peaks[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$peaks$counts_norm %>% dplyr::select(-.data$isFiltered), 
+        GRN@data$peaks[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$peaks$counts_norm %>% dplyr::select(-"isFiltered"), 
                                                                   ID_column = "peakID", slotName = "GRN@data$peaks$counts")
         
         # Record previously filtered peaks, they are lost otherwise
@@ -5382,7 +5382,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         GRN@data$RNA[["counts_orig"]] = NULL
     }
     if (is.null(GRN@data$RNA[["counts"]]) & !is.null(GRN@data$RNA$counts_norm.l[["0"]])) {
-        GRN@data$RNA[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::select(-.data$isFiltered), 
+        GRN@data$RNA[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::select(-"isFiltered"), 
                                                                 ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
         
         # Record previously filtered peaks, they are lost otherwise
@@ -5796,7 +5796,7 @@ add_featureVariation <- function (GRN,
             dplyr::select(tidyselect::one_of(columnsToSelect)) %>%
             dplyr::mutate_if(is.character, as.factor) %>%
             dplyr::mutate_if(is.logical, as.factor) %>%
-            dplyr::select(-.data$has_both)
+            dplyr::select(-"has_both")
         
         # Remove factors with only one level
         coltypes = meta %>% dplyr::summarise_all(class)

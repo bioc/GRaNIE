@@ -1268,10 +1268,10 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         # Save memory and prune the table and add only the variable we need here
         if (varCur != "peak.gene.combined.CV") {
           dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-            dplyr::select(.data$peak_gene.p_raw, tidyselect::all_of(varCur), .data$class, .data$r_positive, .data$peak_gene.p.raw.class, .data$peak_gene.distance) 
+            dplyr::select("peak_gene.p_raw", tidyselect::all_of(varCur), "class", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance") 
         } else {
           dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-            dplyr::select(.data$peak_gene.p_raw, .data$class, .data$gene.CV, .data$peak.CV, .data$r_positive, .data$peak_gene.p.raw.class, .data$peak_gene.distance)
+            dplyr::select("peak_gene.p_raw", class, "gene.CV", "peak.CV", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance")
         }
         
         
@@ -1302,7 +1302,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                 gene.CV >= 1                 & peak.CV >= 1                 ~ "gene.CV+peak.CV>1", ##
                 TRUE ~ "other"
               )) %>%
-              dplyr::select(-.data$gene.CV, -.data$peak.CV)
+              dplyr::select(-gene.CV, -peak.CV)
             
           } else {
             
@@ -1678,7 +1678,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                               .data$TF_peak.connectionType == TF_peak.connectionTypeCur, 
                               is.na(.data$peak_gene.p_raw), 
                               .data$perm == permCur) %>%
-                dplyr::select(.data$TF_peak.fdr, .data$peak_gene.fdr, .data$nGenes, .data$nTFs, .data$nPeaks)
+                dplyr::select("TF_peak.fdr", "peak_gene.fdr", "nGenes", "nTFs", "nPeaks")
               
               # Stratify by TF, peak or gene and produce a simple matrix
               if (nrow(stats_filtered.df) > 0) {
@@ -2428,7 +2428,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
           igraph::induced_subgraph(graph = GRN@graph$TF_gene$graph, 
                                    vids = communityVerticesCur) %>%
           igraph::as_long_data_frame() %>% 
-          dplyr::select(.data$from_name, .data$to_name, .data$connectionType, .data$from_names_TF_all, .data$to_names_gene) %>%
+          dplyr::select("from_name", "to_name", "connectionType", "from_names_TF_all", "to_names_gene") %>%
           dplyr::rename(V1 = .data$from_name, V2 = .data$to_name, V1_name = .data$from_names_TF_all, V2_name = .data$to_names_gene) %>%
           dplyr::mutate(community = communityCur, isTFTFinteraction = FALSE)
         
@@ -2609,7 +2609,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
     vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
     # Get the number of vertexes per community as additional annotation column for the heatmap
     geneCounts = vertexMetadata %>%
-      dplyr::select(.data$name, .data$community) %>%
+      dplyr::select("name", "community") %>%
       dplyr::distinct() %>%
       dplyr::count(.data$community)
     
@@ -2690,7 +2690,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
           
           # Convert to wide format and filter those terms that are significant at least once
           all.df.wide = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
-              dplyr::select(.data$community, .data$ID, .data$pval) %>%
+              dplyr::select("community", "ID", "pval") %>%
               tidyr::pivot_wider(names_from = .data$community, values_from = .data$pval) %>%
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
               dplyr::rowwise() %>%
@@ -2711,7 +2711,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
           matrix.m = all.df.wide %>%
               dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
               dplyr::filter(!is.na(.data$Term)) %>%
-              dplyr::select(.data$Term, dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
+              dplyr::select("Term", dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
               tibble::column_to_rownames("Term") %>%
               as.matrix()
@@ -3030,7 +3030,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           
           # Convert to wide format and filter those terms that are significant at least once
           all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-              dplyr::select(.data$TF.name, .data$ID, .data$pval) %>%
+              dplyr::select("TF.name", "ID", "pval") %>%
               tidyr::pivot_wider(names_from = .data$TF.name, values_from = .data$pval) %>%
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
               dplyr::rowwise() %>%
@@ -3051,7 +3051,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           matrix.m = all.df.wide %>%
               dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
               dplyr::filter(!is.na(.data$Term)) %>%
-              dplyr::select(.data$Term, dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
+              dplyr::select("Term", dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
               # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
               tibble::column_to_rownames("Term") %>%
@@ -3261,7 +3261,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     Score = sort(eigen_ctr[geneSet], decreasing = TRUE)[nCentralGenes]) %>% 
     stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
     dplyr::distinct() %>% 
-    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select(.data$V2, .data$V2_name) %>% dplyr::distinct(), 
+    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V2", "V2_name") %>% dplyr::distinct(), 
                      by = c("gene.ENSEMBL" = "V2") ) %>%
     #dplyr::mutate(gene.name = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
     dplyr::rename(gene.name = .data$V2_name) %>%
@@ -3272,7 +3272,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
                              Score   =    sort(eigen_ctr[TFSet], decreasing = TRUE)[nCentralTFs]) %>% 
     stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
     dplyr::distinct() %>%
-    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select(.data$V1, .data$V1_name) %>% dplyr::distinct(), 
+    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), 
                      by = c("TF.ENSEMBL" = "V1") ) %>%
     dplyr::rename(TF.name = .data$V1_name) %>%
     dplyr::mutate(name_plot = paste0(.data$TF.name, "\n(", .data$TF.ENSEMBL, ")")) %>%
@@ -3429,7 +3429,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
                                                             TRUE ~ 0.6),
                       R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
                       color       = dplyr::case_when(R < 0 ~ "gray90", TRUE ~ "gray50")) %>%
-        dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
+        dplyr::select("from", "to", "weight", "R", "linetype", "weight_transformed", "R_direction", "color")
     
     
     

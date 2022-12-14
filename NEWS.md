@@ -1,3 +1,11 @@
+# GRaNIE 1.3.9 (2022-12-14)
+
+## Major changes
+- new argument for `addConnections_peak_gene`: `shuffleRNACounts`. See the R help for more details.
+
+## Minor changes
+- code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
+
 # GRaNIE 1.3.4-1.3.8 (2022-12-06)
 
 ## Major changes

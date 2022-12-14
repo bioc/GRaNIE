@@ -99,7 +99,7 @@
       mapping.df = dplyr::rename(mapping.df, ID = .data$HOCOID)
   }
   
-  checkmate::assertSubset(colnames(mapping.df), c("ENSEMBL", "ID"))
+  checkmate::assertSubset(c("ENSEMBL", "ID"), colnames(mapping.df))
   
   mapping.df = dplyr::mutate(mapping.df , ENSEMBL = gsub("\\..+", "", .data$ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
   
