@@ -102,10 +102,24 @@ setMethod("show",
             GRN = object
             # .checkObjectValidity(GRN)
             
+            # Old: This just gives the current package version and not the one used when creating the object
             packageName = utils::packageName()
-            packageVersion = ifelse(is.null(packageName), NA, utils::packageVersion(packageName))
+            # Outside of a package context this is NULL
+            if (is.null(packageName)) {
+                packageName = "GRaNIE"
+            }
+                
+            #packageVersion = ifelse(is.null(packageName), NA, utils::packageVersion(packageName))
+            #cat("Object of class:", packageName," ( version", paste0(packageVersion[[1]], collapse = "."), ")\n")
+        
+            if (!is.null(GRN@config$parameters$packageVersion)) {
+                packageVersion = GRN@config$parameters$packageVersion
+            } else {
+                packageVersion = NA
+            }
+            cat("GRN object from package ", packageName," (created with version ", packageVersion, ")\n", sep = "")
             
-            cat("Object of class:", packageName," ( version", paste0(packageVersion[[1]], collapse = "."), ")\n")
+         
             
             
             

@@ -411,6 +411,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 
     GRN = .populateGeneAnnotation(GRN)
     
+  } else {
+      .printDataAlreadyExistsMessage()
   }
   
   
@@ -452,7 +454,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 
 .storeAsMatrixOrSparseMatrix <- function (GRN, df, ID_column, slotName, threshold = 0.1) {
     
-    stopifnot(identical(GRN@config$sharedSamples, colnames(df)[-1]))
+    checkmate::assertSubset(GRN@config$sharedSamples, colnames(df)[-1])
     
     # Store as sparse matrix if enough 0s
     checkmate::assertIntegerish(length(GRN@config$sharedSamples), lower = 1)
@@ -1150,71 +1152,68 @@ filterData <- function (GRN,
   checkmate::assertNumber(maxCV_genes, lower = dplyr::if_else(is.null(minCV_genes), 0, minCV_genes), null.ok = TRUE)
   checkmate::assertFlag(forceRerun)
   
-  if (!GRN@config$isFiltered | forceRerun) {
-    
-    GRN@data$peaks$counts_metadata$isFiltered = FALSE
-    
-    if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
+  GRN@data$peaks$counts_metadata$isFiltered = FALSE
+  
+  if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
       GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = 0
-    }
-    
-    
-    # Filter peaks
-    futile.logger::flog.info("FILTER PEAKS")
-    peakIDs.CV = .filterPeaksByMeanCV(GRN, 
-                                      minMean = minNormalizedMean_peaks, maxMean = maxNormalizedMean_peaks, 
-                                      minCV = minCV_peaks, maxCV = maxCV_peaks) 
-    
-    # Clean peaks from alternative contigs etc 
-    GRN@config$parameters$chrToKeep =  chrToKeep_peaks
-    peakIDs.chr = .filterPeaksByChromosomeAndSize(GRN, 
-                                                  chrToKeep_peaks, 
-                                                  minSize_peaks = minSize_peaks, maxSize_peaks = maxSize_peaks)
-    
-    nPeaksBefore = nrow(GRN@data$peaks$counts_metadata)
-    peaks_toKeep = intersect(peakIDs.chr, peakIDs.CV)
-    futile.logger::flog.info(paste0("Collectively, filter ", nPeaksBefore -length(peaks_toKeep), " out of ", nPeaksBefore, " peaks."))
-    futile.logger::flog.info(paste0("Number of remaining peaks: ", length(peaks_toKeep)))
-    
-    if (length(peaks_toKeep) < 1000) {
-        message = paste0("Too few peaks (", length(peaks_toKeep), ") remain after filtering. At least 1000 peaks must remain. Adjust the filtering settings.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    GRN@data$peaks$counts_metadata$isFiltered  = ! GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
-    #GRN@data$peaks$counts_raw$isFiltered = ! GRN@data$peaks$counts_raw$peakID  %in% peaks_toKeep
-    GRN@data$peaks$counts_metadata$isFiltered = ! GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
-    
-    
-    if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
+  }
+  
+  
+  # Filter peaks
+  futile.logger::flog.info("FILTER PEAKS")
+  peakIDs.CV = .filterPeaksByMeanCV(GRN, 
+                                    minMean = minNormalizedMean_peaks, maxMean = maxNormalizedMean_peaks, 
+                                    minCV = minCV_peaks, maxCV = maxCV_peaks) 
+  
+  # Clean peaks from alternative contigs etc 
+  GRN@config$parameters$chrToKeep =  chrToKeep_peaks
+  peakIDs.chr = .filterPeaksByChromosomeAndSize(GRN, 
+                                                chrToKeep_peaks, 
+                                                minSize_peaks = minSize_peaks, maxSize_peaks = maxSize_peaks)
+  
+  nPeaksBefore = nrow(GRN@data$peaks$counts_metadata)
+  peaks_toKeep = intersect(peakIDs.chr, peakIDs.CV)
+  futile.logger::flog.info(paste0("Collectively, filter ", nPeaksBefore -length(peaks_toKeep), " out of ", nPeaksBefore, " peaks."))
+  futile.logger::flog.info(paste0("Number of remaining peaks: ", length(peaks_toKeep)))
+  
+  if (length(peaks_toKeep) < 1000) {
+      message = paste0("Too few peaks (", length(peaks_toKeep), ") remain after filtering. At least 1000 peaks must remain. Adjust the filtering settings.")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+  }
+  
+  GRN@data$peaks$counts_metadata$isFiltered  = ! GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
+  #GRN@data$peaks$counts_raw$isFiltered = ! GRN@data$peaks$counts_raw$peakID  %in% peaks_toKeep
+  GRN@data$peaks$counts_metadata$isFiltered = ! GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
+  
+  
+  if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
       GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = as.integer (! rownames(GRN@data$TFs$TF_peak_overlap) %in% peaks_toKeep)
-    }
-    
-    
-    # Remove genes with small rowMeans
-    #Only for real data, not for permuted (rowmeans is equal anyway)
-    # Filter peaks
-    futile.logger::flog.info("FILTER RNA-seq")
-    genes.CV = .filterGenesByMeanCV(GRN, 
-                                    minMean = minNormalizedMeanRNA, maxMean = maxNormalizedMeanRNA, 
-                                    minCV = minCV_genes, maxCV = maxCV_genes) 
-    
-    
-    if (length(genes.CV) < 100) {
-        message = paste0("Too few genes (", length(genes.CV), ") remain after filtering. At least 100 genes must remain. Adjust the filtering settings.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-
-    GRN@data$RNA$counts_metadata$isFiltered = ! GRN@data$RNA$counts_metadata$ID %in% genes.CV
-
-    nRowsFlagged = length(which(GRN@data$RNA$counts_metadata$isFiltered))
-    
-    # Raw counts are left untouched and filtered where needed only
-    futile.logger::flog.info(paste0(" Flagged ", nRowsFlagged, " rows due to filtering criteria"))
-    
-    GRN@config$isFiltered = TRUE
-  } 
+  }
+  
+  
+  # Remove genes with small rowMeans
+  #Only for real data, not for permuted (rowmeans is equal anyway)
+  # Filter peaks
+  futile.logger::flog.info("FILTER RNA-seq")
+  genes.CV = .filterGenesByMeanCV(GRN, 
+                                  minMean = minNormalizedMeanRNA, maxMean = maxNormalizedMeanRNA, 
+                                  minCV = minCV_genes, maxCV = maxCV_genes) 
+  
+  
+  if (length(genes.CV) < 100) {
+      message = paste0("Too few genes (", length(genes.CV), ") remain after filtering. At least 100 genes must remain. Adjust the filtering settings.")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+  }
+  
+  
+  GRN@data$RNA$counts_metadata$isFiltered = ! GRN@data$RNA$counts_metadata$ID %in% genes.CV
+  
+  nRowsFlagged = length(which(GRN@data$RNA$counts_metadata$isFiltered))
+  
+  # Raw counts are left untouched and filtered where needed only
+  futile.logger::flog.info(paste0(" Flagged ", nRowsFlagged, " rows due to filtering criteria"))
+  
+  GRN@config$isFiltered = TRUE
   
   .printExecutionTime(start, prefix = "")
   
@@ -1426,7 +1425,9 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", translationTable = "translati
     GRN@config$directories$motifFolder = motifFolder
     
     
-  } 
+  } else {
+      .printDataAlreadyExistsMessage()
+  }
   
   .printExecutionTime(start, prefix = "")
   
@@ -1599,7 +1600,9 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     # TODO: Here could be an error due to differences in sorting. Also, whether or not all or the filtered version shall be used
     stopifnot(identical(rownames(GRN@data$TFs$TF_peak_overlap), GRN@data$peaks$counts_metadata$peakID))
     
-  } 
+  } else {
+      .printDataAlreadyExistsMessage()
+  }
   
   .printExecutionTime(start, prefix = "")
   
@@ -1870,8 +1873,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     futile.logger::flog.info(paste0("TF activity successfully calculated. Data has been stored under the name ", name))
     
   } else {
-    
-    futile.logger::flog.info(paste0("Data already exists in object (slot ", name, "), nothing to do. Set forceRerun = TRUE to regenerate and overwrite."))
+      .printDataAlreadyExistsMessage(slotName = paste0("data$TFs$", name))
   }
   
   
@@ -2339,6 +2341,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       
     }
     
+  } else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start, prefix = "")
@@ -2805,6 +2809,13 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @template corMethod
 #' @param  promoterRange Integer >=0. Default 250000. The size of the neighborhood in bp to correlate peaks and genes in vicinity. Only peak-gene pairs will be correlated if they are within the specified range. Increasing this value leads to higher running times and more peak-gene pairs to be associated, while decreasing results in the opposite.
 #' @param TADs Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.
+#' @param shuffleRNACounts \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the RNA sample labels be permuted in addition to 
+#' testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, the default, only peak-gene pairs are shuffled, but
+#' for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
+#' If set to \code{TRUE}, however, the RNA sample labels are in addition permuted so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
+#' Permuting twice randomizes the resulting eGRN even more, but potential biases in the peak-gene diagnostic plots for permuted data may not be visible anymore.
+#' Note that this parameter and its influence is still being investigated and newer GRaNIE versions changed the old default. Until version 1.0.7, this parameter (although not existent explicitly)
+#' was implicitly set to \code{TRUE}.
 #' @template nCores
 #' @template plotDiagnosticPlots
 #' @param plotGeneTypes List of character vectors. Default \code{list(c("all"), c("protein_coding"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).
@@ -2819,6 +2830,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' GRN = addConnections_peak_gene(GRN, promoterRange=10000, plotDiagnosticPlots = FALSE)
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
                                      promoterRange = 250000, TADs = NULL,
+                                     shuffleRNACounts = FALSE,
                                      nCores = 4, 
                                      plotDiagnosticPlots = TRUE, 
                                      plotGeneTypes = list(c("all"), c("protein_coding")), 
@@ -2839,6 +2851,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   checkmate::assert(checkmate::testNull(TADs), checkmate::testDataFrame(TADs))
   checkmate::assertIntegerish(nCores, lower = 1)
   checkmate::assertFlag(plotDiagnosticPlots) 
+  checkmate::assertFlag(shuffleRNACounts)
   for (elemCur in plotGeneTypes) {
       checkmate::assertSubset(elemCur, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   }
@@ -2888,6 +2901,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                        gene.types = as.character(gene.types),
                                        corMethod = corMethod,
                                        randomizePeakGeneConnections = randomizePeakGeneConnections,
+                                       shuffleRNA = shuffleRNACounts,
                                        overlapTypeGene,
                                        nCores = nCores,
                                        debugMode_nPlots = 0,
@@ -2896,6 +2910,8 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       
     }
     
+  } else {
+      .printDataAlreadyExistsMessage()
   } 
   
   if (plotDiagnosticPlots) {
@@ -3049,6 +3065,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                            overlapTypeGene = "TSS",
                                            corMethod = "pearson",
                                            randomizePeakGeneConnections = FALSE, 
+                                           shuffleRNA = FALSE,
                                            nCores = 1,
                                            chunksize = 50000,
                                            addRobustRegression = TRUE,
@@ -3182,12 +3199,19 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   
   permIndex = as.character(perm)
   
+  if (shuffleRNA) {
+      shuffleRNA = as.logical(perm) # only for perm = 1 this will actually be true
+  } else {
+      shuffleRNA = FALSE
+  }
+ 
+  
   countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted = FALSE, includeIDColumn = FALSE)
-  countsRNA.clean   = getCounts(GRN, type = "rna", permuted = as.logical(perm), includeIDColumn = FALSE)
+  countsRNA.clean   = getCounts(GRN, type = "rna", permuted = shuffleRNA, includeIDColumn = FALSE)
   
   # Cleverly construct the count matrices so we do the correlations in one go
   map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted = FALSE)$peakID)
-  map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = as.logical(perm))$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
+  map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = shuffleRNA)$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
   
   # There should not b any NA because it is about the peaks
   stopifnot(all(!is.na(map_peaks)))
@@ -3196,7 +3220,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   
   #res.m = matrix(NA, ncol = 2, nrow = nrow(overlaps.sub.filt.df), dimnames = list(NULL, c("p.raw", "peak_gene.r")))
   
-  futile.logger::flog.info(paste0(" Iterate through ", nrow(overlaps.sub.filt.df), " peak-gene combinations and (if possible) calculate correlations using ", nCores, " cores. This may take a few minutes."))
+  futile.logger::flog.info(paste0(" Iterate through ", nrow(overlaps.sub.filt.df), " peak-gene combinations and calculate correlations using ", nCores, " cores. This may take a few minutes."))
   
   # parallel version of computing peak-gene correlations
   maxRow = nrow(overlaps.sub.filt.df)
@@ -3290,7 +3314,10 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     }
     
     data1   = unlist(counts1 [map1 [i],])
-    data2   = unlist(counts2 [map2 [i],])
+    
+    # Changed in version 1.3.9: Make sure the other data compares the correct pairs.
+    # This restores the previous functionality of proper shuffling for the permuted RNA-seq data
+    data2   = unlist(counts2 [map2 [i],])[names(data1)]
     
     res =  suppressWarnings(stats::cor.test(data1, data2, method = corMethod))
     
@@ -4141,6 +4168,8 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
       GRN@connections$TF_genes.filtered[[permIndex]] = res.df
       
     } # end for each permutation
+  } else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start, prefix = "")
@@ -4455,7 +4484,7 @@ generateStatsSummary <- function(GRN,
     } # end for each permutation
     
   } else {
-    futile.logger::flog.info(paste0("Data already exists in object. Set forceRerun = TRUE to regenerate and overwrite."))
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start, prefix = "")
@@ -5266,6 +5295,15 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
 
 ####### Internal functions #########
 
+.printDataAlreadyExistsMessage <- function(slotName = NULL) {
+    
+    if (!is.null(slotName)) {
+        futile.logger::flog.info(paste0("Data already exists in object (GRN@", slotName, "). Set forceRerun = TRUE to regenerate and overwrite."))
+    } else {
+        futile.logger::flog.info(paste0("Data already exists in object. Set forceRerun = TRUE to regenerate and overwrite."))
+    }
+  
+}
 
 
 # Converts from an older GRN object format to the most current one due to internal optimizations
@@ -5318,6 +5356,10 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     if (is.null(GRN@data$peaks[["counts"]])) {
         GRN@data$peaks[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$peaks$counts_norm %>% dplyr::select(-.data$isFiltered), 
                                                                   ID_column = "peakID", slotName = "GRN@data$peaks$counts")
+        
+        # Record previously filtered peaks, they are lost otherwise
+        peaksFiltered = GRN@data$peaks$counts_norm %>% dplyr::filter(isFiltered) %>% dplyr::pull(peakID)
+        
     }
     if (!is.null(GRN@data$peaks[["counts_norm"]])) {
         GRN@data$peaks[["counts_norm"]] = NULL
@@ -5326,6 +5368,10 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     if (is.null(GRN@data$peaks[["counts_metadata"]])) {
         GRN@data$peaks[["counts_metadata"]] = .createConsensusPeaksDF(rownames(GRN@data$peaks[["counts"]])) 
         stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
+        
+        # Restore peaks previously set to filtered
+        GRN@data$peaks[["counts_metadata"]]$isFiltered[GRN@data$peaks[["counts_metadata"]]$peakID %in% peaksFiltered] = TRUE
+        
     }
     if (!is.null(GRN@data$peaks[["consensusPeaks"]])) {
         GRN@data$peaks[["consensusPeaks"]] = NULL
@@ -5338,12 +5384,19 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     if (is.null(GRN@data$RNA[["counts"]]) & !is.null(GRN@data$RNA$counts_norm.l[["0"]])) {
         GRN@data$RNA[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::select(-.data$isFiltered), 
                                                                 ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
+        
+        # Record previously filtered peaks, they are lost otherwise
+        genesFiltered = GRN@data$RNA$counts_norm.l$`0` %>% dplyr::filter(isFiltered) %>% dplyr::pull(ENSEMBL)
+        
     }
     if (!is.null(GRN@data$RNA[["counts_norm.l"]])) {
         GRN@data$RNA[["counts_norm.l"]] = NULL
     }
     if (is.null(GRN@data$RNA[["counts_metadata"]]) & !is.null(GRN@data$RNA$counts)) {
         GRN@data$RNA[["counts_metadata"]] = tibble::tibble(ID = rownames(GRN@data$RNA$counts), isFiltered = FALSE)
+        
+        # Restore RNA previously set to filtered
+        GRN@data$RNA[["counts_metadata"]]$isFiltered[GRN@data$RNA[["counts_metadata"]]$ID %in% genesFiltered] = TRUE
     }
     
     if (is.null(GRN@data$RNA[["counts_permuted_index"]]) & !is.null(GRN@data$RNA$counts)) {
@@ -5869,7 +5922,7 @@ add_featureVariation <- function (GRN,
         futile.logger::flog.info(paste0("The result objects have been stored in GRN@stats$variancePartition for both RNA and peaks."))
         
     } else {
-        futile.logger::flog.info(paste0("Data already exists in object, nothing to do due to forceRerun = FALSE"))
+        .printDataAlreadyExistsMessage()
     }
     
     

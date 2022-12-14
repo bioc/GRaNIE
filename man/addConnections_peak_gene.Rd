@@ -43,6 +43,14 @@ Use a robust regression in addition to a non-robust one? Significantly increases
 If set to \code{TRUE}, the package \code{robust} is required (as it is listed under \code{Suggests}, it may not be installed).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
+
+\item{shuffleRNACounts}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the RNA sample labels be permuted in addition to 
+testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, the default, only peak-gene pairs are shuffled, but
+for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
+If set to \code{TRUE}, however, the RNA sample labels are in addition permuted so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
+Permuting twice randomizes the resulting eGRN even more, but potential biases in the peak-gene diagnostic plots for permuted data may not be visible anymore.
+Note that this parameter and its influence is still being investigated and newer GRaNIE versions changed the old default. Until version 1.0.7, this parameter (although not existent explicitly)
+was implicitly set to \code{TRUE}.}
 }
 \value{
 An updated \code{\linkS4class{GRN}} object, with additional information added from this function.

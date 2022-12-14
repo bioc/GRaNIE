@@ -992,7 +992,8 @@ plotDiagnosticPlots_peakGene <- function(GRN,
             dplyr::mutate(class = factor(paste0("real_",range), levels = class_levels)),
           dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
             dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
-        dplyr::left_join(dplyr::select(GRN@annotation$genes, .data$gene.ENSEMBL, .data$gene.type, .data$gene.mean, .data$gene.median, .data$gene.CV), by = "gene.ENSEMBL") %>%
+        dplyr::left_join(dplyr::select(GRN@annotation$genes, .data$gene.ENSEMBL, .data$gene.type, 
+                                       .data$gene.mean, .data$gene.median, .data$gene.CV), by = "gene.ENSEMBL") %>%
         dplyr::left_join(GRN@annotation$peaks %>% 
                            dplyr::select(-dplyr::starts_with("peak.gene."), -.data$peak.GC.perc), by = "peak.ID") %>%
         dplyr::select(-.data$gene.ENSEMBL)
@@ -1334,8 +1335,9 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           promoter    = which(grepl("promoter", var.label, ignore.case = TRUE))
           
           # Remove the first, white-like color from the 2 palettes
-          mycolors[downstream] = RColorBrewer::brewer.pal(length(downstream) + 1, "Greens")[-1]
-          mycolors[promoter]   = RColorBrewer::brewer.pal(length(promoter) + 1, "Purples")[-1]
+          # Also make sure to always select at least 3 colors to avoid a warning
+          mycolors[downstream] = RColorBrewer::brewer.pal(max(2, length(downstream)) + 1, "Greens")[-1][seq_len(length(downstream))]
+          mycolors[promoter]   = RColorBrewer::brewer.pal(max(2, length(promoter)) + 1, "Purples")[-1][seq_len(length(promoter))]
           mycolors[which(grepl("3' UTR", mycolors))] = "yellow"
           mycolors[which(grepl("5' UTR", mycolors))] = "orange"
           mycolors[which(grepl("Distal Intergenic", mycolors))] = "red"
@@ -2093,7 +2095,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     if (plotAsPDF) {grDevices::dev.off()}
     
   } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -2215,7 +2217,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     if (plotAsPDF) grDevices::dev.off()
     
   } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -2492,8 +2494,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
     .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
-  } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists and forceRerun has been set to FALSE. Do nothing."))
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -2792,8 +2794,8 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
     .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
-  } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -3128,8 +3130,8 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
-  } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)

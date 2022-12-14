@@ -100,6 +100,8 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     GRN@graph$parameters$allowLoops     = allowLoops
     GRN@graph$parameters$removeMultiple = removeMultiple
     
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -434,9 +436,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
       
       futile.logger::flog.info(paste0("Result stored in GRN@stats$Enrichment$general$", ontologyCur, "$results"))
       
-    } else {
-      
-      futile.logger::flog.info(paste0("Results already found / previously calculated. Not re-running as forceRerun = FALSE"))
+    }  else {
+        .printDataAlreadyExistsMessage()
     }
     
   }
@@ -904,10 +905,9 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
     
     
     
-  } else {
-    
-    futile.logger::flog.info(paste0("Data already exists in object, nothing to do"))
-  }  
+  }  else {
+      .printDataAlreadyExistsMessage()
+  }
   
   .printExecutionTime(start)
   
@@ -1030,8 +1030,8 @@ calculateCommunitiesEnrichment <- function(GRN,
         
         futile.logger::flog.info(paste0("Result stored in GRN@stats$Enrichment$byCommunity[[\"", communityCur,  "\"]]$", ontologyCur, "$results"))
         
-      } else {
-        futile.logger::flog.info(paste0("Results already found / previously calculated. Not re-running as forceRerun = FALSE"))
+      }  else {
+          .printDataAlreadyExistsMessage()
       }
       
       
@@ -1300,8 +1300,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
         
         futile.logger::flog.info(paste0("   Results stored in GRN@stats$Enrichment$byTF[[\"", TF, "\"]]$", ontologyCur, "$results"))
         
-      }else {
-        futile.logger::flog.info(paste0("   Results already found / previously calculated for TF ", TF, ". Not re-running as forceRerun = FALSE"))
+      } else {
+          .printDataAlreadyExistsMessage(slotName = paste0("Enrichment$byTF$", TF, "$", ontologyCur))
       }
     }
     
