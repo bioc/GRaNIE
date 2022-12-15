@@ -544,8 +544,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         tibble::as_tibble() %>%
         dplyr::filter(stringr::str_length(.data$chromosome_name) <= 5) %>%
         dplyr::mutate(chromosome_name = paste0("chr", .data$chromosome_name)) %>%
-        dplyr::rename(gene.chr = .data$chromosome_name, gene.start = .data$start_position, gene.end = .data$end_position, 
-                      gene.strand = .data$strand, gene.ENSEMBL = .data$ensembl_gene_id, gene.type = .data$gene_biotype, gene.name = .data$external_gene_name) %>%
+        dplyr::rename(gene.chr = "chromosome_name", gene.start = "start_position", gene.end = "end_position", 
+                      gene.strand = "strand", gene.ENSEMBL = "ensembl_gene_id", gene.type = "gene_biotype", gene.name = "external_gene_name") %>%
         tidyr::replace_na(list(gene.type = "unknown")) %>%
         dplyr::mutate_if(is.character, as.factor) %>%
         dplyr::mutate(gene.type = dplyr::recode_factor(.data$gene.type, lncRNA = "lincRNA")) %>%  # there seems to be a name change from lincRNA -> lncRNA, lets change it here 
@@ -621,16 +621,16 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                                                                      GENENAME = as.factor(.data$GENENAME),
                                                                      SYMBOL = as.factor(.data$SYMBOL)),
                                                      by = c("peak.ID" = "peakID")) %>%
-      dplyr::rename(peak.nearestGene.chr = .data$geneChr,
-                    peak.nearestGene.start = .data$geneStart, 
-                    peak.nearestGene.end = .data$geneEnd, 
-                    peak.nearestGene.length = .data$geneLength, 
-                    peak.nearestGene.strand = .data$geneStrand, 
-                    peak.nearestGene.name = .data$GENENAME,
-                    peak.nearestGene.distanceToTSS = .data$distanceToTSS,
-                    peak.nearestGene.ENSEMBL = .data$ENSEMBL,
-                    peak.nearestGene.symbol = .data$SYMBOL,
-                    peak.annotation = .data$annotation
+      dplyr::rename(peak.nearestGene.chr = "geneChr",
+                    peak.nearestGene.start = "geneStart", 
+                    peak.nearestGene.end = "geneEnd", 
+                    peak.nearestGene.length = "geneLength", 
+                    peak.nearestGene.strand = "geneStrand", 
+                    peak.nearestGene.name = "GENENAME",
+                    peak.nearestGene.distanceToTSS = "distanceToTSS",
+                    peak.nearestGene.ENSEMBL = "ENSEMBL",
+                    peak.nearestGene.symbol = "SYMBOL",
+                    peak.annotation = "annotation"
       )
     
     
@@ -1412,7 +1412,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", translationTable = "translati
 
     
     GRN@annotation$TFs = GRN@annotation$TFs %>%
-      dplyr::rename(TF.ENSEMBL = .data$ENSEMBL, TF.ID = .data$ID)  %>% 
+      dplyr::rename(TF.ENSEMBL = "ENSEMBL", TF.ID = "ID")  %>% 
       dplyr::mutate(TF.name = .data$TF.ID)  %>%
       dplyr::select("TF.name", "TF.ENSEMBL", "TF.ID")
     
@@ -2701,7 +2701,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                         "TF_peak.fdr_orig", "TF_peak.fdr_direction", 
                         "TF_peak.connectionType",
                         tidyselect::contains("ground")) %>%
-          dplyr::rename(n_tp = .data$tpvalue, n_fp = .data$fpvalue, n_fp_norm = .data$fpvalue_norm) %>%
+          dplyr::rename(n_tp = "tpvalue", n_fp = "fpvalue", n_fp_norm = "fpvalue_norm") %>%
           dplyr::distinct() %>%
           dplyr::arrange(.data$TF_peak.r_bin)
         
@@ -2809,12 +2809,12 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @template corMethod
 #' @param  promoterRange Integer >=0. Default 250000. The size of the neighborhood in bp to correlate peaks and genes in vicinity. Only peak-gene pairs will be correlated if they are within the specified range. Increasing this value leads to higher running times and more peak-gene pairs to be associated, while decreasing results in the opposite.
 #' @param TADs Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.
-#' @param shuffleRNACounts \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the RNA sample labels be permuted in addition to 
-#' testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, the default, only peak-gene pairs are shuffled, but
+#' @param TADs_mergeOverlapping \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping TADs be merged? Only relevant if TADs are provided.
+#' @param shuffleRNACounts \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be permuted in addition to 
+#' testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but
 #' for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
 #' If set to \code{TRUE}, however, the RNA sample labels are in addition permuted so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
-#' Permuting twice randomizes the resulting eGRN even more, but potential biases in the peak-gene diagnostic plots for permuted data may not be visible anymore.
-#' Note that this parameter and its influence is still being investigated and newer GRaNIE versions changed the old default. Until version 1.0.7, this parameter (although not existent explicitly)
+#' Permuting twice randomizes the resulting eGRN even more. Note that this parameter and its influence is still being investigated. Until version 1.0.7, this parameter (although not existent explicitly)
 #' was implicitly set to \code{TRUE}.
 #' @template nCores
 #' @template plotDiagnosticPlots
@@ -2829,8 +2829,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' GRN = loadExampleObject()
 #' GRN = addConnections_peak_gene(GRN, promoterRange=10000, plotDiagnosticPlots = FALSE)
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
-                                     promoterRange = 250000, TADs = NULL,
-                                     shuffleRNACounts = FALSE,
+                                     promoterRange = 250000, 
+                                     TADs = NULL, TADs_mergeOverlapping = FALSE,
+                                     shuffleRNACounts = TRUE,
                                      nCores = 4, 
                                      plotDiagnosticPlots = TRUE, 
                                      plotGeneTypes = list(c("all"), c("protein_coding")), 
@@ -2849,6 +2850,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   checkmate::assertChoice(corMethod, c("pearson", "spearman"))
   checkmate::assertIntegerish(promoterRange, lower = 0)
   checkmate::assert(checkmate::testNull(TADs), checkmate::testDataFrame(TADs))
+  checkmate::assertFlag(TADs_mergeOverlapping)
   checkmate::assertIntegerish(nCores, lower = 1)
   checkmate::assertFlag(plotDiagnosticPlots) 
   checkmate::assertFlag(shuffleRNACounts)
@@ -2897,12 +2899,13 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       GRN@connections$peak_genes[[as.character(permutationCur)]] = 
         .calculatePeakGeneCorrelations(GRN, permutationCur,
                                        TADs = TADs,
+                                       mergeOverlappingTADs = mergeOverlappingTADs,
                                        neighborhoodSize = promoterRange,
                                        gene.types = as.character(gene.types),
                                        corMethod = corMethod,
                                        randomizePeakGeneConnections = randomizePeakGeneConnections,
                                        shuffleRNA = shuffleRNACounts,
-                                       overlapTypeGene,
+                                       overlapTypeGene = overlapTypeGene,
                                        nCores = nCores,
                                        debugMode_nPlots = 0,
                                        addRobustRegression = addRobustRegression
@@ -3084,12 +3087,12 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   # Preprocess TAD boundaries
   if (!is.null(TADs)) {
     
-    futile.logger::flog.info(paste0("Integrate Hi-C data and overlap peaks and HI-C domains"))  
+    futile.logger::flog.info(paste0("Integrate Hi-C data and overlap peaks and Hi-C domains"))  
     
     # Check format
-    checkmate::assertCharacter(TADs$X1)
-    checkmate::assertIntegerish(TADs$X2, lower = 1)
-    checkmate::assertIntegerish(TADs$X3, lower = 1)
+    checkmate::assertCharacter(unlist(TADs[,1]))
+    checkmate::assertIntegerish(unlist(TADs[,2]), lower = 1)
+    checkmate::assertIntegerish(unlist(TADs[,3]), lower = 1)
     
     colnames(TADs)[seq_len(3)] = c("chr", "start", "end")
     
@@ -3107,7 +3110,8 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     TADOverlaps = GenomicRanges::countOverlaps(subject, subject)
     TADOverlaps_min2 = length(which(TADOverlaps > 1))
     
-    futile.logger::flog.info(paste0(TADOverlaps_min2, "  TADs overlap each other"))
+    futile.logger::flog.info(paste0(TADOverlaps_min2, " TADs overlap each other"))
+    
     
     # Merge overlapping TADs. min.gapwidth is set to 0 to prevent that directly adjacent TADs are merged
     if (mergeOverlappingTADs & TADOverlaps_min2 > 0) {
@@ -3164,6 +3168,8 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     }
     
     
+    
+    
   } else {
     
     peak.TADs.df = NULL
@@ -3176,6 +3182,8 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                                genomeAssembly = genomeAssembly, 
                                                gene.types = gene.types, overlapTypeGene = overlapTypeGene) 
   
+  # Renaming necessary because currently, consensusPeaks contains peakID and 
+  peak.TADs.df = dplyr::rename(peak.TADs.df, peak.ID = "peakID")
   
   overlaps.sub.filt.df = overlaps.sub.df %>%
     dplyr::mutate(gene.ENSEMBL = gsub("\\..+", "", .data$gene.ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
@@ -3250,8 +3258,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   if (addRobustRegression) {
     selectColumns = c(selectColumns, "p_raw.robust", "r_robust", "bias_M_p.raw", "bias_LS_p.raw")
   }
-  
-  
+
   # Make data frame and adjust p-values
   res.df = suppressMessages(tibble::as_tibble(res.m) %>%
                               dplyr::mutate(peak.ID = getCounts(GRN, type = "peaks", permuted = FALSE)$peakID[map_peaks],
@@ -3266,15 +3273,15 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     dplyr::mutate(peak.ID = as.factor(.data$peak.ID),
                   gene.ENSEMBL = as.factor(.data$gene.ENSEMBL), 
                   tad.ID = as.factor(.data$tad.ID)) %>%
-    dplyr::rename(peak_gene.r = .data$r, 
-                  peak_gene.p_raw = .data$p.raw)
+    dplyr::rename(peak_gene.r = "r", 
+                  peak_gene.p_raw = "p.raw")
   
   if (addRobustRegression) {
     res.df = dplyr::rename(res.df, 
-                           peak_gene.p_raw.robust = .data$p_raw.robust, 
-                           peak_gene.r_robust = .data$r_robust,
-                           peak_gene.bias_M_p.raw = .data$bias_M_p.raw,
-                           peak_gene.bias_LS_p.raw = .data$bias_LS_p.raw)
+                           peak_gene.p_raw.robust = "p_raw.robust", 
+                           peak_gene.r_robust = "r_robust",
+                           peak_gene.bias_M_p.raw = "bias_M_p.raw",
+                           peak_gene.bias_LS_p.raw = "bias_LS_p.raw")
   }
   
   if (is.null(TADs)) {
@@ -4137,17 +4144,17 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
           dplyr::mutate(gene.ENSEMBL = as.factor(.data$gene.ENSEMBL), 
                         TF.ENSEMBL   = as.factor(.data$TF.ENSEMBL),
                         TF.name           = as.factor(.data$TF.name)) %>%
-          dplyr::rename(TF_gene.r     = .data$r, 
-                        TF_gene.p_raw = .data$p.raw) %>%
+          dplyr::rename(TF_gene.r     = "r", 
+                        TF_gene.p_raw = "p.raw") %>%
           dplyr::select("TF.name", "TF.ENSEMBL", "gene.ENSEMBL", tidyselect::everything())
         
         
         if (addRobustRegression) {
           res.df = dplyr::rename(res.df, 
-                                 TF_gene.p_raw.robust = .data$p_raw.robust, 
-                                 TF_gene.r_robust = .data$r_robust,
-                                 TF_gene.bias_M_p.raw = .data$bias_M_p.raw,
-                                 TF_gene.bias_LS_p.raw = .data$bias_LS_p.raw)
+                                 TF_gene.p_raw.robust = "p_raw.robust", 
+                                 TF_gene.r_robust = "r_robust",
+                                 TF_gene.bias_M_p.raw = "bias_M_p.raw",
+                                 TF_gene.bias_LS_p.raw = "bias_LS_p.raw")
         }
         
       } else {
@@ -5320,13 +5327,13 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     if (!is.null(GRN@annotation$TFs)) {
         
         if (!"TF.ENSEMBL" %in% colnames(GRN@annotation$TFs)) {
-            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ENSEMBL = .data$ENSEMBL)
+            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ENSEMBL = "ENSEMBL")
         }
         if (!"TF.HOCOID" %in% colnames(GRN@annotation$TFs) & "HOCOID" %in% colnames(GRN@annotation$TFs)) {
-            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.HOCOID = .data$HOCOID)
+            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.HOCOID = "HOCOID")
         }
         if (!"TF.ID" %in% colnames(GRN@annotation$TFs)) {
-            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ID = .data$TF.HOCOID)
+            GRN@annotation$TFs = dplyr::rename(GRN@annotation$TFs, TF.ID = "TF.HOCOID")
         }
         
         if ("ENSEMBL" %in% colnames(GRN@annotation$TFs)) {

@@ -1,3 +1,14 @@
+# GRaNIE 1.3.10 (2022-12-15)
+
+## Bug fixes
+- revisited the import of TADs and made the code more error-prone and fixed some bugs related to TADs. Importing TADs now works again as before.
+
+## Minor changes
+- code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
+
+## Major changes
+- new argument for `addConnections_peak_gene`: `TADs_mergeOverlapping`. See the R help for more details.
+
 # GRaNIE 1.3.9 (2022-12-14)
 
 ## Major changes

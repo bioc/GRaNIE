@@ -96,7 +96,7 @@
   
   # Make compatible to old translation tables
   if ("HOCOID" %in% colnames(mapping.df)) {
-      mapping.df = dplyr::rename(mapping.df, ID = .data$HOCOID)
+      mapping.df = dplyr::rename(mapping.df, ID = "HOCOID")
   }
   
   checkmate::assertSubset(c("ENSEMBL", "ID"), colnames(mapping.df))

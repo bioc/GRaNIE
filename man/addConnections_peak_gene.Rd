@@ -10,6 +10,8 @@ addConnections_peak_gene(
   corMethod = "pearson",
   promoterRange = 250000,
   TADs = NULL,
+  TADs_mergeOverlapping = FALSE,
+  shuffleRNACounts = TRUE,
   nCores = 4,
   plotDiagnosticPlots = TRUE,
   plotGeneTypes = list(c("all"), c("protein_coding")),
@@ -29,6 +31,15 @@ addConnections_peak_gene(
 
 \item{TADs}{Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.}
 
+\item{TADs_mergeOverlapping}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping TADs be merged? Only relevant if TADs are provided.}
+
+\item{shuffleRNACounts}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be permuted in addition to 
+testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but
+for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
+If set to \code{TRUE}, however, the RNA sample labels are in addition permuted so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
+Permuting twice randomizes the resulting eGRN even more. Note that this parameter and its influence is still being investigated. Until version 1.0.7, this parameter (although not existent explicitly)
+was implicitly set to \code{TRUE}.}
+
 \item{nCores}{Integer >0. Default 1. Number of cores to use. 
 A value >1 requires the \code{BiocParallel} package (as it is listed under \code{Suggests}, it may not be installed yet).}
 
@@ -43,14 +54,6 @@ Use a robust regression in addition to a non-robust one? Significantly increases
 If set to \code{TRUE}, the package \code{robust} is required (as it is listed under \code{Suggests}, it may not be installed).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
-
-\item{shuffleRNACounts}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the RNA sample labels be permuted in addition to 
-testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, the default, only peak-gene pairs are shuffled, but
-for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
-If set to \code{TRUE}, however, the RNA sample labels are in addition permuted so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
-Permuting twice randomizes the resulting eGRN even more, but potential biases in the peak-gene diagnostic plots for permuted data may not be visible anymore.
-Note that this parameter and its influence is still being investigated and newer GRaNIE versions changed the old default. Until version 1.0.7, this parameter (although not existent explicitly)
-was implicitly set to \code{TRUE}.}
 }
 \value{
 An updated \code{\linkS4class{GRN}} object, with additional information added from this function.

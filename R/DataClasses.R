@@ -100,6 +100,8 @@ setMethod("show",
           function(object) {
             
             GRN = object
+            
+            GRN = .makeObjectCompatible(GRN)
             # .checkObjectValidity(GRN)
             
             # Old: This just gives the current package version and not the one used when creating the object
@@ -177,7 +179,7 @@ setMethod("show",
             if (!is.null(GRN@connections)) {
 
                 if (!is.null(GRN@connections$TF_peaks$`0`$main)) {
-                    maxFDR = GRN1@config$functionParameters$addConnections_TF_peak$parameters$maxFDRToStore
+                    maxFDR = GRN@config$functionParameters$addConnections_TF_peak$parameters$maxFDRToStore
                     cat(" TF-peak links (", nrow(GRN@connections$TF_peaks$`0`$main), " with FDR < ", maxFDR, ")\n", sep = "")
                 } else {
                     cat(" TF-peak links: none found\n")
