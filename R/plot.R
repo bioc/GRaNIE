@@ -304,7 +304,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     data = log2(data+1)
   } 
   
-  data.df = reshape2::melt(tibble::as_tibble(data), measure.vars = colnames(data)) %>% dplyr::rename(sample = .data$variable)
+  data.df = reshape2::melt(tibble::as_tibble(data), measure.vars = colnames(data)) %>% dplyr::rename(sample = "variable")
   g = ggplot2::ggplot(data.df, ggplot2::aes(.data$value, color = .data$sample)) + ggplot2::geom_density() + ggplot2::theme_bw()
   
   title = paste0("Density of values per sample for all features")
@@ -699,7 +699,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
       
       
       connections_TF_peak.filt = dplyr::filter(connections_TF_peakCur, .data$TF_peak.fdr_direction == typeCur ) %>%
-        dplyr::select(-.data$TF.name, -.data$TF_peak.fdr_direction) %>%
+        dplyr::select(-"TF.name", -"TF_peak.fdr_direction") %>%
         dplyr::mutate(TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = levelsCur))  %>%
         reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
       
@@ -982,21 +982,26 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       
       class_levels = c(paste0("real_",range), paste0("random_",range))
       
+      if (! "peak.GC.perc" %in% colnames(GRN@annotation$peaks)) {
+          GRN@annotation$peaks$peak.GC.perc = NA
+      }
+      
       peakGeneCorrelations.all = 
         rbind(
           dplyr::select(GRN@connections$peak_genes[["0"]], tidyselect::all_of(cols_keep)) %>%
             dplyr::mutate(class = factor(paste0("real_",range), levels = class_levels)),
           dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
             dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
-        dplyr::left_join(dplyr::select(GRN@annotation$genes, .data$gene.ENSEMBL, .data$gene.type, .data$gene.mean, .data$gene.median, .data$gene.CV), by = "gene.ENSEMBL") %>%
+        dplyr::left_join(dplyr::select(GRN@annotation$genes, "gene.ENSEMBL", "gene.type", 
+                                       "gene.mean", "gene.median", "gene.CV"), by = "gene.ENSEMBL") %>%
         dplyr::left_join(GRN@annotation$peaks %>% 
-                           dplyr::select(-dplyr::starts_with("peak.gene."), -.data$peak.GC.perc), by = "peak.ID") %>%
-        dplyr::select(-.data$gene.ENSEMBL)
+                           dplyr::select(-dplyr::starts_with("peak.gene."), -"peak.GC.perc"), by = "peak.ID") %>%
+        dplyr::select(-"gene.ENSEMBL")
       
     }
     
     if (!plotPerTF) {
-      peakGeneCorrelations.all = dplyr::select(peakGeneCorrelations.all, -.data$peak.ID)
+      peakGeneCorrelations.all = dplyr::select(peakGeneCorrelations.all, -"peak.ID")
     }
     
     nClasses_distance  = 10
@@ -1250,13 +1255,12 @@ plotDiagnosticPlots_peakGene <- function(GRN,
       xlabel = paste0("Correlation raw\np-value (binned)")
       mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ", .prettyNum(range), " bp promoter range)")
       
-      allVars = c("peak.GC.class",  "peak.width", "peak.mean","peak.median",
+      allVars = c("peak.annotation", "peak.GC.class", "peak.width", "peak.mean","peak.median",
                   "peak.CV", "gene.median",  "gene.mean", "gene.CV", "peak.gene.combined.CV")
       
-      # If ChIPseeker is not installed, remove peak.annotation from it
-      if ("peak.annotation" %in% colnames(peakGeneCorrelations.all)) {
-        allVars = c(allVars, "peak.annotation")
-      }
+      # Only use those actually available, as some packages may not be available
+      allVars = intersect(allVars, colnames(peakGeneCorrelations.all))
+
       
       
       for (varCur in allVars) {
@@ -1264,10 +1268,10 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         # Save memory and prune the table and add only the variable we need here
         if (varCur != "peak.gene.combined.CV") {
           dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-            dplyr::select(.data$peak_gene.p_raw, tidyselect::all_of(varCur), .data$class, .data$r_positive, .data$peak_gene.p.raw.class, .data$peak_gene.distance) 
+            dplyr::select("peak_gene.p_raw", tidyselect::all_of(varCur), "class", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance") 
         } else {
           dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-            dplyr::select(.data$peak_gene.p_raw, .data$class, .data$gene.CV, .data$peak.CV, .data$r_positive, .data$peak_gene.p.raw.class, .data$peak_gene.distance)
+            dplyr::select("peak_gene.p_raw", "class", "gene.CV", "peak.CV", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance")
         }
         
         
@@ -1298,7 +1302,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                 gene.CV >= 1                 & peak.CV >= 1                 ~ "gene.CV+peak.CV>1", ##
                 TRUE ~ "other"
               )) %>%
-              dplyr::select(-.data$gene.CV, -.data$peak.CV)
+              dplyr::select(-"gene.CV", -"peak.CV")
             
           } else {
             
@@ -1331,8 +1335,9 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           promoter    = which(grepl("promoter", var.label, ignore.case = TRUE))
           
           # Remove the first, white-like color from the 2 palettes
-          mycolors[downstream] = RColorBrewer::brewer.pal(length(downstream) + 1, "Greens")[-1]
-          mycolors[promoter]   = RColorBrewer::brewer.pal(length(promoter) + 1, "Purples")[-1]
+          # Also make sure to always select at least 3 colors to avoid a warning
+          mycolors[downstream] = RColorBrewer::brewer.pal(max(2, length(downstream)) + 1, "Greens")[-1][seq_len(length(downstream))]
+          mycolors[promoter]   = RColorBrewer::brewer.pal(max(2, length(promoter)) + 1, "Purples")[-1][seq_len(length(promoter))]
           mycolors[which(grepl("3' UTR", mycolors))] = "yellow"
           mycolors[which(grepl("5' UTR", mycolors))] = "orange"
           mycolors[which(grepl("Distal Intergenic", mycolors))] = "red"
@@ -1349,7 +1354,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           
           
           # Class in the ggplot2::facet_wrap has been removed, as this is only for real data here
-          gA3 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, color = .data[[newColName]])) + ggplot2::geom_density(size = 0.2)  +
+          gA3 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, color = .data[[newColName]])) + ggplot2::geom_density(linewidth = 0.2)  +
             ggplot2::facet_wrap(~.data$r_positive, labeller = ggplot2::labeller(r_positive = r_positive_label), nrow = 2) +
             ggplot2::geom_density(ggplot2::aes(color = .data$classNew), color = "black",  linetype = "dotted", alpha = 1) + 
             ggplot2::xlab(xlabel) + ggplot2::ylab("Density (for real data only)") +  ggplot2::theme_bw() +
@@ -1414,7 +1419,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           
           dataCur = dataCur %>%
             dplyr::mutate(peak_gene.distance.class250k = factor(dplyr::if_else(.data$peak_gene.distance <= 250000, "<=250k", ">250k"))) %>%
-            dplyr::select(-.data$peak_gene.distance)
+            dplyr::select(-"peak_gene.distance")
           
           # closed = "left", boundary = 0, ensure correct numbers. See https://github.com/tidyverse/ggplot2/issues/1739
           # Without boundary = 0, counts are actually wrong
@@ -1673,7 +1678,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                               .data$TF_peak.connectionType == TF_peak.connectionTypeCur, 
                               is.na(.data$peak_gene.p_raw), 
                               .data$perm == permCur) %>%
-                dplyr::select(.data$TF_peak.fdr, .data$peak_gene.fdr, .data$nGenes, .data$nTFs, .data$nPeaks)
+                dplyr::select("TF_peak.fdr", "peak_gene.fdr", "nGenes", "nTFs", "nPeaks")
               
               # Stratify by TF, peak or gene and produce a simple matrix
               if (nrow(stats_filtered.df) > 0) {
@@ -2090,7 +2095,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     if (plotAsPDF) {grDevices::dev.off()}
     
   } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -2212,7 +2217,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     if (plotAsPDF) grDevices::dev.off()
     
   } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -2423,8 +2428,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
           igraph::induced_subgraph(graph = GRN@graph$TF_gene$graph, 
                                    vids = communityVerticesCur) %>%
           igraph::as_long_data_frame() %>% 
-          dplyr::select(.data$from_name, .data$to_name, .data$connectionType, .data$from_names_TF_all, .data$to_names_gene) %>%
-          dplyr::rename(V1 = .data$from_name, V2 = .data$to_name, V1_name = .data$from_names_TF_all, V2_name = .data$to_names_gene) %>%
+          dplyr::select("from_name", "to_name", "connectionType", "from_names_TF_all", "to_names_gene") %>%
+          dplyr::rename(V1 = "from_name", V2 = "to_name", V1_name = "from_names_TF_all", V2_name = "to_names_gene") %>%
           dplyr::mutate(community = communityCur, isTFTFinteraction = FALSE)
         
         # Handle cases where TF-TF interactions occur and the V2_name is NA because the gene name is NA
@@ -2489,8 +2494,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
     .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
-  } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists and forceRerun has been set to FALSE. Do nothing."))
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -2604,7 +2609,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
     vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
     # Get the number of vertexes per community as additional annotation column for the heatmap
     geneCounts = vertexMetadata %>%
-      dplyr::select(.data$name, .data$community) %>%
+      dplyr::select("name", "community") %>%
       dplyr::distinct() %>%
       dplyr::count(.data$community)
     
@@ -2685,7 +2690,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
           
           # Convert to wide format and filter those terms that are significant at least once
           all.df.wide = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
-              dplyr::select(.data$community, .data$ID, .data$pval) %>%
+              dplyr::select("community", "ID", "pval") %>%
               tidyr::pivot_wider(names_from = .data$community, values_from = .data$pval) %>%
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
               dplyr::rowwise() %>%
@@ -2706,7 +2711,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
           matrix.m = all.df.wide %>%
               dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
               dplyr::filter(!is.na(.data$Term)) %>%
-              dplyr::select(.data$Term, dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
+              dplyr::select("Term", dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
               tibble::column_to_rownames("Term") %>%
               as.matrix()
@@ -2762,10 +2767,10 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
                   dplyr::filter(.data$ID %in% ID_subset) %>%
                   dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
                   dplyr::filter(!is.na(.data$Term)) %>%
-                  dplyr::select(-.data$nSig, -.data$ID) %>%
+                  dplyr::select(-"nSig", -"ID") %>%
                   tibble::column_to_rownames("Term") %>%
                   dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
-                  dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
+                  dplyr::select(dplyr::any_of("communities.order")) %>% # reorder based on the previously generated custom order
                   as.matrix()
               
               futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
@@ -2789,8 +2794,8 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
     .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
-  } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -3025,7 +3030,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           
           # Convert to wide format and filter those terms that are significant at least once
           all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-              dplyr::select(.data$TF.name, .data$ID, .data$pval) %>%
+              dplyr::select("TF.name", "ID", "pval") %>%
               tidyr::pivot_wider(names_from = .data$TF.name, values_from = .data$pval) %>%
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
               dplyr::rowwise() %>%
@@ -3046,7 +3051,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           matrix.m = all.df.wide %>%
               dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
               dplyr::filter(!is.na(.data$Term)) %>%
-              dplyr::select(.data$Term, dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
+              dplyr::select("Term", dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
               # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
               tibble::column_to_rownames("Term") %>%
@@ -3099,7 +3104,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
                   dplyr::filter(.data$ID %in% ID_subset) %>%
                   dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
                   dplyr::filter(!is.na(.data$Term)) %>%
-                  dplyr::select(-.data$nSig, -.data$ID) %>%
+                  dplyr::select(-"nSig", -"ID") %>%
                   tibble::column_to_rownames("Term") %>%
                   dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
                   dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
@@ -3125,8 +3130,8 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     .checkPageNumberValidity(pages, pageCounter)
     if (plotAsPDF) grDevices::dev.off()
     
-  } else {
-    futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -3144,22 +3149,22 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     dplyr::filter(stringr::str_detect(.data$connectionType, "^tf")) %>% 
     dplyr::mutate(name_plot = paste0(.data$V1_name, "\n(", .data$V1, ")")) %>%
     dplyr::count(.data$name_plot, .data$V1) %>% 
-    dplyr::rename(ID = .data$V1, ID_all = .data$name_plot, Degree = .data$n) 
+    dplyr::rename(ID = "V1", ID_all = "name_plot", Degree = "n") 
   
   # TODO modify
   peak_TFend.degrees = df %>%
     dplyr::filter(stringr::str_detect(.data$connectionType, "peak$")) %>%
-    dplyr::count(.data$V2) %>% dplyr::rename(ID = .data$V2, Degree = .data$n)
+    dplyr::count(.data$V2) %>% dplyr::rename(ID = "V2", Degree = "n")
   
   peak_geneend.degrees = df %>%
     dplyr::filter(stringr::str_detect(.data$connectionType, "^peak")) %>%
-    dplyr::count(.data$V1) %>% dplyr::rename(ID = .data$V1, Degree = .data$n)
+    dplyr::count(.data$V1) %>% dplyr::rename(ID = "V1", Degree = "n")
   
   gene.degrees = df %>%
     dplyr::filter(stringr::str_detect(.data$connectionType, "gene$")) %>%
     dplyr::mutate(name_plot = paste0(.data$V2_name, "\n(", .data$V2, ")")) %>%  
     dplyr::count(.data$name_plot, .data$V2) %>% 
-    dplyr::rename(ID = .data$V2, ID_all = .data$name_plot, Degree = .data$n)
+    dplyr::rename(ID = "V2", ID_all = "name_plot", Degree = "n")
   
   degrees.table = dplyr::bind_rows( TF = TF.degrees, 
                                     `peak (TF end)` = peak_TFend.degrees, 
@@ -3189,7 +3194,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   
   top.n.tf = degrees.table %>% 
     dplyr::filter(class =="TF") %>%
-    dplyr::rename(TF.name = .data$ID) %>%
+    dplyr::rename(TF.name = "ID") %>%
     dplyr::arrange(dplyr::desc(.data$Degree)) %>% 
     dplyr::slice(seq_len(nCentralTFs))
   
@@ -3256,10 +3261,10 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     Score = sort(eigen_ctr[geneSet], decreasing = TRUE)[nCentralGenes]) %>% 
     stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
     dplyr::distinct() %>% 
-    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select(.data$V2, .data$V2_name) %>% dplyr::distinct(), 
+    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V2", "V2_name") %>% dplyr::distinct(), 
                      by = c("gene.ENSEMBL" = "V2") ) %>%
     #dplyr::mutate(gene.name = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
-    dplyr::rename(gene.name = .data$V2_name) %>%
+    dplyr::rename(gene.name = "V2_name") %>%
     dplyr::mutate(name_plot = paste0(.data$gene.name, "\n(", .data$gene.ENSEMBL, ")")) %>%
     dplyr::filter(.data$Score > 0) # Require the score to be > 0 because we dont want top nodes to have a score of 0
   
@@ -3267,9 +3272,9 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
                              Score   =    sort(eigen_ctr[TFSet], decreasing = TRUE)[nCentralTFs]) %>% 
     stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
     dplyr::distinct() %>%
-    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select(.data$V1, .data$V1_name) %>% dplyr::distinct(), 
+    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), 
                      by = c("TF.ENSEMBL" = "V1") ) %>%
-    dplyr::rename(TF.name = .data$V1_name) %>%
+    dplyr::rename(TF.name = "V1_name") %>%
     dplyr::mutate(name_plot = paste0(.data$TF.name, "\n(", .data$TF.ENSEMBL, ")")) %>%
     dplyr::filter(.data$Score > 0) # Require the score to be > 0 because we dont want top nodes to have a score of 0
   
@@ -3387,7 +3392,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     GRN = .getBasic_metadata_visualization(GRN, forceRerun = forceRerun)
     # if (useDefaultMetadata) {
     #   metadata_visualization.l = .getBasic_metadata_visualization(GRN)
-    #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "HOCOID",     "baseMean_log")
+    #   vertice_color_TFs   = list(metadata_visualization.l[["RNA_expression_TF"]],    "ID",     "baseMean_log")
     #   vertice_color_genes = list(metadata_visualization.l[["RNA_expression_genes"]], "ENSEMBL_ID", "baseMean_log")
     #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
     # }
@@ -3396,23 +3401,23 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     # check that it's in sync with the @ graph
     if (graph == "TF-gene"){
         grn.merged = GRN@graph$TF_gene$table %>%
-            dplyr::rename(TF.name = .data$V1_name)
+            dplyr::rename(TF.name = "V1_name")
         
         edges_final = grn.merged %>%
-            dplyr::rename(from = .data$TF.name, to = .data$V2) %>%
+            dplyr::rename(from = "TF.name", to = "V2") %>%
             dplyr::mutate(weight = 1, R = 1, linetype = "solid")
         
     }else{
         
         grn.merged = GRN@graph$TF_peak_gene$table %>%
-            dplyr::rename(TF.name = .data$V1_name) 
+            dplyr::rename(TF.name = "V1_name") 
         
         grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
         
         edges_final = grn.merged %>%
             dplyr::mutate(weight = .data$r,
                           linetype = "solid") %>%
-            dplyr::rename(from = .data$V1, to = .data$V2, R =  .data$r) 
+            dplyr::rename(from = "V1", to = "V2", R =  "r") 
         
     }
     
@@ -3424,7 +3429,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
                                                             TRUE ~ 0.6),
                       R_direction = dplyr::case_when(R < 0 ~ "neg", TRUE ~ "pos"),
                       color       = dplyr::case_when(R < 0 ~ "gray90", TRUE ~ "gray50")) %>%
-        dplyr::select(.data$from, .data$to, .data$weight, .data$R, .data$linetype, .data$weight_transformed, .data$R_direction, .data$color)
+        dplyr::select("from", "to", "weight", "R", "linetype", "weight_transformed", "R_direction", "color")
     
     
     
@@ -3503,7 +3508,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         colors_categories.l[["TF"]]  = c(color_gradient[1], color_gradient[nBins_real]) 
         colors_categories.l[["TF"]]  = color_gradient 
         symbols_categories.l[["TF"]] = c(15,NA,15)
-        vertice_color_TFs   = append(list(GRN@visualization$metadata[["RNA_expression_TF"]],    "TF.HOCOID",     "baseMean_log"), vertice_color_TFs)
+        vertice_color_TFs   = append(list(GRN@visualization$metadata[["RNA_expression_TF"]],    "TF.ID",     "baseMean_log"), vertice_color_TFs)
         #}
         
         if(graph == "TF-peak-gene"){
@@ -3633,7 +3638,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
             dplyr::group_by(.data$V2) %>%
             dplyr::summarize(label = NA) %>% #, id2 = paste0(SYMBOL, collapse = ",")) %>%
             dplyr::ungroup() %>%
-            dplyr::rename(gene.ENSEMBL = .data$V2)
+            dplyr::rename(gene.ENSEMBL = "V2")
         
         if (nrow(vertices_genes) > 0) {
             
@@ -3997,3 +4002,4 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
 
   
 }
+

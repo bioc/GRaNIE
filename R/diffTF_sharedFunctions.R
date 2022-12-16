@@ -38,106 +38,6 @@
 
 
 # Needed
-.normalizeCounts <- function(rawCounts, method = "quantile", idColumn, removeCols = c(), returnDESeqObj = FALSE) {
-  
-  start = Sys.time()
-
-  futile.logger::flog.info(paste0("Normalize counts. Method: ", method, ", ID column: ", idColumn))
-  
-  if (is.null(idColumn)) {
-    rawCounts = as.data.frame(rawCounts) %>%
-      tibble::rownames_to_column("ENSEMBL")
-    idColumn = "ENSEMBL"
-  } 
-  
-  ids = as.character(unlist(rawCounts[,idColumn]))
-  
-  # Test for additional character columns 
-  colTypes = sapply(rawCounts, class)
-  colTypes_rm = colTypes[which(colTypes == "character" | colTypes == "factor" | 
-                                 names(colTypes) %in% removeCols)]
-  
-  if (length(colTypes_rm) > 1) {
-    colnames_rm = names(colTypes_rm)[which(names(colTypes_rm) != idColumn)]
-    futile.logger::flog.info(paste0("Remove the following columns because they do not represent counts: ", paste0(colnames_rm, collapse = ",")))
-    colnames_rm = c(colnames_rm, idColumn)
-  } else {
-    colnames_rm = c(idColumn)
-  }
-  
-  if (length(colnames_rm) > 0) {
-    colnames_samples = colnames(rawCounts)[-which(colnames(rawCounts) %in% colnames_rm)]
-  } else {
-    colnames_samples = colnames(rawCounts)
-  }
-  
-  rmCols = which(colnames(rawCounts) %in% colnames_rm)
-  
-  if (method == "quantile") {
-    
-    if (length(rmCols) > 0) {
-      input = as.matrix(rawCounts[,-rmCols])
-    } else {
-      input = as.matrix(rawCounts)
-    }
-    
-    # We use limma for normalizing quantiles and NOT preprocessCore as before due to regression bugs for version >1.50
-    counts.norm = limma::normalizeQuantiles(input)
-    
-  } else if (method == "DESeq_sizeFactor") {
-    
-    if (length(rmCols) > 0) {
-      sampleData.df = data.frame( sampleID = colnames(rawCounts)[-rmCols], stringsAsFactors = FALSE)
-      countDataNew = as.data.frame(rawCounts[, -rmCols])
-    } else {
-      sampleData.df = data.frame( sampleID = colnames(rawCounts))
-      countDataNew = as.data.frame(rawCounts)
-    }
-    
-    rownames(countDataNew) = ids
-    
-    stopifnot(identical(sampleData.df$sampleID, colnames(countDataNew)))
-    
-    dd <- DESeq2::DESeqDataSetFromMatrix(countData = countDataNew,
-                                         colData = sampleData.df,
-                                         design = stats::as.formula(" ~ 1"))
-    
-    dd = DESeq2::estimateSizeFactors(dd)
-    counts.norm = DESeq2::counts(dd, normalized = TRUE)
-    
-    if (returnDESeqObj) {
-      return(dd)
-    }
-    
-    
-  } else if (method == "none") {
-    
-    if (length(rmCols) > 0) {
-      counts.norm = rawCounts[,-rmCols]
-    } else {
-      counts.norm = rawCounts
-    }
-    
-  } else  {
-    stop("Not implemented yet")
-  }
-  
-  .printExecutionTime(start)
-  
-  counts.norm = counts.norm %>% 
-    as.data.frame()  %>% 
-    tibble::as_tibble() %>% 
-    dplyr::mutate({{idColumn}} := ids) %>%
-    dplyr::select({{idColumn}}, tidyselect::everything()) 
-  
-  colnames(counts.norm) = c(idColumn, colnames_samples)
-  
-  counts.norm
-  
-}
-
-
-# Needed
 .intersectData <- function(countsRNA, countsPeaks, idColumn_RNA = "ENSEMBL", idColumn_peaks = "peakID") {
   
   start = Sys.time()
@@ -190,15 +90,22 @@
 
 
 # Needed
-.readHOCOMOCOTable <- function(file, delim = " ") {
+.readTranslationTable <- function(file, delim = " ") {
 
-  HOCOMOCO_mapping.df = .read_tidyverse_wrapper(file, type = "delim", delim = delim, col_types = readr::cols()) %>%
-    dplyr::mutate(ENSEMBL = gsub("\\..+", "", .data$ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
+  mapping.df = .read_tidyverse_wrapper(file, type = "delim", delim = delim, col_types = readr::cols()) 
   
-  checkmate::assertSubset(c("ENSEMBL", "HOCOID"), colnames(HOCOMOCO_mapping.df))
+  # Make compatible to old translation tables
+  if ("HOCOID" %in% colnames(mapping.df)) {
+      mapping.df = dplyr::rename(mapping.df, ID = "HOCOID")
+  }
   
+  checkmate::assertSubset(c("ENSEMBL", "ID"), colnames(mapping.df))
   
-  HOCOMOCO_mapping.df
+  mapping.df = dplyr::mutate(mapping.df , ENSEMBL = gsub("\\..+", "", .data$ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
+  
+
+  
+  mapping.df
 }
 
 
@@ -481,76 +388,6 @@
 }
 
 
-.plot_classCorrelations <- function(DESeq_obj, output.global.TFs, HOCOMOCO_mapping, par.l, file = NULL, ...) {
-  
-  start = Sys.time()
-  futile.logger::flog.info(paste0("Plot class correlations", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
-
-  
-  if (!is.null(file)) {
-     grDevices::pdf(file, ...)
-  }
-
-  DESeq_results  = DESeq2::results(DESeq_obj) %>% 
-      as.data.frame() %>% 
-      tibble::rownames_to_column("ENSEMBL") %>% 
-      tibble::as_tibble()
-  
-  # Prepare the RNASeq data
-  TF.specific = dplyr::left_join(HOCOMOCO_mapping, DESeq_results, by = "ENSEMBL") %>% 
-    dplyr::filter(!is.na(.data$baseMean))
-  
-  if (nrow(TF.specific) == 0) {
-    message = "The Ensembl IDs from the translation table do not match with the IDs from the RNA-seq counts table."
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-
-  for (thresholdCur in par.l$internal$allClassificationThresholds) {
-    
-    colnameClassificationCur = paste0("classification_q", thresholdCur, "_final")
-    
-    output.global.TFs.merged = output.global.TFs %>%
-      dplyr::filter(!!as.name(colnameClassificationCur) != "not-expressed")  %>%
-      dplyr::full_join(TF.specific, by = c( "TF" = "TF.HOCOID"))  %>%
-      dplyr::mutate(baseMeanNorm = (.data$baseMean - min(.data$baseMean, na.rm = TRUE)) / (max(.data$baseMean, na.rm = TRUE) - min(.data$baseMean, na.rm = TRUE)) + par.l$minPointSize)   %>%
-      dplyr::filter(!is.na(!!as.name(colnameClassificationCur))) 
-    
-    
-    for (classificationCur in unique(output.global.TFs.merged[,colnameClassificationCur])) {
-      
-      output.global.TFs.cur = dplyr::filter(output.global.TFs.merged, !!as.name(colnameClassificationCur) == classificationCur)
-      
-      cor.res.l = list()
-      for (corMethodCur in c("pearson", "spearman")) {
-        cor.res.l[[corMethodCur]] = stats::cor.test(output.global.TFs.cur$weighted_meanDifference, 
-                                             output.global.TFs.cur$log2FoldChange, 
-                                             method = corMethodCur)
-      }
-      
-      titleCur = paste0(classificationCur, ": R=", 
-                        signif(cor.res.l[["pearson"]]$estimate, 2), "/", 
-                        signif(cor.res.l[["spearman"]]$estimate, 2), ", p-value ", 
-                        signif(cor.res.l[["pearson"]]$p.value,2),  "/", 
-                        signif(cor.res.l[["spearman"]]$p.value,2), "\n(Pearson/Spearman, stringency: ", thresholdCur, ")")
-      
-      g = ggplot2::ggplot(output.global.TFs.cur, ggplot2::aes(.data$weighted_meanDifference, .data$log2FoldChange)) + ggplot2::geom_point(ggplot2::aes(size = .data$baseMeanNorm)) + 
-          ggplot2::geom_smooth(method = par.l$regressionMethod, color = par.l$internal$colorCategories[classificationCur]) + 
-          ggplot2::ggtitle(titleCur) + 
-          ggplot2::ylab("log2 fold-change RNA-seq") + 
-          ggplot2::theme_bw() + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-      plot(g)
-      
-    }
-  }
-  
-  if (!is.null(file)) {
-     grDevices::dev.off()
-  }
-  
-  .printExecutionTime(start)
-
-}
-
 #' @import graphics
 .plot_AR_thresholds  <- function(median.cor.tfs, median.cor.tfs.non, par.l, act.rep.thres.l, corMethod, file = NULL, ...) {
     
@@ -633,29 +470,29 @@
 
 
 # Code from Armando Reyes
-.plot_heatmapAR <- function(TF.peakMatrix.df, HOCOMOCO_mapping.df.exp, sort.cor.m, par.l, corMethod,
+.plot_heatmapAR <- function(TF.peakMatrix.df, TF_mapping.df.exp, sort.cor.m, par.l, corMethod,
                            median.cor.tfs, median.cor.tfs.non, act.rep.thres.l, finalClassification = NULL,  file = NULL, ...) {
     
     start = Sys.time()
     futile.logger::flog.info(paste0("Plotting AR heatmap", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
     
     
-    missingGenes = which(!HOCOMOCO_mapping.df.exp$TF.HOCOID %in% colnames(sort.cor.m))
+    missingGenes = which(!TF_mapping.df.exp$TF.ID %in% colnames(sort.cor.m))
     if (length(missingGenes) > 0) {
-        HOCOMOCO_mapping.df.exp = dplyr::filter(HOCOMOCO_mapping.df.exp, .data$TF.HOCOID %in% colnames(sort.cor.m))
+        TF_mapping.df.exp = dplyr::filter(TF_mapping.df.exp, .data$TF.ID %in% colnames(sort.cor.m))
     }
     
     if (!is.null(file)) {
          grDevices::pdf(file, ...)
     }
     
-    cor.r.filt.m <- sort.cor.m[,as.character(HOCOMOCO_mapping.df.exp$TF.HOCOID)]
+    cor.r.filt.m <- sort.cor.m[,as.character(TF_mapping.df.exp$TF.ID)]
     
-    stopifnot(identical(colnames( cor.r.filt.m), as.character(HOCOMOCO_mapping.df.exp$TF.HOCOID)))
+    stopifnot(identical(colnames( cor.r.filt.m), as.character(TF_mapping.df.exp$TF.ID)))
     
     BREAKS = seq(-1,1,0.05)
     diffDensityMat = matrix(NA, nrow = ncol( cor.r.filt.m), ncol = length(BREAKS) - 1)
-    rownames(diffDensityMat) = HOCOMOCO_mapping.df.exp$TF.HOCOID
+    rownames(diffDensityMat) = TF_mapping.df.exp$TF.ID
     
     TF_Peak_all.m <- TF.peakMatrix.df
     TF_Peak.m <- TF_Peak_all.m
@@ -675,7 +512,7 @@
     
     ## check to what extent the number of TF motifs affects the density values
     n_min = dplyr::if_else(colSums(TF_Peak.m) < nrow(TF_Peak.m),colSums(TF_Peak.m), nrow(TF_Peak.m) - colSums(TF_Peak.m))
-    names(n_min) = HOCOMOCO_mapping.df.exp$TF.HOCOID#[match(names(n_min), as.character(tf2ensg$ENSEMBL))]
+    names(n_min) = TF_mapping.df.exp$TF.ID#[match(names(n_min), as.character(tf2ensg$ENSEMBL))]
     n_min <- sapply(split(n_min,names(n_min)),sum)
     
     # Make sure n_min and diffDenityMat are compatible because some NA rows may have been filtered out for diffDensityMat

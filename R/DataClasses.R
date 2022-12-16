@@ -100,12 +100,28 @@ setMethod("show",
           function(object) {
             
             GRN = object
+            
+            GRN = .makeObjectCompatible(GRN)
             # .checkObjectValidity(GRN)
             
+            # Old: This just gives the current package version and not the one used when creating the object
             packageName = utils::packageName()
-            packageVersion = ifelse(is.null(packageName), NA, utils::packageVersion(packageName))
+            # Outside of a package context this is NULL
+            if (is.null(packageName)) {
+                packageName = "GRaNIE"
+            }
+                
+            #packageVersion = ifelse(is.null(packageName), NA, utils::packageVersion(packageName))
+            #cat("Object of class:", packageName," ( version", paste0(packageVersion[[1]], collapse = "."), ")\n")
+        
+            if (!is.null(GRN@config$parameters$packageVersion)) {
+                packageVersion = GRN@config$parameters$packageVersion
+            } else {
+                packageVersion = NA
+            }
+            cat("GRN object from package ", packageName," (created with version ", packageVersion, ")\n", sep = "")
             
-            cat("Object of class:", packageName," ( version", paste0(packageVersion[[1]], collapse = "."), ")\n")
+         
             
             
             
@@ -163,7 +179,7 @@ setMethod("show",
             if (!is.null(GRN@connections)) {
 
                 if (!is.null(GRN@connections$TF_peaks$`0`$main)) {
-                    maxFDR = round(max(GRN@connections$TF_peaks$`0`$main$TF_peak.fdr), 1)
+                    maxFDR = GRN@config$functionParameters$addConnections_TF_peak$parameters$maxFDRToStore
                     cat(" TF-peak links (", nrow(GRN@connections$TF_peaks$`0`$main), " with FDR < ", maxFDR, ")\n", sep = "")
                 } else {
                     cat(" TF-peak links: none found\n")
@@ -176,10 +192,12 @@ setMethod("show",
                 
                 
                 if (!is.null(GRN@connections$all.filtered$`0`)) {
+                    
                     nRows = nrow(GRN@connections$all.filtered$`0`)
-                    max_TF_peak_FDR = round(max(GRN@connections$all.filtered$`0`$TF_peak.fdr), 1)
-                    max_peak_gene_FDR = round(max(GRN@connections$all.filtered$`0`$peak_gene.p_adj), 1)
+                    max_TF_peak_FDR = GRN@config$functionParameters$filterGRNAndConnectGenes$parameters$TF_peak.fdr.threshold
+                    max_peak_gene_FDR = GRN@config$functionParameters$filterGRNAndConnectGenes$parameters$peak_gene.fdr.threshold
                     cat(" TF-peak-gene links (", nRows," with TF-peak FDR ", max_TF_peak_FDR, " and peak-gene FDR ",  max_peak_gene_FDR , ")\n", sep = "")
+                    
                     
                 } else {
                     cat(" TF-peak-gene links (filtered): none found\n")

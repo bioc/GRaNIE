@@ -2,12 +2,14 @@
 % Please edit documentation in R/core.R
 \name{addTFBS}
 \alias{addTFBS}
-\title{Add TFBS to a \code{\linkS4class{GRN}} object}
+\title{Add TFBS to a \code{\linkS4class{GRN}} object.}
 \usage{
 addTFBS(
   GRN,
   motifFolder,
   TFs = "all",
+  translationTable = "translationTable.csv",
+  translationTable_sep = " ",
   nTFMax = NULL,
   filesTFBSPattern = "_TFBS",
   fileEnding = ".bed",
@@ -17,9 +19,13 @@ addTFBS(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{motifFolder}{Character. No default. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details.}
+\item{motifFolder}{Character. No default. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details. The folder must also contain a so-called translation table, see the argument \code{translationTable} for details.}
 
 \item{TFs}{Character vector. Default \code{all}. Vector of TF names to include. The special keyword \code{all} can be used to include all TF found in the folder as specified by \code{motifFolder}. If \code{all} is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.}
+
+\item{translationTable}{Character. Default \code{translationTable.csv}. Name of the translation table file that is also located in the folder along with the TFBS files. This file must have the following structure: at least 2 columns, called \code{ENSEMBL} and \code{ID}. \code{ID} denotes the ID for the TF that is used throughout the pipeline (e.g., AHR) and the prefix of how the corresponding file is called (e.g., \code{AHR.0.B} if the file for AHR is called \code{AHR.0.B_TFBS.bed.gz}), while \code{ENSEMBL} denotes the ENSEMBL ID (dot suffix; e.g., ENSG00000106546, are removed automatically if present).}
+
+\item{translationTable_sep}{Character. Default \code{" "} (whitespace character). The column separator for the \code{translationTable} file.}
 
 \item{nTFMax}{\code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.}
 
@@ -33,7 +39,7 @@ addTFBS(
 An updated \code{\linkS4class{GRN}} object, with additional information added from this function (\code{GRN@annotation$TFs} in particular)
 }
 \description{
-Add TFBS to a \code{\linkS4class{GRN}} object
+For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. We provide example files for all supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

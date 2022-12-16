@@ -8,7 +8,8 @@ initializeGRN(objectMetadata = list(), outputFolder = ".", genomeAssembly)
 }
 \arguments{
 \item{objectMetadata}{List. Default \code{list()}. Optional (named) list with an arbitrary number of elements, all of which 
-capture metadata for the object. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.}
+capture metadata for the object. \strong{Only atomic data types are allowed for each list element
+(see ?is.atomic for more help: logical, integer, numeric, complex, character, raw, and NULL), and this slot is not supposed to store real data}. This is mainly used to distinguish GRN objects from one another by storing object-specific metadata along with the data.}
 
 \item{outputFolder}{Output folder, either absolute or relative to the current working directory. Default \code{"."}. 
 Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. 

@@ -35,6 +35,8 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   # tf-peak-gene graph is weighted (r), tf-gene graph is unweighted
   
   if (is.null(GRN@graph$TF_gene) | is.null(GRN@graph$TF_peak_gene) | forceRerun) {
+      
+   .checkConnections(GRN, throwError = TRUE)
     
     # Should the TF nodes and gene nodes represent the same or different nodes? 
     # If set to TRUE, the new default, self-loops can happen and the graph is not strictly tripartite anymore
@@ -68,10 +70,10 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
       dplyr::mutate_at(c("V1","V2"), as.vector)
     
     TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak`=TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
-      dplyr::select(.data$V1, .data$V2, .data$V1_name, .data$V2_name, .data$r, .data$connectionType)
+      dplyr::select("V1", "V2", "V1_name", "V2_name", "r", "connectionType")
     
     TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2"="V1"), suffix = c(".TF_peak", ".peak_gene")) %>% 
-      dplyr::select(.data$V1, .data$V2.peak_gene, .data$V1_name.TF_peak, .data$V2_name.peak_gene) %>%
+      dplyr::select("V1", "V2.peak_gene", "V1_name.TF_peak", "V2_name.peak_gene") %>%
       dplyr::rename(V1_name = .data$V1_name.TF_peak, V2 = .data$V2.peak_gene, V2_name = .data$V2_name.peak_gene) %>%
       dplyr::distinct() %>%
       dplyr::mutate(connectionType = "tf-gene") 
@@ -98,6 +100,8 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     GRN@graph$parameters$allowLoops     = allowLoops
     GRN@graph$parameters$removeMultiple = removeMultiple
     
+  }  else {
+      .printDataAlreadyExistsMessage()
   }
   
   .printExecutionTime(start)
@@ -106,13 +110,31 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   
 }
 
+.checkConnections <- function (GRN, throwError = TRUE) {
+    
+    if (is.null(GRN@connections$all.filtered$`0`)) {
+        message = "Slot GRN@connections$all.filtered not found. Run the function filterGRNAndConnectGenes first."
+        
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    
+    if (nrow(GRN@connections$all.filtered$`0`) == 0) {
+        
+        message = "There are no connections in the filtered GRN. Make sure you run the function filterGRNAndConnectGenes and that the final eGRN has connections."
+        
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = !throwError)
+    }
+    
+}
+
 .buildGraph <- function(df, directed, allowLoops, removeMultiple = FALSE, silent = FALSE) {
   
   # Remove V1_name and V2_name as igraph treats additional columns as edge attribute, which can become messed up as it here refers to vertice attribute
   df_mod = df %>% dplyr::select(-.data$V1_name, -.data$V2_name)
   
   TF_vertices = df %>%
-    dplyr::select(.data$V1, .data$V1_name) %>% 
+    dplyr::select("V1", "V1_name") %>% 
     dplyr::rename(nodeID = .data$V1) %>%
     dplyr::distinct() %>%
     dplyr::group_by(.data$nodeID) %>%
@@ -122,7 +144,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     dplyr::ungroup()
   
   gene_vertices = df %>%
-    dplyr::select(.data$V2, .data$V2_name) %>% 
+    dplyr::select("V2", "V2_name") %>% 
     dplyr::distinct() %>%
     dplyr::mutate(isGene = TRUE) %>%
     dplyr::rename(names_gene = .data$V2_name, nodeID = .data$V2) %>%
@@ -382,6 +404,9 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   checkmate::assertChoice(pAdjustMethod, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   checkmate::assertFlag(forceRerun)
   
+  .checkConnections(GRN, throwError = TRUE)
+  .checkGraphExistance(GRN)
+  
   futile.logger::flog.info(paste0("Calculating general enrichment. This may take a while"))
   
   
@@ -411,9 +436,8 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
       
       futile.logger::flog.info(paste0("Result stored in GRN@stats$Enrichment$general$", ontologyCur, "$results"))
       
-    } else {
-      
-      futile.logger::flog.info(paste0("Results already found / previously calculated. Not re-running as forceRerun = FALSE"))
+    }  else {
+        .printDataAlreadyExistsMessage()
     }
     
   }
@@ -608,7 +632,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
       #         maxGSSize = maxGSSize,
       #         pAdjustMethod = pAdjustMethod)
       
-      # go.res.new = .createEnichmentTable(go_enrichment)
+      # go.res.new = .createEnrichmentTable(go_enrichment)
       
       # The need of p-value adjustment: https://bioconductor.org/packages/devel/bioc/vignettes/topGO/inst/doc/topGO.pdf
     
@@ -679,7 +703,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     }
     )
     
-    result.list[["results"]] = .createEnichmentTable(kegg_enrichment)
+    result.list[["results"]] = .createEnrichmentTable(kegg_enrichment)
     
   }
   
@@ -706,7 +730,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     }
     )
     
-    result.list[["results"]] = .createEnichmentTable(reactome_enrichment)
+    result.list[["results"]] = .createEnrichmentTable(reactome_enrichment)
     
   }
   
@@ -734,7 +758,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     }
     )
     
-    result.list[["results"]] = .createEnichmentTable(DO_enrichment)
+    result.list[["results"]] = .createEnrichmentTable(DO_enrichment)
     
   }
   
@@ -760,7 +784,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 }
 
 
-.createEnichmentTable <- function (enrichmentObj) {
+.createEnrichmentTable <- function (enrichmentObj) {
   
   if (!is.null(enrichmentObj)) {
     
@@ -830,6 +854,8 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
   checkmate::assertChoice(clustering, c("louvain", "leading_eigen", "fast_greedy", "optimal", "walktrap", "leiden"))
   checkmate::assertFlag(forceRerun)
   
+  .checkGraphExistance(GRN)
+  
   if (is.null(igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community) | forceRerun) {
     
     futile.logger::flog.info(paste0("Calculating communities for clustering type ", clustering, "..."))
@@ -879,10 +905,9 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
     
     
     
-  } else {
-    
-    futile.logger::flog.info(paste0("Data already exists in object, nothing to do"))
-  }  
+  }  else {
+      .printDataAlreadyExistsMessage()
+  }
   
   .printExecutionTime(start)
   
@@ -928,6 +953,8 @@ calculateCommunitiesEnrichment <- function(GRN,
   GRN = .addFunctionLogToObject(GRN)
   
   GRN = .makeObjectCompatible(GRN)
+  
+  .checkGraphExistance(GRN)
 
   checkmate::assertSubset(ontology , c("GO_BP", "GO_MF", "GO_CC", "KEGG", "DO", "Reactome"), empty.ok = FALSE)
  
@@ -1003,8 +1030,8 @@ calculateCommunitiesEnrichment <- function(GRN,
         
         futile.logger::flog.info(paste0("Result stored in GRN@stats$Enrichment$byCommunity[[\"", communityCur,  "\"]]$", ontologyCur, "$results"))
         
-      } else {
-        futile.logger::flog.info(paste0("Results already found / previously calculated. Not re-running as forceRerun = FALSE"))
+      }  else {
+          .printDataAlreadyExistsMessage()
       }
       
       
@@ -1083,6 +1110,8 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 
   checkmate::assert(checkmate::checkNumeric(n, lower = 0.0001, upper = 0.999999), checkmate::checkIntegerish(n, lower = 1))
   
+  .checkGraphExistance(GRN)
+  
   if (nodeType == "gene") {
     slot = "gene.ENSEMBL"
     link = dplyr::if_else(use_TF_gene_network, "tf-gene", "peak-gene")
@@ -1122,11 +1151,11 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
     # TODO: change column names
     if (nodeType == "gene") {
       topNodes = topNodes  %>%
-        dplyr::left_join(graph.df %>% dplyr::select(.data$V2, .data$V2_name) %>% dplyr::distinct(), by = "V2") %>%
+        dplyr::left_join(graph.df %>% dplyr::select("V2", "V2_name") %>% dplyr::distinct(), by = "V2") %>%
         dplyr::rename(gene.ENSEMBL = .data$V2, gene.name = .data$V2_name)
     } else {
       topNodes = topNodes  %>%
-        dplyr::left_join(graph.df %>% dplyr::select(.data$V1, .data$V1_name) %>% dplyr::distinct(), by = "V1") %>%
+        dplyr::left_join(graph.df %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), by = "V1") %>%
         dplyr::rename(TF.ENSEMBL = .data$V1, TF.name = .data$V1_name)
     }
     
@@ -1194,6 +1223,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
   checkmate::assertFlag(forceRerun)
   
   futile.logger::flog.info(paste0("Calculating TF enrichment. This may take a while"))
+  
+  .checkGraphExistance(GRN)
   
   if (rankType == "custom"){
     if(is.null(TF.names)){
@@ -1269,8 +1300,8 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
         
         futile.logger::flog.info(paste0("   Results stored in GRN@stats$Enrichment$byTF[[\"", TF, "\"]]$", ontologyCur, "$results"))
         
-      }else {
-        futile.logger::flog.info(paste0("   Results already found / previously calculated for TF ", TF, ". Not re-running as forceRerun = FALSE"))
+      } else {
+          .printDataAlreadyExistsMessage(slotName = paste0("Enrichment$byTF$", TF, "$", ontologyCur))
       }
     }
     
