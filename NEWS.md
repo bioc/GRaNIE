@@ -1,3 +1,8 @@
+# GRaNIE 1.3.11 (2022-12-16)
+
+## Major changes
+- the default URL for the example `GRN` object in `loadExampleObject` had to be changed due to changes in the IT infrastructure. The new stable default URL is now \url{https://git.embl.de/grp-zaugg/GRaNIE/-/raw/master/data/GRN.rds}, in the same Git repository that provides `GRaNIE` outside of Bioconductor.
+
 # GRaNIE 1.3.10 (2022-12-15)
 
 ## Bug fixes

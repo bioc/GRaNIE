@@ -4621,7 +4621,7 @@ generateStatsSummary <- function(GRN,
 #' @examples 
 #' GRN = loadExampleObject()
 #' @return An small example \code{\linkS4class{GRN}} object
-loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://www.embl.de/download/zaugg/GRaNIE/GRN.rds") {
+loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl.de/grp-zaugg/GRaNIE/-/raw/master/data/GRN.rds") {
     
     checkmate::assertFlag(forceDownload)
     options(timeout=200)
