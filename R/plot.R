@@ -3051,7 +3051,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           matrix.m = all.df.wide %>%
               dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
               dplyr::filter(!is.na(.data$Term)) %>%
-              dplyr::select("Term", dplyr::all_of("TF.order")) %>% # reorder the table based on the previously generated custom order
+              dplyr::select("Term", dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x){return(-log10(x))}) %>%
               # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
               tibble::column_to_rownames("Term") %>%
@@ -3107,7 +3107,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
                   dplyr::select(-"nSig", -"ID") %>%
                   tibble::column_to_rownames("Term") %>%
                   dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
-                  dplyr::select(dplyr::all_of("TF.order")) %>% # reorder based on the previously generated custom order
+                  dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
                   as.matrix()
               
               futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
@@ -4002,3 +4002,4 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
 
   
 }
+

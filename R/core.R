@@ -2899,7 +2899,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       GRN@connections$peak_genes[[as.character(permutationCur)]] = 
         .calculatePeakGeneCorrelations(GRN, permutationCur,
                                        TADs = TADs,
-                                       mergeOverlappingTADs = mergeOverlappingTADs,
+                                       mergeOverlappingTADs = TADs_mergeOverlapping,
                                        neighborhoodSize = promoterRange,
                                        gene.types = as.character(gene.types),
                                        corMethod = corMethod,
@@ -3183,7 +3183,9 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                                gene.types = gene.types, overlapTypeGene = overlapTypeGene) 
   
   # Renaming necessary because currently, consensusPeaks contains peakID and 
-  peak.TADs.df = dplyr::rename(peak.TADs.df, peak.ID = "peakID")
+  if (!is.null(TADs)) {
+      peak.TADs.df = dplyr::rename(peak.TADs.df, peak.ID = "peakID")
+  }
   
   overlaps.sub.filt.df = overlaps.sub.df %>%
     dplyr::mutate(gene.ENSEMBL = gsub("\\..+", "", .data$gene.ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
@@ -3240,7 +3242,8 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
   
   
-  res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, functionName = .correlateData, 
+  res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, 
+                             functionName = .correlateData, 
                              chunksize = chunksize, maxRow = maxRow, 
                              counts1 = countsPeaks.clean, counts2 = countsRNA.clean, map1 = map_peaks, map2 = map_rna, 
                              corMethod = corMethod, debugMode_nPlots = debugMode_nPlots, addRobustRegression = addRobustRegression)
@@ -4610,14 +4613,14 @@ generateStatsSummary <- function(GRN,
 
 #' Load example GRN dataset
 #' 
-#' Loads an example GRN object with 6 TFs, ~61.000 peaks, ~19.000 genes, 259 filtered connections and pre-calculated enrichments from the internet. 
+#' Loads an example GRN object with 6 TFs, ~61.000 peaks, ~19.000 genes, 259 filtered connections and pre-calculated enrichments. 
 #' This function uses \code{BiocFileCache} if installed to cache the example object, which is 
 #' considerably faster than re-downloading the file anew every time the function is executed.
 #' If not, the file is re-downloaded every time anew. Thus, to enable caching, you may install the package \code{BiocFileCache}.
 #' 
 #' @export
 #' @param forceDownload \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the download be enforced even if the local cached file is already present?
-#' @param fileURL Character. Default \url{https://www.embl.de/download/zaugg/GRaNIE/GRN.rds}. URL to the GRN example object in rds format.
+#' @param fileURL Character. Default \url{https://git.embl.de/grp-zaugg/GRaNIE/-/raw/master/data/GRN.rds}. URL to the GRN example object in rds format.
 #' @examples 
 #' GRN = loadExampleObject()
 #' @return An small example \code{\linkS4class{GRN}} object
@@ -5357,58 +5360,62 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     
     # Renamed count slots and their structure
     # 1. peaks
-    if (!is.null(GRN@data$peaks[["counts_orig"]])) {
-        GRN@data$peaks[["counts_orig"]] = NULL
-    }
-    if (is.null(GRN@data$peaks[["counts"]])) {
-        GRN@data$peaks[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$peaks$counts_norm %>% dplyr::select(-"isFiltered"), 
-                                                                  ID_column = "peakID", slotName = "GRN@data$peaks$counts")
+    if (length(GRN@data) > 0) {
+        if (!is.null(GRN@data$peaks[["counts_orig"]])) {
+            GRN@data$peaks[["counts_orig"]] = NULL
+        }
+        if (is.null(GRN@data$peaks[["counts"]])) {
+            GRN@data$peaks[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$peaks$counts_norm %>% dplyr::select(-"isFiltered"), 
+                                                                      ID_column = "peakID", slotName = "GRN@data$peaks$counts")
+            
+            # Record previously filtered peaks, they are lost otherwise
+            peaksFiltered = GRN@data$peaks$counts_norm %>% dplyr::filter(.data$isFiltered) %>% dplyr::pull(.data$peakID)
+            
+        }
+        if (!is.null(GRN@data$peaks[["counts_norm"]])) {
+            GRN@data$peaks[["counts_norm"]] = NULL
+        }
         
-        # Record previously filtered peaks, they are lost otherwise
-        peaksFiltered = GRN@data$peaks$counts_norm %>% dplyr::filter(isFiltered) %>% dplyr::pull(peakID)
+        if (is.null(GRN@data$peaks[["counts_metadata"]])) {
+            GRN@data$peaks[["counts_metadata"]] = .createConsensusPeaksDF(rownames(GRN@data$peaks[["counts"]])) 
+            stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
+            
+            # Restore peaks previously set to filtered
+            GRN@data$peaks[["counts_metadata"]]$isFiltered[GRN@data$peaks[["counts_metadata"]]$peakID %in% peaksFiltered] = TRUE
+            
+        }
+        if (!is.null(GRN@data$peaks[["consensusPeaks"]])) {
+            GRN@data$peaks[["consensusPeaks"]] = NULL
+        }
         
-    }
-    if (!is.null(GRN@data$peaks[["counts_norm"]])) {
-        GRN@data$peaks[["counts_norm"]] = NULL
+        # 2. RNA
+        if (!is.null(GRN@data$RNA[["counts_orig"]])) {
+            GRN@data$RNA[["counts_orig"]] = NULL
+        }
+        if (is.null(GRN@data$RNA[["counts"]]) & !is.null(GRN@data$RNA$counts_norm.l[["0"]])) {
+            GRN@data$RNA[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::select(-"isFiltered"), 
+                                                                    ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
+            
+            # Record previously filtered peaks, they are lost otherwise
+            genesFiltered = GRN@data$RNA$counts_norm.l$`0` %>% dplyr::filter(.data$isFiltered) %>% dplyr::pull(.data$ENSEMBL)
+            
+        }
+        if (!is.null(GRN@data$RNA[["counts_norm.l"]])) {
+            GRN@data$RNA[["counts_norm.l"]] = NULL
+        }
+        if (is.null(GRN@data$RNA[["counts_metadata"]]) & !is.null(GRN@data$RNA$counts)) {
+            GRN@data$RNA[["counts_metadata"]] = tibble::tibble(ID = rownames(GRN@data$RNA$counts), isFiltered = FALSE)
+            
+            # Restore RNA previously set to filtered
+            GRN@data$RNA[["counts_metadata"]]$isFiltered[GRN@data$RNA[["counts_metadata"]]$ID %in% genesFiltered] = TRUE
+        }
+        
+        if (is.null(GRN@data$RNA[["counts_permuted_index"]]) & !is.null(GRN@data$RNA$counts)) {
+            GRN@data$RNA[["counts_permuted_index"]] = sample.int(ncol(GRN@data$RNA$counts), ncol(GRN@data$RNA$counts))
+        }
     }
     
-    if (is.null(GRN@data$peaks[["counts_metadata"]])) {
-        GRN@data$peaks[["counts_metadata"]] = .createConsensusPeaksDF(rownames(GRN@data$peaks[["counts"]])) 
-        stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
-        
-        # Restore peaks previously set to filtered
-        GRN@data$peaks[["counts_metadata"]]$isFiltered[GRN@data$peaks[["counts_metadata"]]$peakID %in% peaksFiltered] = TRUE
-        
-    }
-    if (!is.null(GRN@data$peaks[["consensusPeaks"]])) {
-        GRN@data$peaks[["consensusPeaks"]] = NULL
-    }
-    
-    # 2. RNA
-    if (!is.null(GRN@data$RNA[["counts_orig"]])) {
-        GRN@data$RNA[["counts_orig"]] = NULL
-    }
-    if (is.null(GRN@data$RNA[["counts"]]) & !is.null(GRN@data$RNA$counts_norm.l[["0"]])) {
-        GRN@data$RNA[["counts"]] = .storeAsMatrixOrSparseMatrix(GRN, df = GRN@data$RNA$counts_norm.l[["0"]] %>% dplyr::select(-"isFiltered"), 
-                                                                ID_column = "ENSEMBL", slotName = "GRN@data$RNA$counts")
-        
-        # Record previously filtered peaks, they are lost otherwise
-        genesFiltered = GRN@data$RNA$counts_norm.l$`0` %>% dplyr::filter(isFiltered) %>% dplyr::pull(ENSEMBL)
-        
-    }
-    if (!is.null(GRN@data$RNA[["counts_norm.l"]])) {
-        GRN@data$RNA[["counts_norm.l"]] = NULL
-    }
-    if (is.null(GRN@data$RNA[["counts_metadata"]]) & !is.null(GRN@data$RNA$counts)) {
-        GRN@data$RNA[["counts_metadata"]] = tibble::tibble(ID = rownames(GRN@data$RNA$counts), isFiltered = FALSE)
-        
-        # Restore RNA previously set to filtered
-        GRN@data$RNA[["counts_metadata"]]$isFiltered[GRN@data$RNA[["counts_metadata"]]$ID %in% genesFiltered] = TRUE
-    }
-    
-    if (is.null(GRN@data$RNA[["counts_permuted_index"]]) & !is.null(GRN@data$RNA$counts)) {
-        GRN@data$RNA[["counts_permuted_index"]] = sample.int(ncol(GRN@data$RNA$counts), ncol(GRN@data$RNA$counts))
-    }
+   
     
     
     GRN

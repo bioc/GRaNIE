@@ -3,6 +3,10 @@
 ## Major changes
 - the default URL for the example `GRN` object in `loadExampleObject` had to be changed due to changes in the IT infrastructure. The new stable default URL is now \url{https://git.embl.de/grp-zaugg/GRaNIE/-/raw/master/data/GRN.rds}, in the same Git repository that provides `GRaNIE` outside of Bioconductor.
 
+## Bug fixes
+- fixing bugs introduced due to the tidyverse 1.2.0 related code cleaning
+- other bugfix accidentally introduced in the previous commits
+
 # GRaNIE 1.3.10 (2022-12-15)
 
 ## Bug fixes
@@ -20,7 +24,7 @@
 - new argument for `addConnections_peak_gene`: `shuffleRNACounts`. See the R help for more details.
 
 ## Minor changes
-- code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
+- first round of code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
 
 # GRaNIE 1.3.4-1.3.8 (2022-12-06)
 
