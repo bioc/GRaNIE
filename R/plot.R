@@ -2770,7 +2770,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
                   dplyr::select(-"nSig", -"ID") %>%
                   tibble::column_to_rownames("Term") %>%
                   dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x){return(-log10(x))}) %>%
-                  dplyr::select(dplyr::any_of("communities.order")) %>% # reorder based on the previously generated custom order
+                  dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
                   as.matrix()
               
               futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
