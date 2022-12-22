@@ -47,7 +47,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
         stats::na.omit() %>% 
         dplyr::mutate(V2_name = NA) %>%
         unique() %>%
-        dplyr::rename(V1 = .data$TF.name, V2 = .data$peak.ID, V1_name = .data$TF.ENSEMBL, r = .data$TF_peak.r) %>%
+        dplyr::rename(V1 = "TF.name", V2 = "peak.ID", V1_name = "TF.ENSEMBL", r = "TF_peak.r") %>%
         dplyr::mutate_at(c("V1","V2"), as.vector)
     } else {
       # Get Ensembl ID for TFs here to make a clean join and force a TF that is regulated by a peak to be the same node
@@ -57,7 +57,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
         stats::na.omit() %>% 
         dplyr::mutate(V2_name = NA) %>%
         unique() %>%
-        dplyr::rename(V1 = .data$TF.ENSEMBL, V2 = .data$peak.ID, V1_name = .data$TF.name, r = .data$TF_peak.r) %>%
+        dplyr::rename(V1 = "TF.ENSEMBL", V2 = "peak.ID", V1_name = "TF.name", r = "TF_peak.r") %>%
         dplyr::mutate_at(c("V1","V2"), as.vector)
     }
     
@@ -66,7 +66,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
       stats::na.omit() %>% 
       dplyr::mutate(V1_name = NA) %>%
       unique() %>%
-      dplyr::rename(V1 = .data$peak.ID, V2 = .data$gene.ENSEMBL, V2_name = .data$gene.name, r = .data$peak_gene.r) %>%
+      dplyr::rename(V1 = "peak.ID", V2 = "gene.ENSEMBL", V2_name = "gene.name", r = "peak_gene.r") %>%
       dplyr::mutate_at(c("V1","V2"), as.vector)
     
     TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak`=TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
@@ -74,7 +74,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     
     TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2"="V1"), suffix = c(".TF_peak", ".peak_gene")) %>% 
       dplyr::select("V1", "V2.peak_gene", "V1_name.TF_peak", "V2_name.peak_gene") %>%
-      dplyr::rename(V1_name = .data$V1_name.TF_peak, V2 = .data$V2.peak_gene, V2_name = .data$V2_name.peak_gene) %>%
+      dplyr::rename(V1_name = "V1_name.TF_peak", V2 = "V2.peak_gene", V2_name = "V2_name.peak_gene") %>%
       dplyr::distinct() %>%
       dplyr::mutate(connectionType = "tf-gene") 
     
@@ -135,7 +135,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   
   TF_vertices = df %>%
     dplyr::select("V1", "V1_name") %>% 
-    dplyr::rename(nodeID = .data$V1) %>%
+    dplyr::rename(nodeID = "V1") %>%
     dplyr::distinct() %>%
     dplyr::group_by(.data$nodeID) %>%
     dplyr::summarise(names_TF_all = paste0(.data$V1_name, collapse="|"),
@@ -147,7 +147,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     dplyr::select("V2", "V2_name") %>% 
     dplyr::distinct() %>%
     dplyr::mutate(isGene = TRUE) %>%
-    dplyr::rename(names_gene = .data$V2_name, nodeID = .data$V2) %>%
+    dplyr::rename(names_gene = "V2_name", nodeID = "V2") %>%
     dplyr::ungroup()
   
   # Combine vertex metadata
@@ -659,7 +659,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     # Dont trim GO terms here, happens later when plotting
     result.tbl = unique(topGO::GenTable(go_enrichment, pval = result, orderBy = "pval", numChar = 1000, 
                                         topNodes = length(topGO::score(result))) ) %>%
-      dplyr::rename(ID = .data$GO.ID, Found = .data$Significant)  %>%      # make it more clear what Significant refers to here
+      dplyr::rename(ID = "GO.ID", Found = "Significant")  %>%      # make it more clear what Significant refers to here
       dplyr::mutate(GeneRatio = .data$Found / nForeground) %>%
       dplyr::left_join(allGO_inForeground.df, by = "ID")
     
@@ -789,7 +789,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   if (!is.null(enrichmentObj)) {
     
     result.tbl = enrichmentObj@result %>%
-      dplyr::rename(Term = .data$Description, pval = .data$pvalue, Found = .data$Count) 
+      dplyr::rename(Term = "Description", pval = "pvalue", Found = "Count") 
     
       # GeneRatio and BgRatio are reported as fractions like 5/83, leave it like this for now 
       # %>% dplyr::mutate(GeneRatio = sapply(parse (text = enrichmentObj@result$GeneRatio), eval))
@@ -1144,7 +1144,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
       dplyr::filter(.data$connectionType == link) %>%
       dplyr::count(!!as.name(col), sort = TRUE) %>%
       # dplyr::rename(!!slot := V1, Connections = n) %>%
-      dplyr::rename(Connections = n) %>%
+      dplyr::rename(Connections = "n") %>%
       dplyr::arrange(dplyr::desc(.data$Connections)) %>%
       dplyr::slice(seq_len(top.n)) 
     
@@ -1152,11 +1152,11 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
     if (nodeType == "gene") {
       topNodes = topNodes  %>%
         dplyr::left_join(graph.df %>% dplyr::select("V2", "V2_name") %>% dplyr::distinct(), by = "V2") %>%
-        dplyr::rename(gene.ENSEMBL = .data$V2, gene.name = .data$V2_name)
+        dplyr::rename(gene.ENSEMBL = "V2", gene.name = "V2_name")
     } else {
       topNodes = topNodes  %>%
         dplyr::left_join(graph.df %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), by = "V1") %>%
-        dplyr::rename(TF.ENSEMBL = .data$V1, TF.name = .data$V1_name)
+        dplyr::rename(TF.ENSEMBL = "V1", TF.name = "V1_name")
     }
     
     
