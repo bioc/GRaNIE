@@ -1,6 +1,10 @@
-# GRaNIE 1.2.2 (2022-12-16)
-- bug fix in plotCommunitiesEnrichment that was caused by the tidyverse 1.2.0 related changes
-- further small code changes related to tidyverse 1.2.0 changes
+# GRaNIE 1.2.2 (2022-12-22)
+
+## Bug ix
+- bug fix in `plotCommunitiesEnrichment` that was caused by the `tidyverse` 1.2.0 related changes
+
+## Minor changes
+- further small code changes related to `tidyverse` 1.2.0 changes
 
 
 # GRaNIE 1.2.1 (2022-12-16)
