@@ -1,3 +1,11 @@
+# GRaNIE 1.3.12 (2022-12-22)
+
+## Bug fixes
+- bug fix in `plotCommunitiesEnrichment` that was introduced due to the `tidyselect` 1.2.0 changes
+
+## Minor changes
+- further code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
+
 # GRaNIE 1.3.11 (2022-12-16)
 
 ## Major changes
