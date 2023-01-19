@@ -4699,7 +4699,7 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
 #' GRN = loadExampleObject()
 #' counts.df = getCounts(GRN, type = "peaks", permuted = FALSE)
 #' @return Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
-classification(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDColumn = TRUE, includeFiltered = FALSE) {
+getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDColumn = TRUE, includeFiltered = FALSE) {
     
     checkmate::assertClass(GRN, "GRN")
     GRN = .addFunctionLogToObject(GRN)     
