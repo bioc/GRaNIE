@@ -31,7 +31,7 @@ For \code{mm9} and \code{mm10},
 the packages \code{org.Mm.eg.db} as well as \code{BSgenome.Mmusculus.UCSC.mm9}+\code{TxDb.Mmusculus.UCSC.mm9.knownGene} or 
 \code{Mmusculus.UCSC.mm10}+\code{TxDb.Mmusculus.UCSC.mm10.knownGene} are required, respectively.
 For more information, see the error message if any of these packages is missing or the 
-\href{https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation}{Package Details Vignette}.
+\href{https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE.createTables_peakGeneQC_packageDetails.html#installation}{Package Details Vignette}.
 }
 \examples{
 meta.l = list(name = "exampleName", date = "01.03.22")

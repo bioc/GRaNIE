@@ -1,3 +1,20 @@
+# GRaNIE 1.3.13-13.14 (2023-01-20)
+
+## New features
+- the function `plotDiagnosticPlots_peakGene` (which is also called indirectly from `addConnections_peak_gene` when setting `plotDiagnosticPlots = TRUE`) now stores the plot data for the QC plots from the first page into the GRN object. It is stored in `GRN@stats$peak_genes` 
+- the columns of the result table from `getGRNConnections` are now explained in detail in the R help, and we reference this from the Vignette and other places
+- various significant Vignette updates
+
+## Bug fixes
+- optimized the column names for the function `getGRNConnections`, which now does not return duplicate columns for particular cases anymore
+- improved printing in the log for the function `filterData` and `addData`
+
+## Minor changes
+- further code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
+- the default gene types for `addConnections_peak_gene` and `plotDiagnosticPlots_peakGene` have been homogenized and changed to `list(c("all"), c("protein_coding"))`. Before, the default was `list(c("protein_coding", "lincRNA"))`, but we decided to now split this into two separate lists: Once for all genes irrespective of the gene type and once for only protein-coding genes. As before, `lincRNA` or other gene types can of course still be selected and chosen.
+- various minor changes
+
+
 # GRaNIE 1.3.12 (2022-12-22)
 
 ## Bug fixes
@@ -23,12 +40,12 @@
 ## Minor changes
 - code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
 
-## Major changes
+## New features
 - new argument for `addConnections_peak_gene`: `TADs_mergeOverlapping`. See the R help for more details.
 
 # GRaNIE 1.3.9 (2022-12-14)
 
-## Major changes
+## New features
 - new argument for `addConnections_peak_gene`: `shuffleRNACounts`. See the R help for more details.
 
 ## Minor changes
@@ -41,13 +58,15 @@
 
 ## Minor changes
 - in `initializeGRN`, the `objectMetadata` argument is now checked whether it contains only atomic elements, and an error is thrown if this is not the case. As this list is not supposed to contain real data, checking this prevents the print(GRN) function to unnecessarily print the whole content of the provided object metadata, thereby breaking the original purpose.
+
+## New features
 - `addTFBS` got two more arguments to make it more flexible. Now, it is possible to specify the file name of the translation table to be used via the argument `translationTable`, which makes it more flexible than the previously hard-coded name `"translationTable.csv`. In addition, the column separator for this file can now be specified via the argument `translationTable_sep`
 - Overlapping TFBS data with the peak is now more error-tolerant and does not error out in case that some chromosome or contig names from the TFBS BED files contain elements the size of which cannot be retrieved online. This was the case for some contig names with the suffix `decoy`, for example. If such elements are found, a warning is now thrown and they are ignored as they are usually not wanted anyway.
 - in case a GRN objects contains 0 connections (e..g, because of too strict filtering), subsequent functions as well as the `print` function now give a more user-friendly warning / error message.
 
 # GRaNIE 1.1.22-1.3.3 (2022-11-29)
 
-## Major changes
+## New features
 - additional normalization schemes have been implemented, including GC-aware normalization schemes for peaks, and existing normalization methods have been renamed for clarity. See `?addData` for details.
 - further reduced the package burden; the large genome annotation packages are now more or less fully optional and only needed when a GC-aware normalization has been chosen or when additional peak annotation is wanted. However, in contrast to before, none of these annotation packages are strictly required anywhere anymore. The vignettes have been updated accordingly.
 
@@ -58,7 +77,7 @@
 
 # GRaNIE 1.1.14-1.1.21 (2022-11-13)
 
-## Major changes
+## Major changes and new features
 - major object changes and optimizations, particularly related to storing the count matrices in an optimized and simpler format. In short, the count matrices are now stored either as normal or sparse matrices, depending on the amount of zeros present. In addition, only the counts after normalization are saved, the raw counts before applying normalization are not stored anymore. If no normalization is wished by the user, as before, the "normalized" counts are equal to the raw counts. `GRaNIE` is now more readily applicable for larger analyses and single-cell analysis even though we just started actively optimizing for it, so we cannot yet recommend applying our framework in a single-cell manner. Older GRN objects are automatically changed internally when executing the major functions upon the first invocation.
 - various Documentation and R help updates
 - the function `generateStatsSummary` now doesnt alter the stored filtered connections in the object anymore. This makes its usage more intuitive and it can be used anywhere in the workflow.
@@ -71,7 +90,7 @@
 
 # GRaNIE 1.1.12 and 1.1.13 (2022-09-13)
 
-## Major changes
+## Major changes and new features
 
 - many Documentation and R help updates, the [Package Details Vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation) is online
 - The workflow vignette is now improved: better figure resolution, figure aspect ratios are optimized, and a few other changes
@@ -90,7 +109,7 @@
 
 # GRaNIE 1.1.X (2022-05-31)
 
-## Minor changes
+## New features
 
 - added the argument *maxWidth_nchar_plot* to all functions that plot enrichments, and changed the default from 100 to 50. 
 
@@ -100,7 +119,7 @@
 
 # GRaNIE 0.99.X (2022-04-26)
 
-## Major changes
+## Major changes and new features
 
 - Bioconductor acceptance: this version is the final version for the Bioconductor 3.15 release branch
 - full inclusion of the GRN visualization
@@ -118,7 +137,7 @@
 
 # GRaNIE 0.15-0.17 (2021-12-13)
 
-## Major changes
+## Major changes and new features
 
 - all enrichment analyses have been extended and improved, we added additional ontologies (KEGG, DO, and Reactome), more information in the resulting summary plots
 - all plotting functions have been homogenized and extended, PDF width and height can now be set for all exported plot functions. Also, the possibility to not to a PDF but instead to the currently active graphics device is possible. Lastly, setting a different filename is finally possible. Collectively, this provides ultimate flexibility for customizing file names, the output devices used and PDF sizes
@@ -138,7 +157,7 @@
 
 # GRaNIE 0.9-0.14 (2021-12-13)
 
-## Major changes
+## Major changes and new features
 
 - major overhaul and continuous work on peak-gene QC plots
 - the *filterData* functions has now more filter parameters, such as filtering for CV. Also, all filters uniformly have a *min* and *max* filter.
@@ -157,7 +176,7 @@
 
 # GRaNIE 0.8 (2021-05-07)
 
-## Major changes
+## Major changes and new features
 
 - improved PCA plotting, PCA plots are now produced for both raw and normalized data
 - new filters for the function *filterGRaNIEAndConnectGenes* (*peak_gene.maxDistance*) as well as more flexibility how to adjust the peak-gene raw p-values for multiple testing (including the possibility to use IHW - experimental)
@@ -175,7 +194,7 @@
 
 # GRaNIE 0.7 (2021-03-12)
 
-## Major changes
+## Major changes and new features
 
 - improved PCA plotting, also works for pre-normalized counts now when provided as input originally
 - more flexibility for data normalization
@@ -191,7 +210,7 @@
 
 # GRaNIE 0.6 (2021-02-09)
 
-## Major changes
+## Major changes and new features
 
 - significant speed improvements for the peak-FDR calculations and subsequent plotting
 - TF-peak diagnostic plots now also show negatively correlated TF-peak statistics irrespective of whether they have been filtered out in the object / pipeline. This may be useful for diagnostic purposes to check whether excluding them is a sensible choice and to confirm the numbers are low

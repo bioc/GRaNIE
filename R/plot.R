@@ -854,7 +854,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 plotDiagnosticPlots_peakGene <- function(GRN, 
                                          outputFolder = NULL, 
                                          basenameOutput = NULL, 
-                                         gene.types = list(c("protein_coding", "lincRNA")), 
+                                         gene.types = list(c("all"), c("protein_coding")), 
                                          useFiltered = FALSE, 
                                          plotDetails = FALSE,
                                          plotPerTF = FALSE,
@@ -906,7 +906,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
     filenameCurBase = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_peakGene_diag"), basenameOutput), "_")
   }
   
-  .plotDiagnosticPlots_peakGene_all(GRN, gene.types = gene.types, fileBase = filenameCurBase, 
+  GRN = .plotDiagnosticPlots_peakGene_all(GRN, gene.types = gene.types, fileBase = filenameCurBase, 
                                     useFiltered = useFiltered, 
                                     plotPerTF = plotPerTF,
                                     pdf_width = pdf_width, pdf_height = pdf_height,
@@ -1165,6 +1165,8 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           # Helper function to retrieve all tables and data aggregation steps for subsequent visualization
           tbl.l = .createTables_peakGeneQC(peakGeneCorrelations.all[indexCur,], networkType_details, colors_vec, range)
           
+          # Store in the GRN object for independent analysis
+          GRN@stats$peak_genes[[paste0(geneTypesSelected, collapse = "+")]] = tbl.l
           
           xlabel = paste0("Correlation raw\np-value (binned)")
           
@@ -1540,6 +1542,8 @@ plotDiagnosticPlots_peakGene <- function(GRN,
   
   
   .printExecutionTime(start)
+  
+  GRN
   
 }
 

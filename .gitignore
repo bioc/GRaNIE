@@ -16,3 +16,4 @@ _pkgdown.yml
 GRaNIE.Rproj
 fixBugs_RELASE_GRaNIE.sh
 logo.png
+R/unreleased.R

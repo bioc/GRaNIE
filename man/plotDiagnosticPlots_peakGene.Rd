@@ -8,7 +8,7 @@ plotDiagnosticPlots_peakGene(
   GRN,
   outputFolder = NULL,
   basenameOutput = NULL,
-  gene.types = list(c("protein_coding", "lincRNA")),
+  gene.types = list(c("all"), c("protein_coding")),
   useFiltered = FALSE,
   plotDetails = FALSE,
   plotPerTF = FALSE,
