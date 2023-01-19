@@ -14,17 +14,6 @@ getGRNConnections(
   include_geneMetadata = FALSE,
   include_variancePartitionResults = FALSE
 )
-
-getGRNConnections(
-  GRN,
-  type = "all.filtered",
-  permuted = FALSE,
-  include_TF_gene_correlations = FALSE,
-  include_TFMetadata = FALSE,
-  include_peakMetadata = FALSE,
-  include_geneMetadata = FALSE,
-  include_variancePartitionResults = FALSE
-)
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
@@ -47,8 +36,6 @@ If set to \code{TRUE}, they must have been computed beforehand with \code{\link{
 Only relevant for type = "all.filtered"}
 }
 \value{
-A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object.
-
 A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object. Depending on the arguments, the
 data frame that is returned has different columns, which however can be divided into the following classes according to their name:
 \itemize{
@@ -94,25 +81,13 @@ data frame that is returned has different columns, which however can be divided 
 \description{
 Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
 \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
-
-Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
-\strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 GRN_con.all.df = getGRNConnections(GRN)
-# See the Workflow vignette on the GRaNIE website for examples
-GRN = loadExampleObject()
-GRN_con.all.df = getGRNConnections(GRN)
 }
 \seealso{
-\code{\link{filterGRNAndConnectGenes}}
-
-\code{\link{add_featureVariation}}
-
-\code{\link{add_TF_gene_correlation}}
-
 \code{\link{filterGRNAndConnectGenes}}
 
 \code{\link{add_featureVariation}}
