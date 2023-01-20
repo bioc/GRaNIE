@@ -4644,6 +4644,12 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
         
         bfc <- .get_cache()
         
+        if (forceDownload) {
+            BiocFileCache::removebfc(bfc, ask = FALSE)
+            bfc <- .get_cache()
+            
+        }
+        
         rid <- BiocFileCache::bfcquery(bfc, "GRaNIE_object_example")$rid
         if (!length(rid)) {
             rid <- names(BiocFileCache::bfcadd(bfc, "GRaNIE_object_example", fileURL))
@@ -4651,7 +4657,9 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
         if (!isFALSE(BiocFileCache::bfcneedsupdate(bfc, rid)) | forceDownload) {
             messageStr = paste0("Downloading GRaNIE example object from ", fileURL)
             message(messageStr)
-            filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
+            
+            # Not needed, redundant it seems, as file is already downloaded through the code above
+            # filePath = BiocFileCache::bfcdownload(bfc, rid, ask = FALSE)
         }
         
         
@@ -4667,14 +4675,14 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
     GRN@config$directories$output_plots = "."
     GRN@config$directories$motifFolder = "."
     GRN@config$files$output_log = "GRN.log"
+    GRN@config$metadata$file_peaks = basename(GRN@config$metadata$file_peaks)
+    GRN@config$metadata$file_rna = basename(GRN@config$metadata$file_rna)
+    GRN@config$metadata$file_sampleMetadata = basename(GRN@config$metadata$file_sampleMetadata)
     
     GRN = .makeObjectCompatible(GRN)
     
-    # TODO remove once done already in the object
-    GRN = add_TF_gene_correlation(GRN)
-    
-    # GRN = add_featureVariation(GRN, formula = "auto", metadata = "mt_frac")
-    
+    message("Finished successfully. You may explore the example object. Start by typing the object name to the console to see a summaty. Happy GRaNIE'ing!")
+
     GRN
     
 }
