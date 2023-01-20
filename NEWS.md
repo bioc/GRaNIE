@@ -1,4 +1,4 @@
-# GRaNIE 1.3.13-13.14 (2023-01-20)
+# GRaNIE 1.3.13-1.3.14 (2023-01-20)
 
 ## New features
 - the function `plotDiagnosticPlots_peakGene` (which is also called indirectly from `addConnections_peak_gene` when setting `plotDiagnosticPlots = TRUE`) now stores the plot data for the QC plots from the first page into the GRN object. It is stored in `GRN@stats$peak_genes` 

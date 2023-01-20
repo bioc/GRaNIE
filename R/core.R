@@ -5414,7 +5414,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
                          sum_neg = .data$n[!.data$r_positive]) %>%
         dplyr::mutate(ratio_pos_raw = .data$sum_pos / .data$sum_neg,
                       fraction_pos = .data$sum_pos / (.data$sum_pos + .data$sum_neg),
-                      fraction_neg = 1 - .data$enrichment_pos) %>%
+                      fraction_neg = 1 - .data$fraction_pos) %>%
         dplyr::ungroup()
     
     # Compare between real and permuted

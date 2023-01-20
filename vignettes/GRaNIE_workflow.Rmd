@@ -84,6 +84,9 @@ opts_chunk$set(
   dpi=200,
   fig.height=8,
   results='hold')
+
+options(bitmapType = "cairo")
+
 ```
 
 First, let's load the required libraries. The `readr` package is already loaded and attached when loading the `GRaNIE` package, but we nevertheless load it here explicitly to highlight that we'll use various \`readr\`\` functions for data import.
@@ -468,10 +471,10 @@ As you can see, some details about the TF-peak-gene and TF-gene are shown as out
 
 ## Visualize the filtered `eGRN`
 
-The `GRaNIE` package also offers a function to visualize a filtered `eGRN` network! It is very easy to invoke, but provides many options to customize the output and the way the graph is drawn. We recommend to explore the options in the R help (`?getGRNConnections`), and here just run the default visualization. By default, `eGRNs` with 500 edges or less can be plotted with the default options, which works for this example dataset. However, this can be customized to also draw larger networks (see the parameter `maxEdgesToPlot` and the notes below):
+The `GRaNIE` package also offers a function to visualize a filtered `eGRN` network! It is very easy to invoke, but provides many options to customize the output and the way the graph is drawn. We recommend to explore the options in the R help (`?getGRNConnections`), and here just run the default visualization. By default, `eGRNs` with 500 edges or less can be plotted with the default options, which prevents from plotting large number of networks that cannot be visualized nicely anyway. However, this can be customized to also draw larger networks (see the parameter `maxEdgesToPlot` and the notes below) and is being utilized here:
 
 ```{r visualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, fig.cap="<i>eGRN example visualization</i>", fig.height = 9, class.output="scroll-200"}
-GRN = visualizeGRN(GRN, plotAsPDF = FALSE)
+GRN = visualizeGRN(GRN, plotAsPDF = FALSE, maxEdgesToPlot = 1000)
 
 ```
 
