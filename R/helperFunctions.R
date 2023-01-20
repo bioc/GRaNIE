@@ -392,6 +392,20 @@
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)    
   }
   
+  # Check if there are any chr names that are not part of seqlengths, which causes an 'seqnames' contains sequence names with no entries in 'seqinfo' error
+  missingSeqs = unique(annotation$chr)[which(! unique(annotation$chr) %in% names(seqlengths))]
+  
+  if (length(missingSeqs) > 0) {
+      message = paste0("For ", length(missingSeqs), " chromosomes (", paste0(missingSeqs, collapse = ","), ") and a total of ", length(which(annotation$chr %in% missingSeqs)), 
+                       " peaks, their length was not found in biomaRt. These peaks will be discarded")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)    
+      
+      # Filter and refactor
+      annotation = annotation %>%
+          dplyr::filter(! chr %in% missingSeqs) %>%
+          dplyr::mutate(chr = factor(chr, levels = unique(chr)))
+      
+  }
   gr = GenomicRanges::makeGRangesFromDataFrame(annotation, keep.extra.columns = TRUE, seqinfo = seqlengths, starts.in.df.are.0based = zeroBased, ...)
   
   # Check whether there are out-of-bound sequences, and abort if there are. This should not happen
@@ -416,6 +430,7 @@
       }
           
   }
+  
   # 
   # nExtraColumns = length(extraColumns)
   # 
