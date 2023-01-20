@@ -8,6 +8,8 @@
 ## Bug fixes
 - optimized the column names for the function `getGRNConnections`, which now does not return duplicate columns for particular cases anymore
 - improved printing in the log for the function `filterData` and `addData`
+- the `loadExampleObject` function has been optimized and should now force download an example object when requesting it.
+- the package version as stored in the GRN object now works correctly.
 
 ## Minor changes
 - further code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings

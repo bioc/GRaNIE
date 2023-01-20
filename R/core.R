@@ -1,18 +1,8 @@
 ######## Init GRN ########
 
-#' Create and initialize a \code{\linkS4class{GRN}} object.
+#' Create and initialize an empty \code{\linkS4class{GRN}} object.
 #' 
-#' Executing this function is the very first step in the *GRaNIE* workflow. After its execution, data can be added to the object. 
-#' \strong{Depending on the genome assembly version, additional genome annotation packages are required, as follows:} 
-#' For \code{hg19} and \code{hg38},
-#' the packages \code{org.Hs.eg.db} as well as \code{BSgenome.Hsapiens.UCSC.hg19}+\code{TxDb.Hsapiens.UCSC.hg19.knownGene} or 
-#' \code{BSgenome.Hsapiens.UCSC.hg38}+\code{TxDb.Hsapiens.UCSC.hg38.knownGene} are required, respectively. 
-#' For \code{mm9} and \code{mm10},
-#' the packages \code{org.Mm.eg.db} as well as \code{BSgenome.Mmusculus.UCSC.mm9}+\code{TxDb.Mmusculus.UCSC.mm9.knownGene} or 
-#' \code{Mmusculus.UCSC.mm10}+\code{TxDb.Mmusculus.UCSC.mm10.knownGene} are required, respectively.
-#' For more information, see the error message if any of these packages is missing or the 
-#' \href{https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE.createTables_peakGeneQC_packageDetails.html#installation}{Package Details Vignette}.
-#' 
+#' Executing this function is the very first step in the *GRaNIE* workflow. After its execution, data can be added to the object.
 #' @export
 #' @param objectMetadata List. Default \code{list()}. Optional (named) list with an arbitrary number of elements, all of which 
 #' capture metadata for the object. \strong{Only atomic data types are allowed for each list element
@@ -81,15 +71,14 @@ initializeGRN <- function(objectMetadata = list(),
   
   par.l = list()
   
-  packageName = utils::packageName()
-  par.l$packageVersion = ifelse(is.null(packageName), NA, paste0(utils::packageVersion(packageName)[[1]], collapse = "."))
+  par.l$packageVersion = as.character(utils::packageVersion("GRaNIE"))
   par.l$genomeAssembly = genomeAssembly
 
   
   # Make an internal subslot
   par.l$internal = list()
   
-  # Recommended to leave at 1, more permutations are currently not necessary
+  # Fixed at 1 currently.
   par.l$internal$nPermutations = 1 
   
   # Step size for the TF-peak FDR calculation

@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{initializeGRN}
 \alias{initializeGRN}
-\title{Create and initialize a \code{\linkS4class{GRN}} object.}
+\title{Create and initialize an empty \code{\linkS4class{GRN}} object.}
 \usage{
 initializeGRN(objectMetadata = list(), outputFolder = ".", genomeAssembly)
 }
@@ -22,16 +22,7 @@ Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9} and \code
 Empty \code{\linkS4class{GRN}} object
 }
 \description{
-Executing this function is the very first step in the *GRaNIE* workflow. After its execution, data can be added to the object. 
-\strong{Depending on the genome assembly version, additional genome annotation packages are required, as follows:} 
-For \code{hg19} and \code{hg38},
-the packages \code{org.Hs.eg.db} as well as \code{BSgenome.Hsapiens.UCSC.hg19}+\code{TxDb.Hsapiens.UCSC.hg19.knownGene} or 
-\code{BSgenome.Hsapiens.UCSC.hg38}+\code{TxDb.Hsapiens.UCSC.hg38.knownGene} are required, respectively. 
-For \code{mm9} and \code{mm10},
-the packages \code{org.Mm.eg.db} as well as \code{BSgenome.Mmusculus.UCSC.mm9}+\code{TxDb.Mmusculus.UCSC.mm9.knownGene} or 
-\code{Mmusculus.UCSC.mm10}+\code{TxDb.Mmusculus.UCSC.mm10.knownGene} are required, respectively.
-For more information, see the error message if any of these packages is missing or the 
-\href{https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE.createTables_peakGeneQC_packageDetails.html#installation}{Package Details Vignette}.
+Executing this function is the very first step in the *GRaNIE* workflow. After its execution, data can be added to the object.
 }
 \examples{
 meta.l = list(name = "exampleName", date = "01.03.22")
