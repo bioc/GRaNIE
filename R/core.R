@@ -4678,6 +4678,7 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
     GRN@config$metadata$file_peaks = basename(GRN@config$metadata$file_peaks)
     GRN@config$metadata$file_rna = basename(GRN@config$metadata$file_rna)
     GRN@config$metadata$file_sampleMetadata = basename(GRN@config$metadata$file_sampleMetadata)
+    GRN@config$parameters$packageVersion = as.character(packageVersion("GRaNIE"))
     
     GRN = .makeObjectCompatible(GRN)
     
