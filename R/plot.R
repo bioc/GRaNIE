@@ -469,7 +469,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
+
   
   GRN = .makeObjectCompatible(GRN)
   
@@ -510,6 +510,8 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     
     if (!file.exists(fileCur) | !plotAsPDF | forceRerun) {
       
+      GRN = .addFunctionLogToObject(GRN)
+        
       if (!plotAsPDF) fileCur = NULL
       
       heightCur = pdf_height_base * length(GRN@config$TF_peak_connectionTypes)
@@ -2152,7 +2154,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
+  
   
   GRN = .makeObjectCompatible(GRN)
   
@@ -2184,6 +2186,8 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   
   fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_generalEnrichment"), basenameOutput), ".pdf")
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
+    
+    GRN = .addFunctionLogToObject(GRN)
     
     if (plotAsPDF) {
       .checkOutputFile(fileCur)
@@ -2334,7 +2338,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
+  
   
   GRN = .makeObjectCompatible(GRN)
   
@@ -2357,6 +2361,8 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_communityStats"), basenameOutput), ".pdf")
   
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
+      
+    GRN = .addFunctionLogToObject(GRN)
     
     if (plotAsPDF) {
       .checkOutputFile(fileCur)
@@ -2540,7 +2546,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
+
   
   GRN = .makeObjectCompatible(GRN)
   
@@ -2569,10 +2575,11 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_communityEnrichment"), basenameOutput), ".pdf")
-  
-  futile.logger::flog.info(paste0("Including terms only if overlap is at least ", nSignificant, " genes."))
-  
+ 
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
+      
+    futile.logger::flog.info(paste0("Including terms only if overlap is at least ", nSignificant, " genes.")) 
+    GRN = .addFunctionLogToObject(GRN)
 
     if (is.null(GRN@stats$Enrichment$general)){
       message = paste0("Could not find general enrichment analysis. Please run the function calculateGeneralEnrichment first.")
@@ -2899,7 +2906,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
+
   
   GRN = .makeObjectCompatible(GRN)
 
@@ -2952,6 +2959,8 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
   
+    GRN = .addFunctionLogToObject(GRN)
+    
     allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "TF")
     
     # Get the number of vertexes per TF as additional annotation column for the heatmap

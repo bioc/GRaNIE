@@ -402,8 +402,8 @@
       
       # Filter and refactor
       annotation = annotation %>%
-          dplyr::filter(! chr %in% missingSeqs) %>%
-          dplyr::mutate(chr = factor(chr, levels = unique(chr)))
+          dplyr::filter(! .data$chr %in% missingSeqs) %>%
+          dplyr::mutate(chr = factor(.data$chr, levels = unique(.data$chr)))
       
   }
   gr = GenomicRanges::makeGRangesFromDataFrame(annotation, keep.extra.columns = TRUE, seqinfo = seqlengths, starts.in.df.are.0based = zeroBased, ...)
@@ -692,6 +692,9 @@ match.call.defaults <- function(asList = TRUE, ...) {
         match.call(sys.function(sys.parent(n = 2)), call)
     }
 }
+
+
+
 
 .firstLetterUppercase <- function(x) {
     substr(x, 1, 1) <- toupper(substr(x, 1, 1))

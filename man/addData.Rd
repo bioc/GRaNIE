@@ -16,6 +16,7 @@ addData(
   additionalParams.l = list(),
   allowOverlappingPeaks = FALSE,
   keepOriginalReadCounts = FALSE,
+  geneAnnotation_customHost = NULL,
   forceRerun = FALSE
 )
 }
@@ -57,6 +58,10 @@ when overlapping peaks are found) or (the default) should an error be raised?}
 
 \item{keepOriginalReadCounts}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the original read counts as provided to the function be kept in addition to
 storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.}
+
+\item{geneAnnotation_customHost}{\code{NULL} or Character(1). Default \code{NULL}. The \code{biomaRt} host to use. 
+By default, the newest host is selected for the most recent genome assembly versions (\url{https://www.ensembl.org}) while \url{https://grch37.ensembl.org} is used
+for hg19. This parameter can specify a custom host instead, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

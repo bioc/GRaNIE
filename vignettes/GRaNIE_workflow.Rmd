@@ -188,7 +188,7 @@ Initializing a `GRaNIE` object occurs in the function `initializeGRN()` and is t
 
 For more parameter details, see the R help (`?initializeGRN`).
 
-At any time point, we can simply "print" a `GRaNIE` object by typing its name and a summary of the content is printed to the console.
+At any time point, we can simply "print" a `GRaNIE` object by typing its name and a summary of the content is printed to the console (as done above in the last line of the code block).
 
 ## Add data
 
@@ -202,6 +202,8 @@ GRN = addData(GRN,
               counts_rna = countsRNA.df, normalization_rna = "limma_quantile", idColumn_RNA = idColumn_RNA,
               sampleMetadata = sampleMetadata.df,
               forceRerun = TRUE)
+
+GRN
 ```
 
 ```{r loadObject, echo=FALSE, results = FALSE, eval = TRUE}
@@ -209,6 +211,17 @@ GRN = loadExampleObject()
 ```
 
 Only overlapping samples between the two data modalities are kept in the `GRaNIE` object. Here, all 29 samples from the RNA data are kept because they are also found in the peak data, while only 29 out of 31 samples from the peak data are also found in the RNA data, resulting in 29 shared samples overall. The RNA counts are also permuted, which will be the basis for all analysis and plots in subsequent steps that repeat the analysis for permuted data in addition to the real, non-permuted data.
+
+When we print the `GRN` object again, we see that the added information from `addData` is now also printed in a summarized manner. 
+
+## Object history
+
+**The package also provides a *history* or *tracking* function: In a `GRN` object, all previously used function calls that modified the object are stored for user convenience and reproducibility purposes.** 
+
+For example, to retrieve the information about how the `addData` function was used in the context of the `GRN` object we have here, simply type `GRN@config$functionParameters$addData` to retrieve a (nested) list with all necessary details.
+
+
+For more details, see the [Package Details](GRaNIE_packageDetails.html#guidelines_objectHistory).
 
 ## Quality control 1: PCA plots
 

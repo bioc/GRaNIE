@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{getGRNConnections}
 \alias{getGRNConnections}
-\title{Extract connections or links from a \code{\linkS4class{GRN}} object as da data frame.}
+\title{Extract connections or links from a \code{\linkS4class{GRN}} object as a data frame.}
 \usage{
 getGRNConnections(
   GRN,
@@ -22,18 +22,17 @@ getGRNConnections(
 
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 
-\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}. Only relevant for type = "all.filtered"}
+\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.}
 
-\item{include_TFMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TF metadata be returned as well? Only relevant for type = "all.filtered"}
+\item{include_TFMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TF metadata be returned as well?}
 
-\item{include_peakMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should peak metadata be returned as well?  Only relevant for type = "all.filtered"}
+\item{include_peakMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should peak metadata be returned as well?}
 
-\item{include_geneMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should gene metadata be returned as well?  Only relevant for type = "all.filtered"}
+\item{include_geneMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should gene metadata be returned as well?}
 
 \item{include_variancePartitionResults}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. 
 Should the results from the function \code{\link{add_featureVariation}} be included? 
-If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_featureVariation}}; otherwise, an error is thrown.
-Only relevant for type = "all.filtered"}
+If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_featureVariation}}; otherwise, an error is thrown.}
 }
 \value{
 A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object. Depending on the arguments, the
@@ -79,7 +78,8 @@ data frame that is returned has different columns, which however can be divided 
 }
 }
 \description{
-Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
+Returns stored connections/links (either TF-peak, peak-genes, TF-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}).
+Additional metacolumns (TF, peak and gene metadata) can be added optionally. 
 \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{

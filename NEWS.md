@@ -1,3 +1,17 @@
+# GRaNIE 1.3.16 (2023-01-24)
+
+## New features
+- significant updated to the package details vignette
+- revisited and improved the internal logging and object history. The time when a function was called is now added to the list name, which allows the storage of multiple instances of the same function.
+- new parameter in `addData()`: `geneAnnotation_customHost` to specify a custom host and overriding the default and previously hard-coded hostname when retrieving gene annotation data via `biomaRt`.
+- the function `getGRNConnections()` can now also include the various additional metadata for all `type` parameters and not only the default type `all.filtered`.
+
+# GRaNIE 1.3.15 (2023-01-20)
+
+## Bug fixes
+- fixed an error that appeared in rare cases when a chromosome name from either peak or RNA data could not be found in `biomaRt` such as `GL000194.1`. Peaks from chromosomes with irretrievable lengths are now automatically discarded.
+- significant updates to the package details vignette
+
 # GRaNIE 1.3.13-1.3.14 (2023-01-20)
 
 ## New features

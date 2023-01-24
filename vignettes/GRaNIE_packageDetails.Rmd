@@ -183,6 +183,17 @@ and may be needed context-specifically:
 Check the [workflow vignette for an example workflow with explanations,
 figures and results](GRaNIE_workflow.html).
 
+# Example GRN object
+
+For user convenience, we provide an example object via a designated helper function. This can be
+retrieved simply by running the following line of code, as explained also in the R help:
+
+```{r eval = FALSE}
+ GRN = loadExampleObject()
+```
+
+You can start by simply typing `GRN` (i.e., the object name) into the console, and a summary of the GRN object is printed. **The example object is always up to date with the most recent version of the package and everything that the package can calculate is contained in the object. Thus, you can run any function after loading the example object.**
+
 # Input {#input}
 
 In our `GRaNIE` approach, we integrate multiple data modalities. Here,
@@ -236,15 +247,16 @@ compatible with our framework:
     names match between them and share as many samples as possible. See
     the methods part for guidelines on how many samples we recommend.
 
-Note that peaks must not overlap. If they do, an informative error
+Note that peaks should not overlap. If they do, an informative error
 message is thrown and the user is requested to modify the peak input
 data so that no overlaps exist among all peaks. This can be done by
 either merging overlapping peaks or deleting those that overlap with
 other peaks based on other criteria such as peak signal, by keeping only
 the strongest peak, for example.
 
-For guidelines on how many peaks are necessary or recommended, see [the
-section below](#guidelines).
+For guidelines on how many peaks are necessary or recommended, see [the section below](#guidelines).
+
+**For guidelines on whether and how to prepare single-cell 10x multiome data, see [here](#guidelines_singleCell).**
 
 ## TF and TFBS data {#input_TF}
 
@@ -476,17 +488,19 @@ should be merged or not.
 
 ## Building eGRNs: Linking TF-peak and peak-gene links and filtering
 
-After a filtered `eGRN` has been stored in the GRN object (in
-`GRN@connections$all.filtered[["0"]]`), the user can run all network
-related analysis such as enrichment or visualization. See the next
-sections for details.
+As `GRaNIE` models TF-peak and peak-gene links independently from one another, the package also offers  function to combine them to a tripartite TF-peak-gene combination. In addition, filtering both TF-peaks and peak-gene links according to different criteria is important and can be user-adjusted flexibly. For all of this, the function `filterGRNAndConnectGenes()` has to be used, which stores the filtered TF-peak-gene network (both the real and permuted one) in `GRN@connections$all.filtered`. It can be easily retrieved, along with additional options for which output columns to include, using the function `getGRNConnections()` connections.
+
+After a filtered `eGRN` has been stored in the GRN object, the user can run all network
+related analysis such as enrichment or visualization. See the next sections for details.
+
+**Importantly, after successful execution of `filterGRNAndConnectGenes()` and re-population of the filtered `eGRN` in `GRN@connections$all.filtered[["0"]]`, the `eGRN` graph as produced by `build_eGRN_graph()` (`GRN@graph`) is reset to avoid inconsistencies with mismatches between the filtered `eGRN`, the graph representation of it and associated enrichment results.
 
 ## Constructing the `eGRN` network
 
 After a filtered set of TF-peak-gene links (i.e., a full `eGRN`) has been
-build with `filterGRNAndConnectGenes()`, the actual graph must be
+built with `filterGRNAndConnectGenes()`, the actual graph must be
 constructed using the function `build_eGRN_graph()` based on the filtered
-`eGRN`.
+`eGRN` (in `GRN@connections$all.filtered[["0"]]`).
 
 Importantly, two types of networks are constructed:
 
@@ -511,38 +525,18 @@ For more information, see the R help (`?build_eGRN_graph`).
 After the graph has been built, three types of enrichment analysis are
 available within the `GRaNIE` framework:
 
-1.  Enrichment based on the full network
-2.  Enrichment based on communities
-3.  Enrichment based on TF regulons
+1.  Enrichment based on the full network (function `calculateGeneralEnrichment`)
+2.  Enrichment based on communities (function `calculateCommunitiesEnrichment()`)
+3.  Enrichment based on TF regulons (function `calculateTFEnrichment()`)
 
-All enrichment functions here use the *TF-gene* graph in the `GRN`
-object.
+All enrichment functions here use the *TF-gene* graph in the `GRN` object and therefore require the function `build_eGRN_graph()` to be run beforehand. They are, as explained above, based on
+the filtered network as obtained by `filterGRNAndConnectGenes()` and include only the genes from the corresponding (sub)network.
 
-**This section will be completed soon. We are working on it.**
+All three functions have corresponding plot functions to visualize the enrichment. For more information such as supported ontologies, see the corresponding R help for the functions, all details are explained there.
 
-<!-- A description of the plot will follow soon. We are working on it. -->
+For an explanation of the output files from the plot functions, see [here](#output_enrichment).
 
-<!-- ```{r, echo=FALSE, fig.cap="<i>A proper caption will follow soon</i>", out.width = '80%'} -->
-
-<!-- knitr::include_graphics("figs/stats.community/p-01.png") -->
-
-<!-- ``` -->
-
-<!-- A description of the plot will follow soon. We are working on it. -->
-
-<!-- ```{r, echo=FALSE, fig.cap="<i>A proper caption will follow soon</i>", out.width = '80%'} -->
-
-<!-- knitr::include_graphics("figs/stats.community/p-02.png") -->
-
-<!-- ``` -->
-
-<!-- A description of the plot will follow soon. We are working on it. -->
-
-<!-- ```{r, echo=FALSE, fig.cap="<i>A proper caption will follow soon</i>", out.width = '80%'} -->
-
-<!-- knitr::include_graphics("figs/stats.community/p-03.png") -->
-
-<!-- ``` -->
+All results are stored in `GRN@stats$Enrichment`. For example, the results from the enrichment results of TF `E2F7.0.B` from the example GRN object (see function `loadExampleObject()`) for the `GO` biological process (BP) enrichment can be retrieved from `GRN@stats$Enrichment$byTF$E2F7.0.B$GO_BP$results`, while the parameters that were used to run the enrichment are correspondingly stored in `GRN@stats$Enrichment$byTF$E2F7.0.B$GO_BP$parameters`.
 
 ## Network visualization
 
@@ -587,6 +581,38 @@ In this section, we want explicitly mention the designated scope of the
 that may be used subsequently or beforehand.
 
 **This section will be completed soon. We are working on it.**
+
+## Recapitulating object history, function parameters etc {#guidelines_objectHistory}
+
+A nice little helper feature for the `GRaNIE` package is that the object history, including all function calls that have been applied to the object, including the function parameters and their actual values (unless a variable has been provided, then only the variable name is stored and not the actual value), the date, and the actual call are stored in the actual `GRN` object in a nested list inside `GRN@GRN@config$functionParameters`. This looks like the following, for example, for the function `add_TF_gene_correlation` that has been executed at 2023-01-23 21:50:52 CET:
+
+```{r tidy=FALSE, eval = FALSE}
+
+> GRN@config$functionParameters$add_TF_gene_correlation$`2023-01-23_21:50:52`
+
+$call
+add_TF_gene_correlation(GRN = GRN, nCores = 5)
+
+$parameters
+
+$parameters$GRN
+GRN
+
+$parameters$nCores
+[1] 5
+
+$parameters$corMethod
+[1] "pearson"
+
+$parameters$addRobustRegression
+[1] FALSE
+
+$parameters$forceRerun
+[1] FALSE
+
+```
+
+This can be very helpful for recapitulating at a later point which functions have been applied to a `GRN` object, and to verify specific parameter assignments.
 
 ## Transcription factor binding sites (TFBS) {#guidelines_TFBS}
 
@@ -643,6 +669,13 @@ guidelines for the RNA-Seq data:
 ## Peak-gene p-values accuracy and violations {#guidelines_peakGene}
 
 **This section will be completed soon. We are working on it.**
+
+
+## eGRNs from single-cell data {#guidelines_singleCell}
+
+We now also provide some preliminary guidelines on whether and how to use `GRaNIE` for single-cell `eGRN` inference. 
+For more details, see the [designated vignette for single-cell data](GRaNIE_singleCell_eGRNs.html).
+
 
 # Output {#output}
 
@@ -1024,6 +1057,25 @@ boxplot, as exemplified with the following Figure:
 
 <!-- # ``` -->
 
+## Enrichment {#output_enrichment}
+
+Here, we describe the output of the enrichment functions in more detail.
+
+### General enrichment
+
+The output is structured as follows:
+- one page per ontology for the whole `eGRN` with an enrichment summary that includes the ontology terms (y-axis), the gene ratio (the number of genes found divided by the total number of genes in the foreground) on the x-axis, the raw p-value (color) and the absolute number of genes found (dot size). The plot title gives some additional information such as the chosen ontology, the statistic used, the used background, the number of genes in foreground and background, respectively, and the chosen multiple testing adjustment (if applicable; in some cases, this is ignored due to the way the enrichment calculation works)
+
+### Community enrichment
+
+The output is structured as follows:
+- one page per ontology and community with an enrichment summary (see general enrichment above for explanations)
+- two pages in the end that compare the community-enrichment with the general enrichment. Here, all ontology terms that are deemed significant according to the chosen significance threshold `p` (see function parameters) in either the general or the community-specific enrichment are included, along with their -log10-transformed statistical confidence (either raw or adjusted p-value). The top part shows the size of the general enrichment and the community-specific subnetworks (in number of genes they include). In contrast, the last page shows not all but only the top 10 enriched terms per column.
+
+### TF enrichment
+
+The output is structured in analogy to the community enrichment, but instead of communities, the regulon that a particular TF spans is chosen as subnetwork (i.e., all genes the TF is connected to).
+
 ## Output tables {#output_other}
 
 During a typical `GRaNIE` analysis, all results are automatically stored
@@ -1064,17 +1116,18 @@ that are time-consuming in nature.
 ## Memory footprint {#resources_memory}
 
 The maximum memory footprint can be a few GB in `R`. We recommend not
-using more than 100,000 to 200,000 or so peaks as the memory footprint
-as well as running time may otherwise increase notably.
+using more than a few 100,000 or so peaks as the memory footprint
+as well as running time may otherwise increase notably. However, there is no package-defined upper limit,
+it all depends on the available system memory.
 
-Given that our approach is a correlation-based one, it seems preferable
+Given that our approach is correlation-based, it seems preferable
 to maximize the number of samples while retaining only peaks that carry
 a biological signal that is differing among samples.
 
 The size of the `GRN` object is typically in the range of a few hundred
 MB, but can exceed 1 GB for large datasets. If you have troubles with
 big datasets, let us know! We always look for ways to further optimize
-the memory footprint.
+the memory footprint. However, with the recent optimizations to store the count matrices as sparse matrix if the fraction of 0s is too large, the overall memory footprint significantly reduced.
 
 # References {#refs}
 
