@@ -1,7 +1,7 @@
 # GRaNIE 1.3.17 (2023-01-26)
 
 ## New features
-- We are excited to announce that we added a new vignette for how to use `GRaNIE` for single-cell data! We plan to update it regularly with new information. [Check it out here!](GRaNIE_singleCell_eGRNs.html)
+- We are excited to announce that we added a new vignette for how to use `GRaNIE` for single-cell data! We plan to update it regularly with new information. [Check it out here!](articles/GRaNIE_singleCell_eGRNs.html)
 
 # GRaNIE 1.3.16 (2023-01-24)
 
