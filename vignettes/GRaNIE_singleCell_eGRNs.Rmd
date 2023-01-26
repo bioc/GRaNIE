@@ -1,0 +1,175 @@
+---
+title: "GRaNIE single-cell eGRN inference"
+author: "Christian Arnold, Judith Zaugg, Rim Moussa"
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('GRaNIE')`"
+abstract: >
+        
+vignette: >
+  %\VignetteIndexEntry{Single-cell eGRN inference}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+output:
+  BiocStyle::html_document:
+      code_folding: hide
+---
+
+```{css, echo=FALSE}
+pre {
+  max-height: 300px;
+  overflow-y: auto;
+}
+pre[class] {
+  max-height: 100px;
+}
+```
+
+```{css, echo=FALSE}
+.scroll-100 {
+  max-height: 100px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+```{css, echo=FALSE}
+.scroll-200 {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+```{css, echo=FALSE}
+.scroll-300 {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: inherit;
+}
+```
+
+
+# Motivation and Summary
+
+This vignettes summarizes our views and experiences on running `GRaNIE` for 10x multiome data. While `GRaNIE` has been developed originally for bulk data, it can in fact also be applied, with particular preprocessing, to single-cell data. As many tools that integrate single-cell data, some kind of aggregation is necessary to reduce the scarcity of the data - ATAC in particular. While many tools do this implicitly in their methods, somewhat hidden from the user, we employ here a different approach: We preprocess the data manually and feed it into `GRaNIE` in a pseudobulk manner so that the original frameworks works just as well, while giving a lot of flexibility to the user in how exactly the data preprocessing and granularity of the data should look like. From our experience, very often this is very question-specific and data-dependent, and no universal solution exists that works equally well for everything.
+
+**Disclaimer:: These are just recommendations here based on our (limited) experience and testing so far. We cannot guarantee this works also well for your data. Feel free to contact us for questions and feedback, we are happy for discussions and comments.**
+
+# General notes and sources
+
+In this vignette, we pretty much follow [this Seurat vignette](https://satijalab.org/seurat/articles/weighted_nearest_neighbor_analysis.html#wnn-analysis-of-10x-multiome-rna-atac-1) for the preprocessing of the RNA and ATAC data and subsequent clustering for 10x multiome data. However, `GRaNIE` is not dependent on a specific way of preprocessing as long as the final count matrices that are used as input are appropriate - see subsequent chapters here for details on what *appropriate* means here in this context.
+
+**Thus, feel free to modify and extend the preprocessing and RNA/ATAC integration as proposed here - let us know whether and how well it worked, we are very happy for receiving feedback for `GRaNIE` in single-cell / pseudobulk mode.**
+
+**If you do not have 10x multiome data, you need to find a way to match the ATAC and RNA data by yourself, and most of the steps in the tutorial below may not apply**. Share your experiences with us how and whether you managed to run `GRaNIE` for your data!
+
+# Prerequisites: a multimodal Seurat object
+
+The first step is to create a multimodal `Seurat` object with paired transcriptome and ATAC-seq profiles. For details on how to generate it, you only need the output of, for example, `CellRanger ARC` for 10x multiome experiments. You may check various excellent tutorials such as this [this Seurat vignette](https://satijalab.org/seurat/articles/weighted_nearest_neighbor_analysis.html#wnn-analysis-of-10x-multiome-rna-atac-1). 
+
+
+# Data preprocessing
+
+For the 10x multiome data, we next perform pre-processing and dimensional reduction on both assays independently, using standard approaches for RNA and ATAC-seq data, as summarized below:
+
+
+## RNA
+
+In a nutshell, we perform a standard scRNA-seq normalization and processing:
+
+1. `SCTransform`
+2. `RunPCA`
+3. `RunUMAP`
+
+## ATAC
+
+Similarly, we perform the following standard scATAC-seq normalization and processing:
+
+1. `RunTFIDF`
+2. `FindTopFeatures`
+3. `RunSVD`
+4. `RunUMAP` using `reduction = 'lsi'`
+
+
+# Integrating the modalities
+
+For integrating both modalities, you can use any method you find appropriate for your data. Here, we use a *weighted-nearest neighbor* (WNN) analysis, an unsupervised framework to learn the relative utility of each data type in each cell. By learning cell-specific modality ‘weights’, and constructing a WNN graph that integrates the modalities, we represent a weighted combination of the RNA and ATAC-seq modalities that we can subsequently use for generating our pseudobulk samples.
+
+In short, we run this on the `Seurat` object;
+
+1. `FindMultiModalNeighbors` with `reduction.list = list("pca", "lsi"), dims.list = list(1:50, 2:50)`
+2. `RunUMAP`
+
+We now have both data modalities in a reduced dimensionality representation.
+
+# Clustering and pseudobulk creation
+
+## Methods
+After integration of both RNA and ATAC modalities, we can now perform a clustering on RNA+ATAC data on the single cell level.
+
+For the 10x multiome, we so far used the WNN graph for UMAP visualization and subsequent clustering as described [here](https://satijalab.org/seurat/articles/weighted_nearest_neighbor_analysis.html#wnn-analysis-of-10x-multiome-rna-atac-1). However, many other methods may be used and we will update this vignette with alternatives in the future.
+
+In a nutshell, these are the functions we may run here:
+
+1. `FindClusters` with a specific `resolution` value that we usually vary between 0.1 and 20. Reasonable cluster resolutions are data and question dependent. For recommendations, see the notes below.
+2. `AggregateExpression` to aggregate counts within each cluster to cluster pseudocounts based on their (cluster) identities. We so far used the function with `slot = "counts"` to avoid prior exponentiation of the data . Each cluster forms a sample as used in the `GRaNIE` analysis. 
+
+## Choosing the right number of clusters
+
+**We strongly suggest choosing a resolution that gives at least 10 clusters, as fewer clusters (or samples consequently in the `GRaNIE` analysis) can cause statistical issues and artifacts as observed in the enhancer-gene diagnostic plots for some datasets**. If the desired number of clusters is smaller than 10, pay close(r) attention to the enhancer-gene QC plots, in particular whether the signal from the randomized connections looks flat (enough). For more details, see the [Package Details](GRaNIE_packageDetails.html#output_peak_gene).
+
+**On the other extreme, too many clusters will result in data that becomes too scares - especially the ATAC-seq data suffers from scarcity**. Throughout our experiments, we have seen that when having too many clusters (close to or more than 100, for example), the scarcity of ATAC becomes so big that either man peaks are filtered out in the `filterData()` function or that the abundance of zeros results in very few connections in the *eGRN*. Thus, we advise on an intermediate level of cluster that is also plausible biologically, but testing different cluster resolutions is generally also a good idea for initial exploration.
+
+# Preparing the input data for `GRaNIE`
+
+Lastly, we need a few processing steps to bring both RNA and ATAC count matrices into the required format that can be directly used by `GRaNIE`. This encompasses mainly simple transformation steps. 
+
+## ATAC
+
+No special steps are needed here except for creating a `peakID` column. For more details, see the example scripts we provide and link in this document.
+
+## RNA
+
+For RNA, one extra step is needed: We need to translate the gene names as provided by `Seurat` into proper Ensembl IDs. To do so, there are two options:
+
+1. The feature file as provided as output from `CellRanger` can be used for it. It is called `features.tsv.gz` or alike and contains in total 6 columns (*Ensembl ID*, *gene name*, *set name*, *chr*, *start*, *end*). This can be utilized to use the Ensembl IDs in the ID column of the RNA count matrix (default name is `ENSEMBL`). 
+2. If this file is not available, we provide example files for both `hg38` and `mm10` that can be used. [You can download them here](https://git.embl.de/grp-zaugg/GRaNIE/-/tree/master/misc/singleCell/sharedMetadata).
+
+## Metadata
+
+Creating a metadata file is optional but recommended. We usually create a simple data frame with two columns:
+
+1. Cluster number as given by `Seurat`
+2. Number of cells for each cluster.
+
+However, you may add additional metadata such as cluster annotation or other information to it.
+
+
+# Running GRaNIE
+
+We are now all set to run `GRaNIE`, using the cluster-specific count matrices for both ATAC and RNA and, optionally, the metadata file. 
+We usually use `GRaNIE` in the default mode, as the pseudobulk data mimics bulk data close enough from our experience.
+
+We want to emphasize in particular to use `filterData()` to filter both RNA and particularly ATAC to exclude peaks that have very low count values. We usually use `minNormalizedMean_peaks_bulk = 5` and `minNormalizedMean_RNA_bulk = 1` although other values may be reasonable too. Let us know what your experiences are, we are happy for any feedback. Especially for analyses with many clusters, many peaks have very low means from our experience with consequently low variation - so excluding them may be a better idea than keeping them to remove noise.
+
+Depending on the number of clusters, `GRaNIE` may run a little longer than the typical bulk analysis but from our experience not much longer.
+
+# Scripts and example data
+
+In our main repository for `GRaNIE` (outside Bioconductor), we provide a set of scripts that can help setting up a `GRaNIE` analysis for 10x multiome data. The scripts are located [here](https://git.embl.de/grp-zaugg/GRaNIE/-/tree/master/misc/singleCell). If you run into issues with the scripts, let us know!
+
+## Data processing and `GRaNIE` preparation
+We provide a script to takes  a `Seurat` object with `ATAC` and `RNA` assays as input and processes the data according to what we described here in this vignette, performs 10 and more clustering runs for resolutions between 0.5 and 20 (user-adjustable) and produces the properly processed count and metadata files that can be directly used as input for `GRaNIE`. 
+
+## Running `GRaNIE`  in batch mode
+We also provide a script that runs `GRaNIE` in batch mode, once per *cluster resolution* as produced in the step before. The input is essentially a folder, along with `GraNIE` parameters for a standard analysis, and the function then iterates over all input files and performs one `GraNIE` analysis at a time for a user-provided list of cluster resolutions.
+
+# Further notes and FAQs
+
+Over time, we will add here further notes and compile a list of FAQs.
+
+# Session Info
+
+```{r, class.output="scroll-200"}
+ sessionInfo()
+```

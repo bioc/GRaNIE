@@ -241,6 +241,8 @@ There are more plots that are generated, make sure to examine these plots closel
 
 Now it is time to add data for TFs and predicted TF binding sites (TFBS)! Our `GRaNIE` package requires pre-computed TFBS that need to be in a specific format. In brief, a 6-column bed file must be present for each TF, with a specific file name that starts with the name of the TF, an arbitrary and optional suffix (here: `_TFBS`) and a particular file ending (supported are `bed` or `bed.gz`; here, we specify the latter). All these files must be located in a particular folder that the `addTFBS()` functions then searches in order to identify those files that match the specified patterns. We provide example TFBS for the 3 genome assemblies we support. After setting this up, we are ready to overlap the TFBS and the peaks by calling the function `overlapPeaksAndTFBS()`.
 
+**For more details how to download the full set of TF and TFBS data, see the [Package Details](GRaNIE_packageDetails.html#input_TF).**
+
 For more parameter details, see the R help (`?addTFBS` and `?overlapPeaksAndTFBS`).
 
 ```{r addTFBS, echo=TRUE, include=TRUE, eval = FALSE, class.output="scroll-200", results='hold'}

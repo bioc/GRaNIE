@@ -267,6 +267,9 @@ genome-wide TFBS can be used. For convenience and orientation, we
 provide TFBS predictions for HOCOMOCO-based TF motifs that were used
 with `PWMScan` for `hg19`, `hg38` and `mm10`. Check the [workflow vignette for an example](GRaNIE_workflow.html).
 
+**We recommend to download the full HOCOMOCO TFBS data from [here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs). In short, we provide example files for all supported genome assemblies (*hg19*, *hg38* and *mm10*) that are fully compatible with `GRaNIE` as separate downloads. While we also provide TFBS data for FIMO, we recommend using HOCOMOCO.**
+
+
 However, you may also use your own TFBS data, and we provide full
 flexibility in doing so. Only some manual preparation is necessary.
 Briefly, if you decide to use your own TFBS data, you have to prepare
