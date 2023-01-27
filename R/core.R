@@ -162,9 +162,8 @@ initializeGRN <- function(objectMetadata = list(),
 #' when overlapping peaks are found) or (the default) should an error be raised?
 #' @param keepOriginalReadCounts \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the original read counts as provided to the function be kept in addition to
 #' storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.
-#' @param geneAnnotation_customHost \code{NULL} or Character(1). Default \code{NULL}. The \code{biomaRt} host to use. 
-#' By default, the newest host is selected for the most recent genome assembly versions (\url{https://www.ensembl.org}) while \url{https://grch37.ensembl.org} is used
-#' for hg19. This parameter can specify a custom host instead, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}.
+#' @param geneAnnotation_customVersion \code{NULL} or Character(1). Default \code{NULL}. The Ensembl version to use for genome annotation retrieval via \code{biomaRt}, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}. 
+#' By default, the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead .
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with added data from this function (e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 #' @seealso \code{\link{plotPCA_all}}
@@ -183,7 +182,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                     additionalParams.l = list(),
                     allowOverlappingPeaks= FALSE,
                     keepOriginalReadCounts = FALSE,
-                    geneAnnotation_customHost = NULL,
+                    geneAnnotation_customVersion = NULL,
                     forceRerun = FALSE) {
   
   start = Sys.time()
@@ -211,7 +210,9 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
   checkmate::assertFlag(keepOriginalReadCounts)
   checkmate::assertFlag(allowOverlappingPeaks)
-  checkmate::assert(checkmate::checkNull(geneAnnotation_customHost), checkmate::checkCharacter(geneAnnotation_customHost, min.chars = 1, len = 1))
+  checkmate::assert(checkmate::checkNull(geneAnnotation_customVersion), checkmate::assertSubset(as.character(geneAnnotation_customVersion), biomaRt::listEnsemblArchives()$version))
+  
+
   
   checkmate::assertFlag(forceRerun)
   
@@ -412,7 +413,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     
 
 
-    GRN = .populateGeneAnnotation(GRN, customHost = geneAnnotation_customHost)
+    GRN = .populateGeneAnnotation(GRN, customVersion = geneAnnotation_customVersion)
     
   } else {
       .printDataAlreadyExistsMessage()
@@ -512,14 +513,16 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 }
 
 #' @importFrom biomaRt useEnsembl getBM
-.retrieveAnnotationData <- function(genomeAssembly, customHost = NULL) {
+.retrieveAnnotationData <- function(genomeAssembly, customVersion = NULL) {
     
     futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt for ", genomeAssembly, "... This may take a while"))
     
     params.l = .getBiomartParameters(genomeAssembly)
     
-    if (!is.null(customHost)) {
-        params.l[["host"]] =customHost
+    if (!is.null(customVersion)) {
+        ensemblVersion = customVersion
+    } else {
+        ensemblVersion = NULL
     }
     
     columnsToRetrieve = c("chromosome_name", "start_position", "end_position",
@@ -531,14 +534,14 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     while(!is.data.frame(geneAnnotation) && attempt <= 3 ) {
         attempt <- attempt + 1
         geneAnnotation = tryCatch({ 
-            ensembl = biomaRt::useEnsembl(biomart = "genes", host = params.l[["host"]], dataset = params.l[["dataset"]], mirror = mirrors[attempt])
+            ensembl = biomaRt::useEnsembl(biomart = "genes", version = ensemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
             biomaRt::getBM(attributes = columnsToRetrieve, mart = ensembl)
             
         }
         )
     } 
-    
-    
+
+  
     if (!is.data.frame(geneAnnotation)) {
         
         error_Biomart = "A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl. This is often caused by an unresponsive Ensembl site. Try again at a later time. Note that this error is not caused by GRaNIE but external services."
@@ -647,7 +650,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
 }
 
-.populateGeneAnnotation <- function (GRN, customHost = NULL) {
+.populateGeneAnnotation <- function (GRN, customVersion = NULL) {
 
 
   countsRNA.m  = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
@@ -659,7 +662,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   rowMedians_rna = matrixStats::rowMedians(countsRNA.m)
   CV_rna = matrixStats::rowSds(countsRNA.m) /  rowMeans_rna
   
-  genomeAnnotation.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly, customHost = customHost)
+  genomeAnnotation.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly, customVersion = customVersion)
   
   metadata_rna = tibble::tibble(gene.ENSEMBL = rownames(countsRNA.m), 
                                 gene.mean = rowMeans_rna, 
