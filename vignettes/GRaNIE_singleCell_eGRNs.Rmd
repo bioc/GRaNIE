@@ -1,6 +1,6 @@
 ---
 title: "GRaNIE single-cell eGRN inference"
-author: "Christian Arnold, Judith Zaugg, Rim Moussa"
+author: "Christian Arnold"
 date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('GRaNIE')`"
 abstract: >
@@ -53,7 +53,7 @@ pre[class] {
 
 This vignettes summarizes our views and experiences on running `GRaNIE` for 10x multiome data. While `GRaNIE` has been developed originally for bulk data, it can in fact also be applied, with particular preprocessing, to single-cell data. As many tools that integrate single-cell data, some kind of aggregation is necessary to reduce the scarcity of the data - ATAC in particular. While many tools do this implicitly in their methods, somewhat hidden from the user, we employ here a different approach: We preprocess the data manually and feed it into `GRaNIE` in a pseudobulk manner so that the original frameworks works just as well, while giving a lot of flexibility to the user in how exactly the data preprocessing and granularity of the data should look like. From our experience, very often this is very question-specific and data-dependent, and no universal solution exists that works equally well for everything.
 
-**Disclaimer:: These are just recommendations here based on our (limited) experience and testing so far. We cannot guarantee this works also well for your data. Feel free to contact us for questions and feedback, we are happy for discussions and comments.**
+**Disclaimer: These are just recommendations here based on our (limited) experience and testing so far. We cannot guarantee this works also well for your data. Feel free to contact us for questions and feedback, we are happy for discussions and comments.**
 
 # General notes and sources
 
@@ -65,7 +65,7 @@ In this vignette, we pretty much follow [this Seurat vignette](https://satijalab
 
 # Prerequisites: a multimodal Seurat object
 
-The first step is to create a multimodal `Seurat` object with paired transcriptome and ATAC-seq profiles. For details on how to generate it, you only need the output of, for example, `CellRanger ARC` for 10x multiome experiments. You may check various excellent tutorials such as this [this Seurat vignette](https://satijalab.org/seurat/articles/weighted_nearest_neighbor_analysis.html#wnn-analysis-of-10x-multiome-rna-atac-1). 
+The first step is to create a multimodal `Seurat` object with paired transcriptome and ATAC-seq profiles. For details on how to generate it, you only need the output of, for example, `CellRanger ARC` for 10x multiome experiments. You may check various excellent tutorials such as [this Seurat vignette](https://satijalab.org/seurat/articles/weighted_nearest_neighbor_analysis.html#wnn-analysis-of-10x-multiome-rna-atac-1). 
 
 
 # Data preprocessing

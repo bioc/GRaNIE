@@ -1,6 +1,6 @@
 ---
 title: "Package Details"
-author: "Christian Arnold, Judith Zaugg, Rim Moussa"
+author: "Christian Arnold"
 date: "`r doc_date()`"
 package: "`r BiocStyle::pkg_ver('GRaNIE')`"
 abstract: >

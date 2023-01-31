@@ -1,6 +1,6 @@
 ---
 title: "GRaNIE Workflow Example"
-author: "Christian Arnold, Judith Zaugg, Rim Moussa"
+author: "Christian Arnold"
 date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('GRaNIE')`"
 abstract: >

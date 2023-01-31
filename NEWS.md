@@ -20,26 +20,26 @@
 # GRaNIE 1.3.13-1.3.14 (2023-01-20)
 
 ## New features
-- the function `plotDiagnosticPlots_peakGene` (which is also called indirectly from `addConnections_peak_gene` when setting `plotDiagnosticPlots = TRUE`) now stores the plot data for the QC plots from the first page into the GRN object. It is stored in `GRN@stats$peak_genes` 
-- the columns of the result table from `getGRNConnections` are now explained in detail in the R help, and we reference this from the Vignette and other places
+- the function `plotDiagnosticPlots_peakGene()` (which is also called indirectly from `addConnections_peak_gene()` when setting `plotDiagnosticPlots = TRUE`) now stores the plot data for the QC plots from the first page into the GRN object. It is stored in `GRN@stats$peak_genes` 
+- the columns of the result table from `getGRNConnections()` are now explained in detail in the R help, and we reference this from the Vignette and other places
 - various significant Vignette updates
 
 ## Bug fixes
-- optimized the column names for the function `getGRNConnections`, which now does not return duplicate columns for particular cases anymore
-- improved printing in the log for the function `filterData` and `addData`
-- the `loadExampleObject` function has been optimized and should now force download an example object when requesting it.
+- optimized the column names for the function `getGRNConnections()`, which now does not return duplicate columns for particular cases anymore
+- improved printing in the log for the function `filterData()` and `addData()`
+- the `loadExampleObject()` function has been optimized and should now force download an example object when requesting it.
 - the package version as stored in the GRN object now works correctly.
 
 ## Minor changes
 - further code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
-- the default gene types for `addConnections_peak_gene` and `plotDiagnosticPlots_peakGene` have been homogenized and changed to `list(c("all"), c("protein_coding"))`. Before, the default was `list(c("protein_coding", "lincRNA"))`, but we decided to now split this into two separate lists: Once for all genes irrespective of the gene type and once for only protein-coding genes. As before, `lincRNA` or other gene types can of course still be selected and chosen.
+- the default gene types for `addConnections_peak_gene()` and `plotDiagnosticPlots_peakGene()` have been homogenized and changed to `list(c("all"), c("protein_coding"))`. Before, the default was `list(c("protein_coding", "lincRNA"))`, but we decided to now split this into two separate lists: Once for all genes irrespective of the gene type and once for only protein-coding genes. As before, `lincRNA` or other gene types can of course still be selected and chosen.
 - various minor changes
 
 
 # GRaNIE 1.3.12 (2022-12-22)
 
 ## Bug fixes
-- bug fix in `plotCommunitiesEnrichment` that was introduced due to the `tidyselect` 1.2.0 changes
+- bug fix in `plotCommunitiesEnrichment()` that was introduced due to the `tidyselect` 1.2.0 changes
 
 ## Minor changes
 - further code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
@@ -47,7 +47,7 @@
 # GRaNIE 1.3.11 (2022-12-16)
 
 ## Major changes
-- the default URL for the example `GRN` object in `loadExampleObject` had to be changed due to changes in the IT infrastructure. The new stable default URL is now \url{https://git.embl.de/grp-zaugg/GRaNIE/-/raw/master/data/GRN.rds}, in the same Git repository that provides `GRaNIE` outside of Bioconductor.
+- the default URL for the example `GRN` object in `loadExampleObject()` had to be changed due to changes in the IT infrastructure. The new stable default URL is now \url{https://git.embl.de/grp-zaugg/GRaNIE/-/raw/master/data/GRN.rds}, in the same Git repository that provides `GRaNIE` outside of Bioconductor.
 
 ## Bug fixes
 - fixing bugs introduced due to the tidyverse 1.2.0 related code cleaning
@@ -62,12 +62,12 @@
 - code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
 
 ## New features
-- new argument for `addConnections_peak_gene`: `TADs_mergeOverlapping`. See the R help for more details.
+- new argument for `addConnections_peak_gene()`: `TADs_mergeOverlapping`. See the R help for more details.
 
 # GRaNIE 1.3.9 (2022-12-14)
 
 ## New features
-- new argument for `addConnections_peak_gene`: `shuffleRNACounts`. See the R help for more details.
+- new argument for `addConnections_peak_gene()`: `shuffleRNACounts`. See the R help for more details.
 
 ## Minor changes
 - first round of code cleaning in light of the `tidyselect` changes in version 1.2.0 to eliminate deprecated warnings
@@ -78,10 +78,10 @@
 - the `topGO` package is now  required package and not optional anymore. The reasoning for this is that the standard vignette should run through with the default arguments, and `GO` annotation is the default ontology so `topGO` is needed for this. Despite this package still being optional from a strict workflow point of view, we feel this is a better way and improves user friendliness by not having to install another package in the middle of the workflow.
 
 ## Minor changes
-- in `initializeGRN`, the `objectMetadata` argument is now checked whether it contains only atomic elements, and an error is thrown if this is not the case. As this list is not supposed to contain real data, checking this prevents the print(GRN) function to unnecessarily print the whole content of the provided object metadata, thereby breaking the original purpose.
+- in `initializeGRN()`, the `objectMetadata` argument is now checked whether it contains only atomic elements, and an error is thrown if this is not the case. As this list is not supposed to contain real data, checking this prevents the print(GRN) function to unnecessarily print the whole content of the provided object metadata, thereby breaking the original purpose.
 
 ## New features
-- `addTFBS` got two more arguments to make it more flexible. Now, it is possible to specify the file name of the translation table to be used via the argument `translationTable`, which makes it more flexible than the previously hard-coded name `"translationTable.csv`. In addition, the column separator for this file can now be specified via the argument `translationTable_sep`
+- `addTFBS()` got two more arguments to make it more flexible. Now, it is possible to specify the file name of the translation table to be used via the argument `translationTable`, which makes it more flexible than the previously hard-coded name `"translationTable.csv`. In addition, the column separator for this file can now be specified via the argument `translationTable_sep`
 - Overlapping TFBS data with the peak is now more error-tolerant and does not error out in case that some chromosome or contig names from the TFBS BED files contain elements the size of which cannot be retrieved online. This was the case for some contig names with the suffix `decoy`, for example. If such elements are found, a warning is now thrown and they are ignored as they are usually not wanted anyway.
 - in case a GRN objects contains 0 connections (e..g, because of too strict filtering), subsequent functions as well as the `print` function now give a more user-friendly warning / error message.
 
@@ -101,9 +101,9 @@
 ## Major changes and new features
 - major object changes and optimizations, particularly related to storing the count matrices in an optimized and simpler format. In short, the count matrices are now stored either as normal or sparse matrices, depending on the amount of zeros present. In addition, only the counts after normalization are saved, the raw counts before applying normalization are not stored anymore. If no normalization is wished by the user, as before, the "normalized" counts are equal to the raw counts. `GRaNIE` is now more readily applicable for larger analyses and single-cell analysis even though we just started actively optimizing for it, so we cannot yet recommend applying our framework in a single-cell manner. Older GRN objects are automatically changed internally when executing the major functions upon the first invocation.
 - various Documentation and R help updates
-- the function `generateStatsSummary` now doesnt alter the stored filtered connections in the object anymore. This makes its usage more intuitive and it can be used anywhere in the workflow.
+- the function `generateStatsSummary()` now doesnt alter the stored filtered connections in the object anymore. This makes its usage more intuitive and it can be used anywhere in the workflow.
 - removed redundant `biomaRt` calls in the code. This saves time and makes the code less vulnerable to timeout issues caused by remote services
-- due to the changes described above, the function `plotPCA_all` now can only plot the normalized counts and not the raw counts anymore (except when no normalization is wanted)
+- due to the changes described above, the function `plotPCA_all()` now can only plot the normalized counts and not the raw counts anymore (except when no normalization is wanted)
 - the GO enrichments are now also storing, for each GO term, the ENSEMBL IDs of the genes that were found in the foreground. This facilitates further exploration of the enrichment results.
 
 ## Minor changes
@@ -118,9 +118,9 @@
 - the eGRN graph structure as built by `build_eGRN_graph()` in the `GRaNIE` object is now reset whenever the function `filterGRNAndConnectGenes()` is successfully executed to make sure that enrichment functions etc are not using an outdated graph structure. 
 - the landing page of the website has been extended and overhauled
 - removed some dependency packages and moved others into `Suggests` to lower the installation burden of the package. In addition, removed `topGO` from the `Depends` section (now in `Suggests`) and removed `tidyverse` altogether (before in `Depends`). Detailed explanations when and how the packages listed under `Suggests` are needed can now be found in the new [Package Details Vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#installation) and are clearly given to the user when executing the respective functions
-- major updates to the function `getGRNConnections`, which now has more arguments allowing a more fine-tuned and rich retrieval of eGRN connections, features and feature metadata
-- a new function `add_featureVariation` to quantify and interpret multiple sources of biological and technical variation for features (TFs, peaks, and genes) in a GRN object, see the R help for more information 
-- `filterGRNAndConnectGenes` now doesnt include feature metadata columns to save space in the result data frame that is created. The help has been updated to make clear that `getGRNConnections` includes these features now.
+- major updates to the function `getGRNConnections()`, which now has more arguments allowing a more fine-tuned and rich retrieval of eGRN connections, features and feature metadata
+- a new function `add_featureVariation()` to quantify and interpret multiple sources of biological and technical variation for features (TFs, peaks, and genes) in a GRN object, see the R help for more information 
+- `filterGRNAndConnectGenes()` now doesnt include feature metadata columns to save space in the result data frame that is created. The help has been updated to make clear that `getGRNConnections()` includes these features now.
 
 ## Minor changes
 - small changes in the GRN object structure, moved `GRN@data$TFs@translationTable` to `GRN@annotation@TFs`. All exported functions run automatically a small helper function to make this change for any GRN object automatically to adapt to the new structure
@@ -200,8 +200,8 @@
 ## Major changes and new features
 
 - improved PCA plotting, PCA plots are now produced for both raw and normalized data
-- new filters for the function *filterGRaNIEAndConnectGenes* (*peak_gene.maxDistance*) as well as more flexibility how to adjust the peak-gene raw p-values for multiple testing (including the possibility to use IHW - experimental)
-- new function *plotDiagnosticPlots_TFPeaks* for plotting (this function was previously called only internally, but is now properly exported), in analogy to *plotDiagnosticPlots_peakGene*
+- new filters for the function `filterGRaNIEAndConnectGenes()` (`peak_gene.maxDistance`) as well as more flexibility how to adjust the peak-gene raw p-values for multiple testing (including the possibility to use IHW - experimental)
+- new function `plotDiagnosticPlots_TFPeaks()` for plotting (this function was previously called only internally, but is now properly exported), in analogy to `plotDiagnosticPlots_peakGene()`
 
 ## Bug fixes
 
