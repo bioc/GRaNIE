@@ -216,11 +216,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
   checkmate::assertFlag(forceRerun)
   
-  
-  # For space reasons, do not store the actual count matrices as part of the log
-  GRN@config$functionParameters$addData$parameters$counts_peaks = paste0("Data frame of size ", nrow(counts_peaks), " x ", ncol(counts_peaks))
-  GRN@config$functionParameters$addData$parameters$counts_rna   = paste0("Data frame of size ", nrow(counts_rna), " x ", ncol(counts_rna))
-  
+
   if (is.null(GRN@data$peaks$counts) |
       is.null(GRN@data$peaks$counts_metadata) | 
       is.null(GRN@data$RNA$counts) |
@@ -288,8 +284,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     
     GRN@data$RNA$counts_metadata = tibble::tibble(ID = counts_rna$ENSEMBL, isFiltered = FALSE)
     
+    # Store peak metadata and normalize peak IDS (e.g., replacing second ":" by "-")
     GRN@data$peaks$counts_metadata = .createConsensusPeaksDF(counts_peaks$peakID) 
     stopifnot(c("chr", "start", "end", "peakID", "isFiltered") %in% colnames(GRN@data$peaks$counts_metadata))
+    # Make sure peak ID stored here is always the same as in the metadata
+    counts_peaks$peakID = GRN@data$peaks$counts_metadata$peakID
     
     #  Calculate GC content of peaks which we need before any normalization
     
