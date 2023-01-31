@@ -1,6 +1,13 @@
+
+# GRaNIE 1.2.4 (2023-01-31)
+
+## Bug fix
+- due an external change at UCSC, forced to require at least version `1.34.8` of the `GenomeInfoDb` dependency. For more information, see [here](https://github.com/Bioconductor/GenomeInfoDb/issues/82). Otherwise, `GenomeInfoDb::getChromInfoFromUCSC("hg38")` returns an error.
+
+
 # GRaNIE 1.2.2 (2022-12-22)
 
-## Bug ix
+## Bug fix
 - bug fix in `plotCommunitiesEnrichment` that was caused by the `tidyverse` 1.2.0 related changes
 
 ## Minor changes
