@@ -1151,7 +1151,7 @@ filterData <- function (GRN,
   checkmate::assertNumber(maxNormalizedMean_peaks, lower = minNormalizedMean_peaks , null.ok = TRUE)
   checkmate::assertNumber(maxNormalizedMeanRNA, lower = minNormalizedMeanRNA, null.ok = TRUE)
   checkmate::assertCharacter(chrToKeep_peaks, min.len = 1, any.missing = FALSE, null.ok = TRUE)
-  checkmate::assertSubset(chrToKeep_peaks, GRN@data$peaks$counts_metadata %>% dplyr::pull(.data$chr) %>% unique() %>% as.character())
+  # checkmate::assertSubset(chrToKeep_peaks, GRN@data$peaks$counts_metadata %>% dplyr::pull(.data$chr) %>% unique() %>% as.character())
   
   checkmate::assertIntegerish(minSize_peaks, lower = 1, null.ok = TRUE)
   checkmate::assertIntegerish(maxSize_peaks, lower = dplyr::if_else(is.null(minSize_peaks), 1, minSize_peaks), null.ok = TRUE)
@@ -3563,7 +3563,7 @@ filterGRNAndConnectGenes <- function(GRN,
     futile.logger::flog.info(paste0("Inital number of rows left before all filtering steps: ", nrow(grn.filt)))
     
     if (! "all" %in% TF_peak.connectionTypes) {
-      checkmate::assertSubset(TF_peak.connectionTypes, .getAll_TF_peak_connectionTypes(GRN), empty.ok = FALSE)
+      checkmate::assertSubset(TF_peak.connectionTypes, GRN@config$TF_peak_connectionTypes, empty.ok = FALSE)
       futile.logger::flog.info(paste0(" Filter network and retain only rows with one of the following TF-peak connection types: ", paste0(TF_peak.connectionTypes, collapse = ", ")))
       futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering connection types: ", nrow(grn.filt)))
       grn.filt = dplyr::filter(grn.filt, .data$TF_peak.connectionType %in% TF_peak.connectionTypes)
@@ -4380,7 +4380,7 @@ generateStatsSummary <- function(GRN,
     GRN@stats$connections = .initializeStatsDF()
     
     if (TF_peak.connectionTypes == "all") {
-      TF_peak.connectionTypesAllComb =.getAll_TF_peak_connectionTypes(GRN)
+      TF_peak.connectionTypesAllComb = unique(GRN@config$TF_peak_connectionTypes)
     } else {
       TF_peak.connectionTypesAllComb = unique(TF_peak.connectionTypes)
     }
@@ -5275,17 +5275,6 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         message = "Could not find filtered connections (the slot GRN@connections$all.filtered[[\"0\"]] is NULL). Run the function filterGRNAndConnectGenes."
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
-}
-
-
-.getAll_TF_peak_connectionTypes <- function (GRN) {
-  
-  TF_peak.connectionTypesAll = unique(as.character(GRN@connections$TF_peaks[["0"]]$main$TF_peak.connectionType))
-  if (length(TF_peak.connectionTypesAll) > 1) {
-    # Dont use all, always separate between the different connection types
-    # TF_peak.connectionTypesAll = c(TF_peak.connectionTypesAll, "all")
-  }
-  TF_peak.connectionTypesAll 
 }
 
 

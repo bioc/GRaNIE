@@ -1,13 +1,13 @@
 
-
-# GRaNIE 1.3.18-1.3.19 (2023-01-31)
+# GRaNIE 1.3.18-1.3.20 (2023-02-01)
 
 ## Minor changes
 - Small vignette updates and fixing typos / improved wording
 
 ## Bug fixes
-- due to a change from USCS that affected `GenomeInfoDb::getChromInfoFromUCSC("hg38")` (see [here](https://github.com/Bioconductor/GenomeInfoDb/issues/82) for more details), the minimum required version of `GenomeInfoDb` had to be increased to `1.34.8`.
+- due to a change from USCS that affected `GenomeInfoDb::getChromInfoFromUCSC("hg38")` (see [here](https://github.com/Bioconductor/GenomeInfoDb/issues/82) for more details), the minimum required version of `GenomeInfoDb` had to be increased to `1.35.14`. If you have trouble installing the necessary version for `GenomeInfoDb`, shoot us a message and we will help you out!
 - small change in `addData()` so that peak IDs are stored with the same name in the object in case the user-provided peak IDs have the format `chr:start:end` as opposed to the required `chr:start-end`. `filterData()` otherwise incorrectly discarded all peaks because of the ID mismatch caused by the two different formats.
+- fixed a rare edge case in `filterGRNAndConnectGenes()` that caused an error when 0 TF-peak connections were found beforehand
 
 # GRaNIE 1.3.17 (2023-01-26)
 
