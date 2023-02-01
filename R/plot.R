@@ -1665,7 +1665,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
       
       for (allowMissingGenesCur in unique(GRN@stats$connections$allowMissingGenes)) {
         
-        for (TF_peak.connectionTypeCur in .getAll_TF_peak_connectionTypes(GRN)) {
+        for (TF_peak.connectionTypeCur in GRN@config$TF_peak_connectionTypes) {
           
           # Plot a summary page with the parameters used for the next page
           # 
@@ -1798,7 +1798,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
     allowMissingGenes = names(GRN@stats$connectionDetails.l[["0"]][[TF_peak.fdrs[1]]][[peak_gene.fdrs[1]]][[allowMissingTFs[1]]])
     
     
-    nElemsTotal = length(TF_peak.fdrs) * length(peak_gene.fdrs) * length(allowMissingTFs) * length(allowMissingGenes) * length(.getAll_TF_peak_connectionTypes(GRN))
+    nElemsTotal = length(TF_peak.fdrs) * length(peak_gene.fdrs) * length(allowMissingTFs) * length(allowMissingGenes) * length(GRN@config$TF_peak_connectionTypes)
     
     pb <- progress::progress_bar$new(total = nElemsTotal)
     
@@ -1812,7 +1812,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
           
           for (allowMissingGenesCur in allowMissingGenes) {
             
-            for (TF_peak.connectionTypeCur in .getAll_TF_peak_connectionTypes(GRN)) {
+            for (TF_peak.connectionTypeCur in GRN@config$TF_peak_connectionTypes) {
               
               pb$tick()
               
