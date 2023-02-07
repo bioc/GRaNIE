@@ -4,7 +4,7 @@ author: "Christian Arnold"
 date: "`r BiocStyle::doc_date()`"
 package: "`r BiocStyle::pkg_ver('GRaNIE')`"
 abstract: >
-        
+  This newest vignette focuses on how to use the `GRaNIE` package for single-cell data, the 10x multiome in particular. This vignette will be modified, extended and updated regularly, so stay tuned for our newest thoughts and recommendations as we explore the applicability of the package for the inference of single-cell eGRNs.
 vignette: >
   %\VignetteIndexEntry{Single-cell eGRN inference}
   %\VignetteEngine{knitr::rmarkdown}
