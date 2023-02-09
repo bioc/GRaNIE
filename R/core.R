@@ -5309,7 +5309,12 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     }
   }
   
-  dplyr::if_else(is.null(outputFolder), GRN@config$directories$output_plots, outputFolder)
+    if (is.null(outputFolder)) {
+        return(GRN@config$directories$output_plots)
+    } else {
+       return(outputFolder)
+    }
+ 
   
   
   

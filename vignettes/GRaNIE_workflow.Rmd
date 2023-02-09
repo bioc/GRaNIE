@@ -407,15 +407,14 @@ For more parameter details, see the R help (`?filterGRNAndConnectGenes`).
 
 ## Add TF-gene correlations (optional)
 
-Optionally, we can also include extra columns about the correlation of TF and genes directly. So far, only TF-enhancers and enhancer-genes have been correlated, but not directly TFs and genes. Based on a filtered set of TF-enhancer-gene connections, the function `add_TF_gene_correlation()` calculates the TF-gene correlation for each connection from the filtered set for which the TF is not missing.
+Optionally, we can also include extra columns about the correlation of TF and genes directly. So far, only TF-enhancers and enhancer-genes have been correlated, but not directly TFs and genes with each other. Based on a filtered set of TF-enhancer-gene connections, the function `add_TF_gene_correlation()` calculates the TF-gene correlation for each connection from the filtered set for which the TF is not missing.
 
 ```{r, include=TRUE, eval = TRUE, class.output="scroll-200"}
 GRN = add_TF_gene_correlation(GRN, corMethod = "pearson", nCores = 1, forceRerun = TRUE)
 ```
 
-As can be seen from the output, the Pearson correlation for 587 TF-gene pairs has been calculated. From the around 2500 connections we obtained above, since we set the parameter `allowMissingGenes = TRUE`, for the majority of the TF-enhancer-gene connections the gene is actually missing. That is, while a TF-enhancer connection below the specified significance threshold exists, no corresponding gene could be found that connects to the same enhancer, therefore setting the gene to *NA* rather than excluding the row altogether.
+As can be seen from the output, the Pearson correlation for all TF-gene pairs has been calculated. The newly calculated information is added to the object, and can be retrieved as shown in the next section. For more details, see the R help (`?add_TF_gene_correlation`).
 
-For more parameter details, see the R help (`?add_TF_gene_correlation`).
 
 Time to save our object again!
 

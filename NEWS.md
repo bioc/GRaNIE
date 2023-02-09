@@ -1,3 +1,10 @@
+# GRaNIE 1.3.22 (2023-02-09)
+
+## Minor changes
+- Small workflow vignette updates 
+
+## Bug fixes
+- we were informed that newer versions of `dplyr` changed their default behavior for the function `if_else` when `NULL` is involved, which caused an error. We changed the implementation to accommodate for that and now avoid `if_else` in this context to make it compatible with both old and new versions of `dplyr`
 
 # GRaNIE 1.3.18-1.3.21 (2023-02-01-2023-02-07)
 
@@ -5,7 +12,7 @@
 - Small vignette updates and fixing typos / improved wording
 
 ## Bug fixes
-- due to a change from USCS that affected `GenomeInfoDb::getChromInfoFromUCSC("hg38")` (see [here](https://github.com/Bioconductor/GenomeInfoDb/issues/82) for more details), the minimum required version of `GenomeInfoDb` had to be increased to `1.34.8`.
+- due to a change from USCS that affected `GenomeInfoDb::getChromInfoFromUCSC("hg38")` (see [here](https://github.com/Bioconductor/GenomeInfoDb/issues/82) for more details), the minimum required version of `GenomeInfoDb` had to be increased to `1.34.8`. If you have troubles installing at least this version, we recommend updating to the newest Bioconductor version 3.16 or (without warranties) use the following line to manually install the newest version directly from GitHub outside of Bioconductor (not recommended): `BiocManager::install("Bioconductor/GenomeInfoDb)"` 
 - small change in `addData()` so that peak IDs are stored with the same name in the object in case the user-provided peak IDs have the format `chr:start:end` as opposed to the required `chr:start-end`. `filterData()` otherwise incorrectly discarded all peaks because of the ID mismatch caused by the two different formats.
 - fixed a rare edge case in `filterGRNAndConnectGenes()` that caused an error when 0 TF-peak connections were found beforehand
 
