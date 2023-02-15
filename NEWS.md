@@ -1,4 +1,4 @@
-# GRaNIE 1.3.22 (2023-02-09)
+# GRaNIE 1.3.22-1.3.23 (2023-02-09-2023-02-15)
 
 ## Minor changes
 - Small workflow vignette updates 
