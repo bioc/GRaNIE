@@ -326,7 +326,7 @@
 .plot_density <- function(foreground.m, background.m, corMethod, file = NULL, ...) {
     
     start = Sys.time()
-    futile.logger::flog.info(paste0("Plotting density plots with foreground and background for each TF", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+    futile.logger::flog.info(paste0("Plotting density plots with foreground and background for each TF", ifelse(is.null(file), "", paste0(" to file ", file))))
     stopifnot(identical(colnames(foreground.m), colnames(background.m)))
     
     # 1. Determine maximum y-values across all TFs
@@ -392,7 +392,7 @@
 .plot_AR_thresholds  <- function(median.cor.tfs, median.cor.tfs.non, par.l, act.rep.thres.l, corMethod, file = NULL, ...) {
     
     start = Sys.time()
-    futile.logger::flog.info(paste0("Plotting AR summary plot", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+    futile.logger::flog.info(paste0("Plotting AR summary plot", ifelse(is.null(file), "", paste0(" to file ", file))))
     
     xlab=paste0("Median ", .firstLetterUppercase(corMethod), " correlation (r)")
     ylab=""
@@ -474,7 +474,7 @@
                            median.cor.tfs, median.cor.tfs.non, act.rep.thres.l, finalClassification = NULL,  file = NULL, ...) {
     
     start = Sys.time()
-    futile.logger::flog.info(paste0("Plotting AR heatmap", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+    futile.logger::flog.info(paste0("Plotting AR heatmap", ifelse(is.null(file), "", paste0(" to file ", file))))
     
     
     missingGenes = which(!TF_mapping.df.exp$TF.ID %in% colnames(sort.cor.m))

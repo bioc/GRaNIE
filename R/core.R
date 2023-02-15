@@ -1145,11 +1145,11 @@ filterData <- function (GRN,
   checkmate::assertSubset(chrToKeep_peaks, GRN@data$peaks$counts_metadata %>% dplyr::pull(.data$chr) %>% unique() %>% as.character())
   
   checkmate::assertIntegerish(minSize_peaks, lower = 1, null.ok = TRUE)
-  checkmate::assertIntegerish(maxSize_peaks, lower = dplyr::if_else(is.null(minSize_peaks), 1, minSize_peaks), null.ok = TRUE)
+  checkmate::assertIntegerish(maxSize_peaks, lower = ifelse(is.null(minSize_peaks), 1, minSize_peaks), null.ok = TRUE)
   checkmate::assertNumber(minCV_peaks, lower = 0, null.ok = TRUE)
-  checkmate::assertNumber(maxCV_peaks, lower = dplyr::if_else(is.null(minCV_peaks), 0, minCV_peaks), null.ok = TRUE)
+  checkmate::assertNumber(maxCV_peaks, lower = ifelse(is.null(minCV_peaks), 0, minCV_peaks), null.ok = TRUE)
   checkmate::assertNumber(minCV_genes, lower = 0, null.ok = TRUE)
-  checkmate::assertNumber(maxCV_genes, lower = dplyr::if_else(is.null(minCV_genes), 0, minCV_genes), null.ok = TRUE)
+  checkmate::assertNumber(maxCV_genes, lower = ifelse(is.null(minCV_genes), 0, minCV_genes), null.ok = TRUE)
   checkmate::assertFlag(forceRerun)
   
   GRN@data$peaks$counts_metadata$isFiltered = FALSE

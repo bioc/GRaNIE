@@ -70,7 +70,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     matrixCur = getCounts(GRN, type = "rna", asMatrix = TRUE, includeFiltered = !removeFiltered)
 
     fileCur = paste0(outputFolder, 
-                     dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput),
+                     ifelse(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput),
                      "_RNA.", type, ".pdf")
     if (!file.exists(fileCur) | forceRerun) {
         
@@ -92,7 +92,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     
     matrixCur = getCounts(GRN, type = "peaks", asMatrix = TRUE, includeFiltered = !removeFiltered)
     
-    fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), 
+    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), 
                                                   .getOutputFileName("plot_pca"), basenameOutput), "_peaks.", type, ".pdf")
     
     if (!file.exists(fileCur) | forceRerun) {
@@ -363,7 +363,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   # Enforce checking that they are identical
   checkmate::assertSetEqual(rownames(metadataTable), dataCols)
   
-  futile.logger::flog.info(paste0("  Performing and summarizing PCs across metadata for top ", varn, " features", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+  futile.logger::flog.info(paste0("  Performing and summarizing PCs across metadata for top ", varn, " features", ifelse(is.null(file), "", paste0(" to file ", file))))
   
   # Helper functions
   r2_fun <- function(x, y) {
@@ -504,7 +504,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     
     suffixFile = .getPermutationSuffixStr(permutationCur)
     
-    fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_TFPeak_fdr"), basenameOutput), 
+    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_TFPeak_fdr"), basenameOutput), 
                      suffixFile, ".pdf")
     
     
@@ -597,7 +597,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   
   
   start = Sys.time()
-  futile.logger::flog.info(paste0("Plotting GC diagnostic plots (for each TF)summary + TF-specific", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+  futile.logger::flog.info(paste0("Plotting GC diagnostic plots (for each TF)summary + TF-specific", ifelse(is.null(file), "", paste0(" to file ", file))))
   
   permIndex = as.character(perm)
   summary.df = GRN@connections$TF_peaks[[permIndex]]$summary %>% dplyr::filter(.data$TF_peak.connectionType == "expression")
@@ -650,7 +650,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 .plot_TF_peak_fdr <- function(GRN, perm, useGCCorrection, plotDetails = FALSE, file = NULL, width = 7, height = 7, nPagesMax = NULL, pages = NULL) {
   
   start = Sys.time()
-  futile.logger::flog.info(paste0("Plotting FDR curves for each TF", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+  futile.logger::flog.info(paste0("Plotting FDR curves for each TF", ifelse(is.null(file), "", paste0(" to file ", file))))
   
   pageCounter = 1  
   
@@ -903,7 +903,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
   if (!plotAsPDF) {
     filenameCurBase = NULL
   } else {
-    filenameCurBase = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_peakGene_diag"), basenameOutput), "_")
+    filenameCurBase = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_peakGene_diag"), basenameOutput), "_")
   }
   
   .plotDiagnosticPlots_peakGene_all(GRN, gene.types = gene.types, fileBase = filenameCurBase, 
@@ -942,7 +942,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
   
   if (!all(file.exists(filenames.all)) | forceRerun) {
     
-    futile.logger::flog.info(paste0("Plotting diagnostic plots for peak-gene correlations", dplyr::if_else(is.null(fileBase), "", paste0(" to file(s) with basename ", fileBase))))
+    futile.logger::flog.info(paste0("Plotting diagnostic plots for peak-gene correlations", ifelse(is.null(fileBase), "", paste0(" to file(s) with basename ", fileBase))))
     
     cols_keep = c("peak.ID", "gene.ENSEMBL", "peak_gene.r", "peak_gene.p_raw", "peak_gene.distance")
     
@@ -1599,7 +1599,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   
   if (type ==  "heatmap") {
     if (plotAsPDF) {
-      file = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_heatmap"), basenameOutput), ".pdf")
+      file = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_heatmap"), basenameOutput), ".pdf")
     } else {
       file = NULL
     }
@@ -1609,7 +1609,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   } else if (type ==  "boxplot") {
     
     if (plotAsPDF) {
-      file = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_boxplot"), basenameOutput), ".pdf")
+      file = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_boxplot"), basenameOutput), ".pdf")
     } else {
       file = NULL
     }
@@ -1637,7 +1637,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   
   start = Sys.time()
   
-  futile.logger::flog.info(paste0("Plotting connection summary", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+  futile.logger::flog.info(paste0("Plotting connection summary", ifelse(is.null(file), "", paste0(" to file ", file))))
   
   if ((!is.null(file) && !file.exists(file)) | is.null(file) | forceRerun) {
     
@@ -1776,7 +1776,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   if ((!is.null(file) && !file.exists(file))| is.null(file) | forceRerun) {
     
     
-    futile.logger::flog.info(paste0("Plotting diagnostic plots for network connections", dplyr::if_else(is.null(file), "", paste0(" to file ", file))))
+    futile.logger::flog.info(paste0("Plotting diagnostic plots for network connections", ifelse(is.null(file), "", paste0(" to file ", file))))
     
     
     if (!is.null(file)) {
@@ -1939,7 +1939,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   
-  fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_generalNetworkStats"), basenameOutput), ".pdf")
+  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_generalNetworkStats"), basenameOutput), ".pdf")
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
     
     if (plotAsPDF) {
@@ -2178,7 +2178,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
-  fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_generalEnrichment"), basenameOutput), ".pdf")
+  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_generalEnrichment"), basenameOutput), ".pdf")
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
     
     if (plotAsPDF) {
@@ -2350,7 +2350,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   .checkGraphExistance(GRN)
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
-  fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_communityStats"), basenameOutput), ".pdf")
+  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_communityStats"), basenameOutput), ".pdf")
   
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
     
@@ -2564,7 +2564,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   }
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
-  fileCur = paste0(outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_communityEnrichment"), basenameOutput), ".pdf")
+  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_communityEnrichment"), basenameOutput), ".pdf")
   
   futile.logger::flog.info(paste0("Including terms only if overlap is at least ", nSignificant, " genes."))
   
@@ -2943,7 +2943,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   }
   
   fileCur = paste0(outputFolder, 
-                   dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_TFEnrichment"), basenameOutput), 
+                   ifelse(is.null(basenameOutput), .getOutputFileName("plot_TFEnrichment"), basenameOutput), 
                    ".pdf")
   
   if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
@@ -3443,7 +3443,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     
     
     if (plotAsPDF) {
-        futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, dplyr::if_else(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
+        futile.logger::flog.info(paste0("Plotting GRN network to ", outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"))
         grDevices::pdf(file = paste0(outputFolder,"/", ifelse(is.null(basenameOutput), .getOutputFileName("plot_network"), basenameOutput),".pdf"), width = pdf_width, height = pdf_height )
     } else {
         futile.logger::flog.info(paste0("Plotting GRN network"))
