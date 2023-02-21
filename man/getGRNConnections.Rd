@@ -7,7 +7,7 @@
 getGRNConnections(
   GRN,
   type = "all.filtered",
-  permuted = FALSE,
+  background = FALSE,
   include_TF_gene_correlations = FALSE,
   include_TFMetadata = FALSE,
   include_peakMetadata = FALSE,
@@ -20,7 +20,7 @@ getGRNConnections(
 
 \item{type}{Character. One of \code{TF_peaks}, \code{peak_genes}, \code{TF_genes} or \code{all.filtered}. Default \code{all.filtered}. The type of connections to retrieve.}
 
-\item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
+\item{background}{Integer (0 or 1). Default \code{0}. Either \code{0} or \code{1}). Here, \code{0} refers to the real (foreground) while \code{1} to the background.}
 
 \item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.}
 
@@ -79,7 +79,7 @@ data frame that is returned has different columns, which however can be divided 
 }
 \description{
 Returns stored connections/links (either TF-peak, peak-genes, TF-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}).
-Additional metacolumns (TF, peak and gene metadata) can be added optionally. 
+Additional meta columns (TF, peak and gene metadata) can be added optionally. 
 \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{

@@ -269,7 +269,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     counts_rna$ENSEMBL = gsub("\\..+", "", counts_rna$ENSEMBL, perl = TRUE)
     
     # Check uniqueness of IDs
-    nDuplicateRows = nrow(counts_rna) - length(unique(counts_rna$ENSEMBL))
+    nDuplicateRows = nrow(counts_rna) - dplyr::n_distinct(counts_rna$ENSEMBL)
     if (nDuplicateRows > 0) {
       message = paste0(" Found ", nDuplicateRows, " duplicate rows in RNA-Seq data, consolidating them by summing them up.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
@@ -342,7 +342,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
       colnames(GRN@data$metadata)[1] = "sampleID"
       
       # Assume the ID is in column 1, has to be unique
-      if (nrow(GRN@data$metadata) > length(unique(GRN@data$metadata$sampleID))) {
+      if (nrow(GRN@data$metadata) > dplyr::n_distinct(GRN@data$metadata$sampleID)) {
         message = paste0("The first column in the sample metadata table must contain only unique values, as it is used as sample ID. Make sure the values are unique.")
         tbl_ids = table(GRN@data$metadata$sampleID)
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
@@ -729,8 +729,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     #ggplot2::ggplot(GC_classes.df , ggplot2::aes(GC.class, n_rel)) + geom_bar(stat = "identity") + ggplot2::theme_bw()
     
     
-    GRN@stats$peaks = list()
-    GRN@stats$peaks$GC = GC_classes.df
+    GRN@stats$GC = list()
+    GRN@stats$GC$peaks = GC_classes.df
     
     GRN
 }
@@ -1201,7 +1201,7 @@ filterData <- function (GRN,
   
   
   # Remove genes with small rowMeans
-  #Only for real data, not for permuted (rowmeans is equal anyway)
+  #Only for real data, not for background (rowmeans is equal anyway)
   # Filter peaks
   futile.logger::flog.info("FILTER RNA-seq")
   genes.CV = .filterGenesByMeanCV(GRN, 
@@ -1949,7 +1949,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     idColumns = c(idColumns, "TF.name")
     
     # Check uniqueness of TF names
-    if (length(unique(data$TF.name)) < nrow(data)) {
+    if (dplyr::n_distinct(data$TF.name) < nrow(data)) {
       message = "TF names must be unique, but at least 2 TFs have the same TF name or TF names are missing."
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
@@ -2081,7 +2081,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
       
       futile.logger::flog.info(paste0(" ", .getPermStr(permutationCur), "\n"))
       permIndex = as.character(permutationCur)
-      permSuffix = ifelse(permutationCur == 0, "", ".permuted")
+      permSuffix = ifelse(permutationCur == 0, "", ".background")
       
       if (is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]])) {
         if (is.null(GRN@data$TFs$classification[[permIndex]])) {
@@ -2256,10 +2256,10 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @param connectionTypes Character vector. Default \code{expression}. Vector of connection types to include for the TF-peak connections. If an additional connection type is specified here, it has to be available already within the object (EXPERIMENTAL). See the function \code{\link{addData_TFActivity}} for details.
 #' @param removeNegativeCorrelation  Vector of \code{TRUE} or \code{FALSE}. Default \code{FALSE}. EXPERIMENTAL. Must be a logical vector of the same length as the parameter \code{connectionType}. Should negatively correlated TF-peak connections be removed for the specific connection type? For connection type expression, the default is \code{FALSE}, while for any TF Activity related connection type, we recommend setting this to \code{TRUE}.  
 #' @param maxFDRToStore Numeric[0,1]. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.
-#' @param addForPermuted \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for permuted data. Leave at \code{TRUE} unless you know what you are doing.
-#' @param useGCCorrection \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?
-#' @param percBackground_size Numeric[0,100]. Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
-#' @param percBackground_resample \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
+#' @param addForBackground \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Add connections also for background data. Leave at \code{TRUE} unless you know what you are doing.
+#' @param useGCCorrection \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs? For more details, see the Package Details vignette.
+#' @param percBackground_size Numeric[0,100]. Default 75. EXPERIMENTAL. Percentage of the bakground to use as basis for sampling. If set to 0, an automatic iterative procedure will identify the maximum percentage so that all relevant GC bins with a rel. frequency above 5% from the foreground can be matched. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
+#' @param percBackground_resample \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @template forceRerun
 #' @seealso \code{\link{plotDiagnosticPlots_TFPeaks}}
 #' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 
@@ -2273,7 +2273,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
                                     connectionTypes = c("expression"),
                                     removeNegativeCorrelation = c(FALSE),
                                     maxFDRToStore = 0.3, 
-                                    addForPermuted = TRUE,
+                                    addForBackground = TRUE,
                                     useGCCorrection = FALSE, percBackground_size = 75, percBackground_resample = TRUE,
                                     forceRerun = FALSE) {
   
@@ -2287,7 +2287,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
   checkmate::assertFlag(plotDiagnosticPlots)
   checkmate::assertFlag(plotDetails)
   checkmate::assertChoice(corMethod, c("pearson", "spearman"))
-  checkmate::assertFlag(addForPermuted)
+  checkmate::assertFlag(addForBackground)
   
   GRN = .checkAndUpdateConnectionTypes(GRN) # For compatibility with older versions
   checkmate::assertSubset(connectionTypes, GRN@config$TF_peak_connectionTypes, empty.ok = FALSE)
@@ -2319,7 +2319,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     for (permutationCur in 0:.getMaxPermutation(GRN)) {
         
-      if(!addForPermuted & permutationCur != 0) {
+      if(!addForBackground & permutationCur != 0) {
           next
       }
       
@@ -2340,7 +2340,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       
       
       # GC plots, empty when no GC correction should be done
-      GRN@stats$plots_GC = resFDR.l[["plots_GC"]]
+      GRN@stats$GC$TFs_GC_correction_plots = resFDR.l[["plots_GC"]]
+      GRN@stats$GC$TFs_GC_correction       = resFDR.l[["GC_details"]]
       rm(resFDR.l)
       
       
@@ -2366,7 +2367,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 
 
 .computeTF_peak.fdr <- function(GRN, perm, connectionTypes, corMethod = "pearson", useGCCorrection = FALSE, 
-                                removeNegativeCorrelation, maxFDRToStore = 0.3 , percBackground_size = 75, percBackground_resample = TRUE, plotDetails = FALSE, backgroundSize_min = 1000) {
+                                removeNegativeCorrelation, maxFDRToStore = 0.3 , percBackground_size = 75, 
+                                percBackground_resample = TRUE, plotDetails = FALSE, backgroundSize_min = 1000) {
   
   start = Sys.time()
   checkmate::assertIntegerish(backgroundSize_min, lower = 100)
@@ -2435,17 +2437,27 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     stopifnot(identical(colnames(sort.cor.m.sort), colnames(peak_TF_overlap.df)))
     
-    futile.logger::flog.info(paste0("  Compute FDR for each TF. This may take a while..."))
+    if (useGCCorrection) {
+        futile.logger::flog.info(paste0("  Compute FDR for each TF (GC-aware). This may take a while..."))
+    } else {
+        futile.logger::flog.info(paste0("  Compute FDR for each TF. This may take a while...")) 
+    }
+    
     
     pb <- progress::progress_bar$new(total = length(allTF))
     
-    peaksFiltered = GRN@data$peaks$counts_metadata %>% dplyr::filter(!.data$isFiltered) 
+    peaksFiltered = GRN@data$peaks$counts_metadata %>% 
+        dplyr::filter(!.data$isFiltered)  %>%
+        dplyr::left_join(GRN@annotation$peaks %>% dplyr::select(peak.ID, peak.GC.class, peak.GC.perc, peak.width), by = c("peakID" = "peak.ID"))
     
     if (!useGCCorrection) {
       minPerc = 100
       # Since we do not control for this, we set it to NA
       background_match_success = NA
     }
+    
+    # Stores GC-specific extra data
+    GC_classes_all.l = list()
     
     for (TFCur in allTF) {
       
@@ -2474,30 +2486,30 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         
         # Get GC info from those peaks from the foreground
         GC_classes_foreground.df = peaksForeground %>%
-          dplyr::group_by(.data$GC_class) %>%
-          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak_width), peak_width_sd = sd(.data$peak_width)) %>%
+          dplyr::group_by(.data$peak.GC.class) %>%
+          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
           dplyr::ungroup() %>% 
-          tidyr::complete(.data$GC_class, fill = list(n = 0)) %>%
+          tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
           dplyr::mutate(n_rel = .data$n / nPeaksForeground, type = "foreground") %>%
           dplyr::arrange(dplyr::desc(.data$n_rel))
         
         GC_classes_background.df = peaksBackground %>%
-          dplyr::group_by(.data$GC_class) %>%
-          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak_width), peak_width_sd = sd(.data$peak_width)) %>%
+          dplyr::group_by(.data$peak.GC.class) %>%
+          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
           dplyr::ungroup() %>% 
-          tidyr::complete(.data$GC_class, fill = list(n = 0)) %>%
+          tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
           dplyr::mutate(n_rel = .data$n / nPeaksBackground, type = "background_orig")
         
         
         
         background_match_success = TRUE
         
-        if (!is.null(percBackground_size)) {
+        if (percBackground_size > 0) {
           minPerc = percBackground_size
         } else {
           
-          threshold_percentage = 0.05
-          minPerc = .findMaxBackgroundSize(GC_classes_foreground.df, GC_classes_background.df, peaksBackground, threshold_percentage =  threshold_percentage)
+          minPerc = .findMaxBackgroundSize(GC_classes_foreground.df, GC_classes_background.df, peaksBackground, 
+                                           threshold_percentage =  threshold_percentage)
           
           if (minPerc == 0) {
             #futile.logger::flog.warn(paste0(" Mimicking the foreground failed for TF ", TFCur, ". The background will only be approximated as good as possible using 5% of the peaks."))
@@ -2511,7 +2523,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         # Ensure a minimum no of points in background, even if this sacrifices the mimicking of the distributions
         if (targetNoPeaks < backgroundSize_min) {
           
-          if (!is.null(percBackground_size)) {
+          if (percBackground_size > 0) {
             #futile.logger::flog.warn(paste0("Number of peaks in background is smaller than 1000 for TF ", TFCur, ". Increasing in steps of 5% until a value > 1000 is found.This warning results from a too low value for the parameter percBackground_size"))
           } else {
             background_match_success = FALSE
@@ -2528,10 +2540,12 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         
         # Add sel. minPerc to table and calculate required frequencies
         
-        GC_classes_all.df = dplyr::full_join(GC_classes_foreground.df, GC_classes_background.df, suffix = c(".fg",".bg"), by = "GC_class") %>%
+        GC_classes_all.df = dplyr::full_join(GC_classes_foreground.df, GC_classes_background.df, suffix = c(".fg",".bg"), by = "peak.GC.class") %>%
           dplyr::mutate(maxSizeBackground = .data$n.bg / .data$n_rel.fg,
                         n.bg.needed = floor(.data$n_rel.fg * targetNoPeaks), 
-                        n.bg.needed.perc = .data$n.bg / .data$n.bg.needed) 
+                        n.bg.needed.ratio = .data$n.bg / .data$n.bg.needed) 
+        
+        GC_classes_all.l[[TFCur]] = GC_classes_all.df
         
         
         #futile.logger::flog.info(paste0( " GC-adjustment: Randomly select a total of ", round(targetNoPeaks,0), 
@@ -2543,13 +2557,14 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         peakIDsSel = c()
         for (i in seq_len(nrow(GC_classes_foreground.df))) {
           
-          peaksBackgroundGCCur =  peaksBackground %>% dplyr::filter(.data$GC_class == GC_classes_foreground.df$GC_class[i])
+          peaksBackgroundGCCur =  peaksBackground %>% dplyr::filter(.data$peak.GC.class == GC_classes_foreground.df$peak.GC.class[i])
           
-          if (nrow( peaksBackgroundGCCur) == 0) {
+          if (nrow(peaksBackgroundGCCur) == 0) {
             next
           }
           
-          #Select the minimum, which for low % classes is smaller than the required number to mimic the foreground 100%
+          #Select the minimum, which for low % GC classes is smaller than the required number to mimic the foreground 100%
+          # This works either perfectly when resampling is wanted or as best as possible if not
           if (percBackground_resample) {
             nPeaksCur = GC_classes_all.df$n.bg.needed[i]    
           } else {
@@ -2557,6 +2572,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
           }
           
           if (GC_classes_all.df$n.bg.needed[i] > nrow(peaksBackgroundGCCur)) {
+              #futile.logger::flog.info(paste0("Resampling for bin ", GC_classes_foreground.df$peak.GC.class[i], 
+              #": Needed: ", GC_classes_all.df$n.bg.needed[i], ", available: ", nrow(peaksBackgroundGCCur)))
+              
             peakIDsSel = c(peakIDsSel, peaksBackgroundGCCur %>% dplyr::sample_n(nPeaksCur, replace = percBackground_resample) %>% dplyr::pull(.data$peakID))  
           } else {
             peakIDsSel = c(peakIDsSel, peaksBackgroundGCCur %>% dplyr::sample_n(nPeaksCur, replace = FALSE) %>% dplyr::pull(.data$peakID))
@@ -2734,6 +2752,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         if (!plotDetails) {
           tblFilt.df = dplyr::select(tblFilt.df, -tidyselect::contains("value"))
         }
+
         
         connections_all.l[[indexStr]] = tblFilt.df
         
@@ -2742,8 +2761,23 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         
       } # end for directionCur in c("pos", "neg")
       
+      
+     
+      
     } # end for each TF
     
+    # Add additional elements
+    if (useGCCorrection) {
+        
+        GC_classes_all.df =  GC_classes_all.l %>%
+                                data.table::rbindlist(idcol = "TF.name") %>% 
+                                tibble::as_tibble() %>%
+                                dplyr::select(-starts_with("type")) %>%
+                                dplyr::mutate_if(is.character, as.factor)
+                                
+    } else {
+        GC_classes_all.df = NULL
+    }
     
     .printExecutionTime(start2, prefix = "  ")
     
@@ -2753,7 +2787,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
   .printExecutionTime(start, prefix = "")
   list(main            = data.table::rbindlist(connections_all.l), 
        connectionStats = data.table::rbindlist(connectionStats_all.l), 
-       plots_GC        = plots_GC.l
+       plots_GC        = plots_GC.l,
+       GC_details      = GC_classes_all.df
   )
 }
 
@@ -2761,41 +2796,49 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
   
   # Iterate over different background sizes
   minPerc = 0
+  futile.logger::flog.info(paste0("Trying to automatically find the highest minimum percentage so that mimicking all GC bins with a relative frequenc of at least ", 
+  threshold_percentage, " in the background works"))
   for (percCur in c(seq(100,10,-5),5)) {
     
     if (minPerc > 0) next
     targetNoPeaks = percCur/100 * nrow(peaksBackground)
     
-    #futile.logger::flog.info(paste0("Percentage of background: ", percCur))
+    futile.logger::flog.info(paste0(" Downscaling background to ", percCur, "%"))
     
     #Check for each GC bin in the foreground, starting with the most abundant, whether we have enough background peaks to sample from
     
-    # threshold_percentage: From which percentage of GC bin frequency from the foreground should the mimicking fail?
+    # threshold_percentage: Minimum relative frequency of a GC bin so that it can cause the procedure to fail. 
+    # From which percentage of GC bin frequency from the foreground should the mimicking fail?
     #The motivation is that very small bins that have no weight in the foreground will not cause a failure of the mimicking
-    
-    
+
     for (i in seq_len(nrow(GC_classes_foreground.df))) {
       
       n_rel    = GC_classes_foreground.df$n_rel[i]
-      GC_class.cur = GC_classes_foreground.df$GC_class[i]
+      GC.class.cur = GC_classes_foreground.df$peak.GC.class[i]
       
       requiredNoPeaks = round(n_rel * targetNoPeaks, 0)
       # Check in background
       availableNoPeaks = GC_classes_background.df %>% 
-        dplyr::filter(.data$GC_class == GC_class.cur) %>%
+        dplyr::filter(.data$peak.GC.class == GC.class.cur) %>%
         dplyr::pull(.data$n)
-      #futile.logger::flog.info(paste0(" GC.class ", GC.class.cur, ": Required: ", requiredNoPeaks, ", available: ", availableNoPeaks))
+      
+      ignoredStr = ""
+      if (n_rel <= threshold_percentage) {
+          ignoredStr = paste0(" (ignored because relative frequency < ", threshold_percentage, ")")
+      }
+      
+      futile.logger::flog.info(paste0("  GC.class ", GC.class.cur, ": Required: ", requiredNoPeaks, ", available: ", availableNoPeaks, ignoredStr))
       if ( availableNoPeaks < requiredNoPeaks) {
         #futile.logger::flog.info(paste0("  Not enough"))
       }
       if (availableNoPeaks < requiredNoPeaks & n_rel > threshold_percentage) {
-        #futile.logger::flog.info(paste0(" Mimicking distribution FAILED (GC class ", GC.class.cur, " could not be mimicked"))
+        futile.logger::flog.info(paste0("  Mimicking distribution FAILED (GC class ", GC.class.cur, " could not be mimicked."))
         break
       }
       
       if (i == nrow(GC_classes_foreground.df)) {
         minPerc = percCur
-        #futile.logger::flog.info(paste0("Found max. percentage of background that is able to mimick the foreground: ", percCur))
+        futile.logger::flog.info(paste0("Found max. percentage of background that is able to mimick the foreground: ", percCur))
         
       }
       
@@ -2823,11 +2866,11 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 #' @param  promoterRange Integer >=0. Default 250000. The size of the neighborhood in bp to correlate peaks and genes in vicinity. Only peak-gene pairs will be correlated if they are within the specified range. Increasing this value leads to higher running times and more peak-gene pairs to be associated, while decreasing results in the opposite.
 #' @param TADs Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.
 #' @param TADs_mergeOverlapping \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping TADs be merged? Only relevant if TADs are provided.
-#' @param shuffleRNACounts \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be permuted in addition to 
-#' testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but
+#' @param shuffleRNACounts \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be shuffled in addition to 
+#' testing random peak-gene pairs for the background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but
 #' for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
-#' If set to \code{TRUE}, however, the RNA sample labels are in addition permuted so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
-#' Permuting twice randomizes the resulting eGRN even more. Note that this parameter and its influence is still being investigated. Until version 1.0.7, this parameter (although not existent explicitly)
+#' If set to \code{TRUE}, however, the RNA sample labels are in addition shuffled so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
+#' Shuffling truly randomizes the resulting background eGRN. Note that this parameter and its influence is still being investigated. Until version 1.0.7, this parameter (although not existent explicitly)
 #' was implicitly set to \code{TRUE}.
 #' @template nCores
 #' @template plotDiagnosticPlots
@@ -3230,11 +3273,11 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
  
   
-  countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted = FALSE, includeIDColumn = FALSE)
-  countsRNA.clean   = getCounts(GRN, type = "rna", permuted = shuffleRNA, includeIDColumn = FALSE)
+  countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted =FALSE, includeIDColumn = FALSE)
+  countsRNA.clean   = getCounts(GRN, type = "rna", permuted =shuffleRNA, includeIDColumn = FALSE)
   
   # Cleverly construct the count matrices so we do the correlations in one go
-  map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted = FALSE)$peakID)
+  map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted =FALSE)$peakID)
   map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = shuffleRNA)$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
   
   # There should not b any NA because it is about the peaks
@@ -3340,7 +3383,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     data1   = unlist(counts1 [map1 [i],])
     
     # Changed in version 1.3.9: Make sure the other data compares the correct pairs.
-    # This restores the previous functionality of proper shuffling for the permuted RNA-seq data
+    # This restores the previous functionality of proper shuffling for the background RNA-seq data
     data2   = unlist(counts2 [map2 [i],])[names(data1)]
     
     res =  suppressWarnings(stats::cor.test(data1, data2, method = corMethod))
@@ -3785,7 +3828,7 @@ filterGRNAndConnectGenes <- function(GRN,
         
         
         if (peak_gene.fdr.method == "IHW" && length(indexes) < 1000) {
-          message = paste0("IHW should only be performed with at least 1000 p-values, but only ", length(indexes), " are available. Switching to BH adjustment as fallback. This is to be expected for the permuted data but not for the non-permuted one.")
+          message = paste0("IHW should only be performed with at least 1000 p-values, but only ", length(indexes), " are available. Switching to BH adjustment as fallback. This is to be expected for the background data but not for the real one.")
           
           if (permutationCur == 0) {
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
@@ -4579,9 +4622,9 @@ generateStatsSummary <- function(GRN,
                              allowMissingGenes = allowMissingGenes,
                              allowMissingTFs = allowMissingTFs,
                              
-                             nGenes = length(unique(connections.df$gene.ENSEMBL)),
-                             nPeaks = length(unique(connections.df$peak.ID)),
-                             nTFs   = length(unique(connections.df$TF.name)),
+                             nGenes = dplyr::n_distinct(connections.df$gene.ENSEMBL),
+                             nPeaks = dplyr::n_distinct(connections.df$peak.ID),
+                             nTFs   = dplyr::n_distinct(connections.df$TF.name),
                              
                              TF.connections_min           = TF.connections[1],
                              TF.connections_mean          = TF.connections[2],
@@ -4712,11 +4755,11 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
 #' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 #' 
 #' @template GRN 
-#' @param type Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.
+#' @param type Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both real (foreground) and background data can be retrieved, while for \code{peaks}, only the real (i.e., the one with index \code{0}) can be retrieved.
 #' @param asMatrix Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, counts are returned as a data frame with or without an ID column (see \code{includeIDColumn}). If set to \code{TRUE}, counts are returned as a matrix with the ID column as row names.
 #' @param includeIDColumn Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Only relevant if \code{asMatrix = FALSE}. If set to \code{TRUE}, an explicit ID column is returned (no row names). If set to \code{FALSE}, the IDs are in the row names instead.
 #' @param includeFiltered  Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, genes or peaks marked as filtered (after running the function \code{filterData}) will not be returned. If set to \code{TRUE}, all elements are returned regardless of the currently active filter status.
-#' @template permuted
+#' @template background
 #' @export
 #' @import tibble
 #' @examples 
@@ -4814,12 +4857,12 @@ getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDC
 #' Extract connections or links from a \code{\linkS4class{GRN}} object as a data frame.
 #' 
 #' Returns stored connections/links (either TF-peak, peak-genes, TF-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}).
-#' Additional metacolumns (TF, peak and gene metadata) can be added optionally. 
+#' Additional meta columns (TF, peak and gene metadata) can be added optionally. 
 #' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 #' 
 #' @export
 #' @template GRN 
-#' @template permuted
+#' @template background
 #' @param type Character. One of \code{TF_peaks}, \code{peak_genes}, \code{TF_genes} or \code{all.filtered}. Default \code{all.filtered}. The type of connections to retrieve.
 #' @param include_TF_gene_correlations Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.
 #' @param include_TFMetadata Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TF metadata be returned as well?
@@ -4877,7 +4920,7 @@ getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDC
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' GRN_con.all.df = getGRNConnections(GRN)
-getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE, 
+getGRNConnections <- function(GRN, type = "all.filtered",  background = FALSE, 
                               include_TF_gene_correlations = FALSE, 
                               include_TFMetadata = FALSE,
                               include_peakMetadata = FALSE,
@@ -4890,7 +4933,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE,
     GRN = .makeObjectCompatible(GRN)
     
     checkmate::assertChoice(type, c("TF_peaks", "peak_genes", "TF_genes", "all.filtered"))
-    checkmate::assertFlag(permuted)
+    checkmate::assertFlag(background)
     #checkmate::assertIntegerish(permutation, lower = 0, upper = .getMaxPermutation(GRN))
     checkmate::assertFlag(include_TF_gene_correlations)
     checkmate::assertFlag(include_variancePartitionResults)
@@ -4898,7 +4941,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  permuted = FALSE,
     checkmate::assertFlag(include_peakMetadata)
     checkmate::assertFlag(include_geneMetadata)
     
-    permIndex = dplyr::if_else(permuted, "1", "0")
+    permIndex = dplyr::if_else(background, "1", "0")
     
     if (type == "all.filtered") {
         
@@ -5377,7 +5420,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   if (permutation == 0) {
     suffixFile = "_original"
   } else {
-    suffixFile = "_permuted"
+    suffixFile = "_background"
   }
   
   suffixFile
@@ -5472,25 +5515,25 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
                       fraction_neg = 1 - .data$fraction_pos) %>%
         dplyr::ungroup()
     
-    # Compare between real and permuted
+    # Compare between real and background
     normFactor_real = dplyr::filter(dsum, class ==  !! (networkType_details[1])) %>%  dplyr::pull(.data$sum_n) %>% sum() /
         dplyr::filter(dsum, class ==  !! (networkType_details[2])) %>%  dplyr::pull(.data$sum_n) %>% sum()
     
-    # ratio_norm not used currently, no normalization necessary here or not even useful because we dont want to normalize the r_pos and r_neg ratios: These are signal in a way. Only when comparing between real and permuted, we have to account for sample size for corrections
+    # ratio_norm not used currently, no normalization necessary here or not even useful because we dont want to normalize the r_pos and r_neg ratios: These are signal in a way. Only when comparing between real and background, we have to account for sample size for corrections
     d3 = d %>%
         dplyr::group_by(.data$peak_gene.p.raw.class, .data$r_positive) %>%
         dplyr::summarise(n_real     = .data$n[class == !! (names(colors_vec)[1]) ],
-                         n_permuted = .data$n[class == !! (names(colors_vec)[2]) ]) %>%
+                         n_background = .data$n[class == !! (names(colors_vec)[2]) ]) %>%
         dplyr::ungroup() %>%
-        dplyr::mutate(ratio_real_raw = .data$n_real / .data$n_permuted,
+        dplyr::mutate(ratio_real_raw = .data$n_real / .data$n_background,
                       ratio_real_norm = .data$ratio_real_raw / normFactor_real,
-                      enrichment_real      = .data$n_real / (.data$n_real + .data$n_permuted),
-                      enrichment_real_norm = (.data$n_real / normFactor_real) / ((.data$n_real / normFactor_real) + .data$n_permuted)) 
+                      enrichment_real      = .data$n_real / (.data$n_real + .data$n_background),
+                      enrichment_real_norm = (.data$n_real / normFactor_real) / ((.data$n_real / normFactor_real) + .data$n_background)) 
     
     
     stopifnot(identical(levels(d2$peak_gene.p.raw.class), levels(d3$peak_gene.p.raw.class)))
     # 2 enrichment bar plots but combined using facet_wrap
-    d2$set = "r+ / r-"; d3$set = "real / permuted" 
+    d2$set = "r+ / r-"; d3$set = "real / background" 
     d_merged <- tibble::tibble(peak_gene.p.raw.class = c(as.character(d2$peak_gene.p.raw.class), 
                                                          as.character(d3$peak_gene.p.raw.class)),
                                ratio = c(d2$ratio_pos_raw, d3$ratio_real_norm),
@@ -5502,8 +5545,8 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     d4 = tibble::tibble(peak_gene.p.raw.class = unique(d$peak_gene.p.raw.class), 
                         n_rpos_real = NA_integer_, n_rpos_random = NA_integer_,
                         n_rneg_real = NA_integer_, n_rneg_random = NA_integer_,
-                        ratio_permuted_real_rpos_norm = NA_real_,
-                        ratio_permuted_real_rneg_norm = NA_real_)
+                        ratio_background_real_rpos_norm = NA_real_,
+                        ratio_background_real_rneg_norm = NA_real_)
     
     for (i in seq_len(nrow(d4))) {
         row_d2 = which(d2$class == networkType_details[1] & d2$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
@@ -5515,9 +5558,9 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         d4[i, "n_rneg_random"] = d2[row_d2, "sum_neg"] %>% unlist()
         
         row_d3 = which(d3$r_positive == TRUE & d3$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
-        d4[i, "ratio_permuted_real_rpos_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
+        d4[i, "ratio_background_real_rpos_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
         row_d3 = which(d3$r_positive == FALSE & d3$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
-        d4[i, "ratio_permuted_real_rneg_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
+        d4[i, "ratio_background_real_rneg_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
     }
     
     d4 = d4 %>%

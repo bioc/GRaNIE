@@ -13,7 +13,7 @@ addConnections_TF_peak(
   connectionTypes = c("expression"),
   removeNegativeCorrelation = c(FALSE),
   maxFDRToStore = 0.3,
-  addForPermuted = TRUE,
+  addForBackground = TRUE,
   useGCCorrection = FALSE,
   percBackground_size = 75,
   percBackground_resample = TRUE,
@@ -37,7 +37,7 @@ addConnections_TF_peak(
 
 \item{maxFDRToStore}{Numeric[0,1]. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.}
 
-\item{addForPermuted}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for permuted data. Leave at \code{TRUE} unless you know what you are doing.}
+\item{addForBackground}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for background data. Leave at \code{TRUE} unless you know what you are doing.}
 
 \item{useGCCorrection}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?}
 

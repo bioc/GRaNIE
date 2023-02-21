@@ -1,1 +1,0 @@
-#' @param permutation Integer (0 or 1). Default \code{0}. Permutation number (currently either \code{0} or \code{1}). Here, \code{0} refers to the real, non-permuted data while \code{1} to the permuted one.

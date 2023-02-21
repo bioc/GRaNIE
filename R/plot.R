@@ -67,7 +67,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   
   if ("rna" %in% data | "all" %in% data) {
     
-    matrixCur = getCounts(GRN, type = "rna", asMatrix = TRUE, includeFiltered = !removeFiltered)
+    matrixCur = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = !removeFiltered)
 
     fileCur = paste0(outputFolder, 
                      ifelse(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput),
@@ -90,7 +90,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   
   if ("peaks" %in% data | "all" %in% data) {
     
-    matrixCur = getCounts(GRN, type = "peaks", asMatrix = TRUE, includeFiltered = !removeFiltered)
+    matrixCur = getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE, includeFiltered = !removeFiltered)
     
     fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), 
                                                   .getOutputFileName("plot_pca"), basenameOutput), "_peaks.", type, ".pdf")
@@ -225,7 +225,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
         
         skipLegend = FALSE
         vecCur = metadata[, varCur] %>%unlist()
-        if (is.character(vecCur) & length(unique(vecCur)) > 30) {
+        if (is.character(vecCur) & dplyr::n_distinct(vecCur) > 30) {
           skipLegend = TRUE
           plotTitle = paste0(plotTitle, " (legend skipped)")
         }
@@ -445,7 +445,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 #' @template outputFolder
 #' @template basenameOutput
 #' @template plotDetails
-#' @param dataType Character vector. One of, or both of, \code{"real"} or \code{"permuted"}. For which data type, real or permuted data, to produce the diagnostic plots?
+#' @param dataType Character vector. One of, or both of, \code{"real"} or \code{"background"}. For which type, real or background data, to produce the diagnostic plots?
 #' @param nTFMax \code{NULL} or Integer > 0. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)
 #' @template plotAsPDF
 #' @template pdf_width
@@ -462,7 +462,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                         outputFolder = NULL, 
                                         basenameOutput = NULL, 
                                         plotDetails = FALSE,
-                                        dataType = c("real", "permuted"),
+                                        dataType = c("real", "background"),
                                         nTFMax = NULL,
                                         plotAsPDF = TRUE, pdf_width = 12, pdf_height_base = 8, pages = NULL,
                                         forceRerun = FALSE) {
@@ -476,7 +476,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
   checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
   checkmate::assertFlag(plotDetails)
-  checkmate::assertSubset(dataType, c("real", "permuted"), empty.ok = FALSE)
+  checkmate::assertSubset(dataType, c("real", "background"), empty.ok = FALSE)
   checkmate::assert(checkmate::checkNull(nTFMax), checkmate::checkIntegerish(nTFMax, lower = 1))
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
@@ -491,7 +491,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   
   dataType2 = c()
   if ("real" %in% dataType) dataType2 = c(0)
-  if ("permuted" %in% dataType) dataType2 = c(dataType2, 1)
+  if ("background" %in% dataType) dataType2 = c(dataType2, 1)
   
   for (permutationCur in 0:.getMaxPermutation(GRN)) {
     
@@ -519,20 +519,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                         plotDetails = plotDetails, fileCur, width = pdf_width, height = heightCur,
                         nPagesMax = nTFMax, pages = pages) 
     }
-    
-    # TODO: page selection not implemented here yet
-    fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_fdr_GC"), suffixFile, ".pdf")
-    if (useGCCorrection & (!file.exists(fileCur) | !plotAsPDF | forceRerun)) {
-      
-      if (!plotAsPDF) fileCur = NULL
-      .plotTF_peak_GC_diagnosticPlots(GRN, perm = permutationCur, fileCur, width = pdf_width, height = pdf_height_base) 
-    }
-    
-    # TODO: handle multiple activities and actually write this function
-    # fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_TFActivity_QC"), suffixFile)
-    # if ("TFActivity" %in% GRN@config$TF_peak_connectionTypes & (!file.exists(fileCur) | forceRerun)) {
-    #   .plotTF_peak_TFActivity_QC(GRN, perm = permutationCur, fileCur, width = 7, height = 8) 
-    # }
+  
   }
   
   .printExecutionTime(start, prefix = "")
@@ -541,112 +528,6 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   
 }
 
-# TODO: Currently not used anywhere
-.generateTF_GC_diagnosticPlots <- function(TFCur, GC_classes_foreground.df, GC_classes_background.df, GC_classes_all.df, peaksForeground, peaksBackground, peaksBackgroundGC) {
-  
-  GC_classes_background_GC.df = peaksBackgroundGC %>%
-    dplyr::group_by(.data$GC_class) %>%
-    dplyr::summarise(n=  dplyr::n(), peak_width_mean = mean(.data$peak_width), peak_width_sd = sd(.data$peak_width)) %>%
-    dplyr::ungroup() %>% 
-    tidyr::complete(.data$GC_class, fill = list(n = 0)) %>%
-    dplyr::mutate(n_rel = .data$n / nrow(peaksBackgroundGC), type = "background_GC")
-  
-  # TODO
-  GC_classes_all2.df = rbind(GC_classes_foreground.df, GC_classes_background.df, GC_classes_background_GC.df) %>%
-    dplyr::mutate(type = forcats::fct_relevel(.data$type, "foreground", "background_GC", "background_orig")) %>%
-    dplyr::left_join(GC_classes_all.df, by = "GC_class") %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(n.bg.needed.relFreq = dplyr::if_else(round(.data$n.bg.needed.perc * 100, 0) > 100, "", paste0(as.character(round(.data$n.bg.needed.perc * 100, 0)),"%")))
-  
-  # Current hack: Put those numbers where the no. of peaks in the GC background < the required one (i.e., where resampling occured)
-  GC_classes_all2.df$n.bg.needed.relFreq[GC_classes_all2.df$type != "background_GC" | GC_classes_all2.df$n == 0] = ""
-  
-  label_foreground = paste0("Foreground\n(", .prettyNum(nrow(peaksForeground)), " peaks)\n")
-  label_background_orig = paste0("Background (raw)\n(", .prettyNum(nrow(peaksBackground)), " peaks)\n")
-  label_background_GC = paste0("Background (GC-adj.)\n(", .prettyNum(nrow(peaksBackgroundGC)), " peaks)\n")
-  
-  labelVec = c("background_orig" = label_background_orig, "background_GC" = label_background_GC, "foreground" = label_foreground)
-  colorVec = c("background_orig" = "lightgray", "background_GC" = "darkgray", "foreground" = "black")
-  
-  g1 = ggplot2::ggplot(GC_classes_all2.df , ggplot2::aes(.data$GC_class, .data$n_rel, group = .data$type, fill = .data$type, label = .data$n.bg.needed.relFreq)) + 
-    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.5), width = 0.5) + 
-    ggplot2::geom_text(vjust=-0.5, size = 3)  + 
-    ggplot2::ylim(0,0.75) + 
-    #ggplot2::geom_line(ggplot2::aes(color= type), size = 2) +
-    ggplot2::scale_fill_manual(name = "Peakset origin", labels  = labelVec, values = colorVec) + 
-    #ggplot2::scale_color_manual(name = "Signal", labels = labelVec, values = colorVec) + 
-    ggplot2::theme_bw() + ggplot2::ggtitle(paste0(TFCur, ": Before and after GC-adjustment")) + 
-    ggplot2::xlab("GC class from peaks") +
-    ggplot2::ylab("Relative frequencies") +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 10)) 
-  
-  
-  g2 = ggplot2::ggplot(GC_classes_all2.df , ggplot2::aes(.data$GC_class, log10(.data$n+1), group = .data$type, fill = .data$type)) + 
-    ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(width = 0.5), alpha = 1, width = 0.5) + 
-    #ggplot2::geom_line(ggplot2::aes(color= type), size = 2) +
-    ggplot2::scale_fill_manual(name = "Peakset origin", labels  = labelVec, values = colorVec) + 
-    #ggplot2::scale_color_manual(name = "Signal", labels = labelVec, values = colorVec) + 
-    ggplot2::theme_bw() + ggplot2::ggtitle(paste0(TFCur, ": Before and after GC-adjustment")) + 
-    ggplot2::xlab("GC class from peaks") +
-    ggplot2::ylab("Absolute frequencies (log10 + 1)") +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 10)) 
-  
-  list(g1,g2)
-  
-}
-
-.plotTF_peak_GC_diagnosticPlots <- function(GRN, perm = 0, file, height = 7, width = 7) {
-  
-  
-  start = Sys.time()
-  futile.logger::flog.info(paste0("Plotting GC diagnostic plots (for each TF)summary + TF-specific", ifelse(is.null(file), "", paste0(" to file ", file))))
-  
-  permIndex = as.character(perm)
-  summary.df = GRN@connections$TF_peaks[[permIndex]]$summary %>% dplyr::filter(.data$TF_peak.connectionType == "expression")
-  
-  g1 = ggplot2::ggplot(summary.df %>% dplyr::filter(.data$direction == "pos"), ggplot2::aes(.data$nForeground)) + ggplot2::geom_histogram(bins = 100) +
-    ggplot2::xlab("Number peaks in foreground") + 
-    ggplot2::theme_bw()
-  
-  g2 = ggplot2::ggplot(summary.df %>% dplyr::filter(.data$direction == "pos"), ggplot2::aes(.data$nBackground_orig)) + ggplot2::geom_histogram(bins = 100) +
-    ggplot2::xlab("Number peaks in background (raw)") + 
-    ggplot2::theme_bw()
-  
-  g3 = ggplot2::ggplot(summary.df %>% dplyr::filter(.data$direction == "pos"), ggplot2::aes(.data$nBackground)) + ggplot2::geom_histogram(bins = 100) +
-    ggplot2::xlab("Number peaks in background (after GC-adjustment)") + 
-    ggplot2::theme_bw()
-  
-  g4 = ggplot2::ggplot(summary.df %>% dplyr::filter(.data$direction == "pos"), ggplot2::aes(.data$ratio_fg_bg_orig)) + ggplot2::geom_histogram(bins = 100) +
-    ggplot2::xlab("Ratio of foreground peaks / background peaks (raw)") + 
-    ggplot2::theme_bw()
-  
-  g5 = ggplot2::ggplot(summary.df %>% dplyr::filter(.data$direction == "pos"), ggplot2::aes(.data$ratio_fg_bg)) + ggplot2::geom_histogram(bins = 100) +
-    ggplot2::xlab("Ratio of foreground peaks / background peaks (after GC-adjustment)") + 
-    ggplot2::theme_bw()
-  
-  g6 = ggplot2::ggplot(summary.df %>% dplyr::filter(.data$direction == "pos"), ggplot2::aes(.data$background_match_success)) + ggplot2::geom_histogram(stat = "count") +
-    ggplot2::xlab("GC-background matching successful") + 
-    ggplot2::theme_bw()
-  
-  g7 = ggplot2::ggplot(summary.df %>% dplyr::filter(.data$direction == "pos"), ggplot2::aes(.data$percBackgroundUsed)) + ggplot2::geom_histogram(stat = "count") +
-    ggplot2::xlab("Percentage of used background for GC matching") +
-    ggplot2::theme_bw()
-  
-  g8 = ggplot2::ggplot()
-  
-  # plots.l is nested, unnest 
-  plots.mod.l = list()
-  for (nameCur in names(GRN@stats$plots_GC)) {
-    plots.mod.l[[paste0(nameCur,".rel")]] = GRN@stats$plots_GC[[nameCur]][[1]]
-    plots.mod.l[[paste0(nameCur,".abs")]] = GRN@stats$plots_GC[[nameCur]][[2]]
-  }
-  
-  
-  plots_all.l = c(list(g1,g2,g3,g4,g5,g6,g7,g8), plots.mod.l)
-  
-  .printMultipleGraphsPerPage(plots_all.l, nCol = 1, nRow = 2, pdfFile = file, height = height, width = width)
-  
-}
 
 
 .plot_TF_peak_fdr <- function(GRN, perm, useGCCorrection, plotDetails = FALSE, file = NULL, width = 7, height = 7, nPagesMax = NULL, pages = NULL) {
@@ -664,157 +545,198 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
     futile.logger::flog.info(paste0("Plotting directly"))   
   }
   
+
+  # TODO: handle multiple activities and actually write this function
+  # fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_TFActivity_QC"), suffixFile)
+  # if ("TFActivity" %in% GRN@config$TF_peak_connectionTypes & (!file.exists(fileCur) | forceRerun)) {
+  #   .plotTF_peak_TFActivity_QC(GRN, perm = permutationCur, fileCur, width = 7, height = 8) 
+  # }
   
+
+  # Plot the connection summary first
+  fdrToInclude = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3)
   
-  # Dont take all TF, some might be missing.
-  connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
-  allTF = unique(connections_TF_peak$TF.name)
-  nTF = ifelse(is.null(nPagesMax), length(allTF), nPagesMax)
-  futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
-  
-  
-  # TODO: Check difference between TFActivity TFs and expression TFs
-  
-  
-  pb <- progress::progress_bar$new(total = nTF)
-  
-  steps = GRN@config$parameters$internal$stepsFDR
-  
-  levels_pos<-unique(as.character(cut(steps, breaks = steps, right = FALSE, include.lowest = TRUE )))
-  levels_neg<-unique(as.character(cut(steps, breaks = rev(steps), right = TRUE, include.lowest = TRUE )))
-  
-  for (i in seq_len(nTF)) {
-    pb$tick()
-    TFCur = allTF[i]
-    
-    connections_TF_peakCur = dplyr::filter(connections_TF_peak, .data$TF.name == TFCur)
-    
-    # Produce two FDR plots, coming from both directions
-    plotsCur.l = list()
-    for (typeCur in c("pos","neg")) {
-      
-      if (typeCur == "pos") {
-        levelsCur = levels_pos
-      } else {
-        levelsCur = levels_neg
-      }
-      
-      
-      connections_TF_peak.filt = dplyr::filter(connections_TF_peakCur, .data$TF_peak.fdr_direction == typeCur ) %>%
-        dplyr::select(-"TF.name", -"TF_peak.fdr_direction") %>%
-        dplyr::mutate(TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = levelsCur))  %>%
-        reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
-      
-      plotTitle = paste0(TFCur, ": Direction ", typeCur, ifelse(perm == 0, "", "(permuted)"))
-      
-      if (!useGCCorrection) {
-        
-        g = suppressWarnings(connections_TF_peak.filt %>% 
-                               dplyr::filter(.data$variable %in% c("TF_peak.fdr")) %>%
-                               ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable)) +
-                               ggplot2::geom_point(na.rm = TRUE) +
-                               ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                               ggplot2::labs(x="Correlation bin", y="FDR TF-peak", title= plotTitle) +
-                               ggplot2::theme_bw() +
-                               ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
-                               ggplot2::scale_x_discrete(drop=FALSE) + 
-                               ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
-                               ggplot2::scale_shape_manual("Background", 
-                                                  label = c("TF_peak.fdr" = "original"),
-                                                  values = c("TF_peak.fdr" = 1)) +
-                               ggplot2::scale_color_viridis_c("No. of connections") 
-        )
-        plotsCur.l[[typeCur]] = g
-        
-        
-        if (plotDetails) {
-          
-          g2 = connections_TF_peak.filt %>% dplyr::filter(grepl("value", .data$variable), !grepl("orig", .data$variable)) %>%
-            ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value+1), color = .data$variable)) + 
-            ggplot2::geom_point(size = 1) +
-            ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-            ggplot2::labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= plotTitle) +
-            ggplot2::theme_bw() +
-            ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
-            ggplot2::scale_x_discrete(drop=FALSE) + 
-            ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
-            ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
-                               values = c("tpvalue" = "black", 
-                                          "fpvalue" = "brown1", "fpvalue_norm" = "darkred"),
-                               labels = c("tpvalue" = "True positives\n(foreground, scaling ref.)\n", 
-                                          "fpvalue" = "False positives\n(background, unscaled)\n", 
-                                          "fpvalue_norm" = "False positives\n(background, scaled to ref.)"))
-          
-          plotsCur.l[[paste0(typeCur, "_details")]] = g
-        }
-        
-        
-        
-      } else {
-        
-        g = suppressWarnings(connections_TF_peak.filt %>% 
-                               dplyr::filter(stringr::str_starts(.data$variable, "TF_peak.fdr")) %>% 
-                               ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable, alpha = .data$variable)) + 
-                               ggplot2::geom_point(na.rm = TRUE) +
-                               ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                               ggplot2::labs(x="Correlation bin", y="FDR TF-peak", title= plotTitle) +
-                               ggplot2::theme_bw() +
-                               ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
-                               ggplot2::scale_x_discrete(drop=FALSE) + 
-                               ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
-                               ggplot2::scale_shape_manual("Background", 
-                                                  label = c("TF_peak.fdr" = "GC-adjusted","TF_peak.fdr_orig" = "original"),
-                                                  values = c("TF_peak.fdr" = 3,"TF_peak.fdr_orig" = 1)) +
-                               ggplot2::scale_color_viridis_c("No. of connections") + 
-                               ggplot2::scale_alpha_discrete(range = c("TF_peak.fdr" = 0.5,"TF_peak.fdr_orig" = 1))  +
-                               ggplot2::guides(alpha = FALSE)
-        )
-        plotsCur.l[[typeCur]] = g
-        
-        if (plotDetails) {
-          g2 = ggplot2::ggplot(connections_TF_peak.filt %>% dplyr::filter(grepl("value", .data$variable)), ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value+1), color = .data$variable)) + 
-            ggplot2::geom_point(size = 1) +
-            ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-            ggplot2::labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= plotTitle) +
-            ggplot2::theme_bw() +
-            ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
-            ggplot2::scale_x_discrete(drop=FALSE) + 
-            ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
-            ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
-                               values = c("tpvalue" = "black", 
-                                          "fpvalue_orig" = "lightgray",  "fpvalue_norm_orig" = "darkgray",
-                                          "fpvalue" = "brown1", "fpvalue_norm" = "darkred"),
-                               labels = c("tpvalue" = "True positives\n(foreground, scaling ref.)\n", 
-                                          "fpvalue_orig" = "False positives before GC\n(background, unscaled)\n",  
-                                          "fpvalue_norm_orig" = "False positives without GC\n(background, scaled to ref.)\n",
-                                          "fpvalue" = "False positives with GC\n(background, unscaled)\n", 
-                                          "fpvalue_norm" = "False positives with GC\n(background, scaled to ref.)"))
-          
-          plotsCur.l[[paste0(typeCur, "_details")]] = g
-        }
-        
-      }
-      
-    } # end for both directions
-    
-    # Lets create the plots
-    if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-      plots_all = plotsCur.l$pos / plotsCur.l$neg
-      plot(plots_all)
-    }
-    pageCounter = pageCounter + 1 
-    
-    if (plotDetails) {
+  for (TF_peak_connectionType_cur in GRN@config$TF_peak_connectionTypes) {
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        plots_all = plotsCur.l$pos_details / plotsCur.l$neg_details
-        plot(plots_all)
+          .plot_TF_peak_connectionSummary(GRN, fdr = fdrToInclude, TF_peak_connectionType = TF_peak_connectionType_cur)
       }
-      pageCounter = pageCounter + 1 
-    }
-    
-    
-    
-  } # end allTF
+      pageCounter = pageCounter + 1
+      
+  }
+  
+  #We can skip altogether if all pages have already been produced
+  if (is.null(pages) | (!is.null(pages) && any(pages >= pageCounter))) {
+
+      # Dont take all TF, some might be missing.
+      connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
+      allTF = unique(connections_TF_peak$TF.name)
+      nTF = ifelse(is.null(nPagesMax), length(allTF), nPagesMax - 1)
+      futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
+      
+      # TODO: Check difference between TFActivity TFs and expression TFs
+      
+      pb <- progress::progress_bar$new(total = nTF)
+      
+      steps = GRN@config$parameters$internal$stepsFDR
+      
+      levels_pos<-unique(as.character(cut(steps, breaks = steps, right = FALSE, include.lowest = TRUE )))
+      levels_neg<-unique(as.character(cut(steps, breaks = rev(steps), right = TRUE, include.lowest = TRUE )))
+      
+ 
+      TF_iteration = 0
+      for (i in seq_len(nTF)) {
+        
+        TF_iteration = TF_iteration + 1
+        pb$tick()
+
+        if (!.print_TF(pages, TF_iteration, plotDetails)) {
+            pageCounter = pageCounter + ifelse(plotDetails, 2, 1)
+            next
+        }
+        
+        TFCur = allTF[i]
+        
+        connections_TF_peakCur = dplyr::filter(connections_TF_peak, .data$TF.name == TFCur)
+        
+        # Produce two FDR plots, coming from both directions
+        plotsCur.l = list()
+        for (typeCur in c("pos","neg")) {
+          
+          if (typeCur == "pos") {
+              levelsCur = levels_pos
+          } else {
+              levelsCur = levels_neg
+          }
+          
+          
+          connections_TF_peak.filt = dplyr::filter(connections_TF_peakCur, .data$TF_peak.fdr_direction == typeCur ) %>%
+              dplyr::select(-"TF.name", -"TF_peak.fdr_direction") %>%
+              dplyr::mutate(TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = levelsCur))  %>%
+              reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
+          
+          plotTitle = paste0(TFCur, ": Direction ", typeCur, ifelse(perm == 0, "", "(background)"))
+          
+          if (!useGCCorrection) {
+              
+              g = suppressWarnings(connections_TF_peak.filt %>% 
+                                       dplyr::filter(.data$variable %in% c("TF_peak.fdr")) %>%
+                                       ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable)) +
+                                       ggplot2::geom_point(na.rm = TRUE) +
+                                       ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                                       ggplot2::labs(x="Correlation bin", y="FDR TF-peak", title= plotTitle) +
+                                       ggplot2::theme_bw() +
+                                       ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
+                                       ggplot2::scale_x_discrete(drop=FALSE) + 
+                                       ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
+                                       ggplot2::scale_shape_manual("Background", 
+                                                                   label = c("TF_peak.fdr" = "original"),
+                                                                   values = c("TF_peak.fdr" = 1)) +
+                                       ggplot2::scale_color_viridis_c("No. of connections") 
+              )
+              plotsCur.l[[typeCur]] = g
+              
+              
+              if (plotDetails) {
+                  
+                  
+                  g2 = connections_TF_peak.filt %>%
+                      dplyr::filter(.data$variable %in% c("n_tp", "n_fp", "n_fp_norm")) %>%
+                      ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value+1), color = .data$variable, group = .data$variable)) + 
+                      ggplot2::geom_line() +
+                      ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                      ggplot2::labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= plotTitle) +
+                      ggplot2::theme_bw() +
+                      ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
+                      ggplot2::scale_x_discrete(drop=FALSE) + 
+                      ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
+                      ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
+                                                  values = c("n_tp" = "black", 
+                                                             "n_fp" = "gray", 
+                                                             "n_fp_norm" = "darkred"),
+                                                  labels = c("n_tp" = "True positives\n(foreground, scaling ref.)\n", 
+                                                             "n_fp" = "False positives\n(background, unscaled)\n", 
+                                                             "n_fp_norm" = "False positives\n(background, scaled to ref.)"))
+                  
+                  
+                  plotsCur.l[[paste0(typeCur, "_details")]] = g2
+              }
+              
+              
+              
+          } else {
+              
+              g = suppressWarnings(connections_TF_peak.filt %>% 
+                                       dplyr::filter(stringr::str_starts(.data$variable, "TF_peak.fdr")) %>% 
+                                       ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable, alpha = .data$variable)) + 
+                                       ggplot2::geom_point(na.rm = TRUE) +
+                                       ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                                       ggplot2::labs(x="Correlation bin", y="FDR TF-peak", title= plotTitle) +
+                                       ggplot2::theme_bw() +
+                                       ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
+                                       ggplot2::scale_x_discrete(drop=FALSE) + 
+                                       ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
+                                       ggplot2::scale_shape_manual("Background", 
+                                                                   label = c("TF_peak.fdr" = "GC-adjusted","TF_peak.fdr_orig" = "original"),
+                                                                   values = c("TF_peak.fdr" = 3,"TF_peak.fdr_orig" = 1)) +
+                                       ggplot2::scale_color_viridis_c("No. of connections") + 
+                                       ggplot2::scale_alpha_discrete(range = c("TF_peak.fdr" = 0.5,"TF_peak.fdr_orig" = 1))  +
+                                       ggplot2::guides(alpha = FALSE)
+              )
+              plotsCur.l[[typeCur]] = g
+              
+              if (plotDetails) {
+                  g2 = connections_TF_peak.filt %>%
+                      dplyr::filter(.data$variable %in% c("n_tp", "n_fp", "n_fp_norm")) %>%
+                      ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value+1), color = .data$variable)) + 
+                      ggplot2::geom_point(size = 1) +
+                      ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                      ggplot2::labs(x="Correlation bin", y="log10(Observed frequencies +1)", title= plotTitle) +
+                      ggplot2::theme_bw() +
+                      ggplot2::theme(axis.text.x=ggplot2::element_text(angle=60, hjust=1, size= 8)) +
+                      ggplot2::scale_x_discrete(drop=FALSE) + 
+                      ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
+                      ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
+                                                  values = c("n_tp" = "black", 
+                                                             "fpvalue_orig" = "lightgray",  
+                                                             "fpvalue_norm_orig" = "darkgray",
+                                                             "n_fp" = "brown1", 
+                                                             "fpvalue_norm" = "darkred"),
+                                                  labels = c("n_tp" = "True positives\n(foreground, scaling ref.)\n", 
+                                                             "fpvalue_orig" = "False positives before GC\n(background, unscaled)\n",  
+                                                             "fpvalue_norm_orig" = "False positives without GC\n(background, scaled to ref.)\n",
+                                                             "n_fp" = "False positives with GC\n(background, unscaled)\n", 
+                                                             "fpvalue_norm" = "False positives with GC\n(background, scaled to ref.)"))
+                  
+                  plotsCur.l[[paste0(typeCur, "_details")]] = g2
+              }
+              
+          }
+          
+        } # end for both directions 
+        
+        
+        # PRINT PLOT
+        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+            plots_all = plotsCur.l$pos / plotsCur.l$neg
+            plot(plots_all)
+            pageCounter = pageCounter + 1 
+        }
+      
+
+        if (plotDetails) {
+          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+              plots_all = plotsCur.l$pos_details / plotsCur.l$neg_details
+              plot(plots_all)
+              pageCounter = pageCounter + 1 
+          }
+          
+        }
+
+      } # end allTF
+  
+  } else {
+      futile.logger::flog.info(paste0( "Skip TF-specific plots due to user-selected pages"))
+  }
   
   .checkPageNumberValidity(pages, pageCounter)
   
@@ -823,9 +745,134 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
   .printExecutionTime(start)
 }
 
+
+.print_TF <- function(pages, TF_iteration, plotDetails) {
+    
+    printTF = FALSE
+    
+    if (!plotDetails) {
+        if (any(pages %in% (TF_iteration + 1))) {
+            printTF = TRUE
+        } 
+    } else {
+        if (any(pages %in% c(2* TF_iteration, 2 * TF_iteration + 1))) {
+            printTF = TRUE
+        } 
+    }
+    
+    
+    printTF
+}  
+
 .plotTF_peak_TFActivity_QC <- function(GRN, perm = 0, fileCur, width = 7, height = 8) {
   
   # TODO
+}
+
+.plot_TF_peak_connectionSummary <- function(GRN, fdr = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3), TF_peak_connectionType) {
+    
+    
+    fdr_steps = GRN@config$parameters$internal$stepsFDR
+    if (is.null(fdr_steps)) {
+        fdr_steps = GRN@config$parameters$stepsFDR
+    }
+    
+    
+    bin.order.pos = levels(cut(rnorm(100), breaks = fdr_steps, right = FALSE, include.lowest = TRUE))
+    bin.order.neg = levels(cut(rnorm(100), breaks = rev(fdr_steps), right = TRUE, include.lowest = TRUE))
+    
+    # Combine the slightly different bins and merge them together
+    bin.order.combined = gsub(")", "]", bin.order.pos, fixed = TRUE)
+    bin.order.combined = gsub("(", "[", bin.order.combined, fixed = TRUE)
+    
+    #### COLLECT DATA ####
+    data.l = list()
+    for (permCur in c("0", "1")) {
+        
+        data.l[[permCur]] = GRN@connections$TF_peaks[[permCur]]$connectionStats %>%
+            
+            dplyr::mutate(TF_peak.r_bin = stringr::str_replace_all(TF_peak.r_bin, stringr::fixed(")"), stringr::fixed("]")),
+                          TF_peak.r_bin = stringr::str_replace_all(TF_peak.r_bin, stringr::fixed("("), stringr::fixed("[")),
+                          perm = permCur,
+                          TF_peak.r_bin = factor(TF_peak.r_bin, levels = bin.order.combined)
+            )
+    }
+    
+    data.all.df = data.table::rbindlist(data.l)
+    
+    futile.logger::flog.info(paste0( "TF-peak link summary for real vs background links, stratified by FDR"))
+    
+    data.summary.l = list()
+    for (fdrCur in fdr) {
+        
+        data.summary.l[[as.character(fdrCur)]] = data.all.df %>%
+            dplyr::filter(TF_peak.fdr < fdrCur, TF_peak.connectionType == TF_peak_connectionType) %>%
+            dplyr::group_by(TF_peak.r_bin, perm, .drop = FALSE) %>%
+            dplyr::summarise(n = sum(n), nTFDistinct = dplyr::n_distinct(TF.name), 
+                      TFDistinct = paste0(unique(TF.name), collapse=","), .groups = "keep") %>%
+            dplyr::ungroup() %>%
+            dplyr::mutate(perm = factor(perm, levels = c("0", "1")),
+                          fdr = fdrCur) %>%
+            dplyr::filter(!is.na(perm)) %>%
+            tidyr::complete(TF_peak.r_bin, perm,
+                            fill = list(n = 0, nTFDistinct = 0, TFDistinct  = "", fdr = fdrCur),
+                            explicit = FALSE)
+
+        
+        n_pos = data.summary.l[[as.character(fdrCur)]] %>%
+            dplyr::filter(!stringr::str_starts(TF_peak.r_bin, "\\[-"), ) %>%
+            dplyr::group_by(perm) %>%
+            dplyr::summarise(sum = sum(n), TF.name = paste0(unique(TFDistinct), collapse = ","))%>%
+            dplyr::arrange(perm)
+        
+        n_neg = data.summary.l[[as.character(fdrCur)]] %>%
+            dplyr::filter(stringr::str_starts(TF_peak.r_bin, "\\[-"), ) %>%
+            dplyr::group_by(perm) %>%
+            dplyr::summarise(sum = sum(n), TF.name = paste0(unique(TFDistinct), collapse = ",")) %>%
+            dplyr::arrange(perm)
+        
+        distinct_TF_pos_0 = strsplit(n_pos$TF.name[1], ",")[[1]] %>% unique()
+        distinct_TF_pos_1 = strsplit(n_pos$TF.name[2], ",")[[1]] %>% unique()
+        distinct_TF_neg_0 = strsplit(n_neg$TF.name[1], ",")[[1]] %>% unique()
+        distinct_TF_neg_1 = strsplit(n_neg$TF.name[2], ",")[[1]] %>% unique()
+        
+        futile.logger::flog.info(paste0( " FDR = ", fdrCur, "(real vs background)"))
+        futile.logger::flog.info(paste0( "  Links total        : ", (n_pos$sum[1] + n_neg$sum[1]), " vs ", (n_pos$sum[2] +  n_neg$sum[1])))
+        futile.logger::flog.info(paste0( "  Distinct TFs total : ", 
+                                         (length(distinct_TF_pos_0) + length(distinct_TF_neg_0) - 2), " vs ",
+                                         (length(distinct_TF_pos_1) + length(distinct_TF_neg_1) -2 )))
+        
+        futile.logger::flog.info(paste0( "  Links with r>=0    : ", n_pos$sum[1], " vs ", n_pos$sum[2]))
+        futile.logger::flog.info(paste0( "  Distinct TFs r>=0  : ", 
+                                         length(distinct_TF_pos_0) - 1, " vs ", length(distinct_TF_pos_1) - 1))
+        
+        futile.logger::flog.info(paste0( "  Links with r<0     : " , n_neg$sum[1], " vs ", n_neg$sum[2]))
+        futile.logger::flog.info(paste0( "  Distinct TFs r<0   : ", 
+                                         length(distinct_TF_neg_0) - 1, " vs ", length(distinct_TF_neg_1) - 1))
+        
+    }
+    
+    data.df = data.table::rbindlist(data.summary.l)
+        
+    #### PLOT ####
+
+    xAxiPos = c(1,seq(6,36,5),40)
+    xAxisLabels = levels(data.df$TF_peak.r_bin)[xAxiPos]
+    g = ggplot(data.df, aes(TF_peak.r_bin, n, fill = perm, group = perm)) +
+        geom_col(position = position_dodge()) +
+        xlab("TF-peak correlation bin") +ylab(paste0("No. of connections with FDR < ", fdrCur)) +
+        facet_wrap(~fdr, ncol = 2, drop = FALSE, labeller = ggplot2::labeller(fdr=ggplot2::label_both)) +
+        ggtitle(paste0("TF-peak summary for real & background links\nfor connection type ", TF_peak_connectionType)) + 
+        scale_fill_manual("Background", values = c("1" = "red", "0" = "black"), labels = c("1"= "Yes", "0" = " No")) +
+        scale_x_discrete(breaks=xAxisLabels, labels=xAxisLabels) +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10), 
+              axis.text.y = element_text(size = rel(0.8))) +
+        # theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        #       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+        theme(axis.line = element_line(colour = "black"))
+    plot(g)
+
 }
 
 
@@ -958,7 +1005,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
     networkType_details = c(paste0("real_",range), paste0("random_",range))
     
     colors_vec = c("black", "darkgray")
-    networkType_vec = c("real", "permuted")
+    networkType_vec = c("real", "background")
     names(colors_vec) = names(networkType_vec) = networkType_details
     
     options(dplyr.summarise.inform = FALSE) 
@@ -1045,8 +1092,8 @@ plotDiagnosticPlots_peakGene <- function(GRN,
     
     freqs= table(peakGeneCorrelations.all$class)
     freq_class = paste0(gsub(names(freqs), pattern = "(.+)(_.*)", replacement = "\\1"), " (n=", .prettyNum(freqs) , ")")
-    # Change upstream and go with "permuted" everywhere
-    freq_class = gsub(freq_class, pattern = "random", replacement = "permuted")
+    # Change upstream and go with "background" everywhere
+    freq_class = gsub(freq_class, pattern = "random", replacement = "background")
     names(freq_class) <- names(freqs)
     
     
@@ -1156,7 +1203,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           
           
           
-          ## p-val density curves stratified by real/permuted ##
+          ## p-val density curves stratified by real vs background ##
           
           gA2 = ggplot2::ggplot(peakGeneCorrelations.all[indexCur,], ggplot2::aes(.data$peak_gene.p_raw, color = .data$r_positive)) + ggplot2::geom_density()  +
             ggplot2::facet_wrap(~ .data$class, labeller = ggplot2::labeller(class=freq_class) ) +
@@ -1181,7 +1228,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
             ggplot2::geom_hline(yintercept = 1, linetype = "dotted") + 
             ggplot2::xlab(xlabel) + ggplot2::ylab("Ratio") +
             ggplot2::scale_fill_manual("Class", values = c(dist_class, r_pos_class), 
-                              labels = c("real", "permuted", "r+ (r>0)", "r- (r<=0)"), 
+                              labels = c("real", "background", "r+ (r>0)", "r- (r<=0)"), 
             ) + # labels vector can be kind of manually specified here because the levels were previosly defined in a certain order
             ggplot2::scale_x_discrete(labels = xlabels_peakGene_praw.class) +
             ggplot2::theme_bw() +  
@@ -1190,8 +1237,8 @@ plotDiagnosticPlots_peakGene <- function(GRN,
             theme_main +
             ggplot2::facet_wrap(~ factor(set), nrow = 2, scales = "free_y", strip.position = "left") 
           
-          #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of permuted / permuted + real)
-          # that could give an indication of whether an FDR based on the permuted or based on the negative correlations would be more stringent
+          #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of background / background + real)
+          # that could give an indication of whether an FDR based on the background or based on the negative correlations would be more stringent
           
           # R PEAK GENE #
           
@@ -1405,7 +1452,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         pageCounter = pageCounter + 1
         
         
-        # VERSION JUDITH: simplified peak.gene distance + another variable as histogram, no permuted data
+        # VERSION JUDITH: simplified peak.gene distance + another variable as histogram, no background data
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
           
           datasetName = ""
@@ -1430,7 +1477,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           
           
           nrows_plot = 2
-          if (length(unique(dataCur[[newColName]])) > 9) {
+          if (dplyr::n_distinct(dataCur[[newColName]]) > 9) {
             nrows_plot = 3
           }
           
@@ -1705,7 +1752,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
               
               index = index + 1
               permIndex = as.character(permCur)
-              permSuffix = paste0(dplyr::if_else(permCur == 0, " (real)", " (permuted)"))
+              permSuffix = paste0(dplyr::if_else(permCur == 0, " (real)", " (background)"))
               
               if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
                 
@@ -1774,7 +1821,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 }
 
 
-# Compare real and permuted one, replicate Darias plots
+# Compare real and background one, replicate Darias plots
 .plot_stats_connectionSummaryBoxplot <- function(GRN, file = NULL, pdf_width = 12, pdf_height = 12, pages = NULL, forceRerun = FALSE) {
   
   start = Sys.time()
@@ -1830,7 +1877,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                 }
                 
                 dataCur.df = rbind(dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
-                                   dplyr::mutate(dataCur1.df, networkType = "permuted", connectionType = elemCur)) %>% 
+                                   dplyr::mutate(dataCur1.df, networkType = "background", connectionType = elemCur)) %>% 
                   tibble::as_tibble()
                 
                 for (elemCur in c("gene","peak.gene","peak.TF")) {
@@ -1847,7 +1894,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                   
                   dataCur.df = rbind(dataCur.df,
                                      dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
-                                     dplyr::mutate(dataCur1.df, networkType = "permuted", connectionType = elemCur))
+                                     dplyr::mutate(dataCur1.df, networkType = "background", connectionType = elemCur))
                   
                 }
                 
@@ -1865,8 +1912,8 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                     ggplot2::xlab("Network type")  +ggplot2::ylab(paste0("log10(Number of connections per category",  ", empty = 0)")) +
                     ggplot2::ggtitle(titlePlot) + 
                     ggplot2::facet_wrap(~connectionType, scales = "free") + 
-                    ggplot2::scale_fill_manual("Network type", values = c("real" =  "red", "permuted" = "gray"), 
-                                      labels = c("real" =  "real", "permuted" = "permuted"), drop = FALSE)
+                    ggplot2::scale_fill_manual("Network type", values = c("real" =  "red", "background" = "gray"), 
+                                      labels = c("real" =  "real", "background" = "background"), drop = FALSE)
                   
                   suppressWarnings(plot(g))
                   
@@ -1963,9 +2010,11 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     
     # pie charts
     totalVerteces = data.frame(Class = c("TF", "Peak", "Gene"),
-                               Count = c(length(unique(stats::na.omit(GRN@connections$all.filtered$`0`$TF.name))),
-                                         length(unique(stats::na.omit(GRN@connections$all.filtered$`0`$peak.ID))),
-                                         length(unique(stats::na.omit(GRN@connections$all.filtered$`0`$gene.ENSEMBL))) ))
+                               Count = c(dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$TF.name)),
+                                         dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$peak.ID)),
+                                         dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$gene.ENSEMBL)) 
+                                        )
+                               )
     
     theme_plots = ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), 
                         legend.title = ggplot2::element_blank(), panel.background = ggplot2::element_rect(fill = "white"),
@@ -3410,7 +3459,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     #   vertice_color_peaks = list(metadata_visualization.l[["Peaks_accessibility"]],   "peakID",     "mean_log")
     # }
     # 
-    #grn.merged = getGRNConnections(GRN, permuted = permuted, type = "all.filtered")
+    #grn.merged = getGRNConnections(GRN, background = background, type = "all.filtered")
     # check that it's in sync with the @ graph
     if (graph == "TF-gene"){
         grn.merged = GRN@graph$TF_gene$table %>%
@@ -3763,7 +3812,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
                 GRN = calculateCommunitiesStats(GRN)
             }
             
-            ncommunities = length(unique(GRN@graph$TF_gene$clusterGraph$membership))
+            ncommunities = dplyr::n_distinct(GRN@graph$TF_gene$clusterGraph$membership)
             
             # If more than nCommunitiesMax are to be plotted, make them all gray ("847E89")
             if (ncommunities > nCommunitiesMax){
@@ -3781,7 +3830,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
             TF_ensembl = GRN@graph$TF_gene$table$V1[match(vertices$id, GRN@graph$TF_gene$table$V1_name)] %>% stats::na.omit() %>% as.vector()
             gene_ensembl = GRN@graph$TF_gene$table$V2[match(vertices$id, GRN@graph$TF_gene$table$V2)] %>% stats::na.omit() %>% as.vector()
             if(graph == "TF-peak-gene"){
-                network_ensembl = c(TF_ensembl, rep(NA, length(unique(vertices_peaks$peak))), gene_ensembl) 
+                network_ensembl = c(TF_ensembl, rep(NA, dplyr::n_distinct(vertices_peaks$peak)), gene_ensembl) 
             }else{
                 network_ensembl = c(TF_ensembl, gene_ensembl) 
             }

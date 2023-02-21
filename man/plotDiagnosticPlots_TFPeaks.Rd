@@ -9,7 +9,7 @@ plotDiagnosticPlots_TFPeaks(
   outputFolder = NULL,
   basenameOutput = NULL,
   plotDetails = FALSE,
-  dataType = c("real", "permuted"),
+  dataType = c("real", "background"),
   nTFMax = NULL,
   plotAsPDF = TRUE,
   pdf_width = 12,
@@ -27,7 +27,7 @@ plotDiagnosticPlots_TFPeaks(
 
 \item{plotDetails}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Print additional plots that may help for debugging and QC purposes? Note that these plots are currently less documented or not at all.}
 
-\item{dataType}{Character vector. One of, or both of, \code{"real"} or \code{"permuted"}. For which data type, real or permuted data, to produce the diagnostic plots?}
+\item{dataType}{Character vector. One of, or both of, \code{"real"} or \code{"background"}. For which type, real or background data, to produce the diagnostic plots?}
 
 \item{nTFMax}{\code{NULL} or Integer > 0. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)}
 

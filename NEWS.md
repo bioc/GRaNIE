@@ -1,10 +1,29 @@
+# GRaNIE 1.3.25 (2023-02-20)
+
+## New features and vignette updates
+- additional significant methods vignette updates
+- updates and clarifications for the workflow vignette
+- a new QC plot for `plotDiagnosticPlots_TFPeaks` (and indirectly in `addConnections_TF_peak` when `plotDiagnosticPlots = TRUE`) on page 1 that shows the total number of connections for real and background TF-peak links as calculated and stored in the `GRN` object, stratified by TF-peak FDR and correlation bin. This is a similar plot as we show in the paper and helps comparing foreground and background.
+
+## Improvements
+- speed improvements for `plotDiagnosticPlots_TFPeaks` (and indirectly in `addConnections_TF_peak` when `plotDiagnosticPlots = TRUE`) when `plotAsPDF = FALSE`
+
+## Bugfixes
+- fixed a bug that  only occurred in `addConnections_TF_peak` when using `useGCCorrection = TRUE`
+
+# GRaNIE 1.3.24 (2023-02-20)
+
+## New features and vignette updates
+- significant methods vignette updates that help clarifying methods details
+
+
 # GRaNIE 1.3.22-1.3.23 (2023-02-09-2023-02-15)
 
 ## Minor changes
 - Small workflow vignette updates 
 
 ## Bug fixes
-- we were informed that newer versions of `dplyr` changed their default behavior for the function `if_else` when `NULL` is involved, which caused an error. We changed the implementation to accommodate for that and now avoid `if_else` in this context to make it compatible with both old and new versions of `dplyr`
+- we were informed that newer versions of `dplyr` (1.1.0) changed their default behavior for the function `if_else` when `NULL` is involved, which caused an error. We changed the implementation to accommodate for that and now avoid `dplyr::if_else` and use base R `ifelse` instead.
 
 # GRaNIE 1.3.18-1.3.21 (2023-02-01-2023-02-07)
 
