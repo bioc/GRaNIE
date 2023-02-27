@@ -165,7 +165,7 @@ initializeGRN <- function(objectMetadata = list(),
 #' @param geneAnnotation_customVersion \code{NULL} or Character(1). Default \code{NULL}. The Ensembl version to use for genome annotation retrieval via \code{biomaRt}, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}. 
 #' By default, the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead .
 #' @template forceRerun
-#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function (e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function(e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 #' @seealso \code{\link{plotPCA_all}}
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
@@ -228,7 +228,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     # Normalize ID column names
     if (idColumn_peaks != "peakID") {
       counts_peaks = dplyr::rename(counts_peaks, peakID = !!(idColumn_peaks))
-      idColumn_peaks ="peakID"
+      idColumn_peaks = "peakID"
     }
     if (idColumn_RNA != "ENSEMBL") {
       counts_rna = dplyr::rename(counts_rna, ENSEMBL = !!(idColumn_RNA))
@@ -303,14 +303,14 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
    
     
     ## Normalize counts ##
-    countsPeaks.norm.df  = .normalizeCountMatrix(GRN, counts_peaks %>% tibble::column_to_rownames("peakID") %>% as.matrix(), 
+    countsPeaks.norm.df  = .normalizeCountMatrix(GRN, data = counts_peaks %>% tibble::column_to_rownames("peakID") %>% as.matrix(), 
                                                  normalization = normalization_peaks,
                                                  additionalParams = additionalParams.l
                                             ) %>%
                             as_tibble(rownames = "peakID") %>%
                             dplyr::select("peakID", tidyselect::everything())
     
-    countsRNA.norm.df    = .normalizeCountMatrix(GRN, counts_rna %>% tibble::column_to_rownames("ENSEMBL") %>% as.matrix(), 
+    countsRNA.norm.df    = .normalizeCountMatrix(GRN, data = counts_rna %>% tibble::column_to_rownames("ENSEMBL") %>% as.matrix(), 
                                                  normalization = normalization_rna,
                                                  additionalParams = additionalParams.l) %>%
                             as_tibble(rownames = "ENSEMBL") %>%
@@ -344,11 +344,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
       # Assume the ID is in column 1, has to be unique
       if (nrow(GRN@data$metadata) > dplyr::n_distinct(GRN@data$metadata$sampleID)) {
         message = paste0("The first column in the sample metadata table must contain only unique values, as it is used as sample ID. Make sure the values are unique.")
-        tbl_ids = table(GRN@data$metadata$sampleID)
+        # tbl_ids = table(GRN@data$metadata$sampleID)
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
       }
       
-      missingIDs = which(! allSamples %in% GRN@data$metadata$sampleID)
+      missingIDs = which(!allSamples %in% GRN@data$metadata$sampleID)
       if (length(missingIDs) > 0) {
         GRN@data$metadata = tibble::add_row(GRN@data$metadata, sampleID = allSamples[ missingIDs])
       }
@@ -425,12 +425,12 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
 }
 
-.checkOverlappingPeaks <- function (GRN, allowOverlappingPeaks) {
+.checkOverlappingPeaks <- function(GRN, allowOverlappingPeaks) {
     
     # Assume 0-based exclusive format, see https://arnaudceol.wordpress.com/2014/09/18/chromosome-coordinate-systems-0-based-1-based/ and http://genome.ucsc.edu/FAQ/FAQformat.html#format1 for details
     consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), GRN@config$parameters$genomeAssembly, zeroBased = TRUE)
     
-    overlappingPeaks = which(GenomicRanges::countOverlaps(consensus.gr ,consensus.gr) >1)
+    overlappingPeaks = which(GenomicRanges::countOverlaps(consensus.gr ,consensus.gr) > 1)
     
     if (length(overlappingPeaks) > 0) {
         
@@ -455,7 +455,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 }
 
 
-.storeAsMatrixOrSparseMatrix <- function (GRN, df, ID_column, slotName, threshold = 0.1) {
+.storeAsMatrixOrSparseMatrix <- function(GRN, df, ID_column, slotName, threshold = 0.1) {
     
     checkmate::assertSubset(GRN@config$sharedSamples, colnames(df)[-1])
     
@@ -508,7 +508,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   start = sapply(ids_pos, "[[", 1)
   end   = sapply(ids_pos, "[[", 2)
   
-  paste0(ids_chr, ":", format(as.integer(start), scientific = FALSE), "-", format(as.integer(end), scientific= FALSE))
+  paste0(ids_chr, ":", format(as.integer(start), scientific = FALSE), "-", format(as.integer(end), scientific = FALSE))
 }
 
 #' @importFrom biomaRt useEnsembl getBM
@@ -530,7 +530,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     geneAnnotation <- NULL
     attempt <- 0
     mirrors = c('www', 'uswest', 'useast', 'asia')
-    while(!is.data.frame(geneAnnotation) && attempt <= 3 ) {
+    while (!is.data.frame(geneAnnotation) && attempt <= 3 ) {
         attempt <- attempt + 1
         geneAnnotation = tryCatch({ 
             ensembl = biomaRt::useEnsembl(biomart = "genes", version = ensemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
@@ -563,7 +563,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 }
 
 
-.populatePeakAnnotation <- function (GRN) {
+.populatePeakAnnotation <- function(GRN) {
   
   countsPeaks.clean = getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
   
@@ -595,7 +595,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     
     futile.logger::flog.info(paste0(" Retrieve peak annotation using ChipSeeker. This may take a while"))
     genomeAssembly = GRN@config$parameters$genomeAssembly
-    consensusPeaks     = GRN@data$peaks$counts_metadata %>% dplyr::filter(!.data$isFiltered)
+    # consensusPeaks     = GRN@data$peaks$counts_metadata %>% dplyr::filter(!.data$isFiltered)
     consensusPeaks.gr  = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
     
     # Add ChIPSeeker anotation
@@ -649,7 +649,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
 }
 
-.populateGeneAnnotation <- function (GRN, customVersion = NULL) {
+.populateGeneAnnotation <- function(GRN, customVersion = NULL) {
 
 
   countsRNA.m  = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
@@ -676,7 +676,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
 }
 
-.populateGOAnnotation <- function(GRN, results.tbl, ontology){
+.populateGOAnnotation <- function(GRN, results.tbl, ontology) {
   
   GRN@annotation$GO[[ontology]] = results.tbl[,c("ID", "Term")]
   GRN
@@ -714,11 +714,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   GC_content.df
 }
 
-.calcAdditionalGCStatistics <- function (GRN, GC.data) {
+.calcAdditionalGCStatistics <- function(GRN, GC.data) {
     
     GC_classes.df = GC.data %>%
         dplyr::group_by(.data$peak.GC.class) %>%
-        dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
+        dplyr::summarise(n = dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
         dplyr::ungroup() %>% 
         tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
         dplyr::mutate(n_rel = .data$n / nrow(GC.data))
@@ -730,6 +730,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     
     
     GRN@stats$GC = list()
+    GRN@stats$GC$TFs_GC_correction = list()
+    GRN@stats$GC$TFs_GC_correction_plots = list()
     GRN@stats$GC$peaks = GC_classes.df
     
     GRN
@@ -763,7 +765,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         # However, their distribution still shows some typical features of counts distribution (e.g., the variance depends on the mean). 
         # Hence, for most applications, it is useful to round the normalized values to recover count-like values, which we refer to as “pseudo-counts”.
         # By default, both withinLaneNormalization and betweenLaneNormalization round the normalized values to the closest integer. 
-        # This behavior can be changed by specifying round=FALSE. This gives the user more flexibility and assures that rounding approximations do not affect subsequent computations (e.g., recovering the offset from the normalized counts).
+        # This behavior can be changed by specifying round= FALSE. This gives the user more flexibility and assures that rounding approximations do not affect subsequent computations (e.g., recovering the offset from the normalized counts).
         if ("roundResults" %in% names(additionalParams)) {
             roundResults = additionalParams$roundResults
         } else {
@@ -785,7 +787,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
         futile.logger::flog.info(paste0(" Normalizing data using the package limma with the following method: ", normalization))
 
-        dataNorm = limma::normalizeBetweenArrays(data, method= sub("limma_", replacement = "", normalization))  
+        dataNorm = limma::normalizeBetweenArrays(data, method = sub("limma_", replacement = "", normalization))  
         
     } else if (normalization == "csaw_cyclicLoess_orig" | normalization == "csaw_TMM")   {
         
@@ -798,7 +800,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
 
-        object = SummarizedExperiment::SummarizedExperiment(list(counts=data))
+        object = SummarizedExperiment::SummarizedExperiment(list(counts = data))
         object$totals = colSums(data)
         
         if (normalization == "csaw_cyclicLoess_orig") {
@@ -843,7 +845,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
             DESeq2::sizeFactors(dd) <- sizeFactors
         }
         
-        dataNorm = DESeq2::counts(dd, normalized=TRUE)
+        dataNorm = DESeq2::counts(dd, normalized =  TRUE)
         
     } else if (normalization == "EDASeq_GC_peaks") {
         
@@ -898,8 +900,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         # (2) effects related to between-lane distributional differences, e.g., sequencing depth. 
         # Accordingly, withinLaneNormalization and betweenLaneNormalization adjust for the first and second type of effects, respectively. 
         # We recommend to normalize for within-lane effects prior to between-lane normalization.
-        dataWithin <- EDASeq::withinLaneNormalization(data, y = peaks_GC_fraction, which= withinLane_method, num.bins = nBins, round = roundResults)
-        dataNorm <- EDASeq::betweenLaneNormalization(dataWithin, which=betweenLane_method, round = roundResults)
+        dataWithin <- EDASeq::withinLaneNormalization(data, y = peaks_GC_fraction, which = withinLane_method, num.bins = nBins, round = roundResults)
+        dataNorm <- EDASeq::betweenLaneNormalization(dataWithin, which = betweenLane_method, round = roundResults)
         
         
     } else if (normalization == "gcqn_peaks") {
@@ -917,7 +919,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 
         dataNorm = .gcqn(data = data, 
                          GC_class = peaks_GC_class,
-                         summary='mean', round = roundResults)
+                         summary = 'mean', round = roundResults)
         
         
     } else if (normalization == "DESeq2_sizeFactors") {
@@ -925,7 +927,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         futile.logger::flog.info(paste0(" Normalizing data using the package DESeq2 with a standard size factor normalization."))
         
         dd = DESeq2::estimateSizeFactors(dd)
-        dataNorm = DESeq2::counts(dd, normalized=TRUE)
+        dataNorm = DESeq2::counts(dd, normalized = TRUE)
         
     } else if (normalization == "none") {
         dataNorm = data
@@ -940,17 +942,17 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 #The following functions are taken from https://github.com/koenvandenberge/bulkATACGC/blob/master/methods/gcqn_validated.R
 
 ### GCQN, first implementation
-FQnorm <- function(counts, type="mean"){
-    rk <- apply(counts,2,rank,ties.method='min')
+FQnorm <- function(counts, type= "mean") {
+    rk <- apply(counts,2,rank,ties.method = 'min')
     counts.sort <- apply(counts,2,sort)
-    if(type=="mean"){
+    if (type == "mean") {
         # refdist <- apply(counts.sort,1,mean)
         refdist <- base::rowMeans(counts.sort)
-    } else if(type=="median"){
+    } else if (type == "median") {
         #refdist <- apply(counts.sort,1,median)
         refdist <- matrixStats::rowMedians(counts.sort)
     }
-    norm <- apply(rk,2,function(r){ refdist[r] })
+    norm <- apply(rk, 2, function(r) { refdist[r] })
     rownames(norm) <- rownames(counts)
     return(norm)
 }
@@ -960,28 +962,28 @@ FQnorm <- function(counts, type="mean"){
 # ATAC-seq, read count distributions are often more comparable between samples within a GC-content bin, than
 # between GC-content bins within a sample (Figure 2). It therefore applies between-sample FQ normalization for
 # each GC-content bin separately
-.gcqn <- function(data, GC_class, summary='mean', round=FALSE){
+.gcqn <- function(data, GC_class, summary= 'mean', round= FALSE) {
     
-    gcBinNormCounts <- matrix(NA, nrow=nrow(data), ncol=ncol(data), dimnames=list(rownames(data),colnames(data)))
+    gcBinNormCounts <- matrix(NA, nrow = nrow(data), ncol = ncol(data), dimnames = list(rownames(data),colnames(data)))
     
-    for(ii in 1:nlevels(GC_class)){
+    for (ii in 1:nlevels(GC_class)) {
   
-        id <- which(GC_class==levels(GC_class)[ii])
-        if(length(id) == 0) next
-        if(length(id) == 1){
+        id <- which(GC_class == levels(GC_class)[ii])
+        if (length(id) == 0) next
+        if (length(id) == 1) {
             normCountBin <- data[id,]
-            if(round) normCountBin <- round(normCountBin)
+            if (round) normCountBin <- round(normCountBin)
             gcBinNormCounts[id,] <- normCountBin
             next
         }
-        countBin <- data[id,,drop=FALSE]
-        if(summary=="mean"){
-            normCountBin <- FQnorm(countBin, type='mean')
-        } else if(summary=="median"){
-            normCountBin <- FQnorm(countBin, type='median')
+        countBin <- data[id,,drop = FALSE]
+        if (summary == "mean") {
+            normCountBin <- FQnorm(countBin, type = 'mean')
+        } else if (summary == "median") {
+            normCountBin <- FQnorm(countBin, type = 'median')
         }
-        if(round) normCountBin <- round(normCountBin)
-        normCountBin[normCountBin<0] <- 0
+        if (round) normCountBin <- round(normCountBin)
+        normCountBin[normCountBin < 0] <- 0
         gcBinNormCounts[id,] <- normCountBin
     }
     return(gcBinNormCounts)
@@ -992,7 +994,7 @@ FQnorm <- function(counts, type="mean"){
 # counts = getCounts(GRN, type = "peaks", asMatrix = TRUE, includeFiltered = TRUE)
 # Currently not applicable as we do not have different groups, qsmooth does not run with only one group
 # 
-# .gcqn_qsmooth_mod <- function(counts, peaksAnnotation){
+# .gcqn_qsmooth_mod <- function(counts, peaksAnnotation) {
 #     
 #     packageMessage = paste0("The package qsmooth is not installed, which is however needed for the chosen normalization method. Please install it and re-run this function or change the normalization method.")
 #     .checkPackageInstallation("qsmooth", packageMessage)
@@ -1000,13 +1002,13 @@ FQnorm <- function(counts, type="mean"){
 #     groups_factors = factor(rep("A", length(GRN@config$sharedSamples)))
 #     
 #     gcBinNormCounts <- matrix(NA, nrow=nrow(counts), ncol=ncol(counts), dimnames=list(rownames(counts),colnames(counts)))
-#     for(ii in 1:nlevels(peaksAnnotation$peak.GC.class)){
+#     for(ii in 1:nlevels(peaksAnnotation$peak.GC.class)) {
 #         id <- which(peaksAnnotation$peak.GC.class==levels(peaksAnnotation$peak.GC.class)[ii])
 #         countBin <- counts[id,]
 #         qs <- qsmooth::qsmooth(countBin, group_factor=groups_factors)
 #         normCountBin <- qs@qsmoothData
 #         normCountBin <- round(normCountBin)
-#         normCountBin[normCountBin<0] <- 0
+#         normCountBin[normCountBin< 0] <- 0
 #         gcBinNormCounts[id,] <- normCountBin
 #     }
 #     return(gcBinNormCounts)
@@ -1130,7 +1132,7 @@ FQnorm <- function(counts, type="mean"){
 #' GRN = loadExampleObject()
 #' GRN = filterData(GRN, forceRerun = FALSE)
 #' @export
-filterData <- function (GRN, 
+filterData <- function(GRN, 
                         minNormalizedMean_peaks = NULL, maxNormalizedMean_peaks = NULL, 
                         minNormalizedMeanRNA = NULL,  maxNormalizedMeanRNA = NULL,
                         chrToKeep_peaks = NULL,
@@ -1163,7 +1165,7 @@ filterData <- function (GRN,
   
   GRN@data$peaks$counts_metadata$isFiltered = FALSE
   
-  if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
+  if (!is.null(GRN@data$TFs$TF_peak_overlap)) {
       GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = 0
   }
   
@@ -1182,7 +1184,7 @@ filterData <- function (GRN,
   
   nPeaksBefore = nrow(GRN@data$peaks$counts_metadata)
   peaks_toKeep = intersect(peakIDs.chr, peakIDs.CV)
-  futile.logger::flog.info(paste0("Collectively, filter ", nPeaksBefore -length(peaks_toKeep), " out of ", nPeaksBefore, " peaks."))
+  futile.logger::flog.info(paste0("Collectively, filter ", nPeaksBefore - length(peaks_toKeep), " out of ", nPeaksBefore, " peaks."))
   futile.logger::flog.info(paste0("Number of remaining peaks: ", length(peaks_toKeep)))
   
   if (length(peaks_toKeep) < 1000) {
@@ -1190,13 +1192,13 @@ filterData <- function (GRN,
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
-  GRN@data$peaks$counts_metadata$isFiltered  = ! GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
+  GRN@data$peaks$counts_metadata$isFiltered  = !GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
   #GRN@data$peaks$counts_raw$isFiltered = ! GRN@data$peaks$counts_raw$peakID  %in% peaks_toKeep
-  GRN@data$peaks$counts_metadata$isFiltered = ! GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
+  GRN@data$peaks$counts_metadata$isFiltered = !GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
   
   
-  if(!is.null(GRN@data$TFs$TF_peak_overlap)) {
-      GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = as.integer (! rownames(GRN@data$TFs$TF_peak_overlap) %in% peaks_toKeep)
+  if (!is.null(GRN@data$TFs$TF_peak_overlap)) {
+      GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = as.integer(!rownames(GRN@data$TFs$TF_peak_overlap) %in% peaks_toKeep)
   }
   
   
@@ -1215,7 +1217,7 @@ filterData <- function (GRN,
   }
   
   
-  GRN@data$RNA$counts_metadata$isFiltered = ! GRN@data$RNA$counts_metadata$ID %in% genes.CV
+  GRN@data$RNA$counts_metadata$isFiltered = !GRN@data$RNA$counts_metadata$ID %in% genes.CV
   
   nRowsFlagged = length(which(GRN@data$RNA$counts_metadata$isFiltered))
   
@@ -1249,7 +1251,7 @@ filterData <- function (GRN,
   futile.logger::flog.info(paste0(" Number of peaks before filtering: ", nrow(GRN@data$peaks$counts_metadata)))
   
   countsPeaks.clean = GRN@data$peaks$counts_metadata %>%
-    dplyr::mutate(size = end-start) %>%
+    dplyr::mutate(size = end - start) %>%
     dplyr::filter(.data$chr %in% chrToKeep, .data$size <= maxSize_peaks, .data$size >= minSize_peaks) %>%
     # arrange(chr, start) %>%
     dplyr::rename(peakID = !!(idColumn)) %>%
@@ -1262,7 +1264,7 @@ filterData <- function (GRN,
   countsPeaks.clean$peakID
 }
 
-.filterPeaksByCV <- function (GRN, minCV = 0, maxCV = 1e7) {
+.filterPeaksByCV <- function(GRN, minCV = 0, maxCV = 1e7) {
   
   startTime = Sys.time()
   
@@ -1284,7 +1286,7 @@ filterData <- function (GRN,
   peaksFiltered$peak.ID
 }
 
-.filterPeaksByMeanCV <- function (GRN, minMean = 0, maxMean = NULL, minCV = 0, maxCV = NULL) {
+.filterPeaksByMeanCV <- function(GRN, minMean = 0, maxMean = NULL, minCV = 0, maxCV = NULL) {
   
   startTime = Sys.time()
   
@@ -1328,7 +1330,7 @@ filterData <- function (GRN,
   peaksFiltered$peak.ID
 }
 
-.filterGenesByMeanCV <- function (GRN, minMean = 0, maxMean = NULL, minCV = 0, maxCV = NULL) {
+.filterGenesByMeanCV <- function(GRN, minMean = 0, maxMean = NULL, minCV = 0, maxCV = NULL) {
   
   startTime = Sys.time()
   
@@ -1392,7 +1394,7 @@ filterData <- function (GRN,
 #' @param fileEnding Character. Default \code{".bed"}. File ending for the files from the motif folder.
 #' @param nTFMax \code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
 #' @template forceRerun
-#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function (\code{GRN@annotation$TFs} in particular)
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function(\code{GRN@annotation$TFs} in particular)
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' @export
@@ -1478,7 +1480,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", translationTable = "translati
   file_input_translationTable = paste0(folder_input_TFBS, .Platform$file.sep, translationTable)
   mapping.df = .readTranslationTable(file_input_translationTable, delim = translationTable_sep)
   
-  TF_notExpressed = sort(dplyr::filter(mapping.df, ! .data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
+  TF_notExpressed = sort(dplyr::filter(mapping.df, !.data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
   
   if (length(TF_notExpressed) > 0) {
     futile.logger::flog.info(paste0("Filtering the following ", length(TF_notExpressed), " TFs as they are not present in the RNA-Seq data: ", paste0(TF_notExpressed, collapse = ",")))
@@ -1522,7 +1524,7 @@ addTFBS <- function(GRN, motifFolder, TFs = "all", translationTable = "translati
 #' @template GRN
 #' @template nCores
 #' @template forceRerun
-#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function (\code{GRN@data$TFs$TF_peak_overlap} in particular)
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function(\code{GRN@data$TFs$TF_peak_overlap} in particular)
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -1557,7 +1559,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
     
     
     # Check whether we have peaks on chromosomes not part of the sequence length reference. If yes, discard them
-    annotation_discared = dplyr::filter(GRN@data$peaks$counts_metadata, ! .data$chr %in% names(seqlengths))
+    annotation_discared = dplyr::filter(GRN@data$peaks$counts_metadata, !.data$chr %in% names(seqlengths))
     
     if (nrow(annotation_discared) > 0) {
       
@@ -1642,15 +1644,15 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   
   subject.gr  = .constructGRanges(TFBS.df, seqlengths = seqLengths, GRN@config$parameters$genomeAssembly)
   
-  intersect.gr = GenomicRanges::intersect(subject.gr, consensusPeaks, ignore.strand=TRUE)
+  # intersect.gr = GenomicRanges::intersect(subject.gr, consensusPeaks, ignore.strand= TRUE)
   
   query.gr = consensusPeaks
   
   overlapsAll = GenomicRanges::findOverlaps(query.gr, subject.gr, 
-                                            minoverlap=1,
-                                            type="any",
-                                            select="all",
-                                            ignore.strand=TRUE)
+                                            minoverlap = 1,
+                                            type = "any",
+                                            select = "all",
+                                            ignore.strand = TRUE)
   
   query_row_ids  = S4Vectors::queryHits(overlapsAll)
   subject_rowids = S4Vectors::subjectHits(overlapsAll)
@@ -1726,7 +1728,7 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   # Keep only Ensembl IDs from TFs we have data from
   matrix1.norm.TFs.df = dplyr::filter(matrix1, .data$ENSEMBL %in% HOCOMOCO_mapping$TF.ENSEMBL, rowSums != 0)
   
-  nFiltered1 = dplyr::filter(matrix1, ! .data$ENSEMBL %in% HOCOMOCO_mapping$TF.ENSEMBL) %>% nrow()
+  nFiltered1 = dplyr::filter(matrix1, !.data$ENSEMBL %in% HOCOMOCO_mapping$TF.ENSEMBL) %>% nrow()
   nFiltered2 = dplyr::filter(matrix1, rowSums == 0) %>% nrow()
   
   diff = nrow(matrix1) - nrow(matrix1.norm.TFs.df)
@@ -1839,7 +1841,7 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
       tibble::as_tibble()
     
     # TODO replace by getter
-    countsPeaks = .normalizeCountMatrix(GRN@data$peaks$counts_orig, normalization = normalization)
+    countsPeaks = .normalizeCountMatrix(GRN, data = GRN@data$peaks$counts_orig, normalization = normalization)
     
     stopifnot(identical(nrow(countsPeaks), nrow(GRN@data$TFs$TF_peak_overlap)))
     
@@ -1965,7 +1967,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
     
     # Only TF.names are unique
     # TODO fix
-    countsNorm = .normalizeCountMatrix(data %>% dplyr::select(-"ENSEMBL"), normalization = normalization)
+    countsNorm = .normalizeCountMatrix(GRN, data = data %>% dplyr::select(-"ENSEMBL"), normalization = normalization)
     
     # Check overlap of ENSEMBL IDs
     countsNorm$ENSEMBL = data$ENSEMBL
@@ -2037,7 +2039,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
 #' # GRN = loadExampleObject()
 #' # GRN = AR_classification_wrapper(GRN, outputFolder = ".", forceRerun = FALSE)
 #' @export
-AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05, 
+AR_classification_wrapper <- function(GRN, significanceThreshold_Wilcoxon = 0.05, 
                                       plot_minNoTFBS_heatmap = 100, deleteIntermediateData = TRUE,
                                       plotDiagnosticPlots = TRUE, outputFolder= NULL,
                                       corMethod = "pearson",
@@ -2081,7 +2083,6 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
       
       futile.logger::flog.info(paste0(" ", .getPermStr(permutationCur), "\n"))
       permIndex = as.character(permutationCur)
-      permSuffix = ifelse(permutationCur == 0, "", ".background")
       
       if (is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]])) {
         if (is.null(GRN@data$TFs$classification[[permIndex]])) {
@@ -2130,7 +2131,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
       }
       
       # Final classification: Calculate thresholds by calculating the quantiles of the background and compare the real values to the background
-      # TODO: Clarify whether the default convertZero_to_NA=TRUE is really needed here
+      # TODO: Clarify whether the default convertZero_to_NA= TRUE is really needed here
       if (is.null(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$act.rep.thres.l) | forceRerun) {
         GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$act.rep.thres.l = 
           .calculate_classificationThresholds(.asMatrixFromSparse(GRN@data$TFs$classification[[permIndex]] [[connectionTypeCur]]$TF_peak_cor_background), 
@@ -2258,7 +2259,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' @param maxFDRToStore Numeric[0,1]. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.
 #' @param addForBackground \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Add connections also for background data. Leave at \code{TRUE} unless you know what you are doing.
 #' @param useGCCorrection \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs? For more details, see the Package Details vignette.
-#' @param percBackground_size Numeric[0,100]. Default 75. EXPERIMENTAL. Percentage of the bakground to use as basis for sampling. If set to 0, an automatic iterative procedure will identify the maximum percentage so that all relevant GC bins with a rel. frequency above 5% from the foreground can be matched. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
+#' @param percBackground_size Numeric[0,100]. Default 75. EXPERIMENTAL. Percentage of the background to use as basis for sampling. If set to 0, an automatic iterative procedure will identify the maximum percentage so that all relevant GC bins with a rel. frequency above 5\% from the foreground can be matched. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @param percBackground_resample \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.
 #' @template forceRerun
 #' @seealso \code{\link{plotDiagnosticPlots_TFPeaks}}
@@ -2268,7 +2269,7 @@ AR_classification_wrapper<- function (GRN, significanceThreshold_Wilcoxon = 0.05
 #' GRN = loadExampleObject()
 #' GRN = addConnections_TF_peak(GRN, plotDiagnosticPlots = FALSE, forceRerun = FALSE)
 #' @export
-addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails = FALSE, outputFolder = NULL, 
+addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails = FALSE, outputFolder = NULL, 
                                     corMethod = "pearson", 
                                     connectionTypes = c("expression"),
                                     removeNegativeCorrelation = c(FALSE),
@@ -2319,7 +2320,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     for (permutationCur in 0:.getMaxPermutation(GRN)) {
         
-      if(!addForBackground & permutationCur != 0) {
+      if (!addForBackground & permutationCur != 0) {
           next
       }
       
@@ -2329,7 +2330,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       resFDR.l  = .computeTF_peak.fdr(GRN, perm = permutationCur, connectionTypes = connectionTypes, corMethod = corMethod, 
                                       removeNegativeCorrelation = removeNegativeCorrelation, 
                                       maxFDRToStore = maxFDRToStore, useGCCorrection = useGCCorrection,
-                                      percBackground_size = percBackground_size, 
+                                      percBackground_size = percBackground_size, threshold_percentage = 0.05,
                                       percBackground_resample = percBackground_resample, plotDetails = plotDetails)
       
       # TODO: remove extra columns again
@@ -2340,8 +2341,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       
       
       # GC plots, empty when no GC correction should be done
-      GRN@stats$GC$TFs_GC_correction_plots = resFDR.l[["plots_GC"]]
-      GRN@stats$GC$TFs_GC_correction       = resFDR.l[["GC_details"]]
+      
+      GRN@stats$GC$TFs_GC_correction_plots[[permIndex]] = resFDR.l[["plots_GC"]]
+      GRN@stats$GC$TFs_GC_correction[[permIndex]]       = resFDR.l[["GC_details"]]
       rm(resFDR.l)
       
       
@@ -2367,7 +2369,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
 
 
 .computeTF_peak.fdr <- function(GRN, perm, connectionTypes, corMethod = "pearson", useGCCorrection = FALSE, 
-                                removeNegativeCorrelation, maxFDRToStore = 0.3 , percBackground_size = 75, 
+                                removeNegativeCorrelation, maxFDRToStore = 0.3 , percBackground_size = 75, threshold_percentage = 0.05,
                                 percBackground_resample = TRUE, plotDetails = FALSE, backgroundSize_min = 1000) {
   
   start = Sys.time()
@@ -2378,7 +2380,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
-  peak_TF_overlap.df= .filterSortAndShuffle_peakTF_overlapTable(GRN, perm)
+  peak_TF_overlap.df = .filterSortAndShuffle_peakTF_overlapTable(GRN, perm)
   
   plots_GC.l = list()
   
@@ -2390,6 +2392,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
   connectionTypes_removeNegCor = connectionTypes[removeNegativeCorrelation]
   
   for (connectionTypeCur in connectionTypes) {
+    
+    plots_GC.l[[connectionTypeCur]] = list()
     
     futile.logger::flog.info(paste0("Calculate TF-peak links for connection type ", connectionTypeCur))
     start2 = Sys.time()
@@ -2411,7 +2415,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     counts_peaks = getCounts(GRN, type = "peaks", permuted = FALSE)
     
     # Filtering of the matrices happens automatically within the next function
-    peaksCor.m = .correlateMatrices( matrix1= counts_connectionTypeCur, 
+    peaksCor.m = .correlateMatrices( matrix1 = counts_connectionTypeCur, 
                                      matrix_peaks = counts_peaks, 
                                      GRN@annotation$TFs, 
                                      corMethod,
@@ -2431,9 +2435,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     stopifnot(nrow(peaksCor.m) == nrow(peak_TF_overlap.df))
     
-    peak_TF_overlap.df <- peak_TF_overlap.df[,allTF]
+    peak_TF_overlap.df = peak_TF_overlap.df[,allTF]
     
-    sort.cor.m.sort<-peaksCor.m[,colnames(peak_TF_overlap.df)]
+    sort.cor.m.sort = peaksCor.m[,colnames(peak_TF_overlap.df)]
     
     stopifnot(identical(colnames(sort.cor.m.sort), colnames(peak_TF_overlap.df)))
     
@@ -2448,7 +2452,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     
     peaksFiltered = GRN@data$peaks$counts_metadata %>% 
         dplyr::filter(!.data$isFiltered)  %>%
-        dplyr::left_join(GRN@annotation$peaks %>% dplyr::select(peak.ID, peak.GC.class, peak.GC.perc, peak.width), by = c("peakID" = "peak.ID"))
+        dplyr::left_join(GRN@annotation$peaks %>% dplyr::select("peak.ID", "peak.GC.class", "peak.GC.perc", "peak.width"), by = c("peakID" = "peak.ID"))
     
     if (!useGCCorrection) {
       minPerc = 100
@@ -2457,15 +2461,15 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     }
     
     # Stores GC-specific extra data
-    GC_classes_all.l = list()
+    GC_classes_perTF.l = list()
     
     for (TFCur in allTF) {
       
       pb$tick()
       #start = Sys.time()
-      #for(TFCur in colnames(corr_TF.sort)){
-      overlapYes = which(peak_TF_overlap.df[,TFCur]==1)
-      overlapNo  = which(peak_TF_overlap.df[,TFCur]==0)
+      #for(TFCur in colnames(corr_TF.sort)) {
+      overlapYes = which(peak_TF_overlap.df[,TFCur] == 1)
+      overlapNo  = which(peak_TF_overlap.df[,TFCur] == 0)
       
       tp <- sort.cor.m.sort[overlapYes, TFCur]
       n_tp       = length(tp)
@@ -2474,7 +2478,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
       peaksBackground = peaksBackgroundGC = peaksFiltered %>% dplyr::slice(overlapNo)
       
       nPeaksForeground = nrow(peaksForeground)
-      nPeaksBackground = nPeaksBackgroundGC = nrow(peaksBackground)
+      nPeaksBackground = nrow(peaksBackground)
       
       #.printExecutionTime(start, "Interval 1: ")
       #start = Sys.time()
@@ -2487,7 +2491,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         # Get GC info from those peaks from the foreground
         GC_classes_foreground.df = peaksForeground %>%
           dplyr::group_by(.data$peak.GC.class) %>%
-          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
+          dplyr::summarise(n = dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
           dplyr::ungroup() %>% 
           tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
           dplyr::mutate(n_rel = .data$n / nPeaksForeground, type = "foreground") %>%
@@ -2495,7 +2499,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         
         GC_classes_background.df = peaksBackground %>%
           dplyr::group_by(.data$peak.GC.class) %>%
-          dplyr::summarise(n= dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
+          dplyr::summarise(n = dplyr::n(), peak_width_mean = mean(.data$peak.width), peak_width_sd = sd(.data$peak.width)) %>%
           dplyr::ungroup() %>% 
           tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
           dplyr::mutate(n_rel = .data$n / nPeaksBackground, type = "background_orig")
@@ -2530,7 +2534,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
           }
           
           targetNoPeaksNew = targetNoPeaks
-          while(targetNoPeaksNew < 1000) {
+          while (targetNoPeaksNew < 1000) {
             minPerc = minPerc + 5
             targetNoPeaksNew = minPerc/100 * nPeaksBackground
           }
@@ -2543,9 +2547,9 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         GC_classes_all.df = dplyr::full_join(GC_classes_foreground.df, GC_classes_background.df, suffix = c(".fg",".bg"), by = "peak.GC.class") %>%
           dplyr::mutate(maxSizeBackground = .data$n.bg / .data$n_rel.fg,
                         n.bg.needed = floor(.data$n_rel.fg * targetNoPeaks), 
-                        n.bg.needed.ratio = .data$n.bg / .data$n.bg.needed) 
+                        n.bg.needed.ratio = .data$n.bg / .data$n.bg.needed )
         
-        GC_classes_all.l[[TFCur]] = GC_classes_all.df
+        GC_classes_perTF.l[[TFCur]] = GC_classes_all.df
         
         
         #futile.logger::flog.info(paste0( " GC-adjustment: Randomly select a total of ", round(targetNoPeaks,0), 
@@ -2588,8 +2592,8 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         peaksBackgroundGC = peaksBackground[match(peakIDsSel, peaksBackground$peakID),] 
         
         
-        if (is.null(plots_GC.l[[TFCur]])) {
-          plots_GC.l[[TFCur]] = .generateTF_GC_diagnosticPlots(TFCur, GC_classes_foreground.df, GC_classes_background.df, GC_classes_all.df, peaksForeground, peaksBackground, peaksBackgroundGC)
+        if (is.null(plots_GC.l[[connectionTypeCur]][[TFCur]])) {
+          plots_GC.l[[connectionTypeCur]][[TFCur]] = .generateTF_GC_diagnosticPlots(TFCur, GC_classes_foreground.df, GC_classes_background.df, GC_classes_all.df, peaksForeground, peaksBackground, peaksBackgroundGC)
         }
         
         
@@ -2653,15 +2657,15 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
           # na.rm = TRUE for all sums here to make sure NAs will not cause a problem
           if (directionCur == "pos") {
             
-            n_tp2.vec[i]      = sum(tp>=thres, na.rm = TRUE)
-            n_fp2.vec[i]      = sum(fp>=thres, na.rm = TRUE)
-            n_fp2_orig.vec[i] = sum(fp_orig>=thres, na.rm = TRUE)
+            n_tp2.vec[i]      = sum(tp >= thres, na.rm = TRUE)
+            n_fp2.vec[i]      = sum(fp >= thres, na.rm = TRUE)
+            n_fp2_orig.vec[i] = sum(fp_orig >= thres, na.rm = TRUE)
             
           } else {
             
-            n_tp2.vec[i]      = sum(tp<thres, na.rm = TRUE)
-            n_fp2.vec[i]      = sum(fp<thres, na.rm = TRUE)
-            n_fp2_orig.vec[i] = sum(fp_orig<thres, na.rm = TRUE)
+            n_tp2.vec[i]      = sum(tp < thres, na.rm = TRUE)
+            n_fp2.vec[i]      = sum(fp < thres, na.rm = TRUE)
+            n_fp2_orig.vec[i] = sum(fp_orig < thres, na.rm = TRUE)
           }
           
         }
@@ -2709,6 +2713,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
           
         }
         
+        # TODO: add number of connections in this correlation bin in non-corrected and GC-corrected data as additional column
         connectionStats_all.l[[indexStr]] =  cor.peak.tf %>%
           dplyr::group_by(.data$TF_peak.r_bin) %>%
           dplyr::summarise(n = dplyr::n()) %>%
@@ -2743,7 +2748,7 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
         # DISCARD other rows altogether
         # Left join here is what we want, as we need this df only for "real" data
         tblFilt.df = dplyr::left_join(cor.peak.tf, fdr.curve, by = "TF_peak.r_bin") %>%
-          dplyr::filter(.data$TF_peak.fdr <= maxFDRToStore) %>%
+          dplyr::filter(.data$TF_peak.fdr <= maxFDRToStore | .data$TF_peak.fdr_orig <= maxFDRToStore) %>%
           dplyr::select("TF.name", "TF_peak.r_bin", "TF_peak.r", "TF_peak.fdr", 
                         "TF_peak.fdr_orig", "peak.ID", "TF_peak.fdr_direction", 
                         "TF_peak.connectionType", tidyselect::contains("value"))
@@ -2769,30 +2774,30 @@ addConnections_TF_peak <- function (GRN, plotDiagnosticPlots = TRUE, plotDetails
     # Add additional elements
     if (useGCCorrection) {
         
-        GC_classes_all.df =  GC_classes_all.l %>%
+        GC_classes_all.l = list()
+        GC_classes_all.l[[connectionTypeCur]] =  GC_classes_perTF.l %>%
                                 data.table::rbindlist(idcol = "TF.name") %>% 
                                 tibble::as_tibble() %>%
-                                dplyr::select(-starts_with("type")) %>%
+                                dplyr::select(-tidyselect::starts_with("type")) %>%
                                 dplyr::mutate_if(is.character, as.factor)
                                 
     } else {
-        GC_classes_all.df = NULL
+        GC_classes_all.l = NULL
     }
     
     .printExecutionTime(start2, prefix = "  ")
     
   } # end for each connectionType
   
-  
   .printExecutionTime(start, prefix = "")
   list(main            = data.table::rbindlist(connections_all.l), 
        connectionStats = data.table::rbindlist(connectionStats_all.l), 
        plots_GC        = plots_GC.l,
-       GC_details      = GC_classes_all.df
+       GC_details      = GC_classes_all.l
   )
 }
 
-.findMaxBackgroundSize <- function (GC_classes_foreground.df, GC_classes_background.df, peaksBackground, threshold_percentage = 0.05) {
+.findMaxBackgroundSize <- function(GC_classes_foreground.df, GC_classes_background.df, peaksBackground, threshold_percentage = 0.05) {
   
   # Iterate over different background sizes
   minPerc = 0
@@ -2976,7 +2981,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   
   if (plotDiagnosticPlots) {
     
-    GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder, gene.types = plotGeneTypes, useFiltered = FALSE, forceRerun= forceRerun)
+    GRN = plotDiagnosticPlots_peakGene(GRN, outputFolder, gene.types = plotGeneTypes, useFiltered = FALSE, forceRerun = forceRerun)
     
   }
   
@@ -3052,7 +3057,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       dplyr::filter(!is.na(.data$gene.start), !is.na(.data$gene.end))
   
   if (!is.null(gene.types)) {
-      if (! "all" %in% gene.types) {
+      if (!"all" %in% gene.types) {
           subject = dplyr::filter(subject, .data$gene.type %in% gene.types)
       }
   }
@@ -3069,10 +3074,10 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   } 
   
   overlapsAll = suppressWarnings(GenomicRanges::findOverlaps(query, subject.gr, 
-                                            minoverlap=1,
-                                            type="any",
-                                            select="all",
-                                            ignore.strand=TRUE))
+                                            minoverlap = 1,
+                                            type = "any",
+                                            select = "all",
+                                            ignore.strand = TRUE))
   
   query_row_ids  = S4Vectors::queryHits(overlapsAll)
   subject_rowids = S4Vectors::subjectHits(overlapsAll)
@@ -3173,7 +3178,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     # Merge overlapping TADs. min.gapwidth is set to 0 to prevent that directly adjacent TADs are merged
     if (mergeOverlappingTADs & TADOverlaps_min2 > 0) {
       futile.logger::flog.info(paste0("Merge overlapping TAD domains to one domain"))  
-      subject = GenomicRanges::reduce(subject, min.gapwidth=0L)
+      subject = GenomicRanges::reduce(subject, min.gapwidth = 0L)
       # Metadata has been lost, redefine it with the new boundaries
       subject$ID = paste0(as.character(GenomeInfoDb::seqnames(subject)), ":", start(subject), "-", end(subject))
     } else {
@@ -3184,7 +3189,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     # Check whether TAD boundaries overlap and print a warning if so
     nMultipleOverlaps = .checkSelfOverlap(subject)
     if (nMultipleOverlaps > 0) {
-        message =paste0(nMultipleOverlaps, " out of ", length(subject), " TADs overlap with at least one other TAD. Please verify whether this is intended or a mistake. Particularly 1bp overlaps may not resembl the truth.")
+        message = paste0(nMultipleOverlaps, " out of ", length(subject), " TADs overlap with at least one other TAD. Please verify whether this is intended or a mistake. Particularly 1bp overlaps may not resembl the truth.")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
@@ -3263,9 +3268,6 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
   
   # ITERATE THROUGH ALL PEAK_GENE PAIRS
-  
-  permIndex = as.character(perm)
-  
   if (shuffleRNA) {
       shuffleRNA = as.logical(perm) # only for perm = 1 this will actually be true
   } else {
@@ -3273,11 +3275,11 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
  
   
-  countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted =FALSE, includeIDColumn = FALSE)
-  countsRNA.clean   = getCounts(GRN, type = "rna", permuted =shuffleRNA, includeIDColumn = FALSE)
+  countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted = FALSE, includeIDColumn = FALSE)
+  countsRNA.clean   = getCounts(GRN, type = "rna", permuted = shuffleRNA, includeIDColumn = FALSE)
   
   # Cleverly construct the count matrices so we do the correlations in one go
-  map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted =FALSE)$peakID)
+  map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted = FALSE)$peakID)
   map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = shuffleRNA)$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
   
   # There should not b any NA because it is about the peaks
@@ -3380,11 +3382,11 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       next
     }
     
-    data1   = unlist(counts1 [map1 [i],])
+    data1   = unlist(counts1[map1[i],])
     
     # Changed in version 1.3.9: Make sure the other data compares the correct pairs.
     # This restores the previous functionality of proper shuffling for the background RNA-seq data
-    data2   = unlist(counts2 [map2 [i],])[names(data1)]
+    data2   = unlist(counts2[map2[i],])[names(data1)]
     
     res =  suppressWarnings(stats::cor.test(data1, data2, method = corMethod))
     
@@ -3416,12 +3418,12 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     
     if (nPlotted < debugMode_nPlots & res$p.value < 0.02) {
-      dataCur.df = tibble::tibble(data_Peaks =unlist(counts1 [map1[i],]), 
-                                  data_RNA = unlist(counts2 [map2[i],]) )
+      dataCur.df = tibble::tibble(data_Peaks = unlist(counts1[map1[i],]), 
+                                  data_RNA = unlist(counts2[map2[i],]) )
       
       # TODO: perm and GRN not known here
       stop("Not implemeneted yet")
-      # g = ggplot2::ggplot(dataCur.df, ggplot2::aes(data1, data2)) + ggplot2::geom_point() + ggplot2::geom_smooth(method ="lm") + 
+      # g = ggplot2::ggplot(dataCur.df, ggplot2::aes(data1, data2)) + ggplot2::geom_point() + ggplot2::geom_smooth(method = "lm") + 
       #   ggplot2::ggtitle(paste0(getCounts(GRN, type = "peaks", permuted = FALSE)$peakID[map1[i]], 
       #                  ", ", 
       #                  getCounts(GRN, type = "rna", permuted = as.logical(perm))$ENSEMBL[map2 [i]], 
@@ -3432,7 +3434,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       # nPlotted = nPlotted + 1
     }
     
-    if (debugMode_nPlots > 0 & nPlotted >=  debugMode_nPlots){
+    if (debugMode_nPlots > 0 & nPlotted >= debugMode_nPlots) {
       return(res.m)
     }
     
@@ -3569,7 +3571,7 @@ filterGRNAndConnectGenes <- function(GRN,
   GRN@connections$TF_genes.filtered = NULL
   GRN@connections$all.filtered = list()
   
-  for (permutationCur in 0:.getMaxPermutation(GRN)){
+  for (permutationCur in 0:.getMaxPermutation(GRN)) {
     
     futile.logger::flog.info(paste0("\n\n", .getPermStr(permutationCur)))
     permIndex = as.character(permutationCur)
@@ -3605,7 +3607,7 @@ filterGRNAndConnectGenes <- function(GRN,
     # Filter network #
     futile.logger::flog.info(paste0("Inital number of rows left before all filtering steps: ", nrow(grn.filt)))
     
-    if (! "all" %in% TF_peak.connectionTypes) {
+    if (!"all" %in% TF_peak.connectionTypes) {
       checkmate::assertSubset(TF_peak.connectionTypes, GRN@config$TF_peak_connectionTypes, empty.ok = FALSE)
       futile.logger::flog.info(paste0(" Filter network and retain only rows with one of the following TF-peak connection types: ", paste0(TF_peak.connectionTypes, collapse = ", ")))
       futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering connection types: ", nrow(grn.filt)))
@@ -3649,7 +3651,7 @@ filterGRNAndConnectGenes <- function(GRN,
                   dplyr::distinct() %>% 
                   dplyr::arrange(.data$TF_peak.r_bin)
                 
-                relBins =which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
+                relBins = which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
                 if (length(relBins) > 0) {
                   relBins = binThresholdNeg$TF_peak.r_bin[min(relBins):nrow(binThresholdNeg)]
                   idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
@@ -3673,7 +3675,7 @@ filterGRNAndConnectGenes <- function(GRN,
                   dplyr::distinct() %>% 
                   dplyr::arrange(.data$TF_peak.r_bin)
                 
-                relBins =which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
+                relBins = which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
                 if (length(relBins) > 0) {
                   relBins = binThresholdNeg$TF_peak.r_bin[seq_len(max(relBins))]
                   idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
@@ -3731,7 +3733,7 @@ filterGRNAndConnectGenes <- function(GRN,
       futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering connection types: ", nrow(peakGeneCorrelations)))
     }
     
-    if (! "all" %in% gene.types) {
+    if (!"all" %in% gene.types) {
       futile.logger::flog.info(paste0(" Filter genes by gene type, keep only the following gene types: ", paste0(gene.types, collapse = ", ")))
       futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering by gene type: ", nrow(peakGeneCorrelations)))
       peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$gene.type %in% gene.types)
@@ -4065,7 +4067,7 @@ filterGRNAndConnectGenes <- function(GRN,
     
     data.df$covariate_group <- IHW::groups_by_filter(data.df$covariate, nGroups)
     res.l$ihwPlots$pValHistogramGroupedByCovariate = 
-      ggplot2::ggplot(data.df, ggplot2::aes(x=.data$pValues)) + ggplot2::geom_histogram(binwidth = 0.025, boundary = 0) + 
+      ggplot2::ggplot(data.df, ggplot2::aes(x = .data$pValues)) + ggplot2::geom_histogram(binwidth = 0.025, boundary = 0) + 
         ggplot2::facet_wrap( ~covariate_group, nrow = 2) + 
       ggplot2::ggtitle("p-Value histogram grouped by the covariate")
     
@@ -4082,7 +4084,7 @@ filterGRNAndConnectGenes <- function(GRN,
     
     # Plot No. 8
     res.l$ihwPlots$pValAgainstRankCovariate = 
-      ggplot2::ggplot(data.df, ggplot2::aes(x= .data$covariateRank, y = -log10(.data$pValues))) + ggplot2::geom_hex(bins = 100) + 
+      ggplot2::ggplot(data.df, ggplot2::aes(x = .data$covariateRank, y = -log10(.data$pValues))) + ggplot2::geom_hex(bins = 100) + 
       ggplot2::ggtitle("p-Value against rank of the covariate")
     
     
@@ -4277,7 +4279,7 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
   if (genomeAssembly_SNP %in% c("hg19", "hg38")) {
     index_chr23 = which(grepl("chr23", SNPData[, col_chr]))
     if (length(index_chr23) > 0) {
-      message =paste0(" Chr23 found in SNP data. Renaming to chrX")
+      message = paste0(" Chr23 found in SNP data. Renaming to chrX")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       SNPData[index_chr23, col_chr] = stringr::str_replace(SNPData[index_chr23, col_chr], "chr23", "chrX")
     }
@@ -4349,9 +4351,9 @@ addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_pe
 }
 
 # TODO: Only called for SNPs
-.createDF_fromCoordinates <- function (IDs, colnameID = "peakID") {
+.createDF_fromCoordinates <- function(IDs, colnameID = "peakID") {
   
-  splits = strsplit(as.character(IDs), split=c(":|-"), fixed = FALSE,  perl = TRUE)
+  splits = strsplit(as.character(IDs), split = c(":|-"), fixed = FALSE,  perl = TRUE)
   df = tibble::tibble(      chr   = sapply(splits,"[[", 1),
                             start = as.numeric(sapply(splits,"[[", 2)),
                             end   = as.numeric(sapply(splits,"[[", 3))) %>%
@@ -4446,14 +4448,14 @@ generateStatsSummary <- function(GRN,
         TF_peak.fdr_cur.str = as.character(TF_peak.fdr_cur)
         
         futile.logger::flog.info(paste0("Calculate network stats for TF-peak FDR of ", TF_peak.fdr_cur))
-        GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] =list()
+        GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] = list()
         
         futile.logger::flog.debug(paste0("Iterating over different peak-gene FDR thresholds..."))
         for (peak_gene.fdr_cur in peak_gene.fdr) {
           
           futile.logger::flog.debug(paste0("Peak-gene FDR = ", peak_gene.fdr_cur))
           peak_gene.fdr_cur.str = as.character(peak_gene.fdr_cur)
-          GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] =list()
+          GRN@stats$connectionDetails.l[[permIndex]] [[TF_peak.fdr_cur.str]] [[peak_gene.fdr_cur.str]] = list()
           
           for (allowMissingTFsCur in allowMissingTFs) {
             
@@ -4478,7 +4480,7 @@ generateStatsSummary <- function(GRN,
                                                TF_peak.fdr.threshold = TF_peak.fdr_cur, 
                                                TF_peak.connectionTypes = TF_peak.connectionTypeCur, 
                                                peak_gene.p_raw.threshold = NULL, 
-                                               peak_gene.fdr.threshold= peak_gene.fdr_cur,
+                                               peak_gene.fdr.threshold = peak_gene.fdr_cur,
                                                gene.types = gene.types, 
                                                allowMissingGenes = allowMissingGenesCur, 
                                                allowMissingTFs = allowMissingTFsCur,
@@ -4575,7 +4577,7 @@ generateStatsSummary <- function(GRN,
   peak_gene.stats = dplyr::select(connections.df, "peak.ID", "gene.ENSEMBL") %>% dplyr::filter(!is.na(.data$gene.ENSEMBL),!is.na(.data$peak.ID)) %>% dplyr::pull(.data$peak.ID) %>% as.character() %>% table() 
   peak.TF.stats   = dplyr::select(connections.df, "peak.ID", "TF.name")      %>% dplyr::filter(!is.na(.data$TF.name),     !is.na(.data$peak.ID)) %>% dplyr::pull(.data$peak.ID) %>% as.character() %>% table() 
   
-  if (length(TF.stats) > 0){
+  if (length(TF.stats) > 0) {
     TF.connections = c(min(TF.stats, na.rm = TRUE), 
                        mean(TF.stats, na.rm = TRUE), 
                        median(TF.stats, na.rm = TRUE), 
@@ -4584,7 +4586,7 @@ generateStatsSummary <- function(GRN,
     TF.connections = rep(0,4)
   }
   
-  if (length(gene.stats) > 0){
+  if (length(gene.stats) > 0) {
     gene.connections = c(min(gene.stats, na.rm = TRUE), 
                          mean(gene.stats, na.rm = TRUE), 
                          median(gene.stats, na.rm = TRUE), 
@@ -4593,7 +4595,7 @@ generateStatsSummary <- function(GRN,
     gene.connections = rep(0,4)
   }
   
-  if (length(peak_gene.stats) > 0){
+  if (length(peak_gene.stats) > 0) {
     peak_gene.connections = c(min(peak_gene.stats, na.rm = TRUE), 
                               mean(peak_gene.stats, na.rm = TRUE), 
                               median(peak_gene.stats, na.rm = TRUE), 
@@ -4602,7 +4604,7 @@ generateStatsSummary <- function(GRN,
     peak_gene.connections = rep(0,4)
   }
   
-  if (length(peak.TF.stats) > 0){
+  if (length(peak.TF.stats) > 0) {
     peak_TF.connections = c(min(peak.TF.stats, na.rm = TRUE), 
                             mean(peak.TF.stats, na.rm = TRUE), 
                             median(peak.TF.stats, na.rm = TRUE), 
@@ -4651,7 +4653,7 @@ generateStatsSummary <- function(GRN,
 }
 
 
-.initializeStatsDF <- function(){
+.initializeStatsDF <- function() {
   
   tibble::tribble(~perm, 
                   ~TF_peak.fdr, ~TF_peak.connectionType,
@@ -4686,7 +4688,7 @@ generateStatsSummary <- function(GRN,
 loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl.de/grp-zaugg/GRaNIE/-/raw/master/data/GRN.rds") {
     
     checkmate::assertFlag(forceDownload)
-    options(timeout=200)
+    options(timeout = 200)
     
     if (!is.installed("BiocFileCache")) {
         
@@ -4759,7 +4761,7 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
 #' @param asMatrix Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, counts are returned as a data frame with or without an ID column (see \code{includeIDColumn}). If set to \code{TRUE}, counts are returned as a matrix with the ID column as row names.
 #' @param includeIDColumn Logical. \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Only relevant if \code{asMatrix = FALSE}. If set to \code{TRUE}, an explicit ID column is returned (no row names). If set to \code{FALSE}, the IDs are in the row names instead.
 #' @param includeFiltered  Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, genes or peaks marked as filtered (after running the function \code{filterData}) will not be returned. If set to \code{TRUE}, all elements are returned regardless of the currently active filter status.
-#' @template background
+#' @template permuted
 #' @export
 #' @import tibble
 #' @examples 
@@ -4775,8 +4777,6 @@ getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDC
     
     checkmate::assertChoice(type, c("peaks", "rna"))
     checkmate::assertFlag(permuted)
-    
-    permIndex = dplyr::if_else(permuted, "1", "0")
     
     if (type == "peaks") {
         
@@ -4823,9 +4823,9 @@ getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDC
     if (!includeFiltered) {
         
         if (type == "rna") {
-            nonFiltered = which(! GRN@data$RNA$counts_metadata$isFiltered)
+            nonFiltered = which(!GRN@data$RNA$counts_metadata$isFiltered)
         } else {
-            nonFiltered = which(! GRN@data$peaks$counts_metadata$isFiltered)
+            nonFiltered = which(!GRN@data$peaks$counts_metadata$isFiltered)
         }
         
         result = result[nonFiltered,]
@@ -5086,7 +5086,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  background = FALSE,
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' params.l = getParameters(GRN, type = "parameter", name = "all")
-getParameters <- function (GRN, type = "parameter", name = "all") {
+getParameters <- function(GRN, type = "parameter", name = "all") {
     
     checkmate::assertClass(GRN, "GRN")
     GRN = .addFunctionLogToObject(GRN)
@@ -5166,8 +5166,6 @@ deleteIntermediateData <- function(GRN) {
 #' GRN = loadExampleObject()
 #' GRN = changeOutputDirectory(GRN, outputDirectory = ".")
 changeOutputDirectory <- function(GRN, outputDirectory = ".") {
-    
-    start = Sys.time()  
     
     checkmate::assertClass(GRN, "GRN")
     GRN = .addFunctionLogToObject(GRN)
@@ -5321,7 +5319,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
 }
 
 
-.checkOutputFolder <- function (GRN, outputFolder) {
+.checkOutputFolder <- function(GRN, outputFolder) {
   
   if (!is.null(outputFolder)) {
     
@@ -5380,7 +5378,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   
 }
 
-.getOutputFileName <- function (name) {
+.getOutputFileName <- function(name) {
   
   # List of all output file names
   allNames = list(
@@ -5454,7 +5452,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   GRN
 }
 
-.getMaxPermutation <- function (GRN) {
+.getMaxPermutation <- function(GRN) {
   
   if (!is.null(GRN@config$parameters$internal$nPermutations)) {
     return(GRN@config$parameters$internal$nPermutations)
@@ -5465,6 +5463,37 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   }
 }
 
+.get_combined_TF_peak_bins <- function(GRN) {
+    
+    fdr_steps = GRN@config$parameters$internal$stepsFDR
+    if (is.null(fdr_steps)) {
+        fdr_steps = GRN@config$parameters$stepsFDR
+    }
+    
+    bin.order.pos = levels(cut(stats::rnorm(100), breaks = fdr_steps, right = FALSE, include.lowest = TRUE))
+    
+    # Combine the slightly different bins and merge them together
+    bin.order.combined = gsub(")", "]", bin.order.pos, fixed = TRUE)
+    bin.order.combined = gsub("(", "[", bin.order.combined, fixed = TRUE)
+    
+    bin.order.combined
+    
+}
+
+.getFDR_TF_peak_vector <- function(GRN) {
+    
+    nEntries = length(GRN@config$functionParameters$addConnections_TF_peak)
+    maxFDR = GRN@config$functionParameters$addConnections_TF_peak[[nEntries]]$parameters$maxFDRToStore
+    if (is.null(maxFDR)) {
+        # Old format
+        maxFDR = GRN@config$functionParameters$addConnections_TF_pea$parameters$maxFDRToStore
+    }
+    fdr_toTest = c(0.0001, 0.001, 0.01, 0.05, 0.1, seq(0.2, 1, by = 0.1))
+    fdr_toTest_filt = fdr_toTest[which(fdr_toTest <= (maxFDR + 0.001))]
+    stopifnot(length(fdr_toTest_filt) > 0)
+    
+    fdr_toTest_filt
+}
 
 
 .checkForbiddenNames <- function(name, forbiddenNames) {
@@ -5484,7 +5513,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     
     # Some classes might be missing, add them here with explicit zeros
     for (r_pos in c(TRUE, FALSE)) {
-        for (classCur in networkType_details){
+        for (classCur in networkType_details) {
             for (pclassCur in levels(peakGeneCorrelations.all.cur$peak_gene.p.raw.class)) {
                 
                 row = which(d$r_positive == r_pos & d$class == classCur & as.character(d$peak_gene.p.raw.class) == as.character(pclassCur))
@@ -5507,7 +5536,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     
     # Summarize per bin
     d2 = d %>%
-        dplyr::group_by(class, .data$peak_gene.p.raw.class)%>%
+        dplyr::group_by(class, .data$peak_gene.p.raw.class) %>%
         dplyr::summarise(sum_pos = .data$n[.data$r_positive],
                          sum_neg = .data$n[!.data$r_positive]) %>%
         dplyr::mutate(ratio_pos_raw = .data$sum_pos / .data$sum_neg,
@@ -5539,7 +5568,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
                                ratio = c(d2$ratio_pos_raw, d3$ratio_real_norm),
                                classAll = c(as.character(d2$class), d3$r_positive),
                                set = c(d2$set, d3$set)) %>%
-        dplyr::mutate(classAll = factor(.data$classAll, levels=c(paste0("real_",range), paste0("random_",range), "TRUE", "FALSE")),
+        dplyr::mutate(classAll = factor(.data$classAll, levels = c(paste0("real_",range), paste0("random_",range), "TRUE", "FALSE")),
                       peak_gene.p.raw.class = factor(.data$peak_gene.p.raw.class, levels = levels(d2$peak_gene.p.raw.class)))
     
     d4 = tibble::tibble(peak_gene.p.raw.class = unique(d$peak_gene.p.raw.class), 
@@ -5558,9 +5587,9 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         d4[i, "n_rneg_random"] = d2[row_d2, "sum_neg"] %>% unlist()
         
         row_d3 = which(d3$r_positive == TRUE & d3$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
-        d4[i, "ratio_background_real_rpos_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
+        d4[i, "ratio_background_real_rpos_norm"] = 1 - d3[row_d3, "ratio_real_norm"] %>% unlist()
         row_d3 = which(d3$r_positive == FALSE & d3$peak_gene.p.raw.class == d4$peak_gene.p.raw.class[i])
-        d4[i, "ratio_background_real_rneg_norm"] = 1- d3[row_d3, "ratio_real_norm"] %>% unlist()
+        d4[i, "ratio_background_real_rneg_norm"] = 1 - d3[row_d3, "ratio_real_norm"] %>% unlist()
     }
     
     d4 = d4 %>%
@@ -5649,7 +5678,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
 #' # GRN = loadExampleObject()
 #' # GRN = add_featureVariation(GRN, metadata = c("mt_frac"), forceRerun = TRUE)
 #' @export
-add_featureVariation <- function (GRN, 
+add_featureVariation <- function(GRN, 
                                     formula = "auto", 
                                     metadata = c("all"),
                                     features = "all_filtered", 
@@ -5722,7 +5751,7 @@ add_featureVariation <- function (GRN,
             if (length(factorVariablesNames) > 0) {
                 formulaElems = paste0("(1|", factorVariablesNames, ")")
             } else {
-                formulaElems  =""
+                formulaElems  = ""
             }
             
             if (length(numericVariablesNames) > 0) {

@@ -36,7 +36,7 @@ addTFBS(
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object, with additional information added from this function (\code{GRN@annotation$TFs} in particular)
+An updated \code{\linkS4class{GRN}} object, with additional information added from this function(\code{GRN@annotation$TFs} in particular)
 }
 \description{
 For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. We provide example files for all supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.

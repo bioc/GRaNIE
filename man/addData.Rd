@@ -65,7 +65,7 @@ By default, the newest version is selected for the most recent genome assembly v
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object, with added data from this function (e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
+An updated \code{\linkS4class{GRN}} object, with added data from this function(e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 }
 \description{
 This function adds both RNA and peak data to a \code{\linkS4class{GRN}} object, along with data normalization.

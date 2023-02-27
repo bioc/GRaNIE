@@ -15,7 +15,7 @@ A value >1 requires the \code{BiocParallel} package (as it is listed under \code
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object, with added data from this function (\code{GRN@data$TFs$TF_peak_overlap} in particular)
+An updated \code{\linkS4class{GRN}} object, with added data from this function(\code{GRN@data$TFs$TF_peak_overlap} in particular)
 }
 \description{
 Overlap peaks and TFBS for a \code{\linkS4class{GRN}} object

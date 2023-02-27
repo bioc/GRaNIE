@@ -37,13 +37,13 @@ addConnections_TF_peak(
 
 \item{maxFDRToStore}{Numeric[0,1]. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.}
 
-\item{addForBackground}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for background data. Leave at \code{TRUE} unless you know what you are doing.}
+\item{addForBackground}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Add connections also for background data. Leave at \code{TRUE} unless you know what you are doing.}
 
-\item{useGCCorrection}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?}
+\item{useGCCorrection}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs? For more details, see the Package Details vignette.}
 
-\item{percBackground_size}{Numeric[0,100]. Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
+\item{percBackground_size}{Numeric[0,100]. Default 75. EXPERIMENTAL. Percentage of the background to use as basis for sampling. If set to 0, an automatic iterative procedure will identify the maximum percentage so that all relevant GC bins with a rel. frequency above 5\% from the foreground can be matched. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
 
-\item{percBackground_resample}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
+\item{percBackground_resample}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

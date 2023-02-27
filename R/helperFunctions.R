@@ -156,7 +156,7 @@
 }
 
 
-.checkPackage_topGO_and_arguments <- function (ontology, algorithm, statistic) {
+.checkPackage_topGO_and_arguments <- function(ontology, algorithm, statistic) {
     
     if (length(intersect(ontology, c("GO_BP", "GO_MF", "GO_CC"))) > 0) {
         
@@ -195,7 +195,7 @@
   patternAll = strsplit(pattern, ",")[[1]]
   checkmate::assertCharacter(patternAll, min.len = 1)
   
-  if(!verbose) futile.logger::flog.threshold(futile.logger::WARN)
+  if (!verbose) futile.logger::flog.threshold(futile.logger::WARN)
   futile.logger::flog.info(paste0("Found ", length(patternAll), " distinct pattern(s) in pattern string."))
   
   nFilesToProcessTotal = 0
@@ -228,7 +228,7 @@
     futile.logger::flog.info(paste0("The following", nFilesToProcessTotal, "files were found:\n", paste0(filesToProcess.vec, collapse = "\n ")))
   }
   
-  if(!verbose) futile.logger::flog.threshold(futile.logger::INFO)
+  if (!verbose) futile.logger::flog.threshold(futile.logger::INFO)
   
   filesToProcess.vec
   
@@ -362,7 +362,7 @@
     } else {
       futile.logger::flog.error(messageError)
       # Close all open devices    
-      while (grDevices::dev.cur()>1) grDevices::dev.off()
+      while (grDevices::dev.cur() > 1) grDevices::dev.off()
       stop(messageError)
     }
   }
@@ -393,7 +393,7 @@
   }
   
   # Check if there are any chr names that are not part of seqlengths, which causes an 'seqnames' contains sequence names with no entries in 'seqinfo' error
-  missingSeqs = unique(annotation$chr)[which(! unique(annotation$chr) %in% names(seqlengths))]
+  missingSeqs = unique(annotation$chr)[which(!unique(annotation$chr) %in% names(seqlengths))]
   
   if (length(missingSeqs) > 0) {
       message = paste0("For ", length(missingSeqs), " chromosomes (", paste0(missingSeqs, collapse = ","), ") and a total of ", length(which(annotation$chr %in% missingSeqs)), 
@@ -402,7 +402,7 @@
       
       # Filter and refactor
       annotation = annotation %>%
-          dplyr::filter(! .data$chr %in% missingSeqs) %>%
+          dplyr::filter(!.data$chr %in% missingSeqs) %>%
           dplyr::mutate(chr = factor(.data$chr, levels = unique(.data$chr)))
       
   }
@@ -534,9 +534,9 @@
 .checkSelfOverlap <- function(subject) {
     
     overlapsCount = GenomicRanges::countOverlaps(subject, subject, 
-                                  minoverlap=1,
-                                  type="any",
-                                  ignore.strand=TRUE)
+                                  minoverlap = 1,
+                                  type = "any",
+                                  ignore.strand = TRUE)
     
     length(which(overlapsCount > 1))
     
@@ -547,21 +547,21 @@
 .asSparseMatrix <- function(matrix, convertNA_to_zero=TRUE, dimnames = NULL) {
   
   if (convertNA_to_zero) {
-    matrix[which(is.na(matrix))]= 0
+    matrix[which(is.na(matrix))] = 0
   }
  
-  Matrix::Matrix(matrix, sparse=TRUE, dimnames = dimnames)
+  Matrix::Matrix(matrix, sparse = TRUE, dimnames = dimnames)
 }
 
 #' @importFrom Matrix Matrix
-.asMatrixFromSparse <-function(matrix, convertZero_to_NA=TRUE) {
+.asMatrixFromSparse <- function(matrix, convertZero_to_NA=TRUE) {
   
   if (methods::is(matrix,"dgeMatrix") | methods::is(matrix,"dgCMatrix") | methods::is(matrix,"dgRMatrix")) {
     dimNames = dimnames(matrix)
     matrix = as.matrix(matrix)
     
     if (convertZero_to_NA) {
-        matrix[which(matrix == 0)]= NA
+        matrix[which(matrix == 0)] = NA
     }
     
     dimnames(matrix) = dimNames
@@ -609,7 +609,7 @@
   }
   
   if (!is.null(ncolExpected)) {
-    if (! ncol(tbl) %in% ncolExpected) {
+    if (!ncol(tbl) %in% ncolExpected) {
       message = paste0("The file ", file, " does not have the expected number of ", ncolExpected, " columns, but instead ", ncol(tbl), ".")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
@@ -671,7 +671,7 @@ isIntegerMatrix <- function(df) {
   
 }
 
-.getPermStr <- function (permutation) {
+.getPermStr <- function(permutation) {
   
   dplyr::if_else(permutation == 0, "Real data", "Permuted data")
 }
@@ -682,7 +682,7 @@ match.call.defaults <- function(asList = TRUE, ...) {
     call <- evalq(match.call(expand.dots = FALSE), parent.frame(2))
     formals <- evalq(formals(), parent.frame(2))
     
-    for(i in setdiff(names(formals), names(call)))
+    for (i in setdiff(names(formals), names(call)))
         call[i] <- list( formals[[i]] )
     
     
@@ -709,7 +709,7 @@ is.installed <- function(mypkg){
 # Taken from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
 .get_cache <- function() {
     # cache <- tools::R_user_dir(utils::packageName(), which="cache")
-    cache <- tools::R_user_dir("GRaNIE", which="cache")
+    cache <- tools::R_user_dir("GRaNIE", which = "cache")
     BiocFileCache::BiocFileCache(cache, ask = FALSE)
 }
 
@@ -723,14 +723,14 @@ is.installed <- function(mypkg){
 
 .getBiomartParameters <- function(genomeAssembly) {
     
-    if (grepl(x = genomeAssembly, pattern = "^hg\\d\\d")){
+    if (grepl(x = genomeAssembly, pattern = "^hg\\d\\d")) {
         dataset = "hsapiens_gene_ensembl"
         if (genomeAssembly == "hg38") {
             host = "https://www.ensembl.org"
         } else if (genomeAssembly == "hg19") {
-            host ="https://grch37.ensembl.org"
+            host = "https://grch37.ensembl.org"
         }
-    } else if (grep(x = genomeAssembly, pattern = "^mm\\d\\d")){
+    } else if (grep(x = genomeAssembly, pattern = "^mm\\d\\d")) {
         dataset = "mmusculus_gene_ensembl"
         host = "https://www.ensembl.org"
     }
