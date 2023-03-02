@@ -1,3 +1,12 @@
+# GRaNIE 1.3.26-1.3.28 (2023-02-20)
+
+## New features and vignette updates
+- added two new supported genomes: `rn7` and `dm6` for the rat and the Drosophila (fruit fly) genome, respectively
+- **added preliminary support for a new, alternative way of how to import TF and TFBS data into `GRaNIE`. We now additionally offer a more user-friendly way by making it possible to directly use the `JASPAR2022` database. You do not need any custom files anymore for this approach! [See the Package vignette for more details](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#input_TF).**
+
+## Bugfixes
+- fixed a regression bug in `addConnections_TF_peak` (`Column `peak.GC.class` doesn't exist.`) that was caused due to the recent GC modifications
+
 # GRaNIE 1.3.25 (2023-02-20)
 
 ## New features and vignette updates

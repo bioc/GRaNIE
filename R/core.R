@@ -11,7 +11,7 @@
 #' Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. 
 #' Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.
 #' @param genomeAssembly Character. No default. The genome assembly of all data that to be used within this object. 
-#' Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9} and \code{mm10}. See function description for further information and notes.
+#' Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9}, \code{mm10}, \code{rn7}, \code{dm6}. If you need additional genomes, let us know. See function description for further information and notes.
 #' @return Empty \code{\linkS4class{GRN}} object
 #' @examples 
 #' meta.l = list(name = "exampleName", date = "01.03.22")
@@ -25,7 +25,7 @@ initializeGRN <- function(objectMetadata = list(),
   start = Sys.time()   
     
   checkmate::assert(checkmate::checkNull(objectMetadata), checkmate::checkList(objectMetadata))
-  checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
+  checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn7", "dm6"))
   
   # Check individual metadata components that they are only characters but not actual data objects
   for (i in seq_len(length(objectMetadata))) {
@@ -162,8 +162,8 @@ initializeGRN <- function(objectMetadata = list(),
 #' when overlapping peaks are found) or (the default) should an error be raised?
 #' @param keepOriginalReadCounts \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the original read counts as provided to the function be kept in addition to
 #' storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.
-#' @param geneAnnotation_customVersion \code{NULL} or Character(1). Default \code{NULL}. The Ensembl version to use for genome annotation retrieval via \code{biomaRt}, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}. 
-#' By default, the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead .
+#' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. The Ensembl version to use for genome annotation retrieval via \code{biomaRt}, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}. 
+#' By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with added data from this function(e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 #' @seealso \code{\link{plotPCA_all}}
@@ -182,15 +182,13 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                     additionalParams.l = list(),
                     allowOverlappingPeaks= FALSE,
                     keepOriginalReadCounts = FALSE,
-                    geneAnnotation_customVersion = NULL,
+                    EnsemblVersion = NULL,
                     forceRerun = FALSE) {
   
   start = Sys.time()
   
   checkmate::assertClass(GRN, "GRN")
    
-
-
   checkmate::assertDataFrame(counts_peaks, min.rows = 1, min.cols = 2)
   checkmate::assertDataFrame(counts_rna, min.rows = 1, min.cols = 2)
   checkmate::assertChoice(idColumn_peaks, colnames(counts_peaks))
@@ -210,7 +208,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
   checkmate::assertFlag(keepOriginalReadCounts)
   checkmate::assertFlag(allowOverlappingPeaks)
-  checkmate::assert(checkmate::checkNull(geneAnnotation_customVersion), checkmate::assertSubset(as.character(geneAnnotation_customVersion), biomaRt::listEnsemblArchives()$version))
+  checkmate::assert(checkmate::checkNull(EnsemblVersion), checkmate::assertSubset(as.character(EnsemblVersion), biomaRt::listEnsemblArchives()$version))
   
 
   
@@ -238,6 +236,10 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     # Check existence of correct ID column now
     checkmate::assertSubset(idColumn_peaks, colnames(counts_peaks))
     checkmate::assertSubset(idColumn_RNA, colnames(counts_rna))
+    
+    # Check number of character columns: Must be 1 exactly
+    .checkColumnTypes(counts_rna, "RNA")
+    .checkColumnTypes(counts_peaks, "peaks")
 
     # Check ID columns for missing values and remove
     rna_missing_ID =  which(is.na(counts_rna$ENSEMBL))
@@ -412,7 +414,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     
 
 
-    GRN = .populateGeneAnnotation(GRN, customVersion = geneAnnotation_customVersion)
+    GRN = .populateGeneAnnotation(GRN, EnsemblVersion = EnsemblVersion)
     
   } else {
       .printDataAlreadyExistsMessage()
@@ -424,6 +426,17 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   GRN
   
 }
+
+.checkColumnTypes <- function(counts_df, name) {
+    columnTypes = sapply(counts_df, class) %>% table()
+    if (columnTypes["character"] != 1) {
+        message = paste0(" The input ", name, " data is invalid: Exactly one column must be of type character (the ID column), but ", columnTypes_rna["character"], " columns are instead")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+}
+
+
 
 .checkOverlappingPeaks <- function(GRN, allowOverlappingPeaks) {
     
@@ -512,17 +525,12 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 }
 
 #' @importFrom biomaRt useEnsembl getBM
-.retrieveAnnotationData <- function(genomeAssembly, customVersion = NULL) {
+.retrieveAnnotationData <- function(genomeAssembly, EnsemblVersion = NULL) {
     
     futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt for ", genomeAssembly, "... This may take a while"))
     
     params.l = .getBiomartParameters(genomeAssembly)
     
-    if (!is.null(customVersion)) {
-        ensemblVersion = customVersion
-    } else {
-        ensemblVersion = NULL
-    }
     
     columnsToRetrieve = c("chromosome_name", "start_position", "end_position",
                           "strand", "ensembl_gene_id", "gene_biotype", "external_gene_name")
@@ -533,7 +541,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     while (!is.data.frame(geneAnnotation) && attempt <= 3 ) {
         attempt <- attempt + 1
         geneAnnotation = tryCatch({ 
-            ensembl = biomaRt::useEnsembl(biomart = "genes", version = ensemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
+            ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
             biomaRt::getBM(attributes = columnsToRetrieve, mart = ensembl)
             
         }
@@ -649,7 +657,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
 }
 
-.populateGeneAnnotation <- function(GRN, customVersion = NULL) {
+.populateGeneAnnotation <- function(GRN, EnsemblVersion = NULL) {
 
 
   countsRNA.m  = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
@@ -661,7 +669,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   rowMedians_rna = matrixStats::rowMedians(countsRNA.m)
   CV_rna = matrixStats::rowSds(countsRNA.m) /  rowMeans_rna
   
-  genomeAnnotation.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly, customVersion = customVersion)
+  genomeAnnotation.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly, EnsemblVersion = EnsemblVersion)
   
   metadata_rna = tibble::tibble(gene.ENSEMBL = rownames(countsRNA.m), 
                                 gene.mean = rowMeans_rna, 
@@ -705,7 +713,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     dplyr::mutate(peak.width = GenomicRanges::width(query),
                   peak.ID = query$peakID,
                   peak.GC.class = cut(.data$`G|C`, breaks = seq(0,1,1/nBins), include.lowest = TRUE, ordered_result = TRUE)) %>%
-    dplyr::rename(peak.GC.perc    = .data$`G|C`) %>%
+    dplyr::rename(peak.GC.perc    = "G|C") %>%
     dplyr::select("peak.ID", tidyselect::everything())
   
 
@@ -1383,248 +1391,337 @@ filterData <- function(GRN,
 
 #' Add TFBS to a \code{\linkS4class{GRN}} object. 
 #' 
-#' For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. We provide example files for all supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.
+#' For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. We provide example files for selected supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.
 #' 
 #' @template GRN 
-#' @param motifFolder Character. No default. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details. The folder must also contain a so-called translation table, see the argument \code{translationTable} for details.
-#' @param TFs Character vector. Default \code{all}. Vector of TF names to include. The special keyword \code{all} can be used to include all TF found in the folder as specified by \code{motifFolder}. If \code{all} is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.
-#' @param translationTable Character. Default \code{translationTable.csv}. Name of the translation table file that is also located in the folder along with the TFBS files. This file must have the following structure: at least 2 columns, called \code{ENSEMBL} and \code{ID}. \code{ID} denotes the ID for the TF that is used throughout the pipeline (e.g., AHR) and the prefix of how the corresponding file is called (e.g., \code{AHR.0.B} if the file for AHR is called \code{AHR.0.B_TFBS.bed.gz}), while \code{ENSEMBL} denotes the ENSEMBL ID (dot suffix; e.g., ENSG00000106546, are removed automatically if present). 
-#' @param translationTable_sep Character. Default \code{" "} (whitespace character). The column separator for the \code{translationTable} file.
-#' @param filesTFBSPattern Character. Default \code{"_TFBS"}. Suffix for the file names in the TFBS folder that is not part of the TF name. Can be empty. For example, for the TF CTCF, if the file is called \code{CTCF.all.TFBS.bed}, set this parameter to \code{".all.TFBS"}.
-#' @param fileEnding Character. Default \code{".bed"}. File ending for the files from the motif folder.
+#' @param source Character. One of \code{custom}, \code{JASPAR}. Default \code{custom}. If a custom source is being used, further details about the motif folder and files will be provided (see the other function arguments). If set to \code{JASPAR}, the \href{https://bioconductor.org/packages/release/data/annotation/html/JASPAR2022.html}{JASPAR2022} database is used.
+#' @param motifFolder Character. No default. Only relevant if \code{source = "custom"}. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details. The folder must also contain a so-called translation table, see the argument \code{translationTable} for details.
+#' @param TFs Character vector. Default \code{all}. Only relevant if \code{source = "custom"}. Vector of TF names to include. The special keyword \code{all} can be used to include all TF found in the folder as specified by \code{motifFolder}. If \code{all} is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.
+#' @param translationTable Character. Default \code{translationTable.csv}. Only relevant if \code{source = "custom"}. Name of the translation table file that is also located in the folder along with the TFBS files. This file must have the following structure: at least 2 columns, called \code{ENSEMBL} and \code{ID}. \code{ID} denotes the ID for the TF that is used throughout the pipeline (e.g., AHR) and the prefix of how the corresponding file is called (e.g., \code{AHR.0.B} if the file for AHR is called \code{AHR.0.B_TFBS.bed.gz}), while \code{ENSEMBL} denotes the ENSEMBL ID (dot suffix; e.g., ENSG00000106546, are removed automatically if present). 
+#' @param translationTable_sep Character. Default \code{" "} (white space character). Only relevant if \code{source = "custom"}. The column separator for the \code{translationTable} file.
+#' @param filesTFBSPattern Character. Default \code{"_TFBS"}. Only relevant if \code{source = "custom"}. Suffix for the file names in the TFBS folder that is not part of the TF name. Can be empty. For example, for the TF CTCF, if the file is called \code{CTCF.all.TFBS.bed}, set this parameter to \code{".all.TFBS"}.
+#' @param fileEnding Character. Default \code{".bed"}. Only relevant if \code{source = "custom"}. File ending for the files from the motif folder.
 #' @param nTFMax \code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
+#' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
+#' By default (\code{NULL}), the newest version is selected (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function(\code{GRN@annotation$TFs} in particular)
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' @export
-addTFBS <- function(GRN, motifFolder, TFs = "all", translationTable = "translationTable.csv",  translationTable_sep = " ", nTFMax = NULL, filesTFBSPattern = "_TFBS", fileEnding = ".bed", forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-  
-  
-  GRN = .makeObjectCompatible(GRN)
+addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all", 
+                    translationTable = "translationTable.csv",  translationTable_sep = " ", filesTFBSPattern = "_TFBS", fileEnding = ".bed", 
+                    nTFMax = NULL, EnsemblVersion = NULL, forceRerun = FALSE) {
+    
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertSubset(source, c("custom", "JASPAR"))
+    
+    if(source =="custom") {
+        
+        if(is.null(motifFolder)) {
+            futile.logger::flog.error("When using a custom source for the TFBS, please specify a valid path to a motif folder using the motifFolder parameter")
+        }else{
+            checkmate::assertFileExists(paste0(motifFolder, .Platform$file.sep, translationTable))
+            checkmate::assertDirectoryExists(motifFolder)
+            checkmate::assertCharacter(filesTFBSPattern, len = 1, min.chars = 0)
+            checkmate::assertCharacter(fileEnding, len = 1, min.chars = 1)
+            checkmate::assertCharacter(translationTable_sep, len = 1, min.chars = 1)
+        }
+    } else{ # if source == JASPAR
+        
+        if (!is.null(motifFolder)) {
+            message = paste0("When using the JASPAR database, the motifFolder, along with other function parameters, is ignored")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+        }
 
-  checkmate::assertDirectoryExists(motifFolder)
-  checkmate::assertCharacter(TFs, min.len = 1)
-  checkmate::assert(checkmate::testNull(nTFMax), checkmate::testIntegerish(nTFMax, lower = 1))
-  checkmate::assertCharacter(filesTFBSPattern, len = 1, min.chars = 0)
-  checkmate::assertCharacter(fileEnding, len = 1, min.chars = 1)
-  checkmate::assertFileExists(paste0(motifFolder, .Platform$file.sep, translationTable))
-  checkmate::assertCharacter(translationTable_sep, len = 1, min.chars = 1)
-  checkmate::assertFlag(forceRerun)
-  
-  if (is.null(GRN@annotation$TFs) | is.null(GRN@annotation$TFs) | is.null(GRN@config$allTF)  | is.null(GRN@config$directories$motifFolder) | forceRerun) {
+        packageMessage = paste0("At least one of the packages JASPAR2022, TFBSTools, motifmatchr, rbioapi are not installed, but needed here due to source = \"JASPAR\". Please install and re-run this function.")
+        .checkPackageInstallation(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"), packageMessage)  
+        
+    }
     
-    GRN = .addFunctionLogToObject(GRN)
-      
-    GRN@config$TFBS_fileEnding  = fileEnding
-    GRN@config$TFBS_filePattern = filesTFBSPattern
-    GRN@annotation$TFs = .getFinalListOfTFs(motifFolder, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, getCounts(GRN, type = "rna", permuted = FALSE))
-
-    
-    GRN@annotation$TFs = GRN@annotation$TFs %>%
-      dplyr::rename(TF.ENSEMBL = "ENSEMBL", TF.ID = "ID")  %>% 
-      dplyr::mutate(TF.name = .data$TF.ID)  %>%
-      dplyr::select("TF.name", "TF.ENSEMBL", "TF.ID")
-    
-    # TODO: Change here and make it more logical what to put where
-    GRN@config$allTF = GRN@annotation$TFs$TF.name
-    
-    #Store all data-dependent TF information
-    # GRN@config$TF_list = list()
-    # GRN@config$TF_list[["all_TFBS"]] =GRN@config$allTF
-    GRN@config$directories$motifFolder = motifFolder
+    checkmate::assertCharacter(TFs, min.len = 1)
+    checkmate::assert(checkmate::testNull(nTFMax), checkmate::testIntegerish(nTFMax, lower = 1))
+    checkmate::assertFlag(forceRerun)
     
     
-  } else {
-      .printDataAlreadyExistsMessage()
-  }
-  
-  .printExecutionTime(start, prefix = "")
-  
-  GRN
-  
+    if (is.null(GRN@annotation$TFs) | is.null(GRN@annotation$TFs) | is.null(GRN@config$allTF)  | is.null(GRN@config$directories$motifFolder) | forceRerun) {
+        
+        GRN = .addFunctionLogToObject(GRN)
+        
+        #GRN@config$TFBS_fileEnding  = ifelse(source == "custom", fileEnding, NULL) # ifelse doesn't seem to like that null
+        GRN@config$TFBS_fileEnding = if (source == "custom") fileEnding else NULL
+        GRN@config$TFBS_filePattern = if (source == "custom") filesTFBSPattern else NULL
+        GRN@config$directories$motifFolder <- if (source =="custom") motifFolder else NULL
+        
+        GRN@annotation$TFs = .getFinalListOfTFs(GRN, source, motifFolder, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, getCounts(GRN, type = "rna", permuted = FALSE), EnsemblVersion)
+        
+        GRN@annotation$TFs = GRN@annotation$TFs %>%
+            dplyr::rename(TF.ENSEMBL = "ENSEMBL", TF.ID = "ID", TF.name = "SYMBOL")  %>% 
+            #dplyr::mutate(TF.name = .data$TF.ID)  %>%
+            dplyr::select("TF.name", "TF.ENSEMBL", "TF.ID")
+        
+        GRN@config$allTF = GRN@annotation$TFs$TF.ID
+        
+        #Store all data-dependent TF information
+        # GRN@config$TF_list = list()
+        # GRN@config$TF_list[["all_TFBS"]] =GRN@config$allTF
+        
+        
+        
+    } else {
+        .printDataAlreadyExistsMessage()
+    }
+    
+    .printExecutionTime(start, prefix = "")
+    
+    GRN
+    
 }
 
+.getFinalListOfTFs <- function(GRN, source, folder_input_TFBS, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, countsRNA, EnsemblVersion) {
+    
+    if (source == "JASPAR") {
+        
+        futile.logger::flog.info(paste0("Checking JASPAR database"))
+        # get TF gene names from JASPAR
+        PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2022::JASPAR2022, 
+                                                opts = list(species = .getGenomeObject(GRN@config$parameters$genomeAssembly, "txID"))) 
+        
+        GRN@config$parameters$internal$PFMatrixList = PFMatrixList
+        
+        TFsWithTFBSPredictions <- unlist(lapply(PFMatrixList, function(x) {return(TFBSTools::name(x))}), use.names = FALSE)
+        IDsWithTFBSPredictions <- unlist(lapply(PFMatrixList, function(x) {return(TFBSTools::ID(x))}), use.names = FALSE)
+        # create translation table from biomart
 
-.getFinalListOfTFs <- function(folder_input_TFBS, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, countsRNA) {
-  
-  futile.logger::flog.info(paste0("Checking database folder for matching files: ", folder_input_TFBS))
-  files = .createFileList(folder_input_TFBS, "*.bed*", recursive = FALSE, ignoreCase = FALSE, verbose = FALSE)
-  TFsWithTFBSPredictions = gsub(pattern = filesTFBSPattern, "", tools::file_path_sans_ext(basename(files), compression = TRUE))
-  TFsWithTFBSPredictions = gsub(pattern = fileEnding, "", TFsWithTFBSPredictions)
-  
-  futile.logger::flog.info(paste0("Found ", length(TFsWithTFBSPredictions), " matching TFs: ", paste0(TFsWithTFBSPredictions, collapse = ", ")))
-  
-  
-  # Filter TFs
-  if (length(TFs) == 1 && TFs == "all") {
-    
-    futile.logger::flog.info(paste0("Use all TF from the database folder ", folder_input_TFBS))
-    
-  } else {
-    
-    futile.logger::flog.info(paste0("Subset TFs to user-specified list: ", paste0(TFs, collapse = ", ")))
-    TFsWithTFBSPredictions = TFsWithTFBSPredictions[TFsWithTFBSPredictions %in% TFs]
-    
-    if (length(TFsWithTFBSPredictions) == 0) {
-      message = paste0("No TFs are left after subsetting. Make sure the TF names are identical to the names in the database folder.")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly)
+        
+        mapping.df <- NULL
+        attempt <- 0
+        mirrors = c('www', 'uswest', 'useast', 'asia')
+        while(!is.data.frame(mapping.df) && attempt <= 3 ) {
+            attempt <- attempt + 1
+            mapping.df = tryCatch({ 
+                ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
+                biomaRt::getBM(attributes = c("external_gene_name", "ensembl_gene_id"),
+                               filters = "external_gene_name",
+                               values = TFsWithTFBSPredictions,
+                               mart = ensembl) %>%
+                    dplyr::rename(SYMBOL = external_gene_name,
+                                  ENSEMBL = ensembl_gene_id) %>%
+                    dplyr::mutate(ID = IDsWithTFBSPredictions[match(SYMBOL, TFsWithTFBSPredictions)])
+                
+            })
+        } 
+        
+        if (!is.data.frame(mapping.df)) {
+            error_Biomart = "A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl. This is often caused by an unresponsive Ensembl site. Try again at a later time. Note that this error is not caused by GRaNIE but external services."
+            .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
+            return(NULL)
+        }
+        
+        TFsWithTFBSPredictions = mapping.df$ID[match(TFsWithTFBSPredictions, mapping.df$SYMBOL)]
+        TFsWithTFBSPredictions = TFsWithTFBSPredictions[!is.na(TFsWithTFBSPredictions)]
+        
+    }else{ # if source == "custom"
+        
+        futile.logger::flog.info(paste0("Checking database folder for matching files: ", folder_input_TFBS))
+        
+        files = .createFileList(folder_input_TFBS, "*.bed*", recursive = FALSE, ignoreCase = FALSE, verbose = FALSE)
+        TFsWithTFBSPredictions = gsub(pattern = filesTFBSPattern, "", tools::file_path_sans_ext(basename(files), compression = TRUE))
+        TFsWithTFBSPredictions = gsub(pattern = fileEnding, "", TFsWithTFBSPredictions)
+        
+        file_input_translationTable = paste0(folder_input_TFBS, .Platform$file.sep, translationTable)
+        mapping.df = .readTranslationTable(file_input_translationTable, delim = translationTable_sep)
     }
-    futile.logger::flog.info(paste0("List of TFs: ", paste0(TFs, collapse = ", ")))
     
-  }
-  
-  file_input_translationTable = paste0(folder_input_TFBS, .Platform$file.sep, translationTable)
-  mapping.df = .readTranslationTable(file_input_translationTable, delim = translationTable_sep)
-  
-  TF_notExpressed = sort(dplyr::filter(mapping.df, !.data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
-  
-  if (length(TF_notExpressed) > 0) {
-    futile.logger::flog.info(paste0("Filtering the following ", length(TF_notExpressed), " TFs as they are not present in the RNA-Seq data: ", paste0(TF_notExpressed, collapse = ",")))
+    futile.logger::flog.info(paste0("Found ", length(TFsWithTFBSPredictions), " matching TFs: ", paste0(TFsWithTFBSPredictions, collapse = ", ")))
     
-  }
-  
-  allTF = sort(dplyr::filter(mapping.df, 
-                             .data$ENSEMBL %in% countsRNA$ENSEMBL, 
-                             .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
-  
-  nTF = length(allTF)
-  if (nTF == 0) {
-    message = paste0("No shared Tfs.")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  if (!is.null(nTFMax)) {
+    # Filter TFs
+    if (length(TFs) == 1 && TFs == "all") {
+        if (source == "custom") {
+            futile.logger::flog.info(paste0("Use all TF from the database folder ", folder_input_TFBS))
+        }else{ 
+            futile.logger::flog.info(paste0("Use all TF from the ", source, "databse"))
+        }
+        
+        
+    } else {
+        
+        futile.logger::flog.info(paste0("Subset TFs to user-specified list: ", paste0(TFs, collapse = ", ")))
+        TFsWithTFBSPredictions = TFsWithTFBSPredictions[TFsWithTFBSPredictions %in% TFs]
+        
+        if (length(TFsWithTFBSPredictions) == 0) {
+            message = paste0("No TFs are left after subsetting. Make sure the TF names are identical to the names in the database folder.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        futile.logger::flog.info(paste0("List of TFs: ", paste0(TFs, collapse = ", ")))
+        
+    }
     
-    if (!is.null(nTFMax) && nTFMax < nTF) {
-      futile.logger::flog.info(paste0("Use only the first ", nTFMax, " TFs because nTFMax has been set."))
-      allTF = allTF[seq_len(nTFMax)]
-      futile.logger::flog.info(paste0("Updated list of TFs: ", paste0(allTF, collapse = ", ")))
-    } 
     
-  }
-  
-  futile.logger::flog.info(paste0("Running the pipeline for ", nTF, " TF in total."))
-  
-  mapping.df.exp = dplyr::filter(mapping.df, .data$ID %in% allTF)
-  if (nrow(mapping.df.exp) == 0) {
-    message = paste0("Number of rows of mapping.df.exp is 0. Something is wrong with the mapping table or the filtering")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  
-  mapping.df.exp
+    TF_notExpressed = sort(dplyr::filter(mapping.df, ! .data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
+    
+    if (length(TF_notExpressed) > 0) {
+        futile.logger::flog.info(paste0("Filtering the following ", length(TF_notExpressed), " TFs as they are not present in the RNA-Seq data: ", paste0(TF_notExpressed, collapse = ",")))
+    }
+    
+    allTF = sort(dplyr::filter(mapping.df, 
+                               .data$ENSEMBL %in% countsRNA$ENSEMBL, 
+                               .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
+    
+    nTF = length(allTF)
+    if (nTF == 0) {
+        message = paste0("No shared Tfs.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    if (!is.null(nTFMax)) {
+        
+        if (!is.null(nTFMax) && nTFMax < nTF) {
+            futile.logger::flog.info(paste0("Use only the first ", nTFMax, " TFs because nTFMax has been set."))
+            allTF = allTF[seq_len(nTFMax)]
+            futile.logger::flog.info(paste0("Updated list of TFs: ", paste0(allTF, collapse = ", ")))
+        } 
+        
+    }
+    
+    futile.logger::flog.info(paste0("Running the pipeline for ", nTF, " TF in total."))
+    
+    mapping.df.exp = dplyr::filter(mapping.df, .data$ID %in% allTF)
+    if (nrow(mapping.df.exp) == 0) {
+        message = paste0("Number of rows of mapping.df.exp is 0. Something is wrong with the mapping table or the filtering")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    mapping.df.exp
 }
 
 #' Overlap peaks and TFBS for a \code{\linkS4class{GRN}} object
 #' 
+#' If the source was set to \code{JASPAR} in \code{\link{addTFBS}}, the argument \code{nCores} is ignored.
+#' 
 #' @template GRN
 #' @template nCores
 #' @template forceRerun
-#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function(\code{GRN@data$TFs$TF_peak_overlap} in particular)
+#' @param ... No default. Only relevant if \code{source = "JASPAR"} has been selected in \code{addTFBS}, ignored otherwise. Additional arguments for \code{motifmatchr::matchMotifs} such as custom background nucleotide frequencies or p-value cutoffs. For more information, type \code{?motifmatchr::matchMotifs}
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function (\code{GRN@data$TFs$TF_peak_overlap} in particular)
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' GRN = overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
 #' @export
-overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
-  
-  start = Sys.time()
+overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
     
-  checkmate::assertClass(GRN, "GRN")
-
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assertIntegerish(nCores, lower = 1)
-  checkmate::assertFlag(forceRerun)
-  
-  if (is.null(GRN@data$TFs$TF_peak_overlap) | forceRerun) {
+    start = Sys.time()
     
-    GRN = .addFunctionLogToObject(GRN)   
+    checkmate::assertClass(GRN, "GRN")
     
-    futile.logger::flog.info(paste0("Overlap peaks and TFBS using ", nCores, " cores. This may take a while, particularly if the number of samples is large..."))
+    GRN = .makeObjectCompatible(GRN)
     
-    genomeAssembly = GRN@config$parameters$genomeAssembly
-    seqlengths = .getChrLengths(genomeAssembly)
+    checkmate::assertIntegerish(nCores, lower = 1)
+    checkmate::assertFlag(forceRerun)
     
-    if (!is.null(GRN@config$TFBS_filePattern)) {
-      filesTFBSPattern = GRN@config$TFBS_filePattern
-    } else {
-      message = "Could not retrieve value from GRN@config$TFBS_filePattern. Please rerun the function addTFBS, as this was added in a recent version of the package."
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
+    if (is.null(GRN@data$TFs$TF_peak_overlap) | forceRerun) {
+        
+        GRN = .addFunctionLogToObject(GRN)   
+        
+        futile.logger::flog.info(paste0("Overlap peaks and TFBS using ", nCores, " cores. This may take a while, particularly if the number of samples is large..."))
+        
+        genomeAssembly = GRN@config$parameters$genomeAssembly
+        seqlengths = .getChrLengths(genomeAssembly)
+        
+        # Check whether we have peaks on chromosomes not part of the sequence length reference. If yes, discard them
+        annotation_discared = dplyr::filter(GRN@data$peaks$counts_metadata, ! .data$chr %in% names(seqlengths))
+        
+        if (nrow(annotation_discared) > 0) {
+            
+            tbl_discarded = table(annotation_discared$chr)
+            tbl_discarded = tbl_discarded[which(tbl_discarded > 0)]
+            
+            message = paste0("Found ", sum(tbl_discarded), " regions from chromosomes without a reference length. ", 
+                             "Typically, these are random fragments from known or unknown chromosomes. The following regions will be discarded: \n",
+                             paste0(names(tbl_discarded), " (", tbl_discarded, ")", collapse = ","))
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)  
+            
+            GRN@data$peaks$counts_metadata = dplyr::filter(GRN@data$peaks$counts_metadata, .data$chr %in% names(seqlengths))
+        }
+        
+        
+        if(!is.null(GRN@config$directories$motifFolder)) {
+            if (!is.null(GRN@config$TFBS_filePattern)) {
+                filesTFBSPattern = GRN@config$TFBS_filePattern
+            } else {
+                message = "Could not retrieve value from GRN@config$TFBS_filePattern. Please rerun the function addTFBS, as this was added in a recent version of the package."
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+        }
+        
+        
+        
+        # Construct GRanges
+        consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = seqlengths, genomeAssembly)
+        
+        if(is.null(GRN@config$directories$motifFolder)) { # if source == "JASPAR"
+            
+            TFBS_bindingMatrix.df = .intersectTFBSPeaks_JASPAR(GRN, consensus.gr, verbose = FALSE, ...)
+            GRN@data$TFs$TF_peak_overlap = TFBS_bindingMatrix.df
+            
+            
+        }else{# if source == "custom"
+            
+            res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = GRN@config$allTF, 
+                                       iteration = seq_len(length(GRN@config$allTF)), 
+                                       verbose = FALSE, 
+                                       functionName = .intersectTFBSPeaks_custom, GRN = GRN, consensusPeaks = consensus.gr, filesTFBSPattern = filesTFBSPattern)
+            
+            
+            # Sanity check
+            
+            TFBS_bindingMatrix.df = tibble::as_tibble(res.l)
+            
+            if (!all(colnames(TFBS_bindingMatrix.df) %in% GRN@config$allTF)) {
+                
+                message = paste0("Internal mismatch detected between the TF names and the TF names derived from the translation file (see log, column ID).", 
+                                 "This may happen if the genome assembly version has been changed, but intermediate files have not been properly recreated. ",
+                                 "Set the parameter forceRerun to TRUE and rerun the script.")
+                
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            # new 
+            filteredPeaks = dplyr::filter(GRN@data$peaks$counts_metadata, .data$isFiltered) %>% dplyr::pull(.data$peakID)
+            # Collect binary 0/1 binding matrix from all TF and concatenate
+            GRN@data$TFs$TF_peak_overlap = TFBS_bindingMatrix.df %>%
+                dplyr::mutate(peakID = GRN@data$peaks$counts_metadata$peakID,
+                              isFiltered = .data$peakID %in% filteredPeaks) %>%
+                dplyr::mutate_if(is.logical, as.numeric) %>%
+                dplyr::select(tidyselect::all_of(sort(GRN@config$allTF)), "isFiltered")
+            
+            GRN@data$TFs$TF_peak_overlap = .asSparseMatrix(as.matrix(GRN@data$TFs$TF_peak_overlap), 
+                                                           convertNA_to_zero = FALSE, 
+                                                           dimnames = list(GRN@data$peaks$counts_metadata$peakID, colnames(GRN@data$TFs$TF_peak_overlap)))
+            
+            # The order of rows is here the sorted version as it originates from the sorted consensus peak file
+            # We resort it to match the countsPeaks.norm
+            # TODO: Here could be an error due to differences in sorting. Also, whether or not all or the filtered version shall be used
+            stopifnot(identical(rownames(GRN@data$TFs$TF_peak_overlap), GRN@data$peaks$counts_metadata$peakID))
+            
+        } }else {
+            .printDataAlreadyExistsMessage()
+        }
     
+    .printExecutionTime(start, prefix = "")
     
-    # Check whether we have peaks on chromosomes not part of the sequence length reference. If yes, discard them
-    annotation_discared = dplyr::filter(GRN@data$peaks$counts_metadata, !.data$chr %in% names(seqlengths))
-    
-    if (nrow(annotation_discared) > 0) {
-      
-      tbl_discarded = table(annotation_discared$chr)
-      tbl_discarded = tbl_discarded[which(tbl_discarded > 0)]
-      
-      message = paste0("Found ", sum(tbl_discarded), " regions from chromosomes without a reference length. ", 
-                       "Typically, these are random fragments from known or unknown chromosomes. The following regions will be discarded: \n",
-                       paste0(names(tbl_discarded), " (", tbl_discarded, ")", collapse = ","))
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)  
-      
-      GRN@data$peaks$counts_metadata = dplyr::filter(GRN@data$peaks$counts_metadata, .data$chr %in% names(seqlengths))
-    }
-    
-    # Construct GRanges
-    consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = seqlengths, genomeAssembly)
-    
-    res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = GRN@config$allTF, 
-                               iteration = seq_len(length(GRN@config$allTF)), 
-                               verbose = FALSE, 
-                               functionName = .intersectTFBSPeaks, GRN = GRN, consensusPeaks = consensus.gr, filesTFBSPattern = filesTFBSPattern)
-    
-    # Sanity check
-    
-    TFBS_bindingMatrix.df = tibble::as_tibble(res.l)
-    
-    if (!all(colnames(TFBS_bindingMatrix.df) %in% GRN@config$allTF)) {
-      
-      message = paste0("Internal mismatch detected between the TF names and the TF names derived from the translation file (see log, column ID).", 
-                       "This may happen if the genome assembly version has been changed, but intermediate files have not been properly recreated. ",
-                       "Set the parameter forceRerun to TRUE and rerun the script.")
-      
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    # new 
-    filteredPeaks = dplyr::filter(GRN@data$peaks$counts_metadata, .data$isFiltered) %>% dplyr::pull(.data$peakID)
-    # Collect binary 0/1 binding matrix from all TF and concatenate
-    GRN@data$TFs$TF_peak_overlap = TFBS_bindingMatrix.df %>%
-      dplyr::mutate(peakID = GRN@data$peaks$counts_metadata$peakID,
-                    isFiltered = .data$peakID %in% filteredPeaks) %>%
-      dplyr::mutate_if(is.logical, as.numeric) %>%
-      dplyr::select(tidyselect::all_of(sort(GRN@config$allTF)), "isFiltered")
-    
-    GRN@data$TFs$TF_peak_overlap = .asSparseMatrix(as.matrix(GRN@data$TFs$TF_peak_overlap), 
-                                                   convertNA_to_zero = FALSE, 
-                                                   dimnames = list(GRN@data$peaks$counts_metadata$peakID, colnames(GRN@data$TFs$TF_peak_overlap)))
-    
-    # The order of rows is here the sorted version as it originates from the sorted consensus peak file
-    # We resort it to match the countsPeaks.norm
-    # TODO: Here could be an error due to differences in sorting. Also, whether or not all or the filtered version shall be used
-    stopifnot(identical(rownames(GRN@data$TFs$TF_peak_overlap), GRN@data$peaks$counts_metadata$peakID))
-    
-  } else {
-      .printDataAlreadyExistsMessage()
-  }
-  
-  .printExecutionTime(start, prefix = "")
-  
-  GRN
+    GRN
 }
 
 
 #' @import GenomicRanges
-.intersectTFBSPeaks <- function(GRN, TFIndex, consensusPeaks, filesTFBSPattern, verbose = FALSE) {
+.intersectTFBSPeaks_custom <- function(GRN, TFIndex, consensusPeaks, filesTFBSPattern, verbose = FALSE) {
   
   TFCur = GRN@config$allTF[TFIndex]
   
@@ -1685,6 +1782,40 @@ overlapPeaksAndTFBS <- function(GRN, nCores = 2, forceRerun = FALSE) {
   return(GRN@data$peaks$counts_metadata$peakID %in% final.df$peakID)
   
 }
+
+
+
+.intersectTFBSPeaks_JASPAR <- function(GRN, consensusPeaks, verbose = FALSE, ...) {
+    
+    TFs = GRN@annotation$TFs$TF.name
+    
+    # Shouldnt be NULL but still, make it safe(r) by simply rerunning if it is the case
+    if (!is.null(GRN@config$parameters$internal$PFMatrixList)) {
+        PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2022::JASPAR2022, 
+                                                opts = list(species = .getGenomeObject(GRN@config$parameters$genomeAssembly, "txID"), 
+                                                            name = TFs))
+    } else {
+        PFMatrixList  = GRN@config$parameters$internal$PFMatrixList
+    }
+    
+    TF_names <- unlist(lapply(PFMatrixList, function(x) {return(TFBSTools::name(x))}), use.names = FALSE)
+    TF_IDs   <- unlist(lapply(PFMatrixList, function(x) {return(TFBSTools::ID(x))}), use.names = FALSE)
+    
+    overlapsAll <- motifmatchr::matchMotifs(PFMatrixList, consensusPeaks, out = 'matches', 
+                                            genome = .getGenomeObject(GRN@config$parameters$genomeAssembly, type = "BSgenome"),
+                                            ...)
+    overlapsAll_mtx <- motifmatchr::motifMatches(overlapsAll)
+    rownames(overlapsAll_mtx) <- GRN@data$peaks$counts_metadata$peakID
+    colnames(overlapsAll_mtx) <- TF_names[match(colnames(overlapsAll_mtx), TF_IDs)]
+    
+    # Keep TFs with some peak x motif match
+    # is this needed or??
+    #overlapsAll_mtx <- overlapsAll_mtx[,Matrix::colSums(motifmatchr::motifMatches(overlapsAll_mtx))!=0]
+    overlapsAll_mtx
+    
+}
+
+
 
 .readTFBSFile <- function(file_tfbs_in) {
   
@@ -2318,6 +2449,18 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
+    if (useGCCorrection) {
+        
+        # Now we need the genome annotation packages to calculate the GC content of the peak regions
+        .checkAndLoadPackagesGenomeAssembly(GRN@config$parameters$genomeAssembly)
+        
+        if (!"peak.GC.class" %in% colnames(GRN@annotation$peaks)) {
+            GC.data.df = .calcGCContentPeaks(GRN)
+            GRN@annotation$peaks = dplyr::left_join(GRN@annotation$peaks, GC.data.df, by = "peak.ID") 
+        }
+       
+    }
+    
     for (permutationCur in 0:.getMaxPermutation(GRN)) {
         
       if (!addForBackground & permutationCur != 0) {
@@ -2443,16 +2586,15 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
     
     if (useGCCorrection) {
         futile.logger::flog.info(paste0("  Compute FDR for each TF (GC-aware). This may take a while..."))
+        cols_select = c("peak.ID", "peak.GC.class", "peak.GC.perc", "peak.width")
     } else {
         futile.logger::flog.info(paste0("  Compute FDR for each TF. This may take a while...")) 
+        cols_select = c("peak.ID", "peak.width")
     }
-    
-    
-    pb <- progress::progress_bar$new(total = length(allTF))
     
     peaksFiltered = GRN@data$peaks$counts_metadata %>% 
         dplyr::filter(!.data$isFiltered)  %>%
-        dplyr::left_join(GRN@annotation$peaks %>% dplyr::select("peak.ID", "peak.GC.class", "peak.GC.perc", "peak.width"), by = c("peakID" = "peak.ID"))
+        dplyr::left_join(GRN@annotation$peaks %>% dplyr::select(tidyselect::any_of(cols_select)), by = c("peakID" = "peak.ID"))
     
     if (!useGCCorrection) {
       minPerc = 100
@@ -2462,6 +2604,7 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
     
     # Stores GC-specific extra data
     GC_classes_perTF.l = list()
+    pb <- progress::progress_bar$new(total = length(allTF))
     
     for (TFCur in allTF) {
       

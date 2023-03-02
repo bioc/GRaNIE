@@ -149,6 +149,10 @@
         res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene", "BSgenome.Mmusculus.UCSC.mm10"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "mm9") {
         res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene", "BSgenome.Mmusculus.UCSC.mm9"), baseMessage, returnLogical = returnLogical)
+    } else if (genomeAssembly == "rn7") {
+        res = .checkPackageInstallation(c("org.Rn.eg.db", "TxDb.Rnorvegicus.UCSC.rn7.refGene", "BSgenome.Rnorvegicus.UCSC.rn7"), baseMessage, returnLogical = returnLogical)
+    } else if (genomeAssembly == "dm6") {
+        res = .checkPackageInstallation(c("org.Dm.eg.db", "TxDb.Dmelanogaster.UCSC.dm6.ensGene", "BSgenome.Dmelanogaster.UCSC.dm6"), baseMessage, returnLogical = returnLogical)
     }
     
     if (returnLogical) return(res)
@@ -445,17 +449,24 @@
 
 
 # Only needed here: get CG content peaks (can be made optional), and .populatePeakAnnotation (within ChipSeeker)
-.getGenomeObject <- function(genomeAssembly, type = "txbd") {
+.getGenomeObject <- function(genomeAssembly, type = "txbd", jasparRelease = 2022) {
     
-    checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName"))
-    checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
+    checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName", "txID")) #txID: NCBI taxonomy ID
+    
+    if (type != "txID") {
+        checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn7", "dm6"))
+    } else {
+        availableSpecies.df = rbioapi::rba_jaspar_species(release = jasparRelease)
+    }
     
     if (genomeAssembly == "hg38") {
-
+        
         if (type == "txbd") {
             obj <- TxDb.Hsapiens.UCSC.hg38.knownGene::TxDb.Hsapiens.UCSC.hg38.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38
+        } else if(type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Homo sapiens")]
         } else {
             obj = "org.Hs.eg.db"
         }
@@ -466,6 +477,8 @@
             obj <- TxDb.Hsapiens.UCSC.hg19.knownGene::TxDb.Hsapiens.UCSC.hg19.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
+        } else if(type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Homo sapiens")]
         } else {
             obj = "org.Hs.eg.db"
         }
@@ -477,6 +490,8 @@
             obj <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Mmusculus.UCSC.mm10::BSgenome.Mmusculus.UCSC.mm10
+        } else if(type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Mus musculus")]
         } else {
             obj = "org.Mm.eg.db"
         }
@@ -487,14 +502,42 @@
             obj <- TxDb.Mmusculus.UCSC.mm9.knownGene::TxDb.Mmusculus.UCSC.mm9.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Mmusculus.UCSC.mm9::BSgenome.Mmusculus.UCSC.mm9
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Mus musculus")]
         } else {
             obj = "org.Mm.eg.db"
+        }
+        
+    } else if (genomeAssembly == "rn7") {
+        
+        if (type == "txbd") {
+            obj <- TxDb.Rnorvegicus.UCSC.rn7.refGene::TxDb.Rnorvegicus.UCSC.rn7.refGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Rnorvegicus.UCSC.rn7::BSgenome.Rnorvegicus.UCSC.rn7
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Rattus norvegicus")]
+        } else {
+            obj = "org.Rn.eg.db"
+        }
+        
+    } else if (genomeAssembly == "dm6") {
+        
+        if (type == "txbd") {
+            obj <- TxDb.Dmelanogaster.UCSC.dm6.ensGene::TxDb.Dmelanogaster.UCSC.dm6.ensGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Dmelanogaster.UCSC.dm6::BSgenome.Dmelanogaster.UCSC.dm6
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Drosophila melanogaster")]
+        } else {
+            obj = "org.Dm.eg.db"
         }
         
     }
     
     obj
 }
+
+
 
 # .getChrLengths <- function(genomeAssembly) {
 #   txdb = .getGenomeObject(genomeAssembly)
@@ -723,17 +766,23 @@ is.installed <- function(mypkg){
 
 .getBiomartParameters <- function(genomeAssembly) {
     
+    host = "https://www.ensembl.org"
+    
     if (grepl(x = genomeAssembly, pattern = "^hg\\d\\d")) {
-        dataset = "hsapiens_gene_ensembl"
+        dataset = "hsapiens"
         if (genomeAssembly == "hg38") {
-            host = "https://www.ensembl.org"
         } else if (genomeAssembly == "hg19") {
             host = "https://grch37.ensembl.org"
         }
     } else if (grep(x = genomeAssembly, pattern = "^mm\\d\\d")) {
-        dataset = "mmusculus_gene_ensembl"
-        host = "https://www.ensembl.org"
+        dataset = "mmusculus"
+    } else if (grep(x = genomeAssembly, pattern = "^rn\\d\\d")) {
+        dataset = "rnorvegicus"
+    } else if (grep(x = genomeAssembly, pattern = "^dm\\d\\d")) {
+        dataset = "dmelanogaster"
     }
     
-    list(dataset = dataset, host = host)
+    
+    
+    list(dataset = paste0(dataset, "_gene_ensembl"), host = host)
 }

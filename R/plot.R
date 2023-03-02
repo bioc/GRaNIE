@@ -74,8 +74,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     if (!file.exists(fileCur) | forceRerun) {
         
         futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
-                                        " RNA data for all shared samples to file ", fileCur , 
-                                        "... This may take a few minutes"))
+                                        " RNA data for all shared samples. This may take a few minutes"))
         
         .plot_PCA_wrapper(GRN, matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
         
@@ -97,8 +96,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     if (!file.exists(fileCur) | forceRerun) {
         
         futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
-                                        " peaks data for all shared samples to file ", fileCur , 
-                                        "... This may take a few minutes"))
+                                        " peaks data for all shared samples. This may take a few minutes"))
         
         .plot_PCA_wrapper(GRN, matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
         

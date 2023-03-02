@@ -189,9 +189,9 @@ figures and results](GRaNIE_workflow.html).
 
 # Example GRN object
 
-For user convenience, we provide an example object via a designated
-helper function. This can be retrieved simply by running the following
-line of code, as explained also in the R help:
+For user convenience, we provide the function `loadExampleObject()` that can load a supported GRN object from the `GRaNIE` package from an arbitrary URL into R. This function can be used, for example, to load an example object that contains a small number of TFs that we specifically prepared for package use and exploring the package.
+
+Simply run the following command:
 
 ```{r eval = FALSE}
  GRN = loadExampleObject()
@@ -203,6 +203,8 @@ object is always up to date with the most recent version of the package
 and everything that the package can calculate is contained in the
 object. Thus, you can run any function after loading the example
 object.**
+
+For more details on where the data from the example object comes from, see the [workflow vignette with explanations](GRaNIE_workflow.html).
 
 # Input {#input}
 
@@ -272,7 +274,14 @@ data, see [here](#guidelines_singleCell).**
 
 ## TF and TFBS data {#input_TF}
 
-TF and TFBS data is mandatory as input. Specifically, the package
+TF and TFBS data is mandatory as input. As of March 2023, we offer two different ways of how to
+import TF and TFBS data into `GRaNIE`.
+
+### Importing custom TF and TFBS data
+
+First, we support the import of any TF and TFBS data irrespective of how it was generated or what it represents, thereby offering full flexibility for how our framework is used. The only drawback is that preparing the TF and TFBS data is a little more involved. This was the only and default way of how to use `GRaNIE` until February 2023. In what follows, we explain more details.
+
+Specifically, the package
 requires a `bed` file per TF with TF binding sites (TFBS). TFBS can
 either be in-silico predicted, or experimentally verified, as long as
 genome-wide TFBS can be used. For convenience and orientation, we
@@ -315,6 +324,12 @@ the following:
 For more methodological details, details on how to construct these
 files, their exact format etc we refer to `diffTF` paper and
 [website](https://difftf.readthedocs.io/) for details.
+
+### Importing TF and TFBS from the JASPAR databases directly in R
+
+As of March 2023, we additionally a more user-friendly way of importing TF and TFBS data from the various JASPAR databases that are available in R/Bioconductor: `JASPAR` 2014, 2016, 2018, 2022, and 2022. While we so far tested only with th newest `JASPAR2022` database / R package, the older ones should also work - if not, please let us know. Using `JASPAR2022` is much easier and also quicker from a user perspective, and none of the additional complexities that were mentioned above for the custom import apply here. For details, see the `addTFBS()` and `overlapPeaksAndTFBS()` functions.
+
+Be aware, though, that you may want to compare your *eGRN* across different TF and TFBS data - we are currently investigating the effect of using `JASPAR2022` and cannot currently comment much on it. We will, however, update the vignette here once we have more results to share.
 
 ## Sample metadata (optional but highly recommended) {#input_metadata}
 
@@ -558,11 +573,12 @@ and our experiences from a limited number of datasets:
 
 [Judging how well the GC correction worked]{.underline}
 
-We also provide detailed QC plots per TF that summarize the GC
-background selection. For more details, see [here](#output_TF_peak_GC).
+We also provide detailed QC plots that summarize both the GC
+background selection as well as the differences for teh TF-peak connections with and without GC correction. For more details, see [here](#output_TF_peak_GC).
 
 [Reproducibility of GC correction]{.underline}
-** Lastly, we need to emphasize that the GC correction, due to the random sampling from the background, is not deterministic and may yield a slightly different number of connections each time it is run. The more bins are resampled (see discussion above), the more differences may arise** 
+
+**Lastly, we need to emphasize that the GC correction, due to the random sampling from the background, is not deterministic and may yield a slightly different number of connections each time it is run. The more bins are resampled (see discussion above), the more differences may arise** 
 
 
 ### TF Activity connections {#methods_TF_peak_TFActivity}
@@ -1085,9 +1101,29 @@ TF-peak and ultimately the *eGRN* network, the directionality can be
 ignored and only those TF-peak links with small FDRs are kept,
 irrespective of the directionality.
 
-##### GC adjustment {#output_TF_peak_GC}
 
-Additional diagnostic plots for the GC adjustments are currently being developed. They are available soon, stay tuned! This section will then be updated.
+
+### Extra plots for the GC correction 
+
+When GC background adjustment was activated (`useGCCorrection = TRUE` in the function `addConnections_TF_peak()`), additional QC plots can optionally be generated with the function `plotDiagnosticPlots_TFPeaks_GC()`. They summarize all relevant data and adjustments related to the GC adjustment. **Note that this function is not run automatically as part of the regular TF-peak diagnostic plots at the moment when `plotDiagnosticPlots_TFPeaks()` is executed.**
+
+#### TF-specific plots
+
+For each TF, 2 plots (1 per page in the corresponding PDF file) are produced. One shows the relative frequency of each of the GC bins, stratified by the peak set origin (foreground, background before and after GC adjustment), the second the absolute frequencies (log10 + 1 transformed). For the first plot, GC bins for which resampling was performed are additionally labeled with a percentage value that indicates which percentage of the required number of peaks was actually available in the background. Thus, a value of 95% indicates that only 5% of peaks where missing to have the required number of peaks available in the background (small number of resampled peaks), while a value of 5% indicates the opposite: a large resampling happened to select the required number of peaks, and a potential sampling bias from the small number of peaks to select from in the first place may have occurred. 
+
+Typically, though, resampling happens only for extreme GC bins that have a relatively low relative percentage in the foreground. Ideally, one should see a perfect match between foreground and GC-adjusted background in the plots, both in relative frequencies (page 1) and absolute numbers (page 2) for as many GC bins as possible. The number of GC bins for which resampling occurred should be as small as possible, on the other hand.
+
+
+#### Overall summary
+
+The pages after summarize further aspects of the GC adjustment in the form of heatmaps. Each page shows the heatmap for a particular variable, each row in the heatmap is a TF, and columns are either the peak GC bins (stratified into ten bins, see above) or the TF-peak correlation bins (40 bins, in steps of 0.05, see above).  The color scale is either blue-white-red (for negative and positive scales), white-red (for only positive ones) or black-white (for binary variables).
+
+1. Details for peak GC bins from either foreground or background that are the basis for the bin-specific FDR calculation (labeled *GC adjustment details* in the plot title)
+As the legend indicates, variables are either foreground or background (`n.bg.needed`, `n.bg.needed.ratio`, `n.bg.needed.ratio.atLeast1`) associated, belong to both (`n`, `peak_width mean`, `peak_width sd`, `n_rel` ) or they capture the difference of foreground and background (`diff_fg_bg`). For each plot, TFs are clustered according to their similarity, so the TF ordering differs for each plot.
+ 
+
+2. TF-peak connection summary from the actual connections before and after the GC background adjustment (labeled *GRN connections* in the plot title) as stored in `GRN@connections$TF_peaks`. Four plots are shown, three of which show absolute numbers (`n_beforeGC`, `n_afterGC`, `n_diff_abs`) and one a relative number (`n_diff_rel`, calculated as `n_afterGC` / `n_beforeGC`). For ratios that R deems as *Infinite* like this (e.g, 1 connection after GC correction but no connection without it - `1 / 0`), we set the ratio to a value of either the maximum of all finite values in the heatmap or a hard-coded value of 10 - depending on what the maximum of these two values is. Unlike the heatmaps above, TFs are not clustered here but appear in the same  alphabetical order on every plot.
+
 
 ## Activator-repressor classification results and diagnostic plots {#output_AR}
 
