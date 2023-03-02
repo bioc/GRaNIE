@@ -508,7 +508,19 @@
             obj = "org.Mm.eg.db"
         }
         
-    } else if (genomeAssembly == "rn7") {
+    } else if (genomeAssembly == "rn6") {
+        
+        if (type == "txbd") {
+            obj <- TxDb.Rnorvegicus.UCSC.rn6.refGene::TxDb.Rnorvegicus.UCSC.rn6.refGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Rnorvegicus.UCSC.rn6::BSgenome.Rnorvegicus.UCSC.rn6
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Rattus norvegicus")]
+        } else {
+            obj = "org.Rn.eg.db"
+        }
+        
+    }else if (genomeAssembly == "rn7") {
         
         if (type == "txbd") {
             obj <- TxDb.Rnorvegicus.UCSC.rn7.refGene::TxDb.Rnorvegicus.UCSC.rn7.refGene

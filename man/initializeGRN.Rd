@@ -16,7 +16,7 @@ Default output folder where all pipeline output will be put unless specified oth
 Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.}
 
 \item{genomeAssembly}{Character. No default. The genome assembly of all data that to be used within this object. 
-Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9}, \code{mm10}, \code{rn7}, \code{dm6}. If you need additional genomes, let us know. See function description for further information and notes.}
+Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9}, \code{mm10}, \code{rn6}, \code{rn7}, \code{dm6}. If you need additional genomes, let us know. See function description for further information and notes.}
 }
 \value{
 Empty \code{\linkS4class{GRN}} object

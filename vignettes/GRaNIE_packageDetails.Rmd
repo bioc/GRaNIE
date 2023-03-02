@@ -109,6 +109,14 @@ following options:
             `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm10", "TxDb.Mmusculus.UCSC.mm10.knownGene"))`
         -   `mm9`
             `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm9", "TxDb.Mmusculus.UCSC.mm9.knownGene"))`
+        -   `rn6``
+            `BiocManager::install(c("org.Rn.eg.db", "BSgenome.Rnorvegicus.UCSC.rn6", "TxDb.Rnorvegicus.UCSC.rn6.refGene"))`
+        -   `rn7``
+            `BiocManager::install(c("org.Rn.eg.db", "BSgenome.Rnorvegicus.UCSC.rn7", "TxDb.Rnorvegicus.UCSC.rn7.refGene"))`
+        -   `dm6`
+            `BiocManager::install(c("org.Dm.eg.db", "BSgenome.Dmelanogaster.UCSC.dm6", "TxDb.Dmelanogaster.UCSC.dm6.ensGene"))`
+
+    -   If you want to use the `JASPAR` 2022 database for TF and TFBS, you need the following extra packages:  `BiocManager::install(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"))`
 
     -   For all other optional packages, you may execute this line for
         installing them in one go:
@@ -132,6 +140,8 @@ and may be needed context-specifically:
         (`EDASeq_GC_peaks`, `gcqn_peaks`)**
     -   `org.Hs.eg.db`: Needed only for `hg19` or `hg38`
     -   `org.Mm.eg.db`: Needed only for `mm9` or `mm10`
+    -   `org.Rn.eg.db`: Needed only for `rn6` or `rn7`
+    -   `org.Dm.eg.db`: Needed only for `dm6`
     -   `BSgenome.Hsapiens.UCSC.hg19`,
         `TxDb.Hsapiens.UCSC.hg19.knownGene`: Needed only for `hg19`\
     -   `BSgenome.Hsapiens.UCSC.hg38`,
@@ -140,6 +150,12 @@ and may be needed context-specifically:
         `TxDb.Mmusculus.UCSC.mm10.knownGene`: Needed only for `mm10`\
     -   `BSgenome.Mmusculus.UCSC.mm9`,
         `TxDb.Mmusculus.UCSC.mm9.knownGene`: Needed only for `mm9`\
+    -   `BSgenome.Rnorvegicus.UCSC.rn6`,
+        `TxDb.Rnorvegicus.UCSC.rn6.refGene`: Needed only for `rn6`\
+    -   `BSgenome.Rnorvegicus.UCSC.rn7`,
+        `TxDb.Rnorvegicus.UCSC.rn7.refGene`: Needed only for `rn7`\
+    -   `BSgenome.Dmelanogaster.UCSC.dm6`,
+        `TxDb.Dmelanogaster.UCSC.dm6.ensGene`: Needed only for `dm6`\
     -   **`ChIPseeker`**: Not needed strictly speaking, but used only
         for the function `addData()` to provide additional peak
         annotation, fully optional otherwise.
@@ -291,7 +307,7 @@ vignette for an example](GRaNIE_workflow.html).
 
 **We recommend to download the full HOCOMOCO TFBS data from
 [here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs).
-In short, we provide example files for all supported genome assemblies
+In short, we provide example files for selected supported genome assemblies
 (*hg19*, *hg38* and *mm10*) that are fully compatible with `GRaNIE` as
 separate downloads. While we also provide TFBS data for FIMO, we
 recommend using HOCOMOCO.**
@@ -316,8 +332,8 @@ the following:
     the third column the prefix of how the file is called with the TFBS
     (e.g., `AHR.0.B` if the file for `AHR` is called
     `AHR.0.B_TFBS.bed.gz`).
--   we provide example files for all supported genome assemblies (hg19,
-    hg38 and mm10) that are fully compatible with `GRaNIE` as separate
+-   we provide example files for selected genome assemblies (*hg19*,
+    *hg38* and *mm10*) that are fully compatible with `GRaNIE` as separate
     downloads. For more information, check
     [here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs).
 
