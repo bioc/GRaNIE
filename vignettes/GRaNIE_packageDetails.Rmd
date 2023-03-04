@@ -107,16 +107,16 @@ following options:
             `BiocManager::install(c("org.Hs.eg.db", "BSgenome.Hsapiens.UCSC.hg19", "TxDb.Hsapiens.UCSC.hg19.knownGene"))`
         -   `mm10`:
             `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm10", "TxDb.Mmusculus.UCSC.mm10.knownGene"))`
-        -   `mm9`
+        -   `mm9`:
             `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm9", "TxDb.Mmusculus.UCSC.mm9.knownGene"))`
-        -   `rn6``
+        -   `rn6`:
             `BiocManager::install(c("org.Rn.eg.db", "BSgenome.Rnorvegicus.UCSC.rn6", "TxDb.Rnorvegicus.UCSC.rn6.refGene"))`
-        -   `rn7``
+        -   `rn7`:
             `BiocManager::install(c("org.Rn.eg.db", "BSgenome.Rnorvegicus.UCSC.rn7", "TxDb.Rnorvegicus.UCSC.rn7.refGene"))`
-        -   `dm6`
+        -   `dm6`:
             `BiocManager::install(c("org.Dm.eg.db", "BSgenome.Dmelanogaster.UCSC.dm6", "TxDb.Dmelanogaster.UCSC.dm6.ensGene"))`
 
-    -   If you want to use the `JASPAR` 2022 database for TF and TFBS, you need the following extra packages:  `BiocManager::install(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"))`
+    -   If you want to use the *JASPAR* database for TF and TFBS, you need the following extra packages:  `BiocManager::install(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"))`
 
     -   For all other optional packages, you may execute this line for
         installing them in one go:
@@ -159,6 +159,10 @@ and may be needed context-specifically:
     -   **`ChIPseeker`**: Not needed strictly speaking, but used only
         for the function `addData()` to provide additional peak
         annotation, fully optional otherwise.
+
+-   **TF and TFBS related packages**
+    - **`JASPAR2022`**, **`TFBSTools`**, **`motifmatchr`**, **`rbioapi`**: Needed only when `source = "JASPAR"` for `addTFBS()` for using JASPAR 2022 TFs and TFBS
+
 
 -   **Additional statistical packages and for enhanced functionality**
 

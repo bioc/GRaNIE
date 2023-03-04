@@ -676,7 +676,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                                 gene.median = rowMedians_rna, 
                                 gene.CV = CV_rna) %>%
     dplyr::left_join(genomeAnnotation.df, by = c("gene.ENSEMBL")) %>%
-    dplyr::mutate(gene.type = forcats::fct_explicit_na(.data$gene.type, na_level = "unknown/missing"))
+    dplyr::mutate(gene.type = forcats::fct_na_value_to_level(.data$gene.type, level = "unknown/missing"))
   
   GRN@annotation$genes = metadata_rna
   
@@ -1403,7 +1403,13 @@ filterData <- function(GRN,
 #' @param fileEnding Character. Default \code{".bed"}. Only relevant if \code{source = "custom"}. File ending for the files from the motif folder.
 #' @param nTFMax \code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
 #' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
+#' @param JASPAR_useSpecificTaxGroup \code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? 
+#' If set to \code{NULL}, the specific genome version as provided in the object is used within \code{TFBSTools::getMatrixSet} in the \code{opts} list for \code{species}, 
+#' while \code{tax_group} will be used instead if this argument is not set to \code{NULL}. For example, it can be set to \code{vertebrates} to use the vertebrates TF collection.
+#' For more details, see \code{?TFBSTools::getMatrixSet}.
+#' @param JASPAR_removeAmbiguousTFs \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Remove TFs for which the name as provided b JASPAR cannot be mapped uniquely to one and only Ensembl ID? 
 #' By default (\code{NULL}), the newest version is selected (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
+#' @param ... Additional named elements for the \code{opts} function argument from \code{?TFBSTools::getMatrixSet} that is used to query the JASPAR database.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function(\code{GRN@annotation$TFs} in particular)
 #' @examples 
@@ -1411,7 +1417,9 @@ filterData <- function(GRN,
 #' @export
 addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all", 
                     translationTable = "translationTable.csv",  translationTable_sep = " ", filesTFBSPattern = "_TFBS", fileEnding = ".bed", 
-                    nTFMax = NULL, EnsemblVersion = NULL, forceRerun = FALSE) {
+                    nTFMax = NULL, EnsemblVersion = NULL,
+                    JASPAR_useSpecificTaxGroup = NULL, JASPAR_removeAmbiguousTFs =TRUE,
+                    forceRerun = FALSE, ...) {
     
     start = Sys.time()
     checkmate::assertClass(GRN, "GRN")
@@ -1420,9 +1428,9 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
     
     checkmate::assertSubset(source, c("custom", "JASPAR"))
     
-    if(source =="custom") {
+    if (source == "custom") {
         
-        if(is.null(motifFolder)) {
+        if (is.null(motifFolder)) {
             futile.logger::flog.error("When using a custom source for the TFBS, please specify a valid path to a motif folder using the motifFolder parameter")
         }else{
             checkmate::assertFileExists(paste0(motifFolder, .Platform$file.sep, translationTable))
@@ -1431,7 +1439,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             checkmate::assertCharacter(fileEnding, len = 1, min.chars = 1)
             checkmate::assertCharacter(translationTable_sep, len = 1, min.chars = 1)
         }
-    } else{ # if source == JASPAR
+    } else if (source == "JASPAR") {
         
         if (!is.null(motifFolder)) {
             message = paste0("When using the JASPAR database, the motifFolder, along with other function parameters, is ignored")
@@ -1455,11 +1463,15 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         #GRN@config$TFBS_fileEnding  = ifelse(source == "custom", fileEnding, NULL) # ifelse doesn't seem to like that null
         GRN@config$TFBS_fileEnding = if (source == "custom") fileEnding else NULL
         GRN@config$TFBS_filePattern = if (source == "custom") filesTFBSPattern else NULL
-        GRN@config$directories$motifFolder <- if (source =="custom") motifFolder else NULL
+        GRN@config$directories$motifFolder <- if (source == "custom") motifFolder else NULL
         
-        GRN@annotation$TFs = .getFinalListOfTFs(GRN, source, motifFolder, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, getCounts(GRN, type = "rna", permuted = FALSE), EnsemblVersion)
+       
+        GRN@annotation$TFs = .getFinalListOfTFs(GRN, source, motifFolder, translationTable, translationTable_sep, 
+                                                filesTFBSPattern, fileEnding, TFs, nTFMax, EnsemblVersion,
+                                                JASPAR_useSpecificTaxGroup, JASPAR_removeAmbiguousTFs, ...)
         
         GRN@annotation$TFs = GRN@annotation$TFs %>%
+            dplyr::select("ENSEMBL", "ID", "SYMBOL") %>% # in case the table contains already another column called TF.name as currently the case for JASPAR
             dplyr::rename(TF.ENSEMBL = "ENSEMBL", TF.ID = "ID", TF.name = "SYMBOL")  %>% 
             #dplyr::mutate(TF.name = .data$TF.ID)  %>%
             dplyr::select("TF.name", "TF.ENSEMBL", "TF.ID")
@@ -1482,27 +1494,39 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
     
 }
 
-.getFinalListOfTFs <- function(GRN, source, folder_input_TFBS, translationTable, translationTable_sep, filesTFBSPattern, fileEnding, TFs, nTFMax, countsRNA, EnsemblVersion) {
+.getFinalListOfTFs <- function(GRN, source, folder_input_TFBS, translationTable, translationTable_sep, 
+                               filesTFBSPattern, fileEnding, TFs, nTFMax, EnsemblVersion,
+                               JASPAR_useSpecificTaxGroup = NULL, JASPAR_removeAmbiguousTFs = TRUE, ...) {
     
     if (source == "JASPAR") {
         
-        futile.logger::flog.info(paste0("Checking JASPAR database"))
+        futile.logger::flog.info(paste0("Querying JASPAR 2022 database"))
         # get TF gene names from JASPAR
-        PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2022::JASPAR2022, 
-                                                opts = list(species = .getGenomeObject(GRN@config$parameters$genomeAssembly, "txID"))) 
+        
+        if (!is.null(JASPAR_useSpecificTaxGroup)) {
+            # such as "vertebrates"
+            options_JASPAR = list(tax_group = JASPAR_useSpecificTaxGroup, ...)
+        } else {
+            options_JASPAR = list(species = .getGenomeObject(GRN@config$parameters$genomeAssembly, "txID"), ...)
+        }
+        PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2022::JASPAR2022, opts = options_JASPAR) 
         
         GRN@config$parameters$internal$PFMatrixList = PFMatrixList
+        
+        # TODO: What to o with TFs with no name or IDs?
         
         TFsWithTFBSPredictions <- unlist(lapply(PFMatrixList, function(x) {return(TFBSTools::name(x))}), use.names = FALSE)
         IDsWithTFBSPredictions <- unlist(lapply(PFMatrixList, function(x) {return(TFBSTools::ID(x))}), use.names = FALSE)
         # create translation table from biomart
+        TFs.df = tibble::tibble(ID = IDsWithTFBSPredictions, TF.name = TFsWithTFBSPredictions) %>%
+            dplyr::mutate(TF.name.lowercase = tolower(TF.name))
 
         params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly)
         
         mapping.df <- NULL
         attempt <- 0
         mirrors = c('www', 'uswest', 'useast', 'asia')
-        while(!is.data.frame(mapping.df) && attempt <= 3 ) {
+        while (!is.data.frame(mapping.df) && attempt <= 3 ) {
             attempt <- attempt + 1
             mapping.df = tryCatch({ 
                 ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
@@ -1512,7 +1536,8 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
                                mart = ensembl) %>%
                     dplyr::rename(SYMBOL = external_gene_name,
                                   ENSEMBL = ensembl_gene_id) %>%
-                    dplyr::mutate(ID = IDsWithTFBSPredictions[match(SYMBOL, TFsWithTFBSPredictions)])
+                    dplyr::mutate(SYMBOL.lowercase = tolower(SYMBOL)) %>%
+                    dplyr::full_join(TFs.df, by = c("SYMBOL.lowercase" = "TF.name.lowercase"), multiple = "all")
                 
             })
         } 
@@ -1523,10 +1548,40 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             return(NULL)
         }
         
-        TFsWithTFBSPredictions = mapping.df$ID[match(TFsWithTFBSPredictions, mapping.df$SYMBOL)]
-        TFsWithTFBSPredictions = TFsWithTFBSPredictions[!is.na(TFsWithTFBSPredictions)]
+        table_distinct_id = mapping.df %>%
+            dplyr::pull("ID") %>%
+            table()
         
-    }else{ # if source == "custom"
+        TFs_unique = mapping.df %>%
+            dplyr::group_by(ID)%>%
+            dplyr::filter(!is.na(ENSEMBL)) %>%
+            dplyr::summarise(n = dplyr::n()) %>%
+            dplyr::filter(n == 1) %>%
+            dplyr::pull("ID")
+            
+           
+        ambiguousTFs = names(which(table_distinct_id > 1))
+        
+        futile.logger::flog.info(paste0(" TF statistics:"))
+        futile.logger::flog.info(paste0("  Number of TFs as returned by JASPAR: ", nrow(TFs.df)))
+        futile.logger::flog.info(paste0("  Number of TFs with a unique mapping to an Ensembl ID: ", dplyr::n_distinct(TFs_unique)))
+        futile.logger::flog.info(paste0("  Number of TFs with a non-unique mapping to an Ensembl ID: ", 
+                                        length(ambiguousTFs), " (", 
+                                        paste0(ambiguousTFs, collapse = ", "), ")"))
+        
+
+        if (JASPAR_removeAmbiguousTFs) {
+            # Remove ambiguousTFs from list
+            # SYMBOL            ENSEMBL       ID
+            # 1  Foxq1 ENSRNOG00000021752 MA0040.1
+            # 2  Foxq1 ENSRNOG00000062314 MA0040.1
+            futile.logger::flog.info(paste0("  Removing ambiguously mapping TFs"))
+            mapping.df = dplyr::filter(mapping.df, !ID %in% ambiguousTFs)
+        }
+        
+        TFsWithTFBSPredictions = TFs_unique
+        
+    } else { # if source == "custom"
         
         futile.logger::flog.info(paste0("Checking database folder for matching files: ", folder_input_TFBS))
         
@@ -1545,7 +1600,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         if (source == "custom") {
             futile.logger::flog.info(paste0("Use all TF from the database folder ", folder_input_TFBS))
         }else{ 
-            futile.logger::flog.info(paste0("Use all TF from the ", source, "databse"))
+            futile.logger::flog.info(paste0("Use all TF from the ", source, " database"))
         }
         
         
@@ -1562,16 +1617,21 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         
     }
     
+    countsRNA = getCounts(GRN, type = "rna", permuted = FALSE)
     
-    TF_notExpressed = sort(dplyr::filter(mapping.df, ! .data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
+    TF_missingRNA = mapping.df %>%
+        dplyr::filter(!.data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% 
+        dplyr::pull(.data$ID) %>%
+        sort()
     
-    if (length(TF_notExpressed) > 0) {
-        futile.logger::flog.info(paste0("Filtering the following ", length(TF_notExpressed), " TFs as they are not present in the RNA-Seq data: ", paste0(TF_notExpressed, collapse = ",")))
+    if (length(TF_missingRNA) > 0) {
+        futile.logger::flog.info(paste0("Filtering the following ", length(TF_missingRNA), " TFs as they are not present in the RNA-Seq data: ", paste0(TF_missingRNA, collapse = ", ")))
     }
     
-    allTF = sort(dplyr::filter(mapping.df, 
-                               .data$ENSEMBL %in% countsRNA$ENSEMBL, 
-                               .data$ID %in% TFsWithTFBSPredictions) %>% dplyr::pull(.data$ID))
+    allTF = mapping.df %>%
+        dplyr::filter(.data$ENSEMBL %in% countsRNA$ENSEMBL, .data$ID %in% TFsWithTFBSPredictions) %>% 
+        dplyr::pull(.data$ID) %>%
+        sort()
     
     nTF = length(allTF)
     if (nTF == 0) {
@@ -1651,7 +1711,7 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
         }
         
         
-        if(!is.null(GRN@config$directories$motifFolder)) {
+        if (!is.null(GRN@config$directories$motifFolder)) {
             if (!is.null(GRN@config$TFBS_filePattern)) {
                 filesTFBSPattern = GRN@config$TFBS_filePattern
             } else {
@@ -1665,7 +1725,7 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
         # Construct GRanges
         consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = seqlengths, genomeAssembly)
         
-        if(is.null(GRN@config$directories$motifFolder)) { # if source == "JASPAR"
+        if (is.null(GRN@config$directories$motifFolder)) { # if source == "JASPAR"
             
             TFBS_bindingMatrix.df = .intersectTFBSPeaks_JASPAR(GRN, consensus.gr, verbose = FALSE, ...)
             GRN@data$TFs$TF_peak_overlap = TFBS_bindingMatrix.df

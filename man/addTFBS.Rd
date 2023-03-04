@@ -15,7 +15,10 @@ addTFBS(
   fileEnding = ".bed",
   nTFMax = NULL,
   EnsemblVersion = NULL,
-  forceRerun = FALSE
+  JASPAR_useSpecificTaxGroup = NULL,
+  JASPAR_removeAmbiguousTFs = TRUE,
+  forceRerun = FALSE,
+  ...
 )
 }
 \arguments{
@@ -37,10 +40,19 @@ addTFBS(
 
 \item{nTFMax}{\code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.}
 
-\item{EnsemblVersion}{\code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
+\item{EnsemblVersion}{\code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.}
+
+\item{JASPAR_useSpecificTaxGroup}{\code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? 
+If set to \code{NULL}, the specific genome version as provided in the object is used within \code{TFBSTools::getMatrixSet} in the \code{opts} list for \code{species}, 
+while \code{tax_group} will be used instead if this argument is not set to \code{NULL}. For example, it can be set to \code{vertebrates} to use the vertebrates TF collection.
+For more details, see \code{?TFBSTools::getMatrixSet}.}
+
+\item{JASPAR_removeAmbiguousTFs}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Remove TFs for which the name as provided b JASPAR cannot be mapped uniquely to one and only Ensembl ID? 
 By default (\code{NULL}), the newest version is selected (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
+
+\item{...}{Additional named elements for the \code{opts} function argument from \code{?TFBSTools::getMatrixSet} that is used to query the JASPAR database.}
 }
 \value{
 An updated \code{\linkS4class{GRN}} object, with additional information added from this function(\code{GRN@annotation$TFs} in particular)
