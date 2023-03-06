@@ -563,7 +563,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 
       # Dont take all TF, some might be missing.
       connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
-      allTF = unique(connections_TF_peak$TF.ID)
+      allTF = unique(connections_TF_peak$TF.ID) %>% as.character()
       nTF = ifelse(is.null(nPagesMax), length(allTF), nPagesMax - 1)
       futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
       
@@ -589,7 +589,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
         }
         
         TFCur = allTF[i]
-        
+
         connections_TF_peakCur = dplyr::filter(connections_TF_peak, .data$TF.ID == TFCur)
         
         # Produce two FDR plots, coming from both directions
@@ -608,7 +608,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
               dplyr::mutate(TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = levelsCur))  %>%
               reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
           
-          plotTitle = paste0(.printTF(TFCur, printEnsemblID = TRUE), ": Direction ", typeCur, ifelse(perm == 0, "", "(background)"))
+          plotTitle = paste0(.printTF(GRN, TFCur, printEnsemblID = TRUE), ": Direction ", typeCur, ifelse(perm == 0, "", "(background)"))
           
           if (!useGCCorrection) {
               

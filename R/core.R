@@ -5519,6 +5519,20 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         }
     }
     
+    # Rename TF.name in TF-peak connections
+    if (!is.null(GRN@connections$TF_peaks)) {
+        for (i in 0:.getMaxPermutation(GRN)) {
+            if (!is.null(GRN@connections$TF_peaks[[as.character(i)]])) {
+                if ("TF.name" %in% colnames(GRN@connections$TF_peaks[["0"]]$main)) {
+                    GRN@connections$TF_peaks[["0"]]$main = dplyr::rename(GRN@connections$TF_peaks[["0"]]$main, TF.ID = TF.name)
+                }
+                if ("TF.name" %in% colnames(GRN@connections$TF_peaks[["0"]]$connectionStats)) {
+                    GRN@connections$TF_peaks[["0"]]$connectionStats = dplyr::rename(GRN@connections$TF_peaks[["0"]]$connectionStats, TF.ID = TF.name)
+                }
+            }
+        }
+    }
+    
    
     
     
@@ -6084,11 +6098,16 @@ add_featureVariation <- function(GRN,
     if (printName | printEnsemblID) {
         nameCombined = paste0(nameCombined, " (")
         if (printName) {
+            printComma = FALSE
             TF.name = GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.name)
-            nameCombined = paste0(nameCombined, TF.name)
+            if (TF.name != ID) {
+                nameCombined = paste0(nameCombined, TF.name)
+                printComma = TRUE
+            }
+           
         }
         if (printEnsemblID) {
-            if (printName) {
+            if (printName & printComma) {
                 nameCombined = paste0(nameCombined, ", ")
             } 
             TF.ENSEMBL =  GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.ENSEMBL)
