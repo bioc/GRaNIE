@@ -675,8 +675,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                                 gene.mean = rowMeans_rna, 
                                 gene.median = rowMedians_rna, 
                                 gene.CV = CV_rna) %>%
-    dplyr::left_join(genomeAnnotation.df, by = c("gene.ENSEMBL")) %>%
-    dplyr::mutate(gene.type = forcats::fct_na_value_to_level(.data$gene.type, level = "unknown/missing"))
+    dplyr::left_join(genomeAnnotation.df, by = c("gene.ENSEMBL")) # %>%
+    # dplyr::mutate(gene.type = forcats::fct_na_value_to_level(.data$gene.type, level = "unknown/missing"))
   
   GRN@annotation$genes = metadata_rna
   
@@ -1502,7 +1502,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
     
     if (source == "JASPAR") {
         
-        futile.logger::flog.info(paste0("Querying JASPAR 2022 database"))
+        futile.logger::flog.info(paste0("Querying JASPAR 2022 database. This may take a while."))
         # get TF gene names from JASPAR
         
         if (!is.null(JASPAR_useSpecificTaxGroup)) {
@@ -1511,6 +1511,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         } else {
             options_JASPAR = list(species = .getGenomeObject(GRN@config$parameters$genomeAssembly, "txID"), ...)
         }
+        
         PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2022::JASPAR2022, opts = options_JASPAR) 
         
         
@@ -1525,6 +1526,8 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             dplyr::mutate(TF.name.lowercase = tolower(TF.name))
 
         params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly)
+        
+        futile.logger::flog.info(paste0("Retrieving gene annotation for JASPAR TFs. This may take a while."))
         
         mapping.df <- NULL
         attempt <- 0
@@ -1651,7 +1654,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         
         # Adjust also the JASPAR object
         if (source == "JASPAR") {
-            GRN@config$parameters$internal$PFMatrixList = GRN@config$parameters$internal$PFMatrixList[GRN@config$allTF]
+            GRN@config$parameters$internal$PFMatrixList = GRN@config$parameters$internal$PFMatrixList[allTF]
         }
         
     }
