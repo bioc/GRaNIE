@@ -43,21 +43,21 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     if (model_TF_gene_nodes_separately) {
       TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
         dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>% 
-        dplyr::select(c("TF.name", "peak.ID", "TF.ENSEMBL", "TF_peak.r")) %>%
+        dplyr::select(c("TF.ID", "peak.ID", "TF.ENSEMBL", "TF_peak.r")) %>%
         stats::na.omit() %>% 
         dplyr::mutate(V2_name = NA) %>%
         unique() %>%
-        dplyr::rename(V1 = "TF.name", V2 = "peak.ID", V1_name = "TF.ENSEMBL", r = "TF_peak.r") %>%
+        dplyr::rename(V1 = "TF.ID", V2 = "peak.ID", V1_name = "TF.ENSEMBL", r = "TF_peak.r") %>%
         dplyr::mutate_at(c("V1","V2"), as.vector)
     } else {
       # Get Ensembl ID for TFs here to make a clean join and force a TF that is regulated by a peak to be the same node
       TF_peak.df = GRN@connections$all.filtered[["0"]] %>%
         dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>% 
-        dplyr::select(c("TF.ENSEMBL", "peak.ID", "TF.name", "TF_peak.r")) %>%
+        dplyr::select(c("TF.ENSEMBL", "peak.ID", "TF.ID", "TF_peak.r")) %>%
         stats::na.omit() %>% 
         dplyr::mutate(V2_name = NA) %>%
         unique() %>%
-        dplyr::rename(V1 = "TF.ENSEMBL", V2 = "peak.ID", V1_name = "TF.name", r = "TF_peak.r") %>%
+        dplyr::rename(V1 = "TF.ENSEMBL", V2 = "peak.ID", V1_name = "TF.ID", r = "TF_peak.r") %>%
         dplyr::mutate_at(c("V1","V2"), as.vector)
     }
     
@@ -69,10 +69,10 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
       dplyr::rename(V1 = "peak.ID", V2 = "gene.ENSEMBL", V2_name = "gene.name", r = "peak_gene.r") %>%
       dplyr::mutate_at(c("V1","V2"), as.vector)
     
-    TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak`=TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
+    TF_peak_gene.df = dplyr::bind_rows(list(`tf-peak` = TF_peak.df, `peak-gene` = peak_gene.df), .id = "connectionType") %>%
       dplyr::select("V1", "V2", "V1_name", "V2_name", "r", "connectionType")
     
-    TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2"="V1"), suffix = c(".TF_peak", ".peak_gene")) %>% 
+    TF_gene.df = dplyr::inner_join(TF_peak.df, peak_gene.df, by = c("V2" = "V1"), multiple = "all", suffix = c(".TF_peak", ".peak_gene")) %>% 
       dplyr::select("V1", "V2.peak_gene", "V1_name.TF_peak", "V2_name.peak_gene") %>%
       dplyr::rename(V1_name = "V1_name.TF_peak", V2 = "V2.peak_gene", V2_name = "V2_name.peak_gene") %>%
       dplyr::distinct() %>%
@@ -131,14 +131,14 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 .buildGraph <- function(df, directed, allowLoops, removeMultiple = FALSE, silent = FALSE) {
   
   # Remove V1_name and V2_name as igraph treats additional columns as edge attribute, which can become messed up as it here refers to vertice attribute
-  df_mod = df %>% dplyr::select(-.data$V1_name, -.data$V2_name)
+  df_mod = df %>% dplyr::select(-"V1_name", -"V2_name")
   
   TF_vertices = df %>%
     dplyr::select("V1", "V1_name") %>% 
     dplyr::rename(nodeID = "V1") %>%
     dplyr::distinct() %>%
     dplyr::group_by(.data$nodeID) %>%
-    dplyr::summarise(names_TF_all = paste0(.data$V1_name, collapse="|"),
+    dplyr::summarise(names_TF_all = paste0(.data$V1_name, collapse = "|"),
                      nTF = dplyr::n(),
                      isTF = TRUE, .groups = "keep") %>%
     dplyr::ungroup()
@@ -457,7 +457,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   if (type == "byCommunity") {
     idMerge = "community"
   } else if (type == "byTF") {
-    idMerge = "TF.name"
+    idMerge = "TF.ID"
   }
   
   # Merge all community-specific results to one data frame
@@ -496,7 +496,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   all.df = resultsCombined.df %>%
     rbind(enrichmentGeneral) %>%
     dplyr::mutate(ID = as.factor(.data$ID),
-                  pval =as.numeric(gsub(">|<", "", .data$pval))) %>%
+                  pval = as.numeric(gsub(">|<", "", .data$pval))) %>%
     dplyr::filter(.data$pval <= p & (.data$Found >= nSignificant | .data$ID %in% c(enrichedTermsGeneral, enrichedTermsGrouped)))
   
   all.df[, idMerge] = as.factor(all.df[, idMerge, drop = TRUE])
@@ -505,7 +505,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
 }
 
-.checkEnrichmentCongruence_general <-function(GRN, type = "community") {
+.checkEnrichmentCongruence_general <- function(GRN, type = "community") {
   
   allOntologiesGeneral = sort(names(GRN@stats$Enrichment$general))
   
@@ -1116,7 +1116,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
     slot = "gene.ENSEMBL"
     link = dplyr::if_else(use_TF_gene_network, "tf-gene", "peak-gene")
   } else {
-    slot = "TF.name"
+    slot = "TF.ID"
     slot = "TF.ENSEMBL"
     link = dplyr::if_else(use_TF_gene_network, "tf-gene", "tf-peak")
   } 
@@ -1156,7 +1156,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
     } else {
       topNodes = topNodes  %>%
         dplyr::left_join(graph.df %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), by = "V1") %>%
-        dplyr::rename(TF.ENSEMBL = "V1", TF.name = "V1_name")
+        dplyr::rename(TF.ENSEMBL = "V1", TF.ID = "V1_name")
     }
     
     
@@ -1187,9 +1187,9 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' Also note that some parameter combinations for `algorithm` and `statistic` are incompatible, an error message will be thrown in such a case.
 #'  
 #' @inheritParams calculateGeneralEnrichment
-#' @param rankType Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.names" parameter.
+#' @param rankType Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.IDs" parameter.
 #' @param n Numeric. Default 3. If this parameter is passed as a value between 0 and 1, it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.
-#' @param TF.names Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.
+#' @param TF.IDs Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.
 #' @return An updated \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
 #' @seealso \code{\link{plotTFEnrichment}}
 #' @examples 
@@ -1198,7 +1198,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' GRN =  calculateTFEnrichment(GRN, n = 5, ontology = "GO_BP", forceRerun = FALSE)
 #' @export
 # #' @importFrom topGO whichAlgorithms whichTests
-calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NULL,
+calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.IDs = NULL,
                                   ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 
                                   statistic = "fisher", 
                                   background = "neighborhood", background_geneTypes = "all",
@@ -1227,12 +1227,12 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
   .checkGraphExistance(GRN)
   
   if (rankType == "custom"){
-    if(is.null(TF.names)){
-      futile.logger::flog.error("To calculate the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.names' parameter.")
+    if(is.null(TF.IDs)){
+      futile.logger::flog.error("To calculate the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.IDs' parameter.")
     }
-    wrongTFs = setdiff(TF.names, unique(GRN@connections$all.filtered$`0`$TF.name))
+    wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.name))
 
-    TFset = setdiff(TF.names, wrongTFs) 
+    TFset = setdiff(TF.IDs, wrongTFs) 
     
     if (length(wrongTFs) > 0 & length(TFset) > 0){
         message = paste0("The following TFs are not in the filtered GRN and will be ommited from the analysis: ",  paste0(wrongTFs, collapse = ", "))
@@ -1241,11 +1241,11 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
     
   } else{
     
-    # TF.name is always there, irrespective of whether ENSEMBL ID or TF name is used as primary ID type
-    TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n, use_TF_gene_network = TRUE) %>% dplyr::pull(.data$TF.name)
+    # TF.ID is always there, irrespective of whether ENSEMBL ID or TF name is used as primary ID type
+    TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n, use_TF_gene_network = TRUE) %>% dplyr::pull(.data$TF.ID)
   }
   
-  # TODO: Continue working on the TF.name level or switch to Ensembl? Should be in concordance with the graph!
+  # TODO: Continue working on the TF.ID level or switch to Ensembl? Should be in concordance with the graph!
   
   mapping = .getGenomeObject(GRN@config$parameters$genomeAssembly, type = "packageName")
   
@@ -1269,7 +1269,7 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.names = NU
     
     # get the genes associated with current top TF
     curGenes = GRN@connections$all.filtered$`0` %>% 
-      dplyr::filter(.data$TF.name == TF) %>% 
+      dplyr::filter(.data$TF.ID == TF) %>% 
       dplyr::pull(.data$gene.ENSEMBL) %>%
       unique()
     

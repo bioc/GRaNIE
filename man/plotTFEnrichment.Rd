@@ -8,7 +8,7 @@ plotTFEnrichment(
   GRN,
   rankType = "degree",
   n = NULL,
-  TF.names = NULL,
+  TF.IDs = NULL,
   topn_pvalue = 30,
   p = 0.05,
   nSignificant = 2,
@@ -31,7 +31,7 @@ plotTFEnrichment(
 
 \item{n}{NULL or numeric. Default NULL. If set to NULL, all previously calculated TF enrichments will be plotted. If set to a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if rankType = "custom".}
 
-\item{TF.names}{\code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the names of the TFs to plot. Ignored otherwise.}
+\item{TF.IDs}{\code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the names of the TFs to plot. Ignored otherwise.}
 
 \item{topn_pvalue}{Numeric. Default 30. Maximum number of ontology terms that meet the p-value significance threshold to display in the enrichment dot plot}
 

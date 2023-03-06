@@ -252,11 +252,11 @@ For more parameter details, see the R help (`?addTFBS` and `?overlapPeaksAndTFBS
 folder_TFBS_6TFs = "https://www.embl.de/download/zaugg/GRaNIE/TFBS_selected.zip"
 # Download the zip of all TFBS files. Takes too long here, not executed therefore
 
-# download.file(folder_TFBS_6TFs, file.path("TFBS_selected.zip"), quiet = FALSE)
+download.file(folder_TFBS_6TFs, file.path("TFBS_selected.zip"), quiet = FALSE)
 
-# unzip(file.path("TFBS_selected.zip"), overwrite = TRUE)
+unzip(file.path("TFBS_selected.zip"), overwrite = TRUE)
 
-# motifFolder = tools::file_path_as_absolute("TFBS_selected")
+motifFolder = tools::file_path_as_absolute("TFBS_selected")
 
 GRN = addTFBS(GRN, motifFolder = motifFolder, TFs = "all", filesTFBSPattern = "_TFBS", fileEnding = ".bed.gz", forceRerun = TRUE)
 

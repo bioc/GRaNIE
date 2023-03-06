@@ -1,4 +1,4 @@
-# GRaNIE 1.3.26-1.3.29 (2023-03-02-2023-03-04)
+# GRaNIE 1.3.26-1.3.30 (2023-03-02-2023-03-06)
 
 ## New features and vignette updates
 - added two new supported genomes: `rn6`/`rn7` and `dm6` for the rat and the Drosophila (fruit fly) genome, respectively

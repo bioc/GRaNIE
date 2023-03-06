@@ -529,17 +529,15 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 .plot_TF_peak_fdr <- function(GRN, perm, useGCCorrection, plotDetails = FALSE, file = NULL, width = 7, height = 7, nPagesMax = NULL, pages = NULL) {
   
   start = Sys.time()
-  futile.logger::flog.info(paste0("Plotting FDR curves for each TF", ifelse(is.null(file), "", paste0(" to file ", file))))
-  
+ 
   pageCounter = 1  
   
   if (!is.null(file)) {
     .checkOutputFile(file)
     grDevices::pdf(file, width = width, height = height)
-    futile.logger::flog.info(paste0("Plotting to file ", file))
-  } else {
-    futile.logger::flog.info(paste0("Plotting directly"))   
-  }
+  } 
+  
+  futile.logger::flog.info(paste0("Plotting FDR summary and curves for each TF", ifelse(is.null(file), "", paste0(" to file ", file))))
   
 
   # TODO: handle multiple activities and actually write this function
@@ -565,7 +563,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 
       # Dont take all TF, some might be missing.
       connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
-      allTF = unique(connections_TF_peak$TF.name)
+      allTF = unique(connections_TF_peak$TF.ID)
       nTF = ifelse(is.null(nPagesMax), length(allTF), nPagesMax - 1)
       futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
       
@@ -592,7 +590,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
         
         TFCur = allTF[i]
         
-        connections_TF_peakCur = dplyr::filter(connections_TF_peak, .data$TF.name == TFCur)
+        connections_TF_peakCur = dplyr::filter(connections_TF_peak, .data$TF.ID == TFCur)
         
         # Produce two FDR plots, coming from both directions
         plotsCur.l = list()
@@ -606,11 +604,11 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
           
           
           connections_TF_peak.filt = dplyr::filter(connections_TF_peakCur, .data$TF_peak.fdr_direction == typeCur ) %>%
-              dplyr::select(-"TF.name", -"TF_peak.fdr_direction") %>%
+              dplyr::select(-"TF.ID", -"TF_peak.fdr_direction") %>%
               dplyr::mutate(TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = levelsCur))  %>%
               reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
           
-          plotTitle = paste0(TFCur, ": Direction ", typeCur, ifelse(perm == 0, "", "(background)"))
+          plotTitle = paste0(.printTF(TFCur, printEnsemblID = TRUE), ": Direction ", typeCur, ifelse(perm == 0, "", "(background)"))
           
           if (!useGCCorrection) {
               
@@ -955,16 +953,16 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
         
         for (varCur in colnames(TFs_GC_correction)) {
             
-            if (varCur %in% c("TF.name", "peak.GC.class", "maxSizeBackground", "n.fg.bin")) next
+            if (varCur %in% c("TF.ID", "peak.GC.class", "maxSizeBackground", "n.fg.bin")) next
             
             TFs_GC_correction.cur = TFs_GC_correction %>%
-                dplyr::select("TF.name", "peak.GC.class", {{varCur}}) %>%
+                dplyr::select("TF.ID", "peak.GC.class", {{varCur}}) %>%
                 tidyr::pivot_wider(names_from = "peak.GC.class", values_from = {{varCur}}) %>% 
-                dplyr::select("TF.name", levels(TFs_GC_correction$peak.GC.class)) %>%
-                dplyr::mutate(TF.name = as.character(.data$TF.name)) %>%
+                dplyr::select("TF.ID", levels(TFs_GC_correction$peak.GC.class)) %>%
+                dplyr::mutate(TF.ID = as.character(.data$TF.ID)) %>%
                 dplyr::mutate_all(function(x) ifelse(is.nan(x) | is.infinite(x), NA, x)) %>%  # replaces NaN and Inf with NA
                 # dplyr::select(dplyr::where(~sum(!is.na(.x)) > 0)) %>%
-                tibble::column_to_rownames("TF.name") %>% 
+                tibble::column_to_rownames("TF.ID") %>% 
                 as.matrix()
             
             # Remove columns with only NA
@@ -991,13 +989,13 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
                 dplyr::mutate(TF_peak.r_bin = stringr::str_replace_all(.data$TF_peak.r_bin, stringr::fixed(")"), stringr::fixed("]")),
                               TF_peak.r_bin = stringr::str_replace_all(.data$TF_peak.r_bin, stringr::fixed("("), stringr::fixed("[")),
                               TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = bin.order.combined)) %>%
-                dplyr::group_by(.data$TF.name, .data$TF_peak.r_bin) %>%
+                dplyr::group_by(.data$TF.ID, .data$TF_peak.r_bin) %>%
                 dplyr::summarise(n_beforeGC  = length(.data$TF_peak.fdr_orig[.data$TF_peak.fdr_orig <= fdrCur]),
                                  n_afterGC   = length(.data$TF_peak.fdr[.data$TF_peak.fdr <= fdrCur]),
                                  n_diff_abs  = .data$n_afterGC - .data$n_beforeGC,
                                  n_diff_rel  = .data$n_afterGC / .data$n_beforeGC) %>%
                 dplyr::ungroup() %>%
-                tidyr::complete(.data$TF.name, .data$TF_peak.r_bin)
+                tidyr::complete(.data$TF.ID, .data$TF_peak.r_bin)
             
             
             # Change "Inf" values to a finite value
@@ -1037,10 +1035,10 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
             for (varCur in c("n_beforeGC", "n_afterGC", "n_diff_abs", "n_diff_rel")) {
                 
                 GC.comp.df %>%
-                    dplyr::select("TF.name", "TF_peak.r_bin", {{varCur}}) %>%
+                    dplyr::select("TF.ID", "TF_peak.r_bin", {{varCur}}) %>%
                     tidyr::pivot_wider(names_from = "TF_peak.r_bin", values_from = {{varCur}}) %>%
-                    dplyr::select("TF.name", tidyselect::any_of(bin.order.combined)) %>%
-                    tibble::column_to_rownames("TF.name") %>% 
+                    dplyr::select("TF.ID", tidyselect::any_of(bin.order.combined)) %>%
+                    tibble::column_to_rownames("TF.ID") %>% 
                     as.matrix() %>%
                     ComplexHeatmap::Heatmap(
                         name = var.transl[[varCur]]$label,
@@ -1136,6 +1134,10 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
     
     printTF = FALSE
     
+    if (is.null(pages)) {
+        printTF = TRUE
+    }
+    
     if (!plotDetails) {
         if (any(pages %in% (TF_iteration + 1))) {
             printTF = TRUE
@@ -1145,7 +1147,7 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
             printTF = TRUE
         } 
     }
-    
+
     
     printTF
 }  
@@ -1239,8 +1241,8 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
         data.summary.l[[as.character(fdrCur)]] = data.all.df %>%
             dplyr::filter(.data$TF_peak.fdr < fdrCur, .data$TF_peak.connectionType == TF_peak_connectionType) %>%
             dplyr::group_by(.data$TF_peak.r_bin, .data$perm, .drop = FALSE) %>%
-            dplyr::summarise(n = sum(.data$n), nTFDistinct = dplyr::n_distinct(.data$TF.name), 
-                      TFDistinct = paste0(unique(.data$TF.name), collapse = ","), .groups = "keep") %>%
+            dplyr::summarise(n = sum(.data$n), nTFDistinct = dplyr::n_distinct(.data$TF.ID), 
+                      TFDistinct = paste0(unique(.data$TF.ID), collapse = ","), .groups = "keep") %>%
             dplyr::ungroup() %>%
             dplyr::mutate(perm = factor(.data$perm, levels = c("0", "1")),
                           fdr = fdrCur) %>%
@@ -1253,19 +1255,19 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
         n_pos = data.summary.l[[as.character(fdrCur)]] %>%
             dplyr::filter(!stringr::str_starts(.data$TF_peak.r_bin, "\\[-"), ) %>%
             dplyr::group_by(.data$perm) %>%
-            dplyr::summarise(sum = sum(.data$n), TF.name = paste0(unique(.data$TFDistinct), collapse = ",")) %>%
+            dplyr::summarise(sum = sum(.data$n), TF.ID = paste0(unique(.data$TFDistinct), collapse = ",")) %>%
             dplyr::arrange(.data$perm)
         
         n_neg = data.summary.l[[as.character(fdrCur)]] %>%
             dplyr::filter(stringr::str_starts(.data$TF_peak.r_bin, "\\[-"), ) %>%
             dplyr::group_by(.data$perm) %>%
-            dplyr::summarise(sum = sum(.data$n), TF.name = paste0(unique(.data$TFDistinct), collapse = ",")) %>%
+            dplyr::summarise(sum = sum(.data$n), TF.ID = paste0(unique(.data$TFDistinct), collapse = ",")) %>%
             dplyr::arrange(.data$perm)
         
-        distinct_TF_pos_0 = strsplit(n_pos$TF.name[1], ",")[[1]] %>% unique()
-        distinct_TF_pos_1 = strsplit(n_pos$TF.name[2], ",")[[1]] %>% unique()
-        distinct_TF_neg_0 = strsplit(n_neg$TF.name[1], ",")[[1]] %>% unique()
-        distinct_TF_neg_1 = strsplit(n_neg$TF.name[2], ",")[[1]] %>% unique()
+        distinct_TF_pos_0 = strsplit(n_pos$TF.ID[1], ",")[[1]] %>% unique()
+        distinct_TF_pos_1 = strsplit(n_pos$TF.ID[2], ",")[[1]] %>% unique()
+        distinct_TF_neg_0 = strsplit(n_neg$TF.ID[1], ",")[[1]] %>% unique()
+        distinct_TF_neg_1 = strsplit(n_neg$TF.ID[2], ",")[[1]] %>% unique()
         
         futile.logger::flog.info(paste0( " FDR = ", fdrCur, "(real vs background)"))
         futile.logger::flog.info(paste0( "  Links total        : ", (n_pos$sum[1] + n_neg$sum[1]), " vs ", (n_pos$sum[2] +  n_neg$sum[1])))
@@ -2441,7 +2443,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
     
     # pie charts
     totalVerteces = data.frame(Class = c("TF", "Peak", "Gene"),
-                               Count = c(dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$TF.name)),
+                               Count = c(dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$TF.ID)),
                                          dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$peak.ID)),
                                          dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$gene.ENSEMBL)) 
                                         )
@@ -3361,7 +3363,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' 
 #' @inheritParams plotGeneralEnrichment
 #' @inheritParams plotCommunitiesEnrichment
-#' @param TF.names \code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the names of the TFs to plot. Ignored otherwise.
+#' @param TF.IDs \code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the names of the TFs to plot. Ignored otherwise.
 #' @param rankType Character. One of: "degree", "EV", "custom". This parameter will determine the criterion to be used to identify the "top" nodes. If set to "degree", the function will select top nodes based on the number of connections they have, i.e. based on their degree-centrality. If set to "EV" it will select the top nodes based on their eigenvector-centrality score in the network.
 #' @param n NULL or numeric. Default NULL. If set to NULL, all previously calculated TF enrichments will be plotted. If set to a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if rankType = "custom".
 #' @return The same \code{\linkS4class{GRN}} object, without modifications.
@@ -3374,7 +3376,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' GRN = plotTFEnrichment(GRN, n = 5, plotAsPDF = FALSE, pages = 1)
 #' @export
 #' @importFrom grid gpar
-plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL,
+plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
                              topn_pvalue = 30, p = 0.05, 
                              nSignificant = 2, nID = 10,
                              display_pAdj = FALSE,
@@ -3412,23 +3414,23 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   
   
   if (rankType == "custom") {
-    if (is.null(TF.names)) {
-      message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.names' parameter."
+    if (is.null(TF.IDs)) {
+      message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.IDs' parameter."
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
-    wrongTFs = setdiff(TF.names, unique(GRN@connections$all.filtered$`0`$TF.name))
+    wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.ID))
     if (length(wrongTFs) > 0) {
        message = paste0("The TFs ",  paste0(wrongTFs, collapse = " + "), " are not in the filtered GRN. They will be ommited from the results.")
        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
 
     }
-    TFset = setdiff(TF.names, wrongTFs) 
+    TFset = setdiff(TF.IDs, wrongTFs) 
   } else{ #rankType = "degree"
     
     if (is.null(n)) {
       TFset = setdiff(names(GRN@stats$Enrichment$byTF), "combined")
     } else {
-      TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n = n) %>% dplyr::pull(.data$TF.name)
+      TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n = n) %>% dplyr::pull(.data$TF.ID)
     }
     
   }
@@ -3449,7 +3451,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
 
     nodeDegree_TFset = dplyr::left_join(GRN@annotation$TFs, 
                                         as.data.frame(nodeDegree) %>% tibble::rownames_to_column("TF.ENSEMBL"), by = "TF.ENSEMBL") %>%
-                       dplyr::filter(.data$TF.name %in% as.character(TFset))
+                       dplyr::filter(.data$TF.ID %in% as.character(TFset))
     
     pageCounter = 1  
     
@@ -3476,11 +3478,11 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
         
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
           
-          TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.name == TFCur) %>% dplyr::pull(TF.ENSEMBL)
+          TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID == TFCur) %>% dplyr::pull(TF.ENSEMBL)
           
-          TF.name.full = paste0(TFCur, " (", TF.ENSEMBL, ")")
+          TF.ID.full = paste0(TFCur, " (", TF.ENSEMBL, ")")
           
-          futile.logger::flog.info(paste0("  TF ", TF.name.full))
+          futile.logger::flog.info(paste0("  TF ", TF.ID.full))
           
           # if the enrichment slot for the TFs is empty, calculate the enrichment
           if (is.null(GRN@stats$Enrichment[["byTF"]][[TFCur]])) { 
@@ -3493,7 +3495,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
             message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and TF ", TFCur, ". Rerun the function calculateTFEnrichment.")
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
           }
-          titleCur = paste0("Enrichment Analysis - TF: ", TF.name.full)
+          titleCur = paste0("Enrichment Analysis - TF: ", TF.ID.full)
           .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, topn_pvalue = topn_pvalue,  p = p, display_pAdj = display_pAdj)
           
           
@@ -3512,7 +3514,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] = 
               .combineEnrichmentResults(GRN, type = "byTF", ontologyCur, 
                                         p = p, nSignificant = nSignificant, display_pAdj) %>%
-              dplyr::filter(.data$TF.name %in% c("all", as.character(TFset)))
+              dplyr::filter(.data$TF.ID %in% c("all", as.character(TFset)))
           
           if (nrow(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]) == 0) {
               message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
@@ -3523,8 +3525,8 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           
           # Convert to wide format and filter those terms that are significant at least once
           all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-              dplyr::select("TF.name", "ID", "pval") %>%
-              tidyr::pivot_wider(names_from = .data$TF.name, values_from = .data$pval) %>%
+              dplyr::select("TF.ID", "ID", "pval") %>%
+              tidyr::pivot_wider(names_from = "TF.ID", values_from = .data$pval) %>%
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
               dplyr::rowwise() %>%
               dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>%
@@ -3538,7 +3540,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           }
           
           
-          TF.order = c("all", setdiff(unique(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$TF.name), "all"))
+          TF.order = c("all", setdiff(unique(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$TF.ID), "all"))
           
           
           matrix.m = all.df.wide %>%
@@ -3553,7 +3555,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
           
           # Make sure the top annotation has the same dimensionality as the resulting matrix
           nodeDegree_TFset_numbers =  nodeDegree_TFset %>%
-              dplyr::filter(.data$TF.name %in% colnames(matrix.m)) %>%
+              dplyr::filter(.data$TF.ID %in% colnames(matrix.m)) %>%
               dplyr::arrange(dplyr::desc(nodeDegree)) %>%
               dplyr::pull(nodeDegree)
           
@@ -3587,7 +3589,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
               
               # Now focus on the top X only per community
               ID_subset =  GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-                  dplyr::group_by(.data$TF.name) %>% 
+                  dplyr::group_by(.data$TF.ID) %>% 
                   dplyr::arrange(.data$pval) %>% 
                   dplyr::slice(seq_len(nID)) %>%
                   dplyr::pull(.data$ID) %>% as.character()
@@ -3687,7 +3689,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
   
   top.n.tf = degrees.table %>% 
     dplyr::filter(class == "TF") %>%
-    dplyr::rename(TF.name = "ID") %>%
+    dplyr::rename(TF.ID = "ID") %>%
     dplyr::arrange(dplyr::desc(.data$Degree)) %>% 
     dplyr::slice(seq_len(nCentralTFs))
   
@@ -3767,11 +3769,11 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.names = NULL
     dplyr::distinct() %>%
     dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), 
                      by = c("TF.ENSEMBL" = "V1") ) %>%
-    dplyr::rename(TF.name = "V1_name") %>%
-    dplyr::mutate(name_plot = paste0(.data$TF.name, "\n(", .data$TF.ENSEMBL, ")")) %>%
+    dplyr::rename(TF.ID = "V1_name") %>%
+    dplyr::mutate(name_plot = paste0(.data$TF.ID, "\n(", .data$TF.ENSEMBL, ")")) %>%
     dplyr::filter(.data$Score > 0) # Require the score to be > 0 because we dont want top nodes to have a score of 0
   
-  # dplyr::mutate(TF.name = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
+  # dplyr::mutate(TF.ID = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
   
   theme_all = ggplot2::theme_bw() + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1, size = 8))
   
@@ -3894,18 +3896,18 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     # check that it's in sync with the @ graph
     if (graph == "TF-gene") {
         grn.merged = GRN@graph$TF_gene$table %>%
-            dplyr::rename(TF.name = "V1_name")
+            dplyr::rename(TF.ID = "V1_name")
         
         edges_final = grn.merged %>%
-            dplyr::rename(from = "TF.name", to = "V2") %>%
+            dplyr::rename(from = "TF.ID", to = "V2") %>%
             dplyr::mutate(weight = 1, R = 1, linetype = "solid")
         
     }else{
         
         grn.merged = GRN@graph$TF_peak_gene$table %>%
-            dplyr::rename(TF.name = "V1_name") 
+            dplyr::rename(TF.ID = "V1_name") 
         
-        grn.merged$V1[!is.na(grn.merged$TF.name)] = as.character(grn.merged$TF.name[!is.na(grn.merged$TF.name)]) # replace TF ensembl with TF name
+        grn.merged$V1[!is.na(grn.merged$TF.ID)] = as.character(grn.merged$TF.ID[!is.na(grn.merged$TF.ID)]) # replace TF ensembl with TF name
         
         edges_final = grn.merged %>%
             dplyr::mutate(weight = .data$r,
@@ -4045,15 +4047,15 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
         
         # Make the vertices unique, so that the same peak has only one vertice 
         # vertices_TFs = unique_TF_peak.con %>%
-        #   dplyr::group_by(TF.name) %>%
-        #   dplyr::summarize(label = unique(TF.name)) %>%
+        #   dplyr::group_by(TF.ID) %>%
+        #   dplyr::summarize(label = unique(TF.ID)) %>%
         #   dplyr::ungroup()
         
         vertices_TFs = grn.merged %>%
             dplyr::filter(grepl("^tf", .data$connectionType)) %>%
-            #dplyr::rename(TF.name = V1) %>%
-            dplyr::group_by(.data$TF.name) %>%
-            dplyr::summarize(label = unique(.data$TF.name)) %>%
+            #dplyr::rename(TF.ID = V1) %>%
+            dplyr::group_by(.data$TF.ID) %>%
+            dplyr::summarize(label = unique(.data$TF.ID)) %>%
             dplyr::ungroup()
         
         if (nrow(vertices_TFs) > 0) {
@@ -4063,7 +4065,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
                 .verifyArgument_verticeType(vertice_color_TFs)
                 
                 vertices_TFs = vertices_TFs %>%
-                    dplyr::left_join(vertice_color_TFs[[1]], by = c("TF.name" = vertice_color_TFs[[2]])) %>%
+                    dplyr::left_join(vertice_color_TFs[[1]], by = c("TF.ID" = vertice_color_TFs[[2]])) %>%
                     dplyr::rename(color_raw = !!(vertice_color_TFs[[3]])) %>%
                     dplyr::mutate(color_bin = as.character(cut(.data$color_raw, nBins_real, labels = colors_categories.l[["TF"]], ordered_result = TRUE)))  # Transform the colors for the vertices
                 
@@ -4073,7 +4075,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
             } 
             
             vertices = tibble::add_row(vertices, 
-                                       id = vertices_TFs$TF.name, 
+                                       id = vertices_TFs$TF.ID, 
                                        type = "TF", 
                                        label = as.vector(vertices_TFs$label), 
                                        color_raw = vertices_TFs$color_raw,

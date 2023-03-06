@@ -610,13 +610,14 @@
     matrix[which(is.na(matrix))] = 0
   }
  
-  Matrix::Matrix(matrix, sparse = TRUE, dimnames = dimnames)
+    # TODO: as("lgCMatrix") may be a bit more space-saing BUT then we cannot add the isFiltered column to it that the code currently relies on
+  Matrix::Matrix(matrix, sparse = TRUE, dimnames = dimnames) %>% as("dMatrix")
 }
 
 #' @importFrom Matrix Matrix
 .asMatrixFromSparse <- function(matrix, convertZero_to_NA=TRUE) {
   
-  if (methods::is(matrix,"dgeMatrix") | methods::is(matrix,"dgCMatrix") | methods::is(matrix,"dgRMatrix")) {
+  if (methods::is(matrix,"dgeMatrix") | methods::is(matrix,"dgCMatrix") | methods::is(matrix,"dgRMatrix") | methods::is(matrix,"lgCMatrix")) {
     dimNames = dimnames(matrix)
     matrix = as.matrix(matrix)
     
@@ -626,6 +627,13 @@
     
     dimnames(matrix) = dimNames
 
+  } else {
+      # 
+      # if (!is.matrix(matrix) & !is.data.frame(matrix)) {
+      #     message = paste0("Unknown sparse matrix type \"", class(matrix), "\", this should not happen. Contact the authors.")
+      #     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      # }
+     
   }
 
   matrix
