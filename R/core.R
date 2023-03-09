@@ -3806,7 +3806,7 @@ filterGRNAndConnectGenes <- function(GRN,
     
     peakGeneCorrelations = GRN@connections$peak_genes[[permIndex]] %>%
       dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
-      dplyr::left_join(ann.gene.red, by = "gene.ENSEMBL")
+      dplyr::left_join(ann.gene.red, by = "gene.ENSEMBL", multiple = "all")
 
 
     
@@ -4421,7 +4421,7 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
                                     dplyr::mutate(TF.ENSEMBL   = getCounts(GRN, type = "rna", permuted = as.logical(permutationCur))$ENSEMBL[map_TF],
                                                   gene.ENSEMBL = getCounts(GRN, type = "rna", permuted = as.logical(permutationCur))$ENSEMBL[map_gene]) %>%
                                     dplyr::filter(!is.na(.data$gene.ENSEMBL), !is.na(.data$TF.ENSEMBL)) %>%  # For some peak-gene combinations, no RNA-Seq data was available, these NAs are filtered
-                                    dplyr::left_join(GRN@annotation$TFs, by = c("TF.ENSEMBL")) %>%
+                                    dplyr::left_join(GRN@annotation$TFs, by = c("TF.ENSEMBL"), multiple = "all") %>%
                                     dplyr::select(tidyselect::all_of(selectColumns))) %>%
           dplyr::mutate(gene.ENSEMBL = as.factor(.data$gene.ENSEMBL), 
                         TF.ENSEMBL   = as.factor(.data$TF.ENSEMBL),
@@ -5524,13 +5524,33 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     
     # Rename TF.name in TF-peak connections
     if (!is.null(GRN@connections$TF_peaks)) {
-        for (i in 0:.getMaxPermutation(GRN)) {
+        for (i in as.character(0:.getMaxPermutation(GRN))) {
             if (!is.null(GRN@connections$TF_peaks[[as.character(i)]])) {
-                if ("TF.name" %in% colnames(GRN@connections$TF_peaks[["0"]]$main)) {
-                    GRN@connections$TF_peaks[["0"]]$main = dplyr::rename(GRN@connections$TF_peaks[["0"]]$main, TF.ID = TF.name)
+                if (!"TF.ID" %in% colnames(GRN@connections$TF_peaks[[i]]$main)) {
+                    GRN@connections$TF_peaks[[i]]$main = dplyr::rename(GRN@connections$TF_peaks[[i]]$main, TF.ID = TF.name)
                 }
-                if ("TF.name" %in% colnames(GRN@connections$TF_peaks[["0"]]$connectionStats)) {
-                    GRN@connections$TF_peaks[["0"]]$connectionStats = dplyr::rename(GRN@connections$TF_peaks[["0"]]$connectionStats, TF.ID = TF.name)
+                if (!"TF.ID" %in% colnames(GRN@connections$TF_peaks[[i]]$connectionStats)) {
+                    GRN@connections$TF_peaks[[i]]$connectionStats = dplyr::rename(GRN@connections$TF_peaks[[i]]$connectionStats, TF.ID = TF.name)
+                }
+            }
+        }
+    }
+    
+    if (!is.null(GRN@connections$TF_genes.filtered)) {
+        for (i in as.character(0:.getMaxPermutation(GRN))) {
+            if (!is.null(GRN@connections$TF_genes.filtered[[as.character(i)]])) {
+                if (!"TF.ID" %in% colnames(GRN@connections$TF_genes.filtered[[i]])) {
+                    GRN@connections$TF_genes.filtered[[i]] = dplyr::rename(GRN@connections$TF_genes.filtered[[i]], TF.ID = TF.name)
+                }
+            }
+        }
+    }
+    
+    if (!is.null(GRN@connections$all.filtered)) {
+        for (i in as.character(0:.getMaxPermutation(GRN))) {
+            if (!is.null(GRN@connections$all.filtered[[as.character(i)]])) {
+                if (!"TF.ID" %in% colnames(GRN@connections$all.filtered[[i]])) {
+                    GRN@connections$all.filtered[[i]] = dplyr::rename(GRN@connections$all.filtered[[i]], TF.ID = TF.name)
                 }
             }
         }

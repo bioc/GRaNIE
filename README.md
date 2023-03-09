@@ -9,17 +9,19 @@ This repository is for our *GRaNIE* package (**G**ene **R**egul**a**tory **N**et
 
 For the *GRaNPA* package, see [here](https://grp-zaugg.embl-community.io/GRaNPA).
 
-### Installation and Documentation
+### Installation
 
-*GRaNIE* is now included on *Bioconductor*. The package and installation instructions can be found here and is suitable for the most users, which installs the package from the release branch of Bioconductor: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE)
+*GRaNIE* is now included on *Bioconductor*. The package and installation instructions can be found here and is suitable for the most users, which installs the package from the release branch of Bioconductor: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE). **Make sure to use only the latest Bioconductor version (currently, 3.16).**
 
-**The package is still under very active development. We recommend to either use the development version of Bioconductor for being able to install the latest versions OR to install the newest version of the package outside of the official Bioconductor release cycle (i.e., a devel version that however does not necessarily require even the latest Bioconductor version to be installed)**
+**As the package is still under very active development, we however recommend to either use the development version of Bioconductor for being able to install the latest versions OR to install the newest version of the package outside of the official Bioconductor release cycle** (i.e., a devel version that however does not necessarily require even the latest Bioconductor version to be installed).
 
 For the latter option, you may use the following line that will install the package directly from the Gitlab instance that also hosts the package website. Due to potential package conflicts with existing (Bioconductor) packages, we cannot guarantee this always works, though:
-`devtools::install_gitlab("grp-zaugg/GRaNIE", host = "git.embl.de", subdir = "src/GRaNIE", force = TRUE)`. If you run into any problems, let us know!
+`devtools::install_gitlab("grp-zaugg/GRaNIE", host = "git.embl.de", subdir = "src/GRaNIE", force = TRUE)`. You only need the ``devtools`` package for this. If you run into any problems, let us know!
 
 
-In addition, **the full documentation for the development version is available at [https://grp-zaugg.embl-community.io/GRaNIE](https://grp-zaugg.embl-community.io/GRaNIE) and regularly updated and extended**.
+### Documentation
+
+A very detailed documentation for the latest development version of the package is available here at [https://grp-zaugg.embl-community.io/GRaNIE](https://grp-zaugg.embl-community.io/GRaNIE). We currently provide multiple vignettes as well as the R help in an online format. Both are regularly updated and extended.
 
 
 ### Citation

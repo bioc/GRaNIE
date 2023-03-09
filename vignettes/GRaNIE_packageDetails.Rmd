@@ -347,7 +347,10 @@ files, their exact format etc we refer to `diffTF` paper and
 
 ### Importing TF and TFBS from the JASPAR databases directly in R
 
-As of March 2023, we additionally a more user-friendly way of importing TF and TFBS data from the various JASPAR databases that are available in R/Bioconductor: `JASPAR` 2014, 2016, 2018, 2022, and 2022. While we so far tested only with th newest `JASPAR2022` database / R package, the older ones should also work - if not, please let us know. Using `JASPAR2022` is much easier and also quicker from a user perspective, and none of the additional complexities that were mentioned above for the custom import apply here. For details, see the `addTFBS()` and `overlapPeaksAndTFBS()` functions.
+As of March 2023, we additionally a more user-friendly way of importing TF and TFBS data from the various JASPAR databases that are available in R/Bioconductor: `JASPAR` 2014, 2016, 2018, 2022, and 2022. While we so far tested only with th newest `JASPAR2022` database / R package, the older ones should also work - if not, please let us know. Using `JASPAR2022` as TF database is much easier and also quicker from a user perspective, and none of the additional complexities that were mentioned above for the custom import apply here. For details, see the `addTFBS()` and `overlapPeaksAndTFBS()` functions.
+
+Note that we also implemented an option to customize which TFBS collection to use from the `JASPAR2022` database via the function argument `JASPAR_useSpecificTaxGroup` from `addTFBS()`. For example, this feature can be used to specify the whole \code{vertebrates} TF collection irrespective of the genome assembly the data is in - which is useful for genomes such as rat or mouse, for which JASPAR only finds a few dozen TF at most if the specific genome was specified otherwise.
+
 
 Be aware, though, that you may want to compare your *eGRN* across different TF and TFBS data - we are currently investigating the effect of using `JASPAR2022` and cannot currently comment much on it. We will, however, update the vignette here once we have more results to share.
 
