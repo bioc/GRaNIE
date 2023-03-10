@@ -3363,7 +3363,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
 #' 
 #' @inheritParams plotGeneralEnrichment
 #' @inheritParams plotCommunitiesEnrichment
-#' @param TF.IDs \code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the names of the TFs to plot. Ignored otherwise.
+#' @param TF.IDs \code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the IDs of the TFs to plot. Ignored otherwise.
 #' @param rankType Character. One of: "degree", "EV", "custom". This parameter will determine the criterion to be used to identify the "top" nodes. If set to "degree", the function will select top nodes based on the number of connections they have, i.e. based on their degree-centrality. If set to "EV" it will select the top nodes based on their eigenvector-centrality score in the network.
 #' @param n NULL or numeric. Default NULL. If set to NULL, all previously calculated TF enrichments will be plotted. If set to a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if rankType = "custom".
 #' @return The same \code{\linkS4class{GRN}} object, without modifications.
@@ -3415,7 +3415,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
   
   if (rankType == "custom") {
     if (is.null(TF.IDs)) {
-      message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.IDs' parameter."
+      message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF IDs in the 'TF.IDs' parameter."
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.ID))
@@ -3698,13 +3698,13 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
   gTopGenes = ggplot2::ggplot(data = top.n.gene, ggplot2::aes(x = stats::reorder(.data$ID_all, -.data$Degree), y = .data$Degree)) +
     ggplot2::geom_bar(stat = "identity", fill = "#3B9AB2") +
     ggplot2::geom_text(ggplot2::aes(label = .data$Degree), size = 3) + 
-    ggplot2::xlab("Gene name") +
+    ggplot2::xlab("Gene ID") +
     theme_all
   
   gTopTFs = ggplot2::ggplot(data = top.n.tf, ggplot2::aes(x = stats::reorder(.data$ID_all, -.data$Degree), y = .data$Degree)) +
     ggplot2::geom_bar(stat = "identity", fill = "#E1AF00") +
     ggplot2::geom_text(ggplot2::aes(label = .data$Degree), size = 3) + 
-    ggplot2::xlab("TF name") +
+    ggplot2::xlab("TF ID") +
     theme_all
   
   results = list()
@@ -3785,7 +3785,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
   
   gTopEigenTFs = ggplot2::ggplot(data = top.n.tf, ggplot2::aes(x = stats::reorder(.data$name_plot, -.data$Score), y = .data$Score)) +
     ggplot2::geom_bar(stat = "identity", fill = "#E1AF00") +
-    ggplot2::xlab("TF name") +
+    ggplot2::xlab("TF ID") +
     theme_all
   
   return(list(topGenes = gTopEigenGenes, topTFs = gTopEigenTFs))

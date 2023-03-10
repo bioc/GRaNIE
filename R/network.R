@@ -110,7 +110,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   
 }
 
-.checkConnections <- function (GRN, throwError = TRUE) {
+.checkConnections <- function(GRN, throwError = TRUE) {
     
     if (is.null(GRN@connections$all.filtered$`0`)) {
         message = "Slot GRN@connections$all.filtered not found. Run the function filterGRNAndConnectGenes first."
@@ -156,7 +156,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
   # Fix the isTF column
   vertexMetadata$isTF[is.na(vertexMetadata$isTF)] = FALSE
   
-  graph = igraph::graph_from_data_frame(d=df_mod, directed = directed, vertices = vertexMetadata)
+  graph = igraph::graph_from_data_frame(d = df_mod, directed = directed, vertices = vertexMetadata)
   
   if (!igraph::is_simple(graph)) {
     if (!silent) futile.logger::flog.info(paste0(" Graph contains either loops and/or multiple edges. A simplification is possible."))
@@ -200,7 +200,7 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
     dplyr::group_by(.data$V1, .data$V2) %>% 
     dplyr::summarize(n = dplyr::n(), .groups = "keep") %>% 
     dplyr::ungroup() %>%
-    dplyr::filter(.data$n>1)
+    dplyr::filter(.data$n > 1)
   
   if (nrow(multipleEdges) > 0) {
     if (!silent) futile.logger::flog.info(paste0(" ", nrow(multipleEdges), " edges have the same vertices. This is often caused by multiple TF belonging to the same gene ID."))
@@ -278,7 +278,7 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   GRN = calculateCommunitiesStats(GRN, clustering = clustering, forceRerun = forceRerun)
   
-  GRN = plotCommunitiesStats     (GRN, outputFolder = outputFolder, display = display, communities = communities, 
+  GRN = plotCommunitiesStats(GRN, outputFolder = outputFolder, display = display, communities = communities, 
                                   forceRerun = forceRerun, topnGenes = topnGenes, topnTFs = topnTFs)
   
   GRN = calculateCommunitiesEnrichment(GRN, ontology = ontology, algorithm = algorithm, statistic = statistic, 
@@ -305,7 +305,7 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 
 
 # Retrieve set of background genes (as vector) used for enrichment analyses from a GRN object
-.getBackgroundGenes <-function(GRN, type = "neighborhood", gene.types = "all") {
+.getBackgroundGenes <- function(GRN, type = "neighborhood", gene.types = "all") {
   
   checkmate::assertChoice(type, c("all_annotated", "all_RNA", "all_RNA_filtered", "neighborhood"))
   
@@ -534,7 +534,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' @importFrom biomaRt useEnsembl getBM
 .runEnrichment <- function(GRN, foreground, background, backgroundStr, ontology, 
                            description = "Enrichment Analysis",
-                           algorithm="weight01", statistic = "fisher", mapping, pAdjustMethod = "BH", minGSSize = 0, maxGSSize = 5000){
+                           algorithm="weight01", statistic = "fisher", mapping, pAdjustMethod = "BH", minGSSize = 0, maxGSSize = 5000) {
   
   
   result.list = list()
@@ -615,7 +615,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   futile.logger::flog.info(paste0("   Running enrichment analysis for ontology ", ontology, " using ", nForeground, " and ", nBackground, " genes as foreground and background (", backgroundStr, "), respectively. This may take a while."))
   
   
-  if (ontology %in% c("GO_BP","GO_MF","GO_CC")){
+  if (ontology %in% c("GO_BP","GO_MF","GO_CC")) {
       
       # https://support.bioconductor.org/p/9141171/
       
@@ -671,14 +671,14 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   # Shared error message for different ontologies
   enrichmentErrorMessage = "Could not calculate enrichment, the server returned an error. This may happen for multiple reasons, for example if no gene can be mapped. The results will be set to NA."
   
-  if (ontology == "KEGG"){
+  if (ontology == "KEGG") {
     
      packageMessage = paste0("The package clusterProfiler is not installed, which is however needed for the chosen ontology enrichment. Please install it and re-run this function or change the ontology.")
     .checkPackageInstallation("clusterProfiler", packageMessage)
     
-    if (grep(x = GRN@config$parameters$genomeAssembly, pattern = "^hg\\d\\d" )){
+    if (grep(x = GRN@config$parameters$genomeAssembly, pattern = "^hg\\d\\d" )) {
       org = "hsa"
-    } else if (grep(x = GRN@config$parameters$genomeAssembly, pattern = "^mm\\d\\d")){
+    } else if (grep(x = GRN@config$parameters$genomeAssembly, pattern = "^mm\\d\\d")) {
       org = "mmu"
     }
     
@@ -707,14 +707,14 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     
   }
   
-  if (ontology == "Reactome"){
+  if (ontology == "Reactome") {
     
     packageMessage = paste0("The package ReactomePA is not installed, which is however needed for the chosen ontology enrichment. Please install it and re-run this function or change the ontology.")
     .checkPackageInstallation("ReactomePA", packageMessage)
     
     reactome_enrichment = tryCatch({ 
       ReactomePA::enrichPathway(
-        gene=foreground_entrez,
+        gene = foreground_entrez,
         universe = background_entrez,
         pvalueCutoff = 1,
         qvalueCutoff = 1,
@@ -734,7 +734,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     
   }
   
-  if (ontology == "DO"){
+  if (ontology == "DO") {
     
     packageMessage = paste0("The package DOSE is not installed, which is however needed for the chosen ontology enrichment. Please install it and re-run this function or change the ontology.")
     .checkPackageInstallation("DOSE", packageMessage)
@@ -784,7 +784,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 }
 
 
-.createEnrichmentTable <- function (enrichmentObj) {
+.createEnrichmentTable <- function(enrichmentObj) {
   
   if (!is.null(enrichmentObj)) {
     
@@ -804,7 +804,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
 }
 
-# getEnrichmentResults <- function(GRN, enrichmentGroup, ontology, filePath = NULL){
+# getEnrichmentResults <- function(GRN, enrichmentGroup, ontology, filePath = NULL) {
 #   
 #   start = Sys.time()
 #   GRN = .addFunctionLogToObject(GRN)
@@ -813,7 +813,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #   checkmate::assertSubset(enrichmentType, c("general", "byCommunity", "byTF"))
 #   checkmate::assertSubset(ontology, c("GO_BP", "GO_MF", "GO_CC"))
 #   
-#   if (enrichmentGroup == "general"){
+#   if (enrichmentGroup == "general") {
 #     
 #   }
 #   if (enrichmentGroup == "byCommunity")
@@ -843,7 +843,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' GRN = loadExampleObject()
 #' GRN = calculateCommunitiesStats(GRN, forceRerun = FALSE)
 #' @export
-calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = FALSE, ...){
+calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = FALSE, ...) {
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
@@ -975,11 +975,11 @@ calculateCommunitiesEnrichment <- function(GRN,
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
-  if (selection == "byLabel"){
+  if (selection == "byLabel") {
     communitiesDisplay = as.character(communities)
     # issue a warning if the community label does not exist
     diff.communities = setdiff(communitiesDisplay, foundCommunities)
-    if (length(diff.communities)>0){
+    if (length(diff.communities) > 0) {
       message = paste("The following communities do not exist and will not be in the analysis: ", paste0(diff.communities, collapse = " + "))
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       communitiesDisplay = setdiff(communitiesDisplay, diff.communities)
@@ -1000,7 +1000,7 @@ calculateCommunitiesEnrichment <- function(GRN,
     GRN@stats[["Enrichment"]][["byCommunity"]] = list()
   }
   
-  for (communityCur in communitiesDisplay){
+  for (communityCur in communitiesDisplay) {
     
     futile.logger::flog.info(paste0(" Community ", communityCur))
     
@@ -1094,7 +1094,7 @@ calculateCommunitiesEnrichment <- function(GRN,
 #' topTFs = getTopNodes(GRN, nodeType = "TF", rankType = "EV", n = 5)
 #' @export
 getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = TRUE) { # },
-  #        TFConnectionType = "tf-gene", geneConnectionType = "peak-gene"){
+  #        TFConnectionType = "tf-gene", geneConnectionType = "peak-gene") {
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
@@ -1124,7 +1124,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
   graphType = dplyr::if_else(use_TF_gene_network, "TF_gene", "TF_peak_gene")
   
   
-  if(n<1){
+  if (n < 1) {
     # Get the total number of distinct nodes and calculate a percentage of that irrespective of ndoe degree
     top.n =  (GRN@connections$all.filtered$`0`[[slot]] %>% 
                 unique() %>% 
@@ -1138,7 +1138,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
   
   graph.df = GRN@graph[[graphType]]$table
   
-  if (rankType == "degree"){
+  if (rankType == "degree") {
     col = dplyr::if_else(nodeType == "gene", "V2", "V1")
     topNodes = graph.df %>%
       dplyr::filter(.data$connectionType == link) %>%
@@ -1172,7 +1172,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
   }
 
   .printExecutionTime(start)
-  return (topNodes)
+  return(topNodes)
 }
 
 
@@ -1187,9 +1187,12 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
 #' Also note that some parameter combinations for `algorithm` and `statistic` are incompatible, an error message will be thrown in such a case.
 #'  
 #' @inheritParams calculateGeneralEnrichment
-#' @param rankType Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.IDs" parameter.
+#' @param rankType Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. 
+#' If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. 
+#' If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. 
+#' If set to custom, a set of TF IDs will have to be passed to the "TF.IDs" parameter.
 #' @param n Numeric. Default 3. If this parameter is passed as a value between 0 and 1, it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.
-#' @param TF.IDs Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.
+#' @param TF.IDs Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF IDs for which the GO enrichment should be calculated should be passed to this parameter.
 #' @return An updated \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byTF} slot.
 #' @seealso \code{\link{plotTFEnrichment}}
 #' @examples 
@@ -1203,7 +1206,7 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.IDs = NULL
                                   statistic = "fisher", 
                                   background = "neighborhood", background_geneTypes = "all",
                                   pAdjustMethod = "BH",
-                                  forceRerun = FALSE){
+                                  forceRerun = FALSE) {
   
   start = Sys.time()
   checkmate::assertClass(GRN, "GRN")
@@ -1226,18 +1229,20 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.IDs = NULL
   
   .checkGraphExistance(GRN)
   
-  if (rankType == "custom"){
-    if(is.null(TF.IDs)){
-      futile.logger::flog.error("To calculate the GO enrichment for a custom set of TFs, you must provide the TF names in the 'TF.IDs' parameter.")
+  if (rankType == "custom") {
+    if (is.null(TF.IDs)) {
+      futile.logger::flog.error("To calculate the GO enrichment for a custom set of TFs, you must provide the TF IDs in the 'TF.IDs' parameter.")
     }
-    wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.name))
-
-    TFset = setdiff(TF.IDs, wrongTFs) 
+      
+    if (!all(TF.IDs %in% GRN@connections$all.filtered$`0`$TF.ID)) {
+        wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.ID))
+        message = paste0("All TF IDs that are provided when using a custom rankType must be contained in the GRN@connections$all.filtered$`0` slot (column TF.ID). However, at least one is not: ", paste0(wrongTFs, collapse = ", "))
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
     
-    if (length(wrongTFs) > 0 & length(TFset) > 0){
-        message = paste0("The following TFs are not in the filtered GRN and will be ommited from the analysis: ",  paste0(wrongTFs, collapse = ", "))
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-    }
+
+    TFset = TF.IDs
+
     
   } else{
     
@@ -1263,7 +1268,7 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.IDs = NULL
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
-  for (TF in as.character(TFset)){
+  for (TF in as.character(TFset)) {
     
     futile.logger::flog.info(paste0(" Running enrichment analysis for genes connected to the TF ", TF))
     

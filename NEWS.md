@@ -1,3 +1,9 @@
+# GRaNIE 1.3.31-1.3.32 (2023-03-02-2023-03-06)
+
+## Bugfixes
+- various small bugfixes that were accidentally introduced in the latest change from using the `TF.ID` instead of `TF.name` column as unique TF identifier
+
+
 # GRaNIE 1.3.26-1.3.30 (2023-03-02-2023-03-06)
 
 ## New features and vignette updates

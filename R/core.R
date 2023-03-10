@@ -4359,6 +4359,7 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
     
     GRN = .addFunctionLogToObject(GRN) 
     GRN@connections$TF_genes.filtered = list()
+    GRN@config$parameters$corMethod_TF_gene = corMethod
     
     .checkExistanceFilteredConnections(GRN)
     
@@ -5652,7 +5653,8 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     "plot_communityEnrichment"       = "GRN.community_enrichment",
     "plot_generalNetworkStats"       = "GRN.overall_stats",
     "plot_TFEnrichment"              = "GRN.TF_enrichment",
-    "plot_network"                   = "GRN.network_visualisation"
+    "plot_network"                   = "GRN.network_visualisation",
+    "plot_correlations"              = "correlationPlots"
     
   )
   
@@ -6119,11 +6121,12 @@ add_featureVariation <- function(GRN,
     
     nameCombined = paste0(ID)
     if (printName | printEnsemblID) {
-        nameCombined = paste0(nameCombined, " (")
+        
         if (printName) {
             printComma = FALSE
             TF.name = GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.name)
             if (TF.name != ID) {
+                nameCombined = paste0(nameCombined, " (")
                 nameCombined = paste0(nameCombined, TF.name)
                 printComma = TRUE
             }
@@ -6136,7 +6139,7 @@ add_featureVariation <- function(GRN,
             TF.ENSEMBL =  GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.ENSEMBL)
             nameCombined = paste0(nameCombined, TF.ENSEMBL)
         }
-        nameCombined = paste0(nameCombined, ")")
+        if ( printComma) nameCombined = paste0(nameCombined, ")")
     }
     
     nameCombined
