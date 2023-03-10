@@ -6046,7 +6046,7 @@ add_featureVariation <- function(GRN,
             futile.logger::flog.info(paste0("Using ", length(peaksToInclude), " peaks and ", length(genesToInclude), " TF/genes from the filtered connections."))
             
         } else if (features == "all") {
-            genesToInclude = GRN@data$RNA$counts_metadata$ENSEMBL
+            genesToInclude = GRN@data$RNA$counts_metadata$ID
             peaksToInclude = GRN@data$peaks$counts_metadata$peakID
             
             futile.logger::flog.info(paste0("Using all ", length(peaksToInclude), " peaks and ", length(genesToInclude), " TF/genes. This may take a long time. Consider setting features = \"all_filtered\"."))

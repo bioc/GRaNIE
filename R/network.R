@@ -316,14 +316,14 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   } else if (type == "all_RNA") {
     
       backgroundGenes = GRN@data$RNA$counts_metadata %>%
-          dplyr::pull(.data$ENSEMBL)
+          dplyr::pull(.data$ID)
     
     
   } else if (type == "all_RNA_filtered") {
       
       backgroundGenes = GRN@data$RNA$counts_metadata %>%
           dplyr::filter(!.data$isFiltered) %>%
-          dplyr::pull(.data$ENSEMBL)
+          dplyr::pull(.data$ID)
       
       
   } else if (type == "neighborhood") {
