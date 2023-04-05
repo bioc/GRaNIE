@@ -11,8 +11,8 @@ performAllNetworkAnalyses(
   statistic = "fisher",
   background = "neighborhood",
   clustering = "louvain",
-  communities = seq_len(10),
-  display = "byRank",
+  communities = NULL,
+  selection = "byRank",
   topnGenes = 20,
   topnTFs = 20,
   maxWidth_nchar_plot = 50,
@@ -34,15 +34,23 @@ As they are listed under \code{Suggests}, they may not yet be installed, and the
 \item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library. 
 For general information about the algorithms, see \url{https://academic.oup.com/bioinformatics/article/22/13/1600/193669}. \code{weight01} is a mixture between the \code{elim} and the \code{weight} algorithms.}
 
-\item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher.}
+\item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}. Statistical test to be used. Only relevant if ontology is GO related (\code{GO_BP}, \code{GO_MF}, \code{GO_CC}), and valid inputs are a subset of those supported by the \code{topGO} library (we had to remove some as they do not seem to work properly in \code{topGO} either), ignored otherwise. For the other ontologies the test statistic is always Fisher.}
 
 \item{background}{Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"all_RNA_filtered"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (\code{all_annotated}), all genes from the provided RNA data (\code{all_RNA}), all genes from the provided RNA data excluding those marked as filtered after executing \code{filterData} (\code{all_RNA_filtered}), or all the genes that are within the neighborhood of any peak (before applying any filters except for the user-defined \code{promoterRange} value in \code{addConnections_peak_gene}) (\code{neighborhood}).}
 
 \item{clustering}{Character. Default \code{louvain}. One of: \code{louvain}, \code{leiden}, \code{leading_eigen}, \code{fast_greedy}, \code{optimal}, \code{walktrap}. The community detection algorithm to be used. Please bear in mind the robustness and time consumption of the algorithms when opting for an alternative to the default.}
 
-\item{communities}{Numeric vector. Default \code{seq_len(10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities will be plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} will be plotted. If set to \code{NULL}, all communities will be plotted}
+\item{communities}{\code{NULL} or numeric vector or character vector. Default \code{NULL}. 
+If set to \code{NULL}, all community enrichments that have been calculated before are plotted. 
+If a numeric vector is specified (when \code{selection = "byRank"}), the rank of the communities is specified.
+For example, \code{communities = c(1,4)} then denotes the first and fourth largest community.
+If a character vector is specified (when \code{selection = "byLabel"}), the name of the communities is specified instead.
+For example, \code{communities = c("1","4")} then denotes the communities with the names "1" and "4", which may or may not be the largest and fourth largest communities among all.}
 
-\item{display}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will be displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.}
+\item{selection}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. 
+Specify whether the communities will be selected based on their rank or explicitly by their label. 
+Note that the label is independent of the rank. When set to \code{"byRank"}, the largest 
+community (with most vertices) always has a rank of 1.}
 
 \item{topnGenes}{Integer > 0. Default 20. Number of genes to plot, sorted by their rank or label.}
 
@@ -52,7 +60,9 @@ For general information about the algorithms, see \url{https://academic.oup.com/
 
 \item{display_pAdj}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Is the p-value being displayed in the plots the adjusted p-value? This parameter is relevant for KEGG, Disease Ontology, and Reactome enrichments, and does not affect GO enrichments.}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

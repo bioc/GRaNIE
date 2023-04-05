@@ -47,7 +47,9 @@ A value >1 requires the \code{BiocParallel} package (as it is listed under \code
 
 \item{plotGeneTypes}{List of character vectors. Default \code{list(c("all"), c("protein_coding"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. 
 Use a robust regression in addition to a non-robust one? Significantly increases overall running time.

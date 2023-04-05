@@ -76,7 +76,10 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
         futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
                                         " RNA data for all shared samples. This may take a few minutes"))
         
-        .plot_PCA_wrapper(GRN, matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
+        .plot_PCA_wrapper(GRN, counts = matrixCur, topn = topn, 
+                          transformation = transformationCur, 
+                          logTransformDensity = logTransformDensity, 
+                          file = fileCur, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
         
     } else {
         futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
@@ -162,6 +165,16 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   
   # calculate the variance for each gene
   rv <- matrixStats::rowVars(counts.transf)
+  
+  # Remove rows with 0 variance, these cause errors later on
+  zeroVar = which(rv == 0)
+  if (length(zeroVar) > 0) {
+      message = paste0("Removing ", length(zeroVar), " rows from count data because they have 0 variance")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      rv = rv[-zeroVar]
+      counts.transf = counts.transf[-zeroVar,]
+  }
+
   
   # 0. Density plot for ALL features
   if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
@@ -510,10 +523,13 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
         
       if (!plotAsPDF) fileCur = NULL
       
+      # Total number of pages is nTFMax plus 1 page per connection type
+      nPagesMax = nTFMax + length(GRN@config$TF_peak_connectionTypes)
+      
       heightCur = pdf_height_base * length(GRN@config$TF_peak_connectionTypes)
       .plot_TF_peak_fdr(GRN, perm = permutationCur, useGCCorrection = useGCCorrection, 
                         plotDetails = plotDetails, fileCur, width = pdf_width, height = heightCur,
-                        nPagesMax = nTFMax, pages = pages) 
+                        nPagesMax = nPagesMax, pages = pages) 
     }
   
   }
@@ -526,7 +542,9 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 
 
 
-.plot_TF_peak_fdr <- function(GRN, perm, useGCCorrection, plotDetails = FALSE, file = NULL, width = 7, height = 7, nPagesMax = NULL, pages = NULL) {
+.plot_TF_peak_fdr <- function(GRN, perm, useGCCorrection, 
+                              plotDetails = FALSE, file = NULL, width = 7, height = 7, 
+                              nPagesMax = NULL, pages = NULL) {
   
   start = Sys.time()
  
@@ -564,7 +582,7 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
       # Dont take all TF, some might be missing.
       connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
       allTF = unique(connections_TF_peak$TF.ID) %>% as.character()
-      nTF = ifelse(is.null(nPagesMax), length(allTF), nPagesMax - 1)
+      nTF = ifelse(is.null(nPagesMax), length(allTF), min(length(allTF), nPagesMax - length(GRN@config$TF_peak_connectionTypes)))
       futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
       
       # TODO: Check difference between TFActivity TFs and expression TFs
@@ -875,7 +893,7 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
             ylab(paste0("n.bg.needed.ratio (capped at ", ratioCap, ")")) + 
             theme_bw()
         
-        ggplot(TFs_GC_correction, aes(.data$peak.GC.class, fill=as.factor(.data$n.bg.needed.ratio.atLeast1))) + geom_bar() + 
+        ggplot(TFs_GC_correction, aes(.data$peak.GC.class, fill = as.factor(.data$n.bg.needed.ratio.atLeast1))) + geom_bar() + 
             scale_fill_brewer("Background\nratio >=1", type = "div", palette = "Spectral")  + 
             theme_bw()
         
@@ -1291,7 +1309,7 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
 
     xAxiPos = c(1,seq(6,36,5),40)
     xAxisLabels = levels(data.df$TF_peak.r_bin)[xAxiPos]
-    g = ggplot(data.df, aes(TF_peak.r_bin, n, fill = perm, group = perm)) +
+    g = ggplot(data.df, aes(.data$TF_peak.r_bin, .data$n, fill = .data$perm, group = .data$perm)) +
         geom_col(position = position_dodge()) +
         xlab("TF-peak correlation bin") + ylab(paste0("No. of connections with FDR < ", fdrCur)) +
         facet_wrap(~fdr, ncol = 2, drop = FALSE, labeller = ggplot2::labeller(fdr = ggplot2::label_both)) +
@@ -1317,9 +1335,9 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
 #' @template outputFolder
 #' @template basenameOutput
 #' @param gene.types List of character vectors. Default list(c("protein_coding", "lincRNA")). Vectors of gene types to consider for the diagnostic plots. Multiple distinct combinations of gene types can be specified. For example, if set to \code{list(c("protein_coding", "lincRNA"), c("protein_coding"), c("all"))}, 3 distinct PDFs will be produced, one for each element of the list. The first file would only consider protein-coding and lincRNA genes, while the second plot only considers protein-coding ones. The special keyword "all" denotes all gene types found (usually, there are many gene types present, also more exotic and rare ones).
-#' @param useFiltered Logical. TRUE or FALSE. Default FALSE. If set to \code{FALSE}, the diagnostic plots will be produced based on all peak-gene connections. This is the default and will usually be best to judge whether the background behaves as expected. If set to TRUE, the diagnostic plots will be produced based on the filtered set of connections. For this, the function \code{link{filterGRNAndConnectGenes}} must have been run before.
+#' @param useFiltered Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, the diagnostic plots will be produced based on all peak-gene connections. This is the default and will usually be best to judge whether the background behaves as expected. If set to \code{TRUE}, the diagnostic plots will be produced based on the filtered set of connections. For this, the function \code{\link{filterGRNAndConnectGenes}} must have been run before.
 #' @template plotDetails
-#' @param plotPerTF Logical. TRUE or FALSE. Default \code{FALSE}. If set to \code{FALSE}, the diagnostic plots will be done across all TF (the default), while setting it to \code{TRUE} will generate the QC plots TF-specifically, including "all" TF, sorted by the number of connections.
+#' @param plotPerTF Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If set to \code{FALSE}, the diagnostic plots will be done across all TF (the default), while setting it to \code{TRUE} will generate the QC plots TF-specifically, including "all" TF, sorted by the number of connections.
 #' @template plotAsPDF
 #' @template pdf_width
 #' @template pdf_height
@@ -1434,7 +1452,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
     
     
     range = GRN@config$parameters$promoterRange
-    
+    class_levels = c(paste0("real_",range), paste0("random_",range))
     networkType_details = c(paste0("real_",range), paste0("random_",range))
     
     colors_vec = c("black", "darkgray")
@@ -1462,7 +1480,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         cols_keep = c(cols_keep, robustColumns)
       }
       
-      class_levels = c(paste0("real_",range), paste0("random_",range))
+      
       
       if (!"peak.GC.perc" %in% colnames(GRN@annotation$peaks)) {
           GRN@annotation$peaks$peak.GC.perc = NA
@@ -1475,7 +1493,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
             dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
         dplyr::left_join(dplyr::select(GRN@annotation$genes, "gene.ENSEMBL", "gene.type", 
-                                       "gene.mean", "gene.median", "gene.CV"), by = "gene.ENSEMBL") %>%
+                                       "gene.mean", "gene.median", "gene.CV"), by = "gene.ENSEMBL", multiple = "all") %>%
         dplyr::left_join(GRN@annotation$peaks %>% 
                            dplyr::select(-dplyr::starts_with("peak.gene."), -"peak.GC.perc"), by = "peak.ID") %>%
         dplyr::select(-"gene.ENSEMBL")
@@ -1611,6 +1629,12 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           
           if (TFCur != "all") {
             indexCur = intersect(indexCur, which(peakGeneCorrelations.all$peak.ID %in% TF.peaks[[TFCur]]))
+          }
+            
+          if (length(indexCur) == 0) {
+              message = " No connections left after filtering and intersection, skip plots"
+              .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+              next
           }
           
           # Get subset also for just the real data
@@ -1789,11 +1813,19 @@ plotDiagnosticPlots_peakGene <- function(GRN,
               dplyr::select(-"gene.CV", -"peak.CV")
             
           } else {
+              
+            if (dplyr::n_distinct(dataCur %>% dplyr::pull(.data[[varCur]])) > 1) {
+                dataCur = dataCur %>%
+                    dplyr::mutate(!!(newColName) := cut(.data[[varCur]], breaks = unique(quantile(.data[[varCur]], probs = probs, na.rm = TRUE)), 
+                                                        include.lowest = TRUE, ordered_result = TRUE))
+                    
+            } else {
+                dataCur = dplyr::mutate(dataCur, !!(newColName) := as.factor(.data[[varCur]]))
+            }
+              
+            dataCur = dplyr::select(dataCur, -tidyselect::all_of(varCur))
             
-            dataCur = dataCur %>%
-              dplyr::mutate(!!(newColName) := cut(.data[[varCur]], breaks = unique(quantile(.data[[varCur]], probs = probs, na.rm = TRUE)), 
-                                                  include.lowest = TRUE, ordered_result = TRUE)) %>%
-              dplyr::select(-tidyselect::all_of(varCur))
+           
           }
           
           
@@ -1805,6 +1837,12 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           dplyr::group_by(.data[[newColName]]) %>%  
           dplyr::filter(dplyr::n() >= nGroupsMin) %>%
           dplyr::ungroup()
+        
+        if (nrow(dataCur) == 0) {
+            message = paste0("For variable ", varCur, ", not enough data left after filtering to plot, skipping")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            next
+        }
         
         var.label = .prettyNum(table(dataCur[, newColName]))
         var.label = paste0(names(var.label), "\n(n=", var.label , ")\n")
@@ -1831,14 +1869,16 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         }
         
         r_pos_tbl = dataCur %>% dplyr::group_by(.data$r_positive) %>% dplyr::pull(.data$r_positive) %>% table()
-        r_positive_label = c("TRUE"   = paste0("r+(r>0, n=", .prettyNum(r_pos_tbl[["TRUE"]]), ")"), 
-                             "FALSE" = paste0("r-(r<=0, n=" ,.prettyNum(r_pos_tbl[["FALSE"]]), ")"))
+        
+        # In case the table contains only either TRUE or FALSE, we have to
+        r_positive_label = c("TRUE"   = paste0("r+(r>0, n=", .prettyNum(ifelse(is.na(r_pos_tbl["TRUE"]), 0, r_pos_tbl[["TRUE"]])), ")"), 
+                             "FALSE" = paste0("r-(r<=0, n=" ,.prettyNum(ifelse(is.na(r_pos_tbl["FALSE"]), 0, r_pos_tbl[["FALSE"]])), ")"))
         
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
           
           
           # Class in the ggplot2::facet_wrap has been removed, as this is only for real data here
-          gA3 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, color = .data[[newColName]])) + ggplot2::geom_density(linewidth = 0.2)  +
+          gA3 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, color = .data[[newColName]])) + ggplot2::geom_density(size = 0.2)  +
             ggplot2::facet_wrap(~.data$r_positive, labeller = ggplot2::labeller(r_positive = r_positive_label), nrow = 2) +
             ggplot2::geom_density(ggplot2::aes(color = .data$classNew), color = "black",  linetype = "dotted", alpha = 1) + 
             ggplot2::xlab(xlabel) + ggplot2::ylab("Density (for real data only)") +  ggplot2::theme_bw() +
@@ -1853,10 +1893,18 @@ plotDiagnosticPlots_peakGene <- function(GRN,
             dplyr::ungroup() %>%
             tidyr::complete(class, .data[[newColName]], .data$peak_gene.p.raw.class, .data$r_positive, fill = list(n = 0)) %>% # SOme cases might be missing
             dplyr::group_by(class, .data[[newColName]], .data$peak_gene.p.raw.class) %>% # dont group by r_positive because we want to calculate the ratio within each group
-            dplyr::mutate(  
-              n = .data$n + 1, # to allow ratios to be computed even for 0 counts
-              ratio_pos_raw = .data$n[.data$r_positive] / .data$n[!.data$r_positive]) %>%
-            dplyr::filter(.data$r_positive, class == names(dist_class)[1])# Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
+            dplyr::filter(.data$r_positive, class == names(dist_class)[1]) %>% # Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
+            dplyr::mutate(n = .data$n + 1) # to allow ratios to be computed even for 0 counts
+          
+           if (length(which(freq$r_positive)) > 0 && length(which(!freq$r_positive)) > 0) {
+               freq = freq %>%
+                   dplyr::mutate(ratio_pos_raw = .data$n[.data$r_positive] / .data$n[!.data$r_positive])
+           } else {
+               freq = freq %>%
+                   dplyr::mutate(ratio_pos_raw = NA)
+           }
+         
+            
           
           # Cap ratios > 10 at 10 to avoid visual artefacts
           freq$ratio_pos_raw[which(freq$ratio_pos_raw > 10)] = 10
@@ -2381,6 +2429,591 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
   
 }
 
+############ Plot correlations for any connection type ###############
+
+
+#' Plot scatter plots of the underlying count data for either TF-peak, peak-gene or TF-gene pairs for a \code{\linkS4class{GRN}} object
+#' 
+#' The user can select multiple filters to plot only pairs of interest. The data that is shown is the same that has been used to construct the eGRN.
+#' 
+#' @template GRN 
+#' @param type Character(1). Default \code{"all.filtered"}. Either \code{"TF-peak"}, \code{"peak-gene"}, \code{"TF-gene"}, or \code{"all.filtered"}. Default \code{"all.filtered"}. 
+#' Which connections to plot? \code{"all.filtered"} plots all TF-peak and peak-gene pairs from the filtered eGRN as stored in the object.
+#' @param TF.IDs Character(). Default \code{NULL}. Character vector of TF IDs to include. If set to \code{NULL}, this filter will be ignored. 
+#' Only applicable when \code{type = "TF-peak"} or \code{type = "TF-gene"}. 
+#' @param peak.IDs Character(). Default \code{NULL}. Character vector of peak IDs to include. If set to \code{NULL}, this filter will be ignored. 
+#' Only applicable when \code{type = "TF-peak"} or \code{type = "peak-gene"}. 
+#' @param gene.IDs Character(). Default \code{NULL}. Character vector of gene IDs (Ensembl) to include. If set to \code{NULL}, this filter will be ignored. 
+#' Only applicable when \code{type = "TF-gene"} or \code{type = "peak-gene"}. 
+#' @param n_random Numeric(1). Default 10. Filter for all types of pairs: maximum number of randomly selected pairs that fulfill all other filters that should be plotted.
+#' If set to 0, this filter will be disabled and all pairs that fulfill the user-defined criteria will be plotted. If set to a value > 0, different pairs may be selected each time the function is run
+#'  (if the total number of remaining pairs is large enough)
+#' @param min_abs_r Numeric[0,1]. Default 0. Filter for all types of pairs: Minimum correlation coefficient (absolute value) required to include a particular pair.
+#' @param TF_peak_maxFDR Numeric[0,1]. Default 0.2. Filter for TF-peak pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "TF-peak"}. 
+#' @param peak_gene_max_adjP Numeric[0,1]. Default 0.2. Filter for peak-gene pairs: Which maximum adjusted p-value should a pair to plot have? Only applicable when \code{type = "peak-gene"}. 
+#' @param peak_gene_max_rawP Numeric[0,1]. Default 0.2. Filter for peak-gene pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "peak-gene"}. 
+#' @param TF_gene_max_rawP Numeric[0,1]. Default 0.2. Filter for TF-gene pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "TF-gene"}. 
+#' @template outputFolder
+#' @template basenameOutput
+#' @param dataType Character vector. One of, or both of, \code{"real"} or \code{"background"}. For which type, real or background data, to produce the diagnostic plots?
+#' @template corMethod
+#' @template plotAsPDF
+#' @param plotsPerPage Integer vector of length 2. Default \code{c(2,2)}. How man plots should be put on one page? The first number denotes the number of rows, the second one the number of columns.
+#' @template pdf_width
+#' @template pdf_height
+#' @template forceRerun
+#' @return An updated \code{\linkS4class{GRN}} object.
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' GRN = plotCorrelations(GRN, n_random = 1, min_abs_r = 0.8, plotsPerPage = c(1,1), plotAsPDF = FALSE)
+#' @export
+plotCorrelations <- function(GRN, type = "all.filtered", 
+                             TF.IDs = NULL, peak.IDs = NULL, gene.IDs = NULL, 
+                             min_abs_r = 0, TF_peak_maxFDR = 0.2, peak_gene_max_rawP = 0.2, TF_gene_max_rawP = 0.2,
+                             n_random = 10,
+                             dataType = c("real"), corMethod = NULL,
+                             outputFolder = NULL, 
+                             basenameOutput = NULL, 
+                             plotAsPDF = TRUE, plotsPerPage = c(2,2), pdf_width = 10, pdf_height = 8,
+                             forceRerun = FALSE) {
+    
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertSubset(type, c("TF-peak", "peak-gene", "TF-gene", "all.filtered"), empty.ok = FALSE)
+    
+    checkmate::assert(checkmate::checkNull(TF.IDs), checkmate::checkCharacter(TF.IDs, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(peak.IDs), checkmate::checkCharacter(peak.IDs, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(gene.IDs), checkmate::checkCharacter(gene.IDs, min.chars = 1))
+    
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    
+    checkmate::assertSubset(dataType, c("real", "background"), empty.ok = FALSE)
+    checkmate::assert(checkmate::checkNull(corMethod), checkmate::checkChoice(corMethod, c("pearson", "spearman")))
+    
+    checkmate::assertNumber(n_random, lower = 0)
+    checkmate::assertNumber(TF_peak_maxFDR, lower = 0, upper = 1)
+    checkmate::assertNumber(peak_gene_max_rawP, lower = 0, upper = 1)
+    checkmate::assertNumber(TF_gene_max_rawP, lower = 0, upper = 1)
+    checkmate::assertNumber(min_abs_r, lower = 0, upper = 1)
+    
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertIntegerish(plotsPerPage, lower = 1, len = 2)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    # checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    if (plotAsPDF) {
+        file = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_correlations"), basenameOutput), ".pdf")
+        futile.logger::flog.info(paste0("Plotting to file ", file))
+    } else {
+        file = NULL
+    }
+    
+    permIndex = c()
+    if ("real" %in% dataType) permIndex = c("0")
+    if ("background" %in% dataType) permIndex = c(permIndex, "1")
+    
+    plotAllFiltered = FALSE
+    
+    futile.logger::flog.info(paste0("Plotting correlations for ", type))
+    
+    if ((!is.null(file) && !file.exists(file)) | is.null(file) | forceRerun) {
+        
+        plots.l = list()
+        
+        if (type == "all.filtered") {
+            type = c("TF-peak", "peak-gene")
+            plotAllFiltered = TRUE
+        }
+        
+        if (!is.null(peak.IDs) && any(!peak.IDs %in% GRN@annotation$peaks$peak.ID)) {
+            message = paste0("The peak.IDs argument contains at least one peak that could not be found in the object within all peaks as defined in GRN@annotation$peaks$peak.ID.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        if (!is.null(gene.IDs) && any(!gene.IDs %in% GRN@annotation$genes$gene.ENSEMBL)) {
+            message = paste0("The gene.IDs argument contains at least one gene that could not be found in the object within all genes as defined in GRN@annotation$genes$gene.ENSEMBL.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        if (!is.null(TF.IDs) && any(!TF.IDs %in% GRN@annotation$TFs$TF.ID)) {
+            message = paste0("The TF.IDs argument contains at least one TF that could not be found in the object within all TFs as defined in GRN@annotation$TFs$TF.ID.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+        if ("TF-peak" %in% type) {
+            
+            plots.l = .plotCorrelation_TF_peak(GRN, permIndex, plotAllFiltered, TF.IDs, peak.IDs, TF_peak_maxFDR, min_abs_r, n_random, corMethod)
+            
+        } 
+        
+        if ( "peak-gene" %in% type) {
+            
+            plots.l = c(plots.l, .plotCorrelation_peak_gene(GRN, permIndex, plotAllFiltered, peak.IDs, gene.IDs, peak_gene_max_rawP, min_abs_r, n_random, corMethod))
+            
+        } 
+        
+        if ("TF-gene" %in% type) {
+            
+            plots.l = c(plots.l, .plotCorrelation_TF_gene(GRN, permIndex, plotAllFiltered, TF.IDs, gene.IDs, TF_gene_max_rawP, min_abs_r, n_random, corMethod))
+        } 
+        if (length(plots.l) > 0) {
+            futile.logger::flog.info(paste0(" Plotting", ifelse(!is.null(file), paste0(" to file ", file), " directly"), ". This may take a while."))
+            .printMultipleGraphsPerPage(plots.l, nCol = plotsPerPage[2], nRow = plotsPerPage[1], pdfFile = file, height = pdf_height, width = pdf_width)
+        }
+ 
+        
+    } else {
+        futile.logger::flog.info(paste0("All output files already exist. Set forceRerun = TRUE to regenerate and overwrite."))
+        
+    }
+    
+    .printExecutionTime(start)
+    
+    GRN
+}
+
+.plotCorrelation_TF_peak <- function(GRN, permIndex, plotAllFiltered, TF.IDs, peak.IDs, TF_peak_maxFDR, min_abs_r, n_random, corMethod, digits_round = 3) {
+    
+    filters = c()
+    if (n_random > 0) filters = c(filters, paste0("random (max=", n_random, ")"))
+    if (TF_peak_maxFDR < 1) filters = c(filters, paste0("FDR (max=", TF_peak_maxFDR, ")"))
+    if (min_abs_r > 0) filters = c(filters, paste0("Correlation coefficient (abs) (min=", min_abs_r, ")"))
+    if (!is.null(TF.IDs)) filters = c(filters, paste0("TF IDs only: ", paste0(unique(TF.IDs), collapse = ", ")))
+    if (!is.null(peak.IDs)) filters = c(filters, paste0("peak IDs only: ", paste0(unique(peak.IDs), collapse = ", ")))
+    
+    
+    futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
+    
+    if (is.null(corMethod)) {
+        corMethod = GRN@config$parameters$corMethod_TF_Peak
+    }
+    
+    plots.l = list()
+    plotIndex = 1
+    
+    for (permIndexCur in permIndex) {
+        
+        if (plotAllFiltered) {
+            
+            if (is.null(GRN@connections$all.filtered[[permIndexCur]])) {
+                message = paste0("Could not find the all.filtered slot even though type = \"all.filtered\". Change the type or rerun the filterGRNAndConnectGenes function.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            data.df = GRN@connections$all.filtered[[permIndexCur]]
+            
+        } else {
+            data.df = GRN@connections$TF_peaks[[permIndexCur]]$main
+        }
+        
+        
+        if (!is.null(TF.IDs)) {
+            data.df = dplyr::filter(data.df, .data$TF.ID %in% TF.IDs)
+        }
+        
+        if (!is.null(peak.IDs)) {
+            data.df = dplyr::filter(data.df, .data$peak.ID %in% peak.IDs)
+        }
+        
+        
+        data.df = data.df %>%
+            dplyr::filter(.data$TF_peak.fdr <= TF_peak_maxFDR,
+                          abs(.data$TF_peak.r) >= min_abs_r)
+        
+        
+        
+        if (n_random > 0) {
+            data.df = dplyr::slice_sample(data.df, n = n_random)
+        }
+        
+        if (.checkForZeroPlots(data.df) ) {
+            return(list())
+        }
+        
+        TF.IDs2   = dplyr::pull(data.df, "TF.ID") %>% as.character()
+        peak.IDs2 = dplyr::pull(data.df, "peak.ID") %>% as.character()
+        
+        futile.logger::flog.info(paste0(" Based on user-provided data and filters, ", nrow(data.df), " pairs remain and will be plotted."))
+        
+        # Get the counts. getcounts should be used due to the permuted versiohn
+        countsPeaks = getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
+        countsRNA   = getCounts(GRN, type = "rna", permuted = ifelse(permIndexCur == "0", FALSE, TRUE), asMatrix = TRUE, includeFiltered = TRUE)
+        #countsRNA2   = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
+        # TODO: Enable also for background, but why r is different from what is stored in the object?
+        
+        for (i in seq_len(nrow(data.df))) {
+            
+            futile.logger::flog.info(paste0("  Preparing plot for TF ", .printTF(GRN, TF.IDs2[i]) , " and peak ", peak.IDs2[i]))
+            
+            TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID %in% TF.IDs2[i]) %>% dplyr::pull(TF.ENSEMBL)
+            stopifnot(length(TF.ENSEMBL) == 1) 
+            # rowIndexTF = which(rownames(GRN@data$RNA$counts) == TF.ENSEMBL)
+            # stopifnot(length(rowIndexTF) == 1) 
+            # rowIndexPeak = which(rownames(GRN@data$peaks$counts) == peak.IDs2[i])
+            # stopifnot(length(rowIndexPeak) == 1) 
+            # 
+            # 
+            # values.df = tibble::tibble(x = GRN@data$RNA$counts[rowIndexTF, ], 
+            #                            y = GRN@data$peaks$counts[rowIndexPeak,])
+            # 
+            # Gives different values due to column selection
+            values.df = tibble::tibble(x = countsRNA[TF.ENSEMBL, GRN@config$sharedSamples] %>% as.vector(), 
+                                       y = countsPeaks[peak.IDs2[i], GRN@config$sharedSamples] %>% as.vector())
+            
+            cor_cur = cor(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), method = corMethod)
+            
+            # Check whether we have this pair in the TF-peak and all.filtered connections
+            con.subset.df = GRN@connections$TF_peaks[[permIndexCur]]$main %>%
+                dplyr::filter(.data$TF.ID == TF.IDs2[i], .data$peak.ID == peak.IDs2[i])
+            
+            stopifnot(nrow(con.subset.df) == 1)
+            
+            # Verify identify of values
+            if ((is.null(corMethod) | GRN@config$parameters$corMethod_TF_Peak == corMethod) & nrow(con.subset.df) == 1) {
+                corCalc = dplyr::pull(con.subset.df, "TF_peak.r")
+                stopifnot(abs(cor_cur - corCalc) < 0.01)
+            }
+            
+            pair_in_TF_peak_links = FALSE
+            FDRcur = paste0("NA (>", round(max(.getFDR_TF_peak_vector(GRN)), digits_round), ")")
+            if (nrow(con.subset.df) == 1) {
+                FDRcur = dplyr::pull(con.subset.df, "TF_peak.fdr") %>% round(digits_round)
+                pair_in_TF_peak_links = TRUE
+            }
+            
+            nRows_filtered = 0
+            if (!is.null(GRN@connections$all.filtered[[permIndexCur]])) {
+                nRows_filtered = GRN@connections$all.filtered[[permIndexCur]] %>%
+                    dplyr::filter(.data$TF.ID == TF.IDs2[i], .data$peak.ID == peak.IDs2[i]) %>%
+                    nrow()
+            }
+            
+            
+            ## PLOT
+            dataTypeStr = ifelse(permIndexCur > 0, "permuted connections", "real connections")
+            
+            titleCur = paste0("TF=", .printTF(GRN, TF.IDs2[i]), ", peak=", peak.IDs2[i], 
+                              ":\nCor = ", round(cor_cur, digits_round), " (", corMethod, "), stored FDR = ", FDRcur, 
+                              "\n", dataTypeStr, ", # eGRN links: ", nRows_filtered)
+            
+            plots.l[[plotIndex]]  = .produceCorrelationPlot(values.df, titleCur, 
+                                                            label_x = "(Normalized) TF expression",
+                                                            label_y = "(Normalized) peak accessibility")
+            
+            plotIndex = plotIndex  + 1
+            
+        }
+        
+        
+    } # end for (permIndexCur in permIndex)
+    
+    plots.l
+}
+
+
+.plotCorrelation_peak_gene <- function(GRN, permIndex, plotAllFiltered, peak.IDs, gene.IDs, p_raw, min_abs_r, n_random, corMethod, digits_round = 3) {
+    
+    
+    filters = c()
+    if (n_random > 0) filters = c(filters, paste0("random (max=", n_random, ")"))
+    if (p_raw < 1) filters = c(filters, paste0("Raw p-value (max=", p_raw, ")"))
+    if (min_abs_r > 0) filters = c(filters, paste0("Correlation coefficient (abs) (min=", min_abs_r, ")"))
+    if (!is.null(peak.IDs)) filters = c(filters, paste0("peak IDs only: ", paste0(unique(peak.IDs), collapse = ", ")))
+    if (!is.null(gene.IDs)) filters = c(filters, paste0("Gene IDs only: ", paste0(unique(gene.IDs), collapse = ", ")))
+    
+    
+    futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
+    
+    if (is.null(corMethod)) {
+        corMethod = GRN@config$parameters$corMethod_peak_gene
+    }
+    
+    plots.l = list()
+    plotIndex = 1
+    
+    for (permIndexCur in permIndex) {
+        
+        if (plotAllFiltered) {
+            
+            if (is.null(GRN@connections$all.filtered[[permIndexCur]])) {
+                message = paste0("Could not find the all.filtered slot even though type = \"all.filtered\". Change the type or rerun the filterGRNAndConnectGenes function.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            data.df = GRN@connections$all.filtered[[permIndexCur]]
+        } else {
+            data.df = GRN@connections$peak_genes[[permIndexCur]]
+        }
+        
+        
+        if (!is.null(peak.IDs)) {
+            data.df = dplyr::filter(data.df, .data$peak.ID %in% peak.IDs)
+        }
+        
+        if (!is.null(gene.IDs)) {
+            data.df = dplyr::filter(data.df, .data$gene.ENSEMBL %in% gene.IDs)
+        }
+        
+        
+        data.df = data.df %>%
+            dplyr::filter(.data$peak_gene.p_raw <= p_raw,
+                          abs(.data$peak_gene.r) >= min_abs_r)
+        
+        
+        
+        if (n_random > 0) {
+            data.df = dplyr::slice_sample(data.df, n = n_random)
+        }
+        
+        if (.checkForZeroPlots(data.df) ) {
+            return(list())
+        }
+        
+        peak.IDs2 = dplyr::pull(data.df, "peak.ID") %>% as.character()
+        gene.IDs2   = dplyr::pull(data.df, "gene.ENSEMBL") %>% as.character()
+        
+        futile.logger::flog.info(paste0(" Based on user-provided data and filters, ", nrow(data.df), " pairs remain and will be plotted."))
+        
+        countsPeaks = getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
+        countsRNA   = getCounts(GRN, type = "rna", permuted = ifelse(permIndexCur == "0", FALSE, TRUE), asMatrix = TRUE, includeFiltered = TRUE)
+        
+        
+        for (i in seq_len(nrow(data.df))) {
+            
+            futile.logger::flog.info(paste0("  Preparing plot for peak ",  peak.IDs2[i], " and gene ", .printGene(GRN, gene.IDs2[i])))
+            
+            # rowIndexPeak = which(rownames(GRN@data$peaks$counts) == peak.IDs2[i])
+            # stopifnot(length(rowIndexPeak) == 1) 
+            # rowIndexGene = which(rownames(GRN@data$RNA$counts) == gene.IDs2[i])
+            # stopifnot(length(rowIndexPeak) == 1) 
+            # 
+            # values.df = tibble::tibble(x = GRN@data$RNA$counts[rowIndexGene, ], 
+            #                            y = GRN@data$peaks$counts[rowIndexPeak,])
+            values.df = tibble::tibble(y = countsRNA[gene.IDs2[i], GRN@config$sharedSamples] %>% as.vector(), 
+                                       x = countsPeaks[peak.IDs2[i], GRN@config$sharedSamples] %>% as.vector())
+            
+            cor_cur = cor(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), method = corMethod)
+            
+            # Check whether we have this pair in the peak-gene and all.filtered connections
+            con.subset.df = GRN@connections$peak_genes[[permIndexCur]] %>%
+                dplyr::filter(.data$peak.ID == peak.IDs2[i], .data$gene.ENSEMBL == gene.IDs2[i],)
+            
+            stopifnot(nrow(con.subset.df) == 1)
+            
+            # Verify identify of values
+            if ((is.null(corMethod) | GRN@config$parameters$corMethod_peak_gene == corMethod) & nrow(con.subset.df) == 1) {
+                corCalc = dplyr::pull(con.subset.df, "peak_gene.r")
+                stopifnot(abs(cor_cur - corCalc) < 0.01)
+            }
+            
+            pair_in_peak_gene_links = FALSE
+            praw_cur = paste0("NA (not tested)")
+            if (nrow(con.subset.df) == 1) {
+                praw_cur = dplyr::pull(con.subset.df, "peak_gene.p_raw") %>% round(digits_round)
+                pair_in_peak_gene_links = TRUE
+            }
+            
+            nRows_filtered = 0
+            if (!is.null(GRN@connections$all.filtered[[permIndexCur]])) {
+                nRows_filtered = GRN@connections$all.filtered[[permIndexCur]] %>%
+                    dplyr::filter(.data$peak.ID == peak.IDs2[i], .data$gene.ENSEMBL == gene.IDs2[i], )  %>%
+                    nrow()
+            }
+            
+            
+            ## PLOT
+            dataTypeStr = ifelse(permIndexCur > 0, "permuted connections", "real connections")
+            
+            titleCur = paste0("Peak=", peak.IDs2[i], ", gene=", .printGene(GRN, gene.IDs2[i]),  
+                              ":\nCor = ", round(cor_cur, digits_round), " (", corMethod, "), raw p = ", praw_cur, 
+                              "\n", dataTypeStr, ", # eGRN links: ", nRows_filtered)
+            
+            plots.l[[plotIndex]]  = .produceCorrelationPlot(values.df, titleCur, 
+                                                            label_x = "(Normalized) gene expression",
+                                                            label_y = "(Normalized) peak accessibility")
+            
+            
+            plotIndex = plotIndex  + 1
+            
+        }
+        
+        
+    } # end for (permIndexCur in permIndex)
+    
+    plots.l
+}
+
+
+.plotCorrelation_TF_gene <- function(GRN, permIndex, plotAllFiltered, TF.IDs, gene.IDs, p_raw, min_abs_r, n_random, corMethod, digits_round = 3) {
+    
+    filters = c()
+    if (n_random > 0) filters = c(filters, paste0("random (max=", n_random, ")"))
+    if (p_raw < 1) filters = c(filters, paste0("Raw p-value (max=", p_raw, ")"))
+    if (min_abs_r > 0) filters = c(filters, paste0("Correlation coefficient (abs) (min=", min_abs_r, ")"))
+    if (!is.null(TF.IDs)) filters = c(filters, paste0("TF IDs only: ", paste0(unique(TF.IDs), collapse = ", ")))
+    if (!is.null(gene.IDs)) filters = c(filters, paste0("Gene IDs only: ", paste0(unique(gene.IDs), collapse = ", ")))
+    
+    
+    futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
+    
+    if (is.null(corMethod)) {
+        if (is.null(GRN@config$parameters$corMethod_TF_gene)) { # previous GRN versions didnt have it yet
+            corMethod = GRN@config$parameters$corMethod_TF_Peak
+        } else {
+            corMethod = GRN@config$parameters$corMethod_TF_gene
+        }
+        
+    }
+    
+    plots.l = list()
+    plotIndex = 1
+    
+    for (permIndexCur in permIndex) {
+        
+        if (is.null(GRN@connections$TF_genes.filtered[[permIndexCur]])) {
+            message = paste0("Could not find the TF_genes.filtered slot even though type = \"all.filtered\". Change the type or rerun the add_TF_gene_correlation function.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        data.df = GRN@connections$TF_genes.filtered[[permIndexCur]]
+        
+        
+        if (!is.null(TF.IDs)) {
+            data.df = dplyr::filter(data.df, .data$TF.ID %in% TF.IDs)
+        }
+        
+        if (!is.null(gene.IDs)) {
+            data.df = dplyr::filter(data.df, .data$gene.ENSEMBL %in% gene.IDs)
+        }
+        
+        
+        data.df = data.df %>%
+            dplyr::filter(.data$TF_gene.p_raw <= p_raw,
+                          abs(.data$TF_gene.r) >= min_abs_r)
+        
+        
+        
+        if (n_random > 0) {
+            data.df = dplyr::slice_sample(data.df, n = n_random)
+        }
+        
+        if (.checkForZeroPlots(data.df) ) {
+            return(list())
+        }
+
+        TF.IDs2   = dplyr::pull(data.df, "TF.ID") %>% as.character()
+        gene.IDs2 = dplyr::pull(data.df, "gene.ENSEMBL") %>% as.character()
+        
+        futile.logger::flog.info(paste0(" Based on user-provided data and filters, ", nrow(data.df), " pairs remain and will be plotted."))
+        
+        countsRNA   = getCounts(GRN, type = "rna", permuted = ifelse(permIndexCur == "0", FALSE, TRUE), asMatrix = TRUE, includeFiltered = TRUE)
+        
+        for (i in seq_len(nrow(data.df))) {
+            
+            futile.logger::flog.info(paste0("  Preparing plot for TF ", .printTF(GRN, TF.IDs2[i]), " and gene ", .printGene(GRN, gene.IDs2[i])))
+            
+            TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID %in% TF.IDs2[i]) %>% dplyr::pull(TF.ENSEMBL)
+            stopifnot(length(TF.ENSEMBL) == 1) 
+            # rowIndexTF = which(rownames(GRN@data$RNA$counts) == TF.ENSEMBL)
+            # stopifnot(length(rowIndexTF) == 1) 
+            # rowIndexGene = which(rownames(GRN@data$RNA$counts) == gene.IDs2[i])
+            # stopifnot(length(rowIndexGene) == 1) 
+            
+            values.df = tibble::tibble(y = countsRNA[TF.ENSEMBL, GRN@config$sharedSamples] %>% as.vector(), 
+                                       x = countsRNA[gene.IDs2[i], GRN@config$sharedSamples] %>% as.vector())
+            
+            # values.df = tibble::tibble(x = GRN@data$RNA$counts[rowIndexTF, ], 
+            #                            y = GRN@data$RNA$counts[rowIndexGene,])
+            # 
+            # 
+            cor_cur = cor(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), method = corMethod)
+            
+            # Check whether we have this pair in the TF-gene filtered connections
+            con.subset.df = GRN@connections$TF_genes.filtered[[permIndexCur]] %>%
+                dplyr::filter(.data$TF.ID == TF.IDs2[i], .data$gene.ENSEMBL == gene.IDs2[i])
+            
+            stopifnot(nrow(con.subset.df) == 1)
+            
+            rawp = dplyr::pull(con.subset.df, "TF_gene.p_raw")
+            
+            # Verify identify of values
+            if (!is.null(GRN@config$parameters$corMethod_TF_gene) && ((is.null(corMethod) | GRN@config$parameters$corMethod_TF_gene == corMethod) & nrow(con.subset.df) == 1)) {
+                corCalc = dplyr::pull(con.subset.df, "TF_gene.r")
+                stopifnot(abs(cor_cur - corCalc) < 0.01)
+            }
+            
+            
+            nRows_filtered = 0
+            if (!is.null(GRN@connections$TF_genes.filtered[[permIndexCur]])) {
+                nRows_filtered = GRN@connections$TF_genes.filtered[[permIndexCur]] %>%
+                    dplyr::filter(.data$TF.ID == TF.IDs2[i], .data$gene.ENSEMBL == gene.IDs2[i]) %>%
+                    nrow()
+            }
+            
+            
+            ## PLOT
+            dataTypeStr = ifelse(permIndexCur > 0, "permuted connections", "real connections")
+            
+            titleCur = paste0("TF=", .printTF(GRN, TF.IDs2[i]), ", gene=", .printGene(GRN, gene.IDs2[i]), 
+                              ":\nCor = ", round(cor_cur, digits_round), " (", corMethod, "), raw p-value = ", round(rawp, digits_round),
+                              "\n", dataTypeStr, ", # eGRN links: ", nRows_filtered)
+            
+            plots.l[[plotIndex]]  = .produceCorrelationPlot(values.df, titleCur, 
+                                                            label_x = "(Normalized) TF expression",
+                                                            label_y = "(Normalized) gene expression")
+            
+            plotIndex = plotIndex  + 1
+            
+        }
+        
+        
+    } # end for (permIndexCur in permIndex)
+    
+    plots.l
+}
+
+.produceCorrelationPlot <- function(values, title, label_x, label_y) {
+    
+    x_min = min(-0.01, min(values$x, na.rm = TRUE))
+    y_min = min(-0.01, min(values$y, na.rm = TRUE))
+    
+    # Test for NA, should not happen
+    na_elems = which(is.na(values))
+    if (length(na_elems) > 0) {
+        message = paste0("NA values in correlation data")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    g = ggplot(values, aes(.data$x, .data$y)) + 
+        geom_smooth(method = "lm", formula = "y ~ x", col = "black", na.rm = TRUE) + 
+        geom_point(size = rel(0.5)) +
+        xlim(x_min, NA) + ylim(y_min, NA) + 
+        xlab(label_x) + ylab(label_y) + 
+        ggtitle(title) + 
+        theme_bw() +
+        theme(plot.title = element_text(size = rel(0.9)))
+    
+    g
+}
+
+
+.checkForZeroPlots <- function(data.df) {
+    if (nrow(data.df) == 0) {
+        message = paste0("No connections (left) after filtering. No plots are produced. Rerun the function and change the filters.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+        return(TRUE)
+    } else {
+        return(FALSE)
+    }
+}
+
+
+
+
 
 ######## General & communities Stats Functions ########
 
@@ -2799,7 +3432,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' @template pages
 #' @template basenameOutput
 #' @inheritParams plotCommunitiesEnrichment
-#' @param communities Numeric vector. Default \code{seq_len(10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities will be plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} will be plotted. If set to \code{NULL}, all communities will be plotted
+#' @template communities
 #' @template forceRerun
 #' @param topnGenes Integer > 0. Default 20. Number of genes to plot, sorted by their rank or label.
 #' @param topnTFs Integer > 0. Default 20. Number of TFs to plot, sorted by their rank or label.
@@ -2813,7 +3446,7 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
 #' GRN = plotCommunitiesStats(GRN, plotAsPDF = FALSE, pages = 1)
 #' @export
 plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
-                                 display = "byRank", communities = seq_len(5), 
+                                 selection = "byRank", communities = seq_len(5), 
                                  topnGenes = 20, topnTFs = 20, 
                                  plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                  forceRerun = FALSE) {
@@ -2829,8 +3462,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
   
   checkmate::assertIntegerish(topnGenes, lower = 1)
   checkmate::assertIntegerish(topnTFs, lower = 1)
-  checkmate::assertChoice(display , c("byRank", "byLabel"))
-  checkmate::assert(checkmate::checkNull(communities), checkmate::checkNumeric(communities, lower = 1, any.missing = FALSE, min.len = 1))
+  checkmate::assertChoice(selection , c("byRank", "byLabel"))
   checkmate::assertFlag(plotAsPDF)
   checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
   checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
@@ -2873,22 +3505,10 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       
     } else {
-      if (!is.null(communities)) {
-        if (display == "byRank") {
-          # Only display communities we have data for, in a reasonable order
-          communitiesDisplay = .selectCommunitesByRank(GRN, communities)
-        } else{ # byLabel
-          communitiesDisplay = as.character(communities)
-        }
-      } else {
-        communitiesDisplay = unique(vertexMetadata$community) %>% as.character()
-
-      }
       
-      # TODO here
-      # communityVertices = GRN@stats$communityVertices %>%
-      #     dplyr::filter(community %in% communitiesDisplay)
-      # 
+      communitiesDisplay = .selectCommunities(GRN, selection, communities, refAll = "graph", graph = "TF_gene") 
+      
+
       communityVertices = vertexMetadata %>%
         dplyr::filter(.data$community %in% communitiesDisplay) %>%
         dplyr::mutate(Class = dplyr::if_else(.data$isTF, "TF", "gene"))
@@ -3003,8 +3623,11 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' Third, a subset of the aforementioned heatmap, showing only the top most significantly enriched terms per community and for the whole eGRN (as specified by \code{nID}) for improved visibility 
 #' 
 #' @inheritParams plotGeneralEnrichment
-#' @param display Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will be displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
-#' @param communities \code{NULL} or numeric vector. Default \code{NULL}. If set to \code{NULL}, the default, all communities enrichments that have been calculated before are plotted. If a numeric vector is specified: Depending on what was specified in the \code{display} parameter, this parameter indicates either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities are plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} are plotted. 
+#' @param selection Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. 
+#' Specify whether the communities will be selected based on their rank or explicitly by their label. 
+#' Note that the label is independent of the rank. When set to \code{"byRank"}, the largest 
+#' community (with most vertices) always has a rank of 1. 
+#' @template communities
 #' @param nSignificant Numeric > 0. Default 3. Threshold to filter out an ontology term with less than \code{nSignificant} overlapping genes. 
 #' @param nID Numeric > 0. Default 10. For the reduced summary heatmap, number of top terms to select per community / for the general enrichment.
 #' @template maxWidth_nchar_plot
@@ -3020,7 +3643,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
 #' @import ggplot2
 #' @importFrom grid gpar
 plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
-                                      display = "byRank", communities = NULL,
+                                      selection = "byRank", communities = NULL,
                                       topn_pvalue = 30, p = 0.05, nSignificant = 2, nID = 10, maxWidth_nchar_plot = 50,
                                       display_pAdj = FALSE,
                                       plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
@@ -3032,8 +3655,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   
   GRN = .makeObjectCompatible(GRN)
   
-  checkmate::assertChoice(display , c("byRank", "byLabel"))
-  checkmate::assert(checkmate::checkNull(communities), checkmate::checkNumeric(communities, lower = 1, any.missing = FALSE, min.len = 1))
+  checkmate::assertChoice(selection , c("byRank", "byLabel"))
   checkmate::assertNumeric(p, lower = 0, upper = 1)
   checkmate::assertIntegerish(topn_pvalue, lower = 1)
   checkmate::assertNumeric(nSignificant, lower = 1)
@@ -3051,7 +3673,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
   .checkGraphExistance(GRN)
   
   if (is.null(GRN@stats$Enrichment$byCommunity)) {
-    message = "No communities found, cannot calculate enrichment. Run the functioncalculateCommunitiesStats first. If you did already, it looks like no communities could be identified before"
+    message = "No communities found, cannot calculate enrichment. Please run the functioncalculateCommunitiesStats first. If you did already, it looks like no communities could be identified before"
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
@@ -3069,32 +3691,9 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
     } 
     
     GRN@stats$Enrichment$byCommunity$combined = NULL
-    allCalculatedCommunities = names(GRN@stats$Enrichment$byCommunity)
+
+    communitiesDisplay = .selectCommunities(GRN, selection, communities, refAll = "enrichment", graph = "TF_gene") 
     
-    if (display == "byLabel") {
-      
-      if (is.null(communities)) {
-        message = paste("If display = \"byLabel\", the parameter \"communities\" cannot be NULL.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-      }
-      
-      communitiesDisplay = as.character(communities)
-      # issue a warning if the community label does not exist
-      diff.communities = setdiff(communitiesDisplay, allCalculatedCommunities)
-      if (length(diff.communities) > 0) {
-        message = paste("The following communities do not exist and will not be in the analysis: ", paste0(diff.communities, collapse = " + "))
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        communitiesDisplay = setdiff(communitiesDisplay, diff.communities)
-      }
-    } else { #byRank
-      
-      if (is.null(communities)) {
-        communitiesDisplay = allCalculatedCommunities
-      } else {
-        communitiesDisplay = .selectCommunitesByRank(GRN, communities = communities)
-      }
-      
-    }
     
     futile.logger::flog.info(paste0(" Plotting the enrichment for the following communities: ", paste0(communitiesDisplay, collapse = ",")))
     
@@ -3127,11 +3726,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
       
       futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
       
-      pValPrefix = "raw "
-      # p-adjust only available for non-GO ontologies
-      if (display_pAdj && !stringr::str_starts("GO_", ontologyCur)) {
-        pValPrefix = "adj. "
-      }
+      pValPrefix = .getPValPrefix(display_pAdj, ontologyCur)
       
       for (communityCur in as.character(communitiesDisplay)) {
         
@@ -3147,7 +3742,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
         titleCur = paste0("Enrichment Analysis - Community ", communityCur)
         
         if (is.null(dataCur)) {
-          message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and community ", communityCur, ". Rerun the function calculateCommunitiesEnrichment.")
+          message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and community ", communityCur, ". Please rerun the function calculateCommunitiesEnrichment.")
           .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
@@ -3161,9 +3756,8 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
       
       # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
       # Currently assumes that the general enrichment has been run
-      if (identical(allOntologies.l$community, allOntologies.l$all)) {
-          
-          
+      if (ontologyCur %in% allOntologies.l$all) {
+
           # Take one community as example for which ontologies have been produced
           GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] = 
               .combineEnrichmentResults(GRN, type = "byCommunity", ontologyCur, 
@@ -3184,7 +3778,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
           # Convert to wide format and filter those terms that are significant at least once
           all.df.wide = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
               dplyr::select("community", "ID", "pval") %>%
-              tidyr::pivot_wider(names_from = .data$community, values_from = .data$pval) %>%
+              tidyr::pivot_wider(names_from = "community", values_from = "pval") %>%
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
               dplyr::rowwise() %>%
               dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>% # In how many columns significant?
@@ -3278,7 +3872,11 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
               print(p2)
           } 
           pageCounter = pageCounter + 1
-      } # end if (identical(allOntologies.l$community, allOntologies.l$all)) {
+          
+      } else {
+          message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
+          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      } 
       
       
     } # end for all ontologies
@@ -3411,8 +4009,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
   .checkGraphExistance(GRN)
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  
+
   if (rankType == "custom") {
     if (is.null(TF.IDs)) {
       message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF IDs in the 'TF.IDs' parameter."
@@ -3420,11 +4017,18 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
     }
     wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.ID))
     if (length(wrongTFs) > 0) {
-       message = paste0("The TFs ",  paste0(wrongTFs, collapse = " + "), " are not in the filtered GRN. They will be ommited from the results.")
+       message = paste0("The following user-provided TF(s) \"",  paste0(wrongTFs, collapse = " + "), "\" are not in the filtered GRN. They will be ommited from the results.")
        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
 
     }
     TFset = setdiff(TF.IDs, wrongTFs) 
+    
+    if (length(TFset) == 0) {
+        message = paste0("There are no TFs left to show. Adjust the custom TF list.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        
+    }
+    
   } else{ #rankType = "degree"
     
     if (is.null(n)) {
@@ -3444,6 +4048,11 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
     GRN = .addFunctionLogToObject(GRN)
     
     allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "TF")
+    
+    if (is.null(allOntologies.l$TF)) {
+        message = paste0("No enrichment results found for TFs. Run the function calculateTFEnrichment first")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
     
     # Get the number of vertexes per TF as additional annotation column for the heatmap
     vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
@@ -3468,11 +4077,13 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
       
       futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
       
-      pValPrefix = "raw "
-      # p-adjust only available for non-GO ontologies
-      if (display_pAdj && !stringr::str_starts("GO_", ontologyCur)) {
-        pValPrefix = "adj. "
+      pValPrefix = .getPValPrefix(display_pAdj, ontologyCur)
+      
+      if (display_pAdj && stringr::str_starts(ontologyCur, "GO_")) {
+          message = paste0("For ontology ", ontologyCur, ", only raw p-values can be displayed. Adjusted p-values are only available for the following ontologies: KEGG, Disease Ontology, Reactome")
+          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       }
+
       
       for (TFCur in as.character(TFset)) {
         
@@ -3480,13 +4091,13 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
           
           TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID == TFCur) %>% dplyr::pull(TF.ENSEMBL)
           
-          TF.ID.full = paste0(TFCur, " (", TF.ENSEMBL, ")")
+          TF.ID.full = .printTF(GRN, TFCur, printEnsemblID = TRUE)
           
           futile.logger::flog.info(paste0("  TF ", TF.ID.full))
           
           # if the enrichment slot for the TFs is empty, calculate the enrichment
           if (is.null(GRN@stats$Enrichment[["byTF"]][[TFCur]])) { 
-            message = paste0("Could not find TF enrichment results. Run the function calculateTFEnrichment first or make sure the parameter n that was used for calculateTFEnrichmentn was larger or equal with the current value for n for this function.")
+            message = paste0("Could not find TF enrichment results for TF ", TFCur, ". Run the function calculateTFEnrichment first or make sure the parameter n that was used for calculateTFEnrichmentn was larger or equal with the current value for n for this function.")
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
           }
           
@@ -3496,7 +4107,8 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
           }
           titleCur = paste0("Enrichment Analysis - TF: ", TF.ID.full)
-          .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, topn_pvalue = topn_pvalue,  p = p, display_pAdj = display_pAdj)
+          .plotEnrichmentGeneral(data = dataCur, type = ontologyCur, prefixTitle = titleCur,
+                                 topn_pvalue = topn_pvalue, p = p, display_pAdj = display_pAdj)
           
           
         }
@@ -3504,7 +4116,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
         
       }
       
-      if (identical(allOntologies.l$TF, allOntologies.l$all)) {
+      if (ontologyCur %in% allOntologies.l$all) {
           
           
           # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
@@ -3512,7 +4124,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
           
           # Take one community as example for which ontologies have been produced
           GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] = 
-              .combineEnrichmentResults(GRN, type = "byTF", ontologyCur, 
+              .combineEnrichmentResults(GRN, type = "byTF", ontology = ontologyCur, 
                                         p = p, nSignificant = nSignificant, display_pAdj) %>%
               dplyr::filter(.data$TF.ID %in% c("all", as.character(TFset)))
           
@@ -3526,7 +4138,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
           # Convert to wide format and filter those terms that are significant at least once
           all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
               dplyr::select("TF.ID", "ID", "pval") %>%
-              tidyr::pivot_wider(names_from = "TF.ID", values_from = .data$pval) %>%
+              tidyr::pivot_wider(names_from = "TF.ID", values_from = "pval") %>%
               dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
               dplyr::rowwise() %>%
               dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>%
@@ -3618,7 +4230,10 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
           }
           pageCounter = pageCounter + 1
           
-      } # end if (identical(allOntologies.l$TF, allOntologies.l$all)) {
+      } else {
+          message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
+          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+      } 
       
     } # end for all ontologies
     
@@ -3808,6 +4423,14 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
   return(labels)
 }
 
+.getPValPrefix <- function(display_pAdj, ontology) {
+    pValPrefix = "raw "
+    # p-adjust only available for non-GO ontologies
+    if (display_pAdj && !stringr::str_starts(ontology, "GO_")) {
+        pValPrefix = "adj. "
+    }
+    pValPrefix
+}
 
 ############### GRN visualization ###############
 
@@ -4488,13 +5111,4 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
 
 
 
-.checkGraphExistance <- function(GRN) {
-  
-  if (is.null(GRN@graph$TF_peak_gene) | is.null(GRN@graph$TF_gene)) {
-    message = paste0("Could not find graph slot in the object. (Re)run the function build_eGRN_graph")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-
-  
-}
 

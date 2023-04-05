@@ -252,7 +252,7 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
                                       algorithm = "weight01", statistic = "fisher",
                                       background = "neighborhood", 
                                       clustering = "louvain",
-                                      communities = seq_len(10), display = "byRank",
+                                      communities = NULL, selection = "byRank",
                                       topnGenes = 20, topnTFs = 20,
                                       maxWidth_nchar_plot = 50,
                                       display_pAdj = FALSE,
@@ -278,13 +278,15 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   GRN = calculateCommunitiesStats(GRN, clustering = clustering, forceRerun = forceRerun)
   
-  GRN = plotCommunitiesStats(GRN, outputFolder = outputFolder, display = display, communities = communities, 
+  GRN = plotCommunitiesStats(GRN, outputFolder = outputFolder, selection = selection, communities = communities, 
                                   forceRerun = forceRerun, topnGenes = topnGenes, topnTFs = topnTFs)
   
   GRN = calculateCommunitiesEnrichment(GRN, ontology = ontology, algorithm = algorithm, statistic = statistic, 
+                                       selection = selection, communities = communities,
                                        background = background, forceRerun = forceRerun)
   
-  GRN = plotCommunitiesEnrichment(GRN, outputFolder = outputFolder, display = display, communities = communities, 
+  GRN = plotCommunitiesEnrichment(GRN, outputFolder = outputFolder, 
+                                  selection = selection, communities = communities,
                                   display_pAdj = display_pAdj,  maxWidth_nchar_plot = maxWidth_nchar_plot,
                                   forceRerun = forceRerun)
   
@@ -367,7 +369,7 @@ performAllNetworkAnalyses <- function(GRN, ontology = c("GO_BP", "GO_MF"),
 #' As they are listed under \code{Suggests}, they may not yet be installed, and the function will throw an error if they are missing.
 #' @param algorithm Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library. 
 #' For general information about the algorithms, see \url{https://academic.oup.com/bioinformatics/article/22/13/1600/193669}. \code{weight01} is a mixture between the \code{elim} and the \code{weight} algorithms.
-#' @param statistic Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher. 
+#' @param statistic Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}. Statistical test to be used. Only relevant if ontology is GO related (\code{GO_BP}, \code{GO_MF}, \code{GO_CC}), and valid inputs are a subset of those supported by the \code{topGO} library (we had to remove some as they do not seem to work properly in \code{topGO} either), ignored otherwise. For the other ontologies the test statistic is always Fisher. 
 #' @param background Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"all_RNA_filtered"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (\code{all_annotated}), all genes from the provided RNA data (\code{all_RNA}), all genes from the provided RNA data excluding those marked as filtered after executing \code{filterData} (\code{all_RNA_filtered}), or all the genes that are within the neighborhood of any peak (before applying any filters except for the user-defined \code{promoterRange} value in \code{addConnections_peak_gene}) (\code{neighborhood}).
 #' @param background_geneTypes Character vector of gene types that should be considered for the background. Default \code{"all"}. 
 #' Only gene types as defined in the \code{\linkS4class{GRN}} object, slot \code{GRN@annotation$genes$gene.type} are allowed. 
@@ -469,14 +471,14 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
                                           tibble::as_tibble())
   
   # p-adjust only available for non-GO ontologies
-  if (display_pAdj && !stringr::str_starts("GO_", ontology)) {
+  if (display_pAdj && !stringr::str_starts(ontology, "GO_")) {
     resultsCombined.df$pval = resultsCombined.df$p.adjust
   }
   
   # Add general enrichment
   
   if (is.null(GRN@stats$Enrichment$general[[ontology]]$results)) {
-    message = paste0("Could not find enrichment results for general enrichment for ontology ", ontology, ".. Please (re)run the function calculateGeneralEnrichment for the ontology ", ontology)
+    message = paste0("Could not find enrichment results for general enrichment for ontology ", ontology, ". Please (re)run the function calculateGeneralEnrichment for the ontology ", ontology)
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
@@ -517,8 +519,9 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   if (!identical(allOntologiesGeneral, allOntologiesGroup1)) {
     message = paste0("General enrichment and ", type, " enrichment do not have the same ontologies precalculated (\"",
-                     paste0(allOntologiesGeneral, collapse = " & "), "\" vs. \"", paste0(allOntologiesGroup1, collapse = "&"), "\").",
-                     "Run the function calculateGeneralEnrichment to eliminate this warning")
+                     paste0(allOntologiesGeneral, collapse = " & "), "\" vs. \"", 
+                     paste0(allOntologiesGroup1, collapse = " & "), "\"). ",
+                     "Rerun one of the enrichment functions (general, community, or TF) and add the missing ontology")
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
   }
   
@@ -607,66 +610,79 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     
     
   }
-  
+
   
   geneList = factor(as.integer(unique(background) %in% unique(foreground)))
   names(geneList) = unique(background)
   
-  futile.logger::flog.info(paste0("   Running enrichment analysis for ontology ", ontology, " using ", nForeground, " and ", nBackground, " genes as foreground and background (", backgroundStr, "), respectively. This may take a while."))
-  
-  
-  if (ontology %in% c("GO_BP","GO_MF","GO_CC")) {
+  # Catch cases where none of the foreground genes are in the background
+  if (nlevels(geneList) < 2) {
+      error_Biomart = "None of the foreground genes are part of the background. This may happen, for example, if the background is filtered by the gene type (background_geneTypes). Thus, no enrichment can be calculated."
+      .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = TRUE)
       
-      # https://support.bioconductor.org/p/9141171/
+      result.list[["results"]] = tibble::tribble(~ID, ~Term, ~Annotated, ~Found, ~Expected, ~pval, ~GeneRatio, ~gene.ENSEMBL_foreground)
+  } else {
       
-      # go_enrichment =  
-      #     clusterProfiler::enrichGO(
-      #         gene = foreground_entrez,
-      #         OrgDb = 'org.Hs.eg.db', 
-      #         ont = sub("GO_", "", ontology),
-      #         universe = background_entrez,
-      #         keyType = "ENTREZID",
-      #         pvalueCutoff = 1,
-      #         qvalueCutoff = 1,
-      #         minGSSize = minGSSize,
-      #         maxGSSize = maxGSSize,
-      #         pAdjustMethod = pAdjustMethod)
+      futile.logger::flog.info(paste0("   Running enrichment analysis for ontology ", ontology, " using ", nForeground, " and ", nBackground, " genes as foreground and background (", backgroundStr, "), respectively. This may take a while."))
       
-      # go.res.new = .createEnrichmentTable(go_enrichment)
       
-      # The need of p-value adjustment: https://bioconductor.org/packages/devel/bioc/vignettes/topGO/inst/doc/topGO.pdf
-    
-    go_enrichment = suppressMessages(new("topGOdata",
-                                         ontology = gsub("GO_", "", ontology),
-                                         allGenes = geneList,
-                                         description = description,
-                                         nodeSize = 5,
-                                         annot = topGO::annFUN.org,
-                                         mapping = mapping, 
-                                         ID = "ensembl"))
-    
-    # retrieve genes2GO list from the "expanded" annotation in GOdata
-    allGO = topGO::genesInTerm(go_enrichment)
-    allGO_inForeground = lapply(allGO, function(x) paste0(x[x %in% foreground], collapse = ",")) %>%
-        as.data.frame() %>% t() 
-    
-    allGO_inForeground.df = tibble::tibble(ID = rownames(allGO_inForeground), gene.ENSEMBL_foreground = allGO_inForeground[, 1]) %>%
-        dplyr::mutate(ID = sub(".", ":", .data$ID, fixed = TRUE))
-        
+      if (ontology %in% c("GO_BP","GO_MF","GO_CC")) {
+          
+          # https://support.bioconductor.org/p/9141171/
+          
+          # go_enrichment =  
+          #     clusterProfiler::enrichGO(
+          #         gene = foreground_entrez,
+          #         OrgDb = 'org.Hs.eg.db', 
+          #         ont = sub("GO_", "", ontology),
+          #         universe = background_entrez,
+          #         keyType = "ENTREZID",
+          #         pvalueCutoff = 1,
+          #         qvalueCutoff = 1,
+          #         minGSSize = minGSSize,
+          #         maxGSSize = maxGSSize,
+          #         pAdjustMethod = pAdjustMethod)
+          
+          # go.res.new = .createEnrichmentTable(go_enrichment)
+          
+          # The need of p-value adjustment: https://bioconductor.org/packages/devel/bioc/vignettes/topGO/inst/doc/topGO.pdf
+          
+          go_enrichment = suppressMessages(new("topGOdata",
+                                               ontology = gsub("GO_", "", ontology),
+                                               allGenes = geneList,
+                                               description = description,
+                                               nodeSize = 5,
+                                               annot = topGO::annFUN.org,
+                                               mapping = mapping, 
+                                               ID = "ensembl"))
+          
+          # retrieve genes2GO list from the "expanded" annotation in GOdata
+          allGO = topGO::genesInTerm(go_enrichment)
+          allGO_inForeground = lapply(allGO, function(x) paste0(x[x %in% foreground], collapse = ",")) %>%
+              as.data.frame() %>% t() 
+          
+          allGO_inForeground.df = tibble::tibble(ID = rownames(allGO_inForeground), gene.ENSEMBL_foreground = allGO_inForeground[, 1]) %>%
+              dplyr::mutate(ID = sub(".", ":", .data$ID, fixed = TRUE))
+          
+          
+          
+          result = suppressMessages(topGO::runTest(go_enrichment, algorithm = algorithm, statistic = statistic))
+          # Dont trim GO terms here, happens later when plotting
+          result.tbl = unique(topGO::GenTable(go_enrichment, pval = result, orderBy = "pval", numChar = 1000, 
+                                              topNodes = length(topGO::score(result))) ) %>%
+              dplyr::rename(ID = "GO.ID", Found = "Significant")  %>%      # make it more clear what Significant refers to here
+              dplyr::mutate(GeneRatio = .data$Found / nForeground) %>%
+              dplyr::left_join(allGO_inForeground.df, by = "ID")
+          
+          
+          result.list[["results"]] = result.tbl
 
-    
-    result = suppressMessages(topGO::runTest(go_enrichment, algorithm = algorithm, statistic = statistic))
-    # Dont trim GO terms here, happens later when plotting
-    result.tbl = unique(topGO::GenTable(go_enrichment, pval = result, orderBy = "pval", numChar = 1000, 
-                                        topNodes = length(topGO::score(result))) ) %>%
-      dplyr::rename(ID = "GO.ID", Found = "Significant")  %>%      # make it more clear what Significant refers to here
-      dplyr::mutate(GeneRatio = .data$Found / nForeground) %>%
-      dplyr::left_join(allGO_inForeground.df, by = "ID")
-    
-    
-    result.list[["results"]] = result.tbl
-    
+      }
   }
+  
+  
+  
+  
   
   # Shared error message for different ontologies
   enrichmentErrorMessage = "Could not calculate enrichment, the server returned an error. This may happen for multiple reasons, for example if no gene can be mapped. The results will be set to NA."
@@ -788,11 +804,22 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   if (!is.null(enrichmentObj)) {
     
+    # GeneRatio and BgRatio are reported as fractions like 5/83, change it to numeric here
     result.tbl = enrichmentObj@result %>%
-      dplyr::rename(Term = "Description", pval = "pvalue", Found = "Count") 
+      dplyr::rename(Term = "Description", pval = "pvalue", Found = "Count")
     
-      # GeneRatio and BgRatio are reported as fractions like 5/83, leave it like this for now 
-      # %>% dplyr::mutate(GeneRatio = sapply(parse (text = enrichmentObj@result$GeneRatio), eval))
+    columnTypes = sapply(result.tbl, class)
+    
+    if (columnTypes["GeneRatio"] == "character") {
+        result.tbl = dplyr::mutate(result.tbl, GeneRatio = sapply(parse(text = enrichmentObj@result$GeneRatio), eval))
+    }
+     
+    
+    if ("BgRatio" %in% colnames(result.tbl) && columnTypes["BgRatio"] == "character") {
+        result.tbl = dplyr::mutate(result.tbl, BgRatio = sapply(parse(text = enrichmentObj@result$BgRatio), eval))
+    }
+    
+
     
   } else {
     
@@ -898,7 +925,7 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
     igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community = factor(communities_cluster$membership, levels = names(communities_count))
     
     nClustersMax = min(length(communities_count), 10)
-    futile.logger::flog.info(paste0("Community summary for largest ", nClustersMax, " communities (Number of nodes per community, sorted by community size):"))
+    futile.logger::flog.info(paste0("Community summary for ", ifelse(length(communities_count) == nClustersMax, "all ", "largest "), nClustersMax, " communities (Number of nodes per community, sorted by community size):"))
     for (clusterCur in seq_len(nClustersMax)) {
       futile.logger::flog.info(paste0(" Community ", names(communities_count)[clusterCur], ": ", communities_count[clusterCur], " nodes"))
     }
@@ -927,8 +954,7 @@ calculateCommunitiesStats <- function(GRN, clustering = "louvain", forceRerun = 
 #' 
 #' @inheritParams calculateGeneralEnrichment
 #' @param selection Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities enrichment will by calculated based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.
-#' @param communities Numeric vector. Default \code{c(1:10)}. Depending on what was specified in the \code{display} parameter, 
-#' this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the GO enrichment for the first and fourth largest communities will be calculated if \code{display = "byLabel"}, the results for the communities labeled "1", and "4" will be plotted.
+#' @template communities
 #' @return An updated \code{\linkS4class{GRN}} object, with the enrichment results stored in the \code{stats$Enrichment$byCommunity} slot.
 #' @seealso \code{\link{plotCommunitiesEnrichment}}
 #' @seealso \code{\link{plotGeneralEnrichment}}
@@ -944,7 +970,7 @@ calculateCommunitiesEnrichment <- function(GRN,
                                            ontology = c("GO_BP", "GO_MF"), algorithm = "weight01", 
                                            statistic = "fisher", 
                                            background = "neighborhood", background_geneTypes = "all",
-                                           selection = "byRank", communities = seq_len(10),
+                                           selection = "byRank", communities = NULL,
                                            pAdjustMethod = "BH",
                                            forceRerun = FALSE) {
   
@@ -967,30 +993,22 @@ calculateCommunitiesEnrichment <- function(GRN,
   checkmate::assertFlag(forceRerun)
   
   
-  vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
+  .checkCommunityExistance(GRN)
+  communitiesDisplay = .selectCommunities(GRN, selection, communities, refAll = "graph", graph = "TF_gene")
   
-  foundCommunities = as.character(unique(vertexMetadata)$community)
-  if (length(foundCommunities) == 0) {
-    message = "No communities found, cannot calculate enrichment. Run the function calculateCommunitiesStats first. If you did already, it looks like no communities could be identified before"
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  if (selection == "byLabel") {
-    communitiesDisplay = as.character(communities)
-    # issue a warning if the community label does not exist
-    diff.communities = setdiff(communitiesDisplay, foundCommunities)
-    if (length(diff.communities) > 0) {
-      message = paste("The following communities do not exist and will not be in the analysis: ", paste0(diff.communities, collapse = " + "))
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      communitiesDisplay = setdiff(communitiesDisplay, diff.communities)
-    }
-  } else { # byRank
-    
-    communitiesDisplay = .selectCommunitesByRank(GRN, communities, graph = "TF_gene")
+  if (!is.null(communities)) {
+      
+      futile.logger::flog.info(paste0("Selected communities based on ", ifelse(selection == "byRank", "rank (1 = largest, 2 = second largest, ...)", "label"), ": ", paste0(communities, collapse = ","), ". This corresponds to the following community labels: ", paste0(communitiesDisplay, collapse = ",")))
+
+      if (length(communitiesDisplay) == 0) {
+          message = paste("No communities (left) to run enrichment for. Adjust the settings accordingly.")
+          .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      }
     
   }
+  # TODO
   
-  futile.logger::flog.info(paste0("Running enrichment analysis for selected ", length(communitiesDisplay), " communities. This may take a while..."))
+  futile.logger::flog.info(paste0("Running enrichment analysis for ", ifelse(is.null(communities), "all ", "selected "), length(communitiesDisplay), " communities. This may take a while..."))
   
   
   mapping = .getGenomeObject(GRN@config$parameters$genomeAssembly, type = "packageName")
@@ -999,6 +1017,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   if (is.null(GRN@stats[["Enrichment"]][["byCommunity"]])) {
     GRN@stats[["Enrichment"]][["byCommunity"]] = list()
   }
+  
   
   for (communityCur in communitiesDisplay) {
     
@@ -1009,7 +1028,8 @@ calculateCommunitiesEnrichment <- function(GRN,
     }
     
     
-    foregroundCur = vertexMetadata %>%
+    foregroundCur = igraph::vertex.attributes(GRN@graph$TF_gene$graph) %>%
+      as.data.frame() %>%
       dplyr::filter(.data$community == communityCur) %>%
       dplyr::pull(.data$name)
     
@@ -1044,6 +1064,71 @@ calculateCommunitiesEnrichment <- function(GRN,
   GRN
 }
 
+.checkCommunityExistance <- function(GRN) {
+    
+    if (is.null(igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community)) {
+        message = paste("Could not find community information in the graph object. Run the function calculateCommunitiesStats")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    if (is.null(GRN@graph$TF_gene$clusterGraph)) {
+        message = paste("Could not find community information in the graph object. Run the function calculateCommunitiesStats")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+}
+
+.selectCommunities <- function(GRN, display, communities, refAll, graph = "TF_gene") {
+    
+    checkmate::assertSubset(refAll, c("graph", "enrichment"))
+    
+    if (refAll == "graph") {
+        allCalculatedCommunities = 
+            igraph::vertex.attributes(GRN@graph[[graph]]$graph) %>%
+            as.data.frame() %>%
+            dplyr::pull("community") %>%
+            unique() %>% 
+            as.character()
+        
+    } else {
+        allCalculatedCommunities = setdiff(names(GRN@stats$Enrichment$byCommunity), "combined")
+        
+    }
+    
+    if (!is.null(communities)) {
+        if (display == "byRank") {
+            # Only display communities we have data for, in a reasonable order
+            checkmate::assertNumeric(communities, lower = 1, any.missing = FALSE, min.len = 1)
+            communitiesDisplay = .selectCommunitesByRank(GRN, communities)
+            
+        } else if (display == "byLabel") { # byLabel
+            
+            if (is.null(communities)) {
+                message = paste("If display = \"byLabel\", the parameter \"communities\" cannot be NULL.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            checkmate::assertCharacter(communities, min.chars = 1, any.missing = FALSE, min.len = 1)
+            
+            communitiesDisplay = as.character(communities)
+            # issue a warning if the community label does not exist
+            diff.communities = setdiff(communitiesDisplay, allCalculatedCommunities)
+            if (length(diff.communities) > 0) {
+                message = paste("The following communities do not exist and will not be in the analysis: ", paste0(diff.communities, collapse = " + "))
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                communitiesDisplay = setdiff(communitiesDisplay, diff.communities)
+            }
+            
+        }
+    } else {
+        communitiesDisplay = allCalculatedCommunities
+        
+    }
+    
+    communitiesDisplay
+}
+
+
+
 .selectCommunitesByRank <- function(GRN, communities, graph = "TF_gene") {
   
   df = igraph::vertex.attributes(GRN@graph[[graph]]$graph) %>%
@@ -1068,7 +1153,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   
   if (length(selCommunities) < length(communities)) {
       missingCommunities = setdiff(communities, selCommunities)
-      message = paste0("Some of the requested communities (", paste0(missingCommunities , collapse = ","), ") were not found. Only the following communities are available: ", paste0(selCommunities, collapse = ","))
+      message = paste0("Some of the requested communities (", paste0(missingCommunities , collapse = ","), ") were not found and have been ignored. Only the following communities are available and have been taken: ", paste0(selCommunities, collapse = ","))
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
   }
   
@@ -1168,7 +1253,7 @@ getTopNodes <- function(GRN, nodeType, rankType, n = 0.1, use_TF_gene_network = 
   
   # Remove unnecessary extra column
   if ("name_plot" %in% colnames(topNodes)) {
-      topNodes = dplyr::select(topNodes, -.data$name_plot)
+      topNodes = dplyr::select(topNodes, -"name_plot")
   }
 
   .printExecutionTime(start)
@@ -1314,4 +1399,15 @@ calculateTFEnrichment <- function(GRN, rankType = "degree", n = 3, TF.IDs = NULL
   
   .printExecutionTime(start)
   GRN
+}
+
+
+.checkGraphExistance <- function(GRN) {
+    
+    if (is.null(GRN@graph$TF_peak_gene) | is.null(GRN@graph$TF_gene)) {
+        message = paste0("Could not find graph slot in the object. (Re)run the function build_eGRN_graph")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    
 }

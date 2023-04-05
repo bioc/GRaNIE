@@ -26,7 +26,9 @@ AR_classification_wrapper(
 
 \item{plotDiagnosticPlots}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. Run and plot various diagnostic plots? If set to \code{TRUE}, PDF files will be produced and saved in the output directory (in a subfolder called \code{plots}).}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
 

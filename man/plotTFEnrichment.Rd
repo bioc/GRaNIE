@@ -31,7 +31,7 @@ plotTFEnrichment(
 
 \item{n}{NULL or numeric. Default NULL. If set to NULL, all previously calculated TF enrichments will be plotted. If set to a value between (0,1), it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if rankType = "custom".}
 
-\item{TF.IDs}{\code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the names of the TFs to plot. Ignored otherwise.}
+\item{TF.IDs}{\code{NULL} or character vector. Default \code{NULL}. For \code{rankType="custom"} the IDs of the TFs to plot. Ignored otherwise.}
 
 \item{topn_pvalue}{Numeric. Default 30. Maximum number of ontology terms that meet the p-value significance threshold to display in the enrichment dot plot}
 
@@ -45,7 +45,9 @@ plotTFEnrichment(
 
 \item{maxWidth_nchar_plot}{Integer (>=10). Default 50. Maximum number of characters for a term before it is truncated.}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{basenameOutput}{\code{NULL} or character. Default \code{NULL}. Basename of the output files that are produced. If set to \code{NULL}, a default basename is chosen. If a custom basename is specified, all output files will have the chosen basename as file prefix, be careful with not overwriting already existing files (if \code{forceRerun} is set to \code{TRUE})}
 

@@ -1,3 +1,18 @@
+# GRaNIE 1.3.34 (2023-03-29)
+
+## Bugfixes
+- many small bugfixes and other small improvements to homogenize the user experience due to the usage of systematic unit tests
+
+
+# GRaNIE 1.3.33 (2023-03-02-2023-03-06)
+
+## New features and vignette updates
+- we provide two new functions with this update:
+    1. `getGRNSummary()` that summarizes a `GRN` object and returns a named list, which can be used to compare different `GRN` objects ore easily among each other, for example.
+    2. `plotCorrelations()` for scatter plots of the underlying data for either TF-peak, peak-gene or TF-gene pairs. This can be useful to visualize specific TF-peak, peak-gene or TF-gene pairs to investigate the underlying data and to judge the reasonability of the inferred connection.
+    
+- methods vignette updates
+
 # GRaNIE 1.3.31-1.3.32 (2023-03-02-2023-03-06)
 
 ## Bugfixes

@@ -40,7 +40,8 @@ addTFBS(
 
 \item{nTFMax}{\code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.}
 
-\item{EnsemblVersion}{\code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.}
+\item{EnsemblVersion}{\code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
+By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.}
 
 \item{JASPAR_useSpecificTaxGroup}{\code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? 
 If set to \code{NULL}, the specific genome version as provided in the object is used within \code{TFBSTools::getMatrixSet} in the \code{opts} list for \code{species}, 

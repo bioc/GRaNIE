@@ -333,6 +333,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
       futile.logger::flog.info("Parsing provided metadata...")
       GRN@data$metadata = sampleMetadata %>% dplyr::distinct() %>% tibble::tibble(.name_repair = "universal")
       
+
       # Force the first column to be the ID column
       if ("sampleID" %in% colnames(GRN@data$metadata)) {
         message = paste0("Renaming the first column to sampleID. However, this column already exists, it will be renamed accordingly.")
@@ -342,6 +343,10 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
       } 
       colnames(GRN@data$metadata)[1] = "sampleID"
+      
+      # Force character here
+      GRN@data$metadata$sampleID = as.character(GRN@data$metadata$sampleID)
+      
       
       # Assume the ID is in column 1, has to be unique
       if (nrow(GRN@data$metadata) > dplyr::n_distinct(GRN@data$metadata$sampleID)) {
@@ -430,7 +435,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 .checkColumnTypes <- function(counts_df, name) {
     columnTypes = sapply(counts_df, class) %>% table()
     if (columnTypes["character"] != 1) {
-        message = paste0(" The input ", name, " data is invalid: Exactly one column must be of type character (the ID column), but ", columnTypes_rna["character"], " columns are instead")
+        message = paste0(" The input ", name, " data is invalid: Exactly one column must be of type character (the ID column), but ", columnTypes["character"], " columns are instead")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
@@ -1158,8 +1163,8 @@ filterData <- function(GRN,
 
   checkmate::assertNumber(minNormalizedMean_peaks, lower = 0, null.ok = TRUE)
   checkmate::assertNumber(minNormalizedMeanRNA, lower = 0, null.ok = TRUE)
-  checkmate::assertNumber(maxNormalizedMean_peaks, lower = minNormalizedMean_peaks , null.ok = TRUE)
-  checkmate::assertNumber(maxNormalizedMeanRNA, lower = minNormalizedMeanRNA, null.ok = TRUE)
+  checkmate::assertNumber(maxNormalizedMean_peaks, lower = ifelse(is.null(minNormalizedMean_peaks), -.Machine$double.xmax, minNormalizedMean_peaks), null.ok = TRUE)
+  checkmate::assertNumber(maxNormalizedMeanRNA, lower = ifelse(is.null(minNormalizedMeanRNA) , -.Machine$double.xmax, minNormalizedMeanRNA), null.ok = TRUE)
   checkmate::assertCharacter(chrToKeep_peaks, min.len = 1, any.missing = FALSE, null.ok = TRUE)
   # checkmate::assertSubset(chrToKeep_peaks, GRN@data$peaks$counts_metadata %>% dplyr::pull(.data$chr) %>% unique() %>% as.character())
   
@@ -1242,13 +1247,20 @@ filterData <- function(GRN,
 }
 
 
-.filterPeaksByChromosomeAndSize <- function(GRN, chrToKeep, minSize_peaks = NULL, maxSize_peaks, idColumn = "peakID") {
+.filterPeaksByChromosomeAndSize <- function(GRN, chrToKeep, minSize_peaks = NULL, maxSize_peaks = NULL, idColumn = "peakID") {
   
   startTime = Sys.time()
   
   if (is.null(minSize_peaks)) {
     minSize_peaks = 1
+  } 
+  if (is.null(maxSize_peaks)) {
+      maxSize_peaks = .Machine$double.xmax
+      futile.logger::flog.info(paste0("Filter and sort peaks by size and remain only those bigger than ", minSize_peaks))
+  } else {
+      futile.logger::flog.info(paste0("Filter and sort peaks by size and remain only those bigger than ", minSize_peaks, " and smaller than ", maxSize_peaks))
   }
+ 
   
   if (is.null(chrToKeep)) {
     chrToKeep = GRN@data$peaks$counts_metadata %>% dplyr::pull(.data$chr) %>% unique()
@@ -1257,7 +1269,7 @@ filterData <- function(GRN,
   }
   
 
-  futile.logger::flog.info(paste0("Filter and sort peaks by size and remain only those bigger than ", minSize_peaks, " and smaller than ", maxSize_peaks))
+ 
   futile.logger::flog.info(paste0(" Number of peaks before filtering: ", nrow(GRN@data$peaks$counts_metadata)))
   
   countsPeaks.clean = GRN@data$peaks$counts_metadata %>%
@@ -1274,27 +1286,6 @@ filterData <- function(GRN,
   countsPeaks.clean$peakID
 }
 
-.filterPeaksByCV <- function(GRN, minCV = 0, maxCV = 1e7) {
-  
-  startTime = Sys.time()
-  
-  if (is.null(maxCV)) {
-    futile.logger::flog.info(paste0("Filter peaks by CV: Min CV = ", minCV))
-    
-    peaksFiltered = dplyr::filter(GRN@annotation$peaks, .data$peak.CV >= minCV)
-    
-  } else {
-    futile.logger::flog.info(paste0("Filter peaks by CV: Min CV = ", minCV, ", max CV = ", maxCV))
-    
-    peaksFiltered = dplyr::filter(GRN@annotation$peaks, .data$peak.CV >= minCV, .data$peak.CV <= maxCV)
-  }
-  
-  futile.logger::flog.info(paste0(" Number of peaks after filtering : ", nrow(peaksFiltered)))
-  
-  .printExecutionTime(startTime)
-  
-  peaksFiltered$peak.ID
-}
 
 .filterPeaksByMeanCV <- function(GRN, minMean = 0, maxMean = NULL, minCV = 0, maxCV = NULL) {
   
@@ -1319,16 +1310,24 @@ filterData <- function(GRN,
     
     # As data can be pre-normalized, set the minimum to a very small value so the filter is effectively off
     minMean = -9e+99
+    
+    if (is.null(maxMean)) {
+        maxMean = 9e+99
+    } else {
+        futile.logger::flog.info(paste0("  Filter peaks by mean: Max = ", maxMean))  
+    }   
+    
+  } else {
+      
+      if (is.null(maxMean)) {
+          futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", round(minMean, 2)))
+          maxMean = 9e+99
+      } else {
+          futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", round(minMean, 2), ", Max = ", maxMean))  
+      }   
   }
   
-  if (is.null(maxMean)) {
-    futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", round(minMean, 2)))
-    maxMean = 9e+99
-  } else {
-    futile.logger::flog.info(paste0("  Filter peaks by mean: Min = ", round(minMean, 2), ", Max = ", maxMean))  
-  }   
-  
-  
+ 
   peaksFiltered = dplyr::filter(GRN@annotation$peaks, 
                                 .data$peak.CV >= minCV, .data$peak.CV <= maxCV, 
                                 .data$peak.mean >= minMean, .data$peak.mean <= maxMean)
@@ -1405,6 +1404,7 @@ filterData <- function(GRN,
 #' @param fileEnding Character. Default \code{".bed"}. Only relevant if \code{source = "custom"}. File ending for the files from the motif folder.
 #' @param nTFMax \code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
 #' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
+#' By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
 #' @param JASPAR_useSpecificTaxGroup \code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? 
 #' If set to \code{NULL}, the specific genome version as provided in the object is used within \code{TFBSTools::getMatrixSet} in the \code{opts} list for \code{species}, 
 #' while \code{tax_group} will be used instead if this argument is not set to \code{NULL}. For example, it can be set to \code{vertebrates} to use the vertebrates TF collection.
@@ -1451,6 +1451,10 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         packageMessage = paste0("At least one of the packages JASPAR2022, TFBSTools, motifmatchr, rbioapi are not installed, but needed here due to source = \"JASPAR\". Please install and re-run this function.")
         .checkPackageInstallation(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"), packageMessage)  
         
+        checkmate::assert(checkmate::checkNull(JASPAR_useSpecificTaxGroup), 
+                          checkmate::checkSubset(JASPAR_useSpecificTaxGroup, c("plants", "vertebrates", "insects", "urochordat", "nematodes", "fungi")))
+        checkmate::assertFlag(JASPAR_removeAmbiguousTFs)
+
     }
     
     checkmate::assertCharacter(TFs, min.len = 1)
@@ -1523,7 +1527,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         IDsWithTFBSPredictions <- unlist(lapply(PFMatrixList, function(x) {return(TFBSTools::ID(x))}), use.names = FALSE)
         # create translation table from biomart
         TFs.df = tibble::tibble(ID = IDsWithTFBSPredictions, TF.name = TFsWithTFBSPredictions) %>%
-            dplyr::mutate(TF.name.lowercase = tolower(TF.name))
+            dplyr::mutate(TF.name.lowercase = tolower(.data$TF.name))
 
         params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly)
         
@@ -1559,10 +1563,10 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             table()
         
         TFs_unique = mapping.df %>%
-            dplyr::group_by(ID)%>%
-            dplyr::filter(!is.na(ENSEMBL)) %>%
+            dplyr::group_by(.data$ID) %>%
+            dplyr::filter(!is.na(.data$ENSEMBL)) %>%
             dplyr::summarise(n = dplyr::n()) %>%
-            dplyr::filter(n == 1) %>%
+            dplyr::filter(.data$n == 1) %>%
             dplyr::pull("ID")
             
            
@@ -1582,7 +1586,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             # 1  Foxq1 ENSRNOG00000021752 MA0040.1
             # 2  Foxq1 ENSRNOG00000062314 MA0040.1
             futile.logger::flog.info(paste0("  Removing ambiguously mapping TFs"))
-            mapping.df = dplyr::filter(mapping.df, !ID %in% ambiguousTFs)
+            mapping.df = dplyr::filter(mapping.df, !.data$ID %in% ambiguousTFs)
         }
         
         TFsWithTFBSPredictions = TFs_unique
@@ -1739,13 +1743,18 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
         
         if (is.null(GRN@config$directories$motifFolder)) { # if source == "JASPAR"
             
+            if (nCores > 1) {
+                message = paste0("For TFs from JASPAR, only 1 core can currently be utilized for this function instead of the user-provided value of ", nCores)
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            }
+            
             TFBS_bindingMatrix.df = .intersectTFBSPeaks_JASPAR(GRN, consensus.gr, verbose = FALSE, ...)
             
             # Add the isFiltered column to make it compatible with the custom TFBS source.
             # TODO: This can be changed at some point, seems redundant
             TFBS_bindingMatrix.df = cbind(TFBS_bindingMatrix.df, rep(FALSE, nrow(TFBS_bindingMatrix.df)))
             colnames(TFBS_bindingMatrix.df)[ncol(TFBS_bindingMatrix.df)] = "isFiltered"
-            GRN@data$TFs$TF_peak_overlap = TFBS_bindingMatrix.df %>% as("dMatrix")
+            GRN@data$TFs$TF_peak_overlap = TFBS_bindingMatrix.df %>% methods::as("dMatrix")
             
             
         }else{# if source == "custom"
@@ -3688,8 +3697,9 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' Method for adjusting p-values for multiple testing. 
 #' If set to "IHW", the package \code{IHW} is required (as it is listed under \code{Suggests}, it may not be installed), 
 #' and independent hypothesis weighting will be performed, and a suitable covariate has to be specified for the parameter \code{peak_gene.IHW.covariate}.
-#' @param peak_gene.IHW.covariate Character. Default NULL. Name of the covariate to use for IHW (column name from the table thatis returned with the function \code{getGRNConnections}. Only relevant if \code{peak_gene.fdr.method} is set to "IHW". You have to make sure the specified covariate is suitable or IHW, see the diagnostic plots that are generated in this function for this. For many datasets, the peak-gene distance (called \code{peak_gene.distance} in the object) seems suitable.
+#' @param peak_gene.IHW.covariate Character. Default \code{NULL}. Name of the covariate to use for IHW (column name from the table that is returned with the function \code{getGRNConnections}. Only relevant if \code{peak_gene.fdr.method} is set to "IHW". You have to make sure the specified covariate is suitable for IHW, see the diagnostic plots that are generated in this function for this. For many datasets, the peak-gene distance (called \code{peak_gene.distance} in the object) seems suitable.
 #' @param peak_gene.IHW.nbins Integer or "auto". Default "auto". Number of bins for IHW. Only relevant if \code{peak_gene.fdr.method} is set to "IHW".
+#' @template outputFolder
 #' @template gene.types
 #' @param allowMissingTFs \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Should connections be returned for which the TF is NA (i.e., connections consisting only of peak-gene links?). If set to \code{TRUE}, this generally greatly increases the number of connections but it may not be what you aim for.
 #' @param allowMissingGenes \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Should connections be returned for which the gene is NA (i.e., connections consisting only of TF-peak links?). If set to \code{TRUE}, this generally increases the number of connections.
@@ -3699,12 +3709,12 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @param filterTFs Character vector. Default \code{NULL}. Vector of TFs (as named in the GRN object) to retain. All TFs not listed will be filtered out.
 #' @param filterGenes Character vector. Default \code{NULL}. Vector of gene IDs (as named in the GRN object) to retain. All genes not listed will be filtered out.
 #' @param filterPeaks Character vector. Default \code{NULL}. Vector of peak IDs (as named in the GRN object) to retain. All peaks not listed will be filtered out.
-#' @param TF_peak_FDR_selectViaCorBins \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Use a modified procedure for selecting TF-peak links that is based on the user-specified FDR but that retains also links that may have a higher FDR but a more extreme correlation.
+#' @param TF_peak_FDR_selectViaCorBins \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Use a modified procedure for selecting TF-peak links. Instead of selecting solely based on the user-specified FDR, this procedure first identifies the correlation bin closest to 0 that contains at least one significant TF-peak link according to the chosen TF_peak.fdr.threshold. This is done spearately for both FDR directions.  It then retains all TF-peak links that have a correlation bin at least as extreme as the identified pair. For example, if the correlation bin [0.35,0.40] contains a significant TF-peak link while [0,0.05], [0.05,0.10], ..., [0.30,0.35] do not, all TF-peak links with a correlation of at least 0.35 or above are selected (i.e, bins [0.35,0.40], [0.40,0.45], ..., [0.95,1.00]).  Thus, for the final selection, also links with a higher FDR but a more extreme correlation may be selected.
 #' @param silent \code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.
 #' @param resetGraphAndStoreInternally \code{TRUE} or \code{FALSE}.  Default \code{TRUE}. If set to \code{TRUE}, the stored eGRN graph (slot \code{graph}) is reset due to the potentially changed connections that
 #' would otherwise cause conflicts in the information stored in the object. Also, a GRN object is returned. If set to \code{FALSE}, only the new filtered connections are returned and the object is not altered.
 #' @param filterLoops  \code{TRUE} or \code{FALSE}. Default \code{TRUE}. If a TF regulates itself (i.e., the TF and the gene are the same entity), should such loops be filtered from the GRN?
-#' @template outputFolder
+#' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 
 #' The filtered and merged TF-peak and peak-gene connections in the slot \code{GRN@connections$all.filtered} and can be retrieved (along with other feature metadata) using the function \code{\link{getGRNConnections}}.
 #' @examples 
@@ -3718,6 +3728,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @seealso \code{\link{getGRNConnections}} 
 #' @importFrom rlang .data
 #' @importFrom magrittr `%>%`
+#' @importFrom ggplot2 `%+%`
 #' @export
 filterGRNAndConnectGenes <- function(GRN,
                                      TF_peak.fdr.threshold = 0.2, 
@@ -3727,6 +3738,7 @@ filterGRNAndConnectGenes <- function(GRN,
                                      peak_gene.fdr.method = "BH",
                                      peak_gene.IHW.covariate = NULL,
                                      peak_gene.IHW.nbins = "auto",
+                                     outputFolder = NULL,
                                      gene.types = c("protein_coding"), 
                                      allowMissingTFs = FALSE, allowMissingGenes = TRUE,
                                      peak_gene.r_range = c(0,1), 
@@ -3735,9 +3747,9 @@ filterGRNAndConnectGenes <- function(GRN,
                                      filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL, 
                                      TF_peak_FDR_selectViaCorBins = FALSE,
                                      filterLoops = TRUE,
-                                     outputFolder = NULL,
                                      resetGraphAndStoreInternally = TRUE,
-                                     silent = FALSE) {
+                                     silent = FALSE,
+                                     forceRerun = FALSE) {
   
   start = Sys.time()  
 
@@ -3746,27 +3758,40 @@ filterGRNAndConnectGenes <- function(GRN,
   
   GRN = .makeObjectCompatible(GRN)
   
-  
-  checkmate::assertCharacter(TF_peak.connectionTypes, min.len = 1, any.missing = FALSE)
-  checkmate::assert(checkmate::checkNull(peak_gene.p_raw.threshold), checkmate::checkNumber(peak_gene.p_raw.threshold, lower = 0, upper = 1))
-  checkmate::assertNumeric(peak_gene.r_range, lower = -1, upper = 1, len = 2)
-  checkmate::assertSubset(gene.types, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   checkmate::assertNumber(TF_peak.fdr.threshold, lower = 0, upper = 1)
+  checkmate::assertSubset(TF_peak.connectionTypes, c("all", GRN@config$TF_peak_connectionTypes), empty.ok = FALSE)
+  checkmate::assert(checkmate::checkNull(peak_gene.p_raw.threshold), checkmate::checkNumber(peak_gene.p_raw.threshold, lower = 0, upper = 1))
   checkmate::assert(checkmate::checkNull(peak_gene.fdr.threshold), checkmate::checkNumber(peak_gene.fdr.threshold, lower = 0, upper = 1))
-  
   checkmate::assertChoice(peak_gene.fdr.method, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW"))
+  
   checkmate::assert(checkmate::checkNull(peak_gene.IHW.covariate), checkmate::checkCharacter(peak_gene.IHW.covariate, min.chars = 1, len = 1))
+  if (peak_gene.fdr.method == "IHW") {
+      checkmate::assertCharacter(peak_gene.IHW.covariate, min.chars = 1, len = 1)
+  }
   
   checkmate::assert(checkmate::checkIntegerish(peak_gene.IHW.nbins, lower = 1), checkmate::checkSubset(peak_gene.IHW.nbins, "auto"))
   
-  checkmate::assertFlag(resetGraphAndStoreInternally)
-  checkmate::assertFlag(silent)
-  checkmate::assertChoice(peak_gene.selection, c("all", "closest"))
+  checkmate::assertSubset(gene.types, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
+  
   checkmate::assertFlag(allowMissingTFs)
   checkmate::assertFlag(allowMissingGenes)
   
+  checkmate::assertNumeric(peak_gene.r_range, lower = -1, upper = 1, len = 2)
+  
+  checkmate::assertChoice(peak_gene.selection, c("all", "closest"))
+  
+  checkmate::assert(checkmate::checkNull(peak_gene.maxDistance), checkmate::checkIntegerish(peak_gene.maxDistance, lower = 0, len = 1))
+  
+  checkmate::assert(checkmate::checkNull(filterTFs), checkmate::checkCharacter(filterTFs, min.chars = 1, any.missing = FALSE))
+  checkmate::assert(checkmate::checkNull(filterPeaks), checkmate::checkCharacter(filterPeaks, min.chars = 1, any.missing = FALSE))
+  checkmate::assert(checkmate::checkNull(filterGenes), checkmate::checkCharacter(filterGenes, min.chars = 1, any.missing = FALSE))
+  
+  
   checkmate::assertFlag(TF_peak_FDR_selectViaCorBins)
   checkmate::assertFlag(filterLoops)
+  checkmate::assertFlag(resetGraphAndStoreInternally)
+  checkmate::assertFlag(silent)
+  checkmate::assertFlag(forceRerun)
   
   if (peak_gene.fdr.method == "IHW" & !is.installed("IHW")) {
     packageMessage = "IHW has been selected for p-value adjustment, but IHW is currently not installed. Please install it and re-run the function or choose a different method."
@@ -3779,384 +3804,390 @@ filterGRNAndConnectGenes <- function(GRN,
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
   }
   
+  if (!is.null(peak_gene.IHW.covariate) && peak_gene.fdr.method != "IHW") {
+      message = "peak_gene.fdr.threshold is not set to \"IHW\" while peak_gene.IHW.covariate has been specified. Therefore, peak_gene.IHW.covariate will be ignored. Set peak_gene.fdr.threshold to \"IHW\" to use IHW."
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+  }
+  
   if (silent) {
     futile.logger::flog.threshold(futile.logger::WARN)
   }
   
   futile.logger::flog.info(paste0("Filter GRN network"))
   
-  # Reset TF-gene links as these are recomputed with the filtered set and this cannot be done beforehand
-  GRN@connections$TF_genes.filtered = NULL
-  GRN@connections$all.filtered = list()
-  
-  for (permutationCur in 0:.getMaxPermutation(GRN)) {
-    
-    futile.logger::flog.info(paste0("\n\n", .getPermStr(permutationCur)))
-    permIndex = as.character(permutationCur)
-    
-    if (is.null(GRN@connections$peak_genes[[permIndex]])) {
-      message = "No peak-gene connections found. Run the function addConnections_peak_gene first"
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    # Only select the absolute necessary here, no additional metadata
-    ann.gene.red = GRN@annotation$genes %>%
-        dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
-        dplyr::select("gene.ENSEMBL", "gene.name", "gene.type")
-    
-    peakGeneCorrelations = GRN@connections$peak_genes[[permIndex]] %>%
-      dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
-      dplyr::left_join(ann.gene.red, by = "gene.ENSEMBL", multiple = "all")
-
-
-    
-    # Add TF Ensembl IDs
-    grn.filt = GRN@connections$TF_peaks[[permIndex]]$main  %>% 
-      tibble::as_tibble() %>%
-      dplyr::left_join(GRN@annotation$TFs %>% dplyr::select("TF.ID", "TF.name", "TF.ENSEMBL"), by = c("TF.ID")) %>%
-      dplyr::select(-"TF_peak.fdr_orig") %>%
-      dplyr::mutate(TF.ENSEMBL = as.factor(.data$TF.ENSEMBL))
-    
-    if (is.null(grn.filt)) {
-      message = "No TF-peak connections found. Run the function addConnections_TF_peak first"
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    # Filter network #
-    futile.logger::flog.info(paste0("Inital number of rows left before all filtering steps: ", nrow(grn.filt)))
-    
-    if (!"all" %in% TF_peak.connectionTypes) {
-      checkmate::assertSubset(TF_peak.connectionTypes, GRN@config$TF_peak_connectionTypes, empty.ok = FALSE)
-      futile.logger::flog.info(paste0(" Filter network and retain only rows with one of the following TF-peak connection types: ", paste0(TF_peak.connectionTypes, collapse = ", ")))
-      futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering connection types: ", nrow(grn.filt)))
-      grn.filt = dplyr::filter(grn.filt, .data$TF_peak.connectionType %in% TF_peak.connectionTypes)
-      futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering connection types: ", nrow(grn.filt)))
-    }
-    
-    if (!is.null(TF_peak.fdr.threshold)) {
-      futile.logger::flog.info(paste0(" Filter network and retain only rows with TF-peak connections with an FDR < ", TF_peak.fdr.threshold))
-      futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering TFs: ", nrow(grn.filt)))
+  if (!.checkExistanceFilteredConnections(GRN, returnLogical = TRUE) | forceRerun) {
       
-      if (!TF_peak_FDR_selectViaCorBins) {
-        grn.filt = dplyr::filter(grn.filt, .data$TF_peak.fdr < TF_peak.fdr.threshold)
-        futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
-      } else {
-        
-        # Add a new ID column
-        grn.filt$row.ID = seq_len(nrow(grn.filt))
-        
-        # For each TF, identify those TF-peak correlation bins that are more extreme than the first correlation bin that is beyond the user-specified bin
-        # Add one additional column to the table, and filter later by this column
-        idsRowsKeep = c()
-        for (TFCur in unique( grn.filt$TF.ID)) {
+      
+      # Reset TF-gene links as these are recomputed with the filtered set and this cannot be done beforehand
+      GRN@connections$TF_genes.filtered = NULL
+      GRN@connections$all.filtered = list()
+      
+      for (permutationCur in 0:.getMaxPermutation(GRN)) {
           
-          for (connectionTypeCur in TF_peak.connectionTypes) {
-            
-            grn.filt.TF = dplyr::filter(grn.filt, .data$TF.ID == TFCur, .data$TF_peak.connectionType == connectionTypeCur)
-            
-            for (dirCur in c("pos", "neg")) {
-              
-              if (dirCur == "pos") {
-                
-                grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "pos")
-                stepsCur = GRN@config$parameters$internal$stepsFDR
-                rightOpen = FALSE
-                grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
-                                                    right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
-                
-                binThresholdNeg = grn.filt.TF.dir  %>% 
-                  dplyr::select("TF_peak.r_bin", "TF_peak.fdr") %>% 
-                  dplyr::distinct() %>% 
-                  dplyr::arrange(.data$TF_peak.r_bin)
-                
-                relBins = which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
-                if (length(relBins) > 0) {
-                  relBins = binThresholdNeg$TF_peak.r_bin[min(relBins):nrow(binThresholdNeg)]
-                  idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
-                                    dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
-                                    dplyr::pull(.data$row.ID))
-                }
-                
-                
-              } else {
-                
-                grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "neg")
-                
-                stepsCur = rev(GRN@config$parameters$internal$stepsFDR)  
-                rightOpen = TRUE
-                
-                grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
-                                                    right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
-                
-                binThresholdNeg = grn.filt.TF.dir  %>% 
-                  dplyr::select("TF_peak.r_bin", "TF_peak.fdr") %>% 
-                  dplyr::distinct() %>% 
-                  dplyr::arrange(.data$TF_peak.r_bin)
-                
-                relBins = which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
-                if (length(relBins) > 0) {
-                  relBins = binThresholdNeg$TF_peak.r_bin[seq_len(max(relBins))]
-                  idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
-                                    dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
-                                    dplyr::pull(.data$row.ID))
-                }
-              }
-              
-            } # end for both directions
-          } # end for all TF-peak link types
-        } # end for all TF
-        
-        
-        grn.filt = grn.filt %>%
-          dplyr::filter(.data$row.ID %in% idsRowsKeep) %>%
-          dplyr::select(-"row.ID")
-        
-        futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
-        
-      }
-      
-    }
-    
-    
-    if (!is.null(filterTFs)) {
-      futile.logger::flog.info(paste0(" Filter network to the following TF: ", paste0(filterTFs, collapse = ",")))
-      futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering TFs: ", nrow(grn.filt)))
-      grn.filt = dplyr::filter(grn.filt, .data$TF.ID %in% filterTFs)
-      futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
-    }
-    
-    if (!is.null(filterPeaks)) {
-      futile.logger::flog.info(paste0(" Filter network to the following peaks: ", paste0(filterPeaks, collapse = ",")))
-      futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering peaks: ", nrow(grn.filt)))
-      grn.filt = dplyr::filter(grn.filt, .data$peak.ID %in% filterPeaks)
-      futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering peaks: ", nrow(grn.filt)))
-    }
-    
-    # Filters on peak-genes
-    
-    futile.logger::flog.info("2. Filter peak-gene connections")
-    
-    if (!is.null(filterGenes)) {
-        futile.logger::flog.info(paste0(" Filter peak-gene connections for the following genes: ", paste0(filterGenes, collapse = ",")))
-        futile.logger::flog.info(paste0("  Number of rows before filtering genes: ", nrow(peakGeneCorrelations)))
-        peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$gene.ENSEMBL %in% filterGenes)
-        futile.logger::flog.info(paste0("  Number of rows after filtering genes: ", nrow(peakGeneCorrelations)))
-    }
-    
-    if (!is.null(peak_gene.maxDistance)) {
-      checkmate::assertIntegerish(peak_gene.maxDistance, lower = 0)
-      futile.logger::flog.info(paste0(" Filter peak-gene connections for their distance and keep only connections with a maximum distance of  ", peak_gene.maxDistance))
-      futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering connection types: ", nrow(peakGeneCorrelations)))
-      peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$peak_gene.distance < peak_gene.maxDistance)
-      futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering connection types: ", nrow(peakGeneCorrelations)))
-    }
-    
-    if (!"all" %in% gene.types) {
-      futile.logger::flog.info(paste0(" Filter genes by gene type, keep only the following gene types: ", paste0(gene.types, collapse = ", ")))
-      futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering by gene type: ", nrow(peakGeneCorrelations)))
-      peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$gene.type %in% gene.types)
-      futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering by gene type: ", nrow(peakGeneCorrelations)))
-    }
-    
-   
-    
-    
-    futile.logger::flog.info(paste0("3. Merging TF-peak with peak-gene connections and filter the combined table..."))
-    # Now we need the connected genes. All fitters that are independent of that have been done
-    # Don't warn about the coercing of factors etc
-    
-    if (allowMissingTFs) {
-      grn.filt = suppressWarnings(dplyr::full_join(grn.filt, peakGeneCorrelations, by = "peak.ID"))
-    } else {
-      grn.filt = suppressWarnings(dplyr::left_join(grn.filt, peakGeneCorrelations, by = "peak.ID"))
-    }
-    
-    
-    futile.logger::flog.info(paste0("Inital number of rows left before filtering steps: ", nrow(grn.filt)))
-    
-    if (filterLoops) {
-      futile.logger::flog.info(paste0(" Filter TF-TF self-loops"))
-      futile.logger::flog.info(paste0("  Number of rows before filtering genes: ", nrow(grn.filt)))
-      
-      # Be aware of NA values here in the selection, depending on allowMissingTFs
-      grn.filt = dplyr::filter(grn.filt, 
-                               is.na(.data$TF.ENSEMBL) | 
-                               (!is.na(.data$TF.ENSEMBL) & (as.character(.data$gene.ENSEMBL) != as.character(.data$TF.ENSEMBL))))
-      
-      futile.logger::flog.info(paste0("  Number of rows after filtering genes: ", nrow(grn.filt)))
-    }
-    
-    
-    
-    if (allowMissingGenes) {
-      # Nothing to do here
-    } else {
-      
-      futile.logger::flog.info(paste0(" Filter rows with missing ENSEMBL IDs"))
-      futile.logger::flog.info(paste0("  Number of rows before filtering: ", nrow(grn.filt)))
-      grn.filt = dplyr::filter(grn.filt, !is.na(.data$gene.ENSEMBL))
-      futile.logger::flog.info(paste0("  Number of rows after filtering: ", nrow(grn.filt)))
-      
-    }
-    
-    # TODO: Make order more logical
-    
-    if (!is.null(peak_gene.r_range)) {
-      
-      futile.logger::flog.info(paste0(" Filter network and retain only rows with peak_gene.r in the following interval: (", 
-                                      peak_gene.r_range[1], " - ", peak_gene.r_range[2], "]"))
-      
-      futile.logger::flog.info(paste0("  Number of rows before filtering: ", nrow(grn.filt)))
-      grn.filt = dplyr::filter(grn.filt, 
-                               is.na(.data$peak_gene.r) | .data$peak_gene.r  > peak_gene.r_range[1], 
-                               is.na(.data$peak_gene.r) | .data$peak_gene.r <= peak_gene.r_range[2])
-      futile.logger::flog.info(paste0("  Number of rows after filtering: ", nrow(grn.filt)))
-      
-    }
-    
-    
-    if (!is.null(peak_gene.p_raw.threshold)) {
-      
-      futile.logger::flog.info(paste0(" Filter network and retain only rows with peak-gene connections with p.raw < ", peak_gene.p_raw.threshold))
-      futile.logger::flog.info(paste0("  Number of rows before filtering TFs: ", nrow(grn.filt)))
-      grn.filt = dplyr::filter(grn.filt, is.na(.data$peak_gene.p_raw) | .data$peak_gene.p_raw < peak_gene.p_raw.threshold)
-      futile.logger::flog.info(paste0("  Number of rows after filtering TFs: ", nrow(grn.filt)))
-      
-    }
-    
-    if (!is.null(peak_gene.fdr.threshold)) {
-      
-      futile.logger::flog.info(paste0(" Calculate FDR based on remaining rows, filter network and retain only rows with peak-gene connections with an FDR < ",  peak_gene.fdr.threshold))
-      
-      futile.logger::flog.info(paste0("  Number of rows before filtering genes (including/excluding NA): ", nrow(grn.filt), "/", nrow(grn.filt %>% dplyr::filter(!is.na(.data$peak_gene.p_raw)))))
-      
-      
-      # Adjusted p-value is calculated dynamically here and therefore, for different filters, the numbers may vary
-      # After a discussion in the group, this procedure was agreed upon even though it can sometimes yield confusing results when compared among each other
-      
-      if (peak_gene.fdr.method == "IHW") {
-        
-        # Identify those entries for which both p-value and covariate are not NA
-        
-        covariate_val = grn.filt %>% dplyr::pull(!!(peak_gene.IHW.covariate))
-        indexes = which(!is.na(grn.filt$peak_gene.p_raw) & !is.na(covariate_val))
-        
-        if (length(indexes) < nrow(grn.filt)) {
-          message = paste0("Could only take ", length(indexes), " rows out of ", nrow(grn.filt), " because some entries for either p-value or covariate were NA. The remaining ", nrow(grn.filt) - length(indexes), " rows will be ignored for p-value adjustment and set to NA.")
-          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        }
-        
-        
-        if (peak_gene.fdr.method == "IHW" && length(indexes) < 1000) {
-          message = paste0("IHW should only be performed with at least 1000 p-values, but only ", length(indexes), " are available. Switching to BH adjustment as fallback. This is to be expected for the background data but not for the real one.")
+          futile.logger::flog.info(paste0("\n\n", .getPermStr(permutationCur)))
+          permIndex = as.character(permutationCur)
           
-          if (permutationCur == 0) {
-            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-          } else {
-            futile.logger::flog.info(message)
+          if (is.null(GRN@connections$peak_genes[[permIndex]])) {
+              message = "No peak-gene connections found. Run the function addConnections_peak_gene first"
+              .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
           }
           
-          peak_gene.fdr.method = "BH"
-        }
-        
+          # Only select the absolute necessary here, no additional metadata
+          ann.gene.red = GRN@annotation$genes %>%
+              dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
+              dplyr::select("gene.ENSEMBL", "gene.name", "gene.type")
+          
+          peakGeneCorrelations = GRN@connections$peak_genes[[permIndex]] %>%
+              dplyr::mutate(gene.ENSEMBL = as.character(.data$gene.ENSEMBL)) %>%
+              dplyr::left_join(ann.gene.red, by = "gene.ENSEMBL", multiple = "all")
+          
+          
+          
+          # Add TF Ensembl IDs
+          grn.filt = GRN@connections$TF_peaks[[permIndex]]$main  %>% 
+              tibble::as_tibble() %>%
+              dplyr::left_join(GRN@annotation$TFs %>% dplyr::select("TF.ID", "TF.name", "TF.ENSEMBL"), by = c("TF.ID")) %>%
+              dplyr::select(-"TF_peak.fdr_orig") %>%
+              dplyr::mutate(TF.ENSEMBL = as.factor(.data$TF.ENSEMBL))
+          
+          if (is.null(grn.filt)) {
+              message = "No TF-peak connections found. Run the function addConnections_TF_peak first"
+              .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+          }
+          
+          # Filter network #
+          futile.logger::flog.info(paste0("Inital number of rows left before all filtering steps: ", nrow(grn.filt)))
+          
+          if (!"all" %in% TF_peak.connectionTypes) {
+              checkmate::assertSubset(TF_peak.connectionTypes, GRN@config$TF_peak_connectionTypes, empty.ok = FALSE)
+              futile.logger::flog.info(paste0(" Filter network and retain only rows with one of the following TF-peak connection types: ", paste0(TF_peak.connectionTypes, collapse = ", ")))
+              futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering connection types: ", nrow(grn.filt)))
+              grn.filt = dplyr::filter(grn.filt, .data$TF_peak.connectionType %in% TF_peak.connectionTypes)
+              futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering connection types: ", nrow(grn.filt)))
+          }
+          
+          if (!is.null(TF_peak.fdr.threshold)) {
+              futile.logger::flog.info(paste0(" Filter network and retain only rows with TF-peak connections with an FDR < ", TF_peak.fdr.threshold))
+              futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering TFs: ", nrow(grn.filt)))
+              
+              if (!TF_peak_FDR_selectViaCorBins) {
+                  grn.filt = dplyr::filter(grn.filt, .data$TF_peak.fdr < TF_peak.fdr.threshold)
+                  futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
+              } else {
+                  
+                  # Add a new ID column
+                  grn.filt$row.ID = seq_len(nrow(grn.filt))
+                  
+                  # For each TF, identify those TF-peak correlation bins that are more extreme than the first correlation bin that is beyond the user-specified bin
+                  # Add one additional column to the table, and filter later by this column
+                  idsRowsKeep = c()
+                  for (TFCur in unique( grn.filt$TF.ID)) {
+                      
+                      for (connectionTypeCur in TF_peak.connectionTypes) {
+                          
+                          grn.filt.TF = dplyr::filter(grn.filt, .data$TF.ID == TFCur, .data$TF_peak.connectionType == connectionTypeCur)
+                          
+                          for (dirCur in c("pos", "neg")) {
+                              
+                              if (dirCur == "pos") {
+                                  
+                                  grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "pos")
+                                  stepsCur = GRN@config$parameters$internal$stepsFDR
+                                  rightOpen = FALSE
+                                  grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
+                                                                      right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
+                                  
+                                  binThresholdNeg = grn.filt.TF.dir  %>% 
+                                      dplyr::select("TF_peak.r_bin", "TF_peak.fdr") %>% 
+                                      dplyr::distinct() %>% 
+                                      dplyr::arrange(.data$TF_peak.r_bin)
+                                  
+                                  relBins = which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
+                                  if (length(relBins) > 0) {
+                                      relBins = binThresholdNeg$TF_peak.r_bin[min(relBins):nrow(binThresholdNeg)]
+                                      idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
+                                                          dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
+                                                          dplyr::pull(.data$row.ID))
+                                  }
+                                  
+                                  
+                              } else {
+                                  
+                                  grn.filt.TF.dir = dplyr::filter(grn.filt.TF, .data$TF_peak.fdr_direction == "neg")
+                                  
+                                  stepsCur = rev(GRN@config$parameters$internal$stepsFDR)  
+                                  rightOpen = TRUE
+                                  
+                                  grn.filt.TF.dir$TF_peak.r_bin = cut(grn.filt.TF.dir$TF_peak.r, breaks = stepsCur, 
+                                                                      right = rightOpen, include.lowest = TRUE, ordered_result = TRUE)
+                                  
+                                  binThresholdNeg = grn.filt.TF.dir  %>% 
+                                      dplyr::select("TF_peak.r_bin", "TF_peak.fdr") %>% 
+                                      dplyr::distinct() %>% 
+                                      dplyr::arrange(.data$TF_peak.r_bin)
+                                  
+                                  relBins = which(binThresholdNeg$TF_peak.fdr < TF_peak.fdr.threshold)
+                                  if (length(relBins) > 0) {
+                                      relBins = binThresholdNeg$TF_peak.r_bin[seq_len(max(relBins))]
+                                      idsRowsKeep = c(idsRowsKeep, grn.filt.TF.dir %>% 
+                                                          dplyr::filter(.data$TF_peak.r_bin %in% relBins) %>% 
+                                                          dplyr::pull(.data$row.ID))
+                                  }
+                              }
+                              
+                          } # end for both directions
+                      } # end for all TF-peak link types
+                  } # end for all TF
+                  
+                  
+                  grn.filt = grn.filt %>%
+                      dplyr::filter(.data$row.ID %in% idsRowsKeep) %>%
+                      dplyr::select(-"row.ID")
+                  
+                  futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
+                  
+              }
+              
+          }
+          
+          
+          if (!is.null(filterTFs)) {
+              futile.logger::flog.info(paste0(" Filter network to the following TF IDs: ", paste0(filterTFs, collapse = ",")))
+              futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering TFs: ", nrow(grn.filt)))
+              grn.filt = dplyr::filter(grn.filt, .data$TF.ID %in% filterTFs)
+              futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering TFs: ", nrow(grn.filt)))
+          }
+          
+          if (!is.null(filterPeaks)) {
+              futile.logger::flog.info(paste0(" Filter network to the following peak IDs: ", paste0(filterPeaks, collapse = ",")))
+              futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering peaks: ", nrow(grn.filt)))
+              grn.filt = dplyr::filter(grn.filt, .data$peak.ID %in% filterPeaks)
+              futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering peaks: ", nrow(grn.filt)))
+          }
+          
+          # Filters on peak-genes
+          
+          futile.logger::flog.info("2. Filter peak-gene connections")
+          
+          if (!is.null(filterGenes)) {
+              futile.logger::flog.info(paste0(" Filter peak-gene connections for the following gene IDs: ", paste0(filterGenes, collapse = ",")))
+              futile.logger::flog.info(paste0("  Number of rows before filtering genes: ", nrow(peakGeneCorrelations)))
+              peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$gene.ENSEMBL %in% filterGenes)
+              futile.logger::flog.info(paste0("  Number of rows after filtering genes: ", nrow(peakGeneCorrelations)))
+          }
+          
+          if (!is.null(peak_gene.maxDistance)) {
+              futile.logger::flog.info(paste0(" Filter peak-gene connections for their distance and keep only connections with a maximum distance of  ", peak_gene.maxDistance))
+              futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering connection types: ", nrow(peakGeneCorrelations)))
+              peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$peak_gene.distance < peak_gene.maxDistance)
+              futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering connection types: ", nrow(peakGeneCorrelations)))
+          }
+          
+          if (!"all" %in% gene.types) {
+              futile.logger::flog.info(paste0(" Filter genes by gene type, keep only the following gene types: ", paste0(gene.types, collapse = ", ")))
+              futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering by gene type: ", nrow(peakGeneCorrelations)))
+              peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$gene.type %in% gene.types)
+              futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering by gene type: ", nrow(peakGeneCorrelations)))
+          }
+          
+          
+          
+          
+          futile.logger::flog.info(paste0("3. Merging TF-peak with peak-gene connections and filter the combined table..."))
+          # Now we need the connected genes. All fitters that are independent of that have been done
+          # Don't warn about the coercing of factors etc
+          
+          if (allowMissingTFs) {
+              grn.filt = suppressWarnings(dplyr::full_join(grn.filt, peakGeneCorrelations, by = "peak.ID"))
+          } else {
+              grn.filt = suppressWarnings(dplyr::left_join(grn.filt, peakGeneCorrelations, by = "peak.ID"))
+          }
+          
+          
+          futile.logger::flog.info(paste0("Inital number of rows left before filtering steps: ", nrow(grn.filt)))
+          
+          if (filterLoops) {
+              futile.logger::flog.info(paste0(" Filter TF-TF self-loops"))
+              futile.logger::flog.info(paste0("  Number of rows before filtering genes: ", nrow(grn.filt)))
+              
+              # Be aware of NA values here in the selection, depending on allowMissingTFs
+              grn.filt = dplyr::filter(grn.filt, 
+                                       is.na(.data$TF.ENSEMBL) | 
+                                           (!is.na(.data$TF.ENSEMBL) & (as.character(.data$gene.ENSEMBL) != as.character(.data$TF.ENSEMBL))))
+              
+              futile.logger::flog.info(paste0("  Number of rows after filtering genes: ", nrow(grn.filt)))
+          }
+          
+          
+          
+          if (allowMissingGenes) {
+              # Nothing to do here
+          } else {
+              
+              futile.logger::flog.info(paste0(" Filter rows with missing ENSEMBL IDs"))
+              futile.logger::flog.info(paste0("  Number of rows before filtering: ", nrow(grn.filt)))
+              grn.filt = dplyr::filter(grn.filt, !is.na(.data$gene.ENSEMBL))
+              futile.logger::flog.info(paste0("  Number of rows after filtering: ", nrow(grn.filt)))
+              
+          }
+          
+          # TODO: Make order more logical
+          
+          if (!is.null(peak_gene.r_range)) {
+              
+              futile.logger::flog.info(paste0(" Filter network and retain only rows with peak_gene.r in the following interval: (", 
+                                              peak_gene.r_range[1], " - ", peak_gene.r_range[2], "]"))
+              
+              futile.logger::flog.info(paste0("  Number of rows before filtering: ", nrow(grn.filt)))
+              grn.filt = dplyr::filter(grn.filt, 
+                                       is.na(.data$peak_gene.r) | .data$peak_gene.r  > peak_gene.r_range[1], 
+                                       is.na(.data$peak_gene.r) | .data$peak_gene.r <= peak_gene.r_range[2])
+              futile.logger::flog.info(paste0("  Number of rows after filtering: ", nrow(grn.filt)))
+              
+          }
+          
+          
+          if (!is.null(peak_gene.p_raw.threshold)) {
+              
+              futile.logger::flog.info(paste0(" Filter network and retain only rows with peak-gene connections with p.raw < ", peak_gene.p_raw.threshold))
+              futile.logger::flog.info(paste0("  Number of rows before filtering TFs: ", nrow(grn.filt)))
+              grn.filt = dplyr::filter(grn.filt, is.na(.data$peak_gene.p_raw) | .data$peak_gene.p_raw < peak_gene.p_raw.threshold)
+              futile.logger::flog.info(paste0("  Number of rows after filtering TFs: ", nrow(grn.filt)))
+              
+          }
+          
+          if (!is.null(peak_gene.fdr.threshold)) {
+              
+              futile.logger::flog.info(paste0(" Calculate FDR based on remaining rows, filter network and retain only rows with peak-gene connections with an FDR < ",  peak_gene.fdr.threshold))
+              
+              futile.logger::flog.info(paste0("  Number of rows before filtering genes (including/excluding NA): ", nrow(grn.filt), "/", nrow(grn.filt %>% dplyr::filter(!is.na(.data$peak_gene.p_raw)))))
+              
+              
+              # Adjusted p-value is calculated dynamically here and therefore, for different filters, the numbers may vary
+              # After a discussion in the group, this procedure was agreed upon even though it can sometimes yield confusing results when compared among each other
+              
+              if (peak_gene.fdr.method == "IHW") {
+                  
+                  # Identify those entries for which both p-value and covariate are not NA
+                  
+                  covariate_val = grn.filt %>% dplyr::pull(!!(peak_gene.IHW.covariate))
+                  indexes = which(!is.na(grn.filt$peak_gene.p_raw) & !is.na(covariate_val))
+                  
+                  if (length(indexes) < nrow(grn.filt)) {
+                      message = paste0("For permutation ", permutationCur, ", only ", length(indexes), " rows out of ", nrow(grn.filt), " can be used for IHW because some entries for either p-value or covariate were NA. The remaining ", nrow(grn.filt) - length(indexes), " rows will be ignored for p-value adjustment and set to NA.")
+                      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                  }
+                  
+                  
+                  if (peak_gene.fdr.method == "IHW" && length(indexes) < 1000) {
+                      message = paste0("IHW should only be performed with at least 1000 p-values, but only ", length(indexes), " are available. Switching to BH adjustment as fallback. This is to be expected for the background data but not for the real one.")
+                      
+                      if (permutationCur == 0) {
+                          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                      } else {
+                          futile.logger::flog.info(message)
+                      }
+                      
+                      peak_gene.fdr.method = "BH"
+                  }
+                  
+              }
+              
+              if (peak_gene.fdr.method %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")) {
+                  
+                  grn.filt = dplyr::mutate(grn.filt, peak_gene.p_adj = stats::p.adjust(.data$peak_gene.p_raw, method = peak_gene.fdr.method))
+                  
+              } else { # Do IHW
+                  
+                  suffixFile = .getPermutationSuffixStr(permutationCur)
+                  
+                  outputFolder = .checkOutputFolder(GRN, outputFolder)
+                  outputFile_IHW = paste0(outputFolder, .getOutputFileName("plot_peakGene_IHW_diag"), suffixFile, ".pdf")
+          
+                  IHW.res = .performIHW(pvalues = grn.filt$peak_gene.p_raw[indexes], 
+                                        covariates = covariate_val[indexes] %>% unlist() %>% unname(), 
+                                        alpha = peak_gene.fdr.threshold, nbins = peak_gene.IHW.nbins,
+                                        permutation =permutationCur,
+                                        pdfFile = outputFile_IHW)
+                  
+                  
+                  grn.filt$peak_gene.p_adj  = NA
+                  grn.filt$peak_gene.p_adj[indexes] = IHW::adj_pvalues(IHW.res$ihwResults)
+                  
+              }
+              
+              if (allowMissingGenes) {
+                  grn.filt = dplyr::filter(grn.filt, is.na(.data$peak_gene.p_adj) | .data$peak_gene.p_adj <  peak_gene.fdr.threshold) # keep NA here due to completeCases variable 
+              } else {
+                  grn.filt = dplyr::filter(grn.filt, .data$peak_gene.p_adj <  peak_gene.fdr.threshold) 
+              }
+              
+              futile.logger::flog.info(paste0("  Number of rows after filtering genes (including/excluding NA): ", nrow(grn.filt), "/", nrow(grn.filt %>% dplyr::filter(!is.na(.data$peak_gene.p_adj)))))
+          }
+          
+          
+          if (peak_gene.selection == "closest") {
+              
+              # Select only the closest gene for each peak
+              # Currently, this filter is applied BEFORE any of the other peak-gene filters
+              futile.logger::flog.info(paste0(" Filter network and retain only the closest genes for each peak. Note that previous filters may already have eliminated the overall closest gene for a particular peak. To make sure to always use the closest gene in the network, set the other peak_gene filters to NULL."))
+              
+              # NA distances should be kept, only genes with non NA-values should be filtered
+              
+              grn.filt = grn.filt %>%
+                  dplyr::filter(!is.na(.data$peak_gene.distance)) %>%
+                  dplyr::group_by(.data$peak.ID) %>%
+                  dplyr::slice(which.min(.data$peak_gene.distance)) %>%
+                  dplyr::ungroup() %>%
+                  rbind(dplyr::filter(grn.filt, is.na(.data$peak_gene.distance))) # rbind the na rows separately here
+              
+              futile.logger::flog.info(paste0("  Number of rows after filtering: ", nrow(grn.filt)))
+              
+          }
+          
+          
+          grn.filt = grn.filt %>%
+              dplyr::select(tidyselect::starts_with("TF."), 
+                            tidyselect::starts_with("TF_peak."), 
+                            tidyselect::starts_with("peak."), 
+                            tidyselect::starts_with("peak_gene."),
+                            tidyselect::starts_with("gene."),
+                            tidyselect::everything()) %>%
+              dplyr::mutate(peak.ID      = as.factor(.data$peak.ID),
+                            gene.ENSEMBL = as.factor(.data$gene.ENSEMBL),
+                            TF.ID      = as.factor(.data$TF.ID),
+                            TF.name      = as.factor(.data$TF.name))
+          
+          
+          GRN@connections$all.filtered[[permIndex]] = grn.filt
+          
+          futile.logger::flog.info(paste0("Final number of rows left after all filtering steps: ", nrow(grn.filt)))
+          
+          if (nrow(grn.filt) == 0 & permutationCur == 0 & !silent) {
+              message = "No connections passed the filter steps. Rerun the function and be less stringent."
+              .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+          }
+
+          
+      } #end for all permutations
+      
+      
+      if (length(GRN@graph) > 0 & resetGraphAndStoreInternally) {
+          message = "To avoid object inconsistencies and unexpected/non-reproducible results, the graph slot in the object has been reset. For all network-related functions as well as eGRN visualization, rerun the method build_eGRN_graph and all other network-related ans enrichment functions to update to the new set of filtered connections"
+          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+          GRN@graph = list()
       }
+
       
-      if (peak_gene.fdr.method %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")) {
-        
-        grn.filt = dplyr::mutate(grn.filt, peak_gene.p_adj = stats::p.adjust(.data$peak_gene.p_raw, method = peak_gene.fdr.method))
-        
-      } else { # Do IHW
-        
-        suffixFile = .getPermutationSuffixStr(permutationCur)
-        
-        outputFolder = .checkOutputFolder(GRN, outputFolder)
-        outputFile = paste0(outputFolder, .getOutputFileName("plot_peakGene_IHW_diag"), suffixFile, ".pdf")
-        
-        IHW.res = .performIHW(grn.filt$peak_gene.p_raw[indexes], 
-                              covariate_val[indexes] %>% unlist() %>% unname(), 
-                              alpha = peak_gene.fdr.threshold, nbins = peak_gene.IHW.nbins, pdfFile = outputFile)
-        
-        
-        grn.filt$peak_gene.p_adj  = NA
-        grn.filt$peak_gene.p_adj[indexes] = IHW::adj_pvalues(IHW.res$ihwResults)
-        
-      }
-      
-      if (allowMissingGenes) {
-        grn.filt = dplyr::filter(grn.filt, is.na(.data$peak_gene.p_adj) | .data$peak_gene.p_adj <  peak_gene.fdr.threshold) # keep NA here due to completeCases variable 
-      } else {
-        grn.filt = dplyr::filter(grn.filt, .data$peak_gene.p_adj <  peak_gene.fdr.threshold) 
-      }
-      
-      futile.logger::flog.info(paste0("  Number of rows after filtering genes (including/excluding NA): ", nrow(grn.filt), "/", nrow(grn.filt %>% dplyr::filter(!is.na(.data$peak_gene.p_adj)))))
-    }
-    
-    
-    if (peak_gene.selection == "closest") {
-      
-      # Select only the closest gene for each peak
-      # Currently, this filter is applied BEFORE any of the other peak-gene filters
-      futile.logger::flog.info(paste0(" Filter network and retain only the closest genes for each peak. Note that previous filters may already have eliminated the overall closest gene for a particular peak. To make sure to always use the closest gene in the network, set the other peak_gene filters to NULL."))
-      
-      # NA distances should be kept, only genes with non NA-values should be filtered
-      
-      grn.filt = grn.filt %>%
-        dplyr::filter(!is.na(.data$peak_gene.distance)) %>%
-        dplyr::group_by(.data$peak.ID) %>%
-        dplyr::slice(which.min(.data$peak_gene.distance)) %>%
-        dplyr::ungroup() %>%
-        rbind(dplyr::filter(grn.filt, is.na(.data$peak_gene.distance))) # rbind the na rows separately here
-      
-      futile.logger::flog.info(paste0("  Number of rows after filtering: ", nrow(grn.filt)))
-      
-    }
-    
-    
-    grn.filt = grn.filt %>%
-      dplyr::select(tidyselect::starts_with("TF."), 
-                    tidyselect::starts_with("TF_peak."), 
-                    tidyselect::starts_with("peak."), 
-                    tidyselect::starts_with("peak_gene."),
-                    tidyselect::starts_with("gene."),
-                    tidyselect::everything()) %>%
-      dplyr::mutate(peak.ID      = as.factor(.data$peak.ID),
-                    gene.ENSEMBL = as.factor(.data$gene.ENSEMBL),
-                    TF.ID      = as.factor(.data$TF.ID),
-                    TF.name      = as.factor(.data$TF.name))
-    
-    
-    GRN@connections$all.filtered[[permIndex]] = grn.filt
-    
-    futile.logger::flog.info(paste0("Final number of rows left after all filtering steps: ", nrow(grn.filt)))
-    
-    if (nrow(grn.filt) == 0 & permutationCur == 0 & !silent) {
-      message = "No connections passed the filter steps. Rerun the function and be less stringent."
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-    }
-    
-    
-    
-    
-  } #end for all permutations
-  
-  
-  if (!is.null(GRN@graph) & resetGraphAndStoreInternally) {
-    message = "To avoid object inconsistencies and unexpected/non-reproducible results, the graph slot in the object has been reset. For all network-related functions as well as eGRN visualization, rerun the method build_eGRN_graph and all other network-related ans enrichment functions to update to the new set of filtered connections"
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-    GRN@graph = list()
+  } else {
+      .printDataAlreadyExistsMessage()
   }
- 
-  
   
   if (silent) futile.logger::flog.threshold(futile.logger::INFO)
   
   if (!silent) .printExecutionTime(start)
   
-  if (!resetGraphAndStoreInternally) {
-    return(GRN@connections$all.filtered)
-  } else {
-    return(GRN)
-  }
+  return(GRN)
  
 }
 
@@ -4164,10 +4195,13 @@ filterGRNAndConnectGenes <- function(GRN,
 
 
 .performIHW <- function(pvalues, covariates, alpha = 0.1, covariate_type = "ordinal",
-                        nbins = "auto", m_groups = NULL, quiet = TRUE, nfolds = 5L,
+                        nbins = "auto", permutation,
+                        m_groups = NULL, quiet = TRUE, nfolds = 5L,
                         nfolds_internal = 5L, nsplits_internal = 1L, lambdas = "auto",
                         seed = 1L, distrib_estimator = "grenander", lp_solver = "lpsymphony",
-                        adjustment_type = "BH", return_internal = FALSE, doDiagnostics = TRUE, pdfFile = NULL, verbose = TRUE, ...) {
+                        adjustment_type = "BH", return_internal = FALSE, 
+                        doDiagnostics = TRUE, pValThreshold_diagnosticPlots = 0.2,
+                        pdfFile = NULL, verbose = TRUE, ...) {
   
   start = Sys.time()
   
@@ -4217,7 +4251,7 @@ filterGRNAndConnectGenes <- function(GRN,
   
   if (doDiagnostics) {
     
-    futile.logger::flog.info("  Generate diagnostic plots for IHW results and data...")
+    futile.logger::flog.info(paste0("  Generate diagnostic plots for IHW results and data for ", .getPermStr(permutation), "..."))
     
     # We can compare this to the result of applying the method of Benjamini and Hochberg to the p-values only:
     
@@ -4230,7 +4264,7 @@ filterGRNAndConnectGenes <- function(GRN,
                                     rejectionsBH, " [the latter should be lower])"))
     
     if (rejectionsIHW < rejectionsBH) {
-      message = "  Number of rejections for IHW smaller than for BH, something might be wrong. The covariate chosen might not be appropriate."
+      message = paste0("For ", .getPermStr(permutation), ", the number of rejections for IHW (", rejectionsIHW, ") is smaller than for BH (", rejectionsBH, "), something might be wrong. The covariate chosen might not be appropriate (if this happens for real data) or it is simply a consequence of the data being permuted.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
@@ -4257,12 +4291,10 @@ filterGRNAndConnectGenes <- function(GRN,
       ggplot2::geom_point(size = 0.25) + ggplot2::scale_colour_hue(l = 70, c = 150, drop = FALSE) + 
       ggplot2::ggtitle("Raw versus adjusted p-values")
     
-    # TODO why hard-coded
-    pValThreshold = 0.2
     
     # Plot No. 4
     res.l$ihwPlots$rawVsAdjPVal_subset = 
-      res.l$ihwPlots$rawVsAdjPVal_all %+% subset(IHW::as.data.frame(ihw_res), .data$adj_pvalue <= pValThreshold) + 
+      res.l$ihwPlots$rawVsAdjPVal_all %+% subset(IHW::as.data.frame(ihw_res), adj_pvalue <= pValThreshold_diagnosticPlots) + 
       ggplot2::ggtitle("raw versus adjusted p-values (zoom)")
     
     ##                       ##
@@ -4696,7 +4728,7 @@ generateStatsSummary <- function(GRN,
                 futile.logger::flog.debug(paste0("    TF_peak.connectionType = ", TF_peak.connectionTypeCur))
                 
                 futile.logger::flog.threshold(futile.logger::WARN)
-                con.filt.l = filterGRNAndConnectGenes(GRN, 
+                GRN = filterGRNAndConnectGenes(GRN, 
                                                TF_peak.fdr.threshold = TF_peak.fdr_cur, 
                                                TF_peak.connectionTypes = TF_peak.connectionTypeCur, 
                                                peak_gene.p_raw.threshold = NULL, 
@@ -4707,11 +4739,12 @@ generateStatsSummary <- function(GRN,
                                                peak_gene.r_range = peak_gene.r_range,
                                                filterTFs = NULL, filterGenes = NULL, filterPeaks = NULL,
                                                resetGraphAndStoreInternally = FALSE,
-                                               silent = TRUE)
+                                               silent = TRUE,
+                                               forceRerun = TRUE)
                 
                 futile.logger::flog.threshold(futile.logger::INFO)
                 
-                results.l = .addStats(GRN@stats$connections, con.filt.l[[permIndex]], 
+                results.l = .addStats(GRN@stats$connections, GRN@connections$all.filtered[[permIndex]], 
                                       perm = permutationCur, 
                                       TF_peak.fdr = TF_peak.fdr_cur, TF_peak.connectionType = TF_peak.connectionTypeCur,
                                       peak_gene.p_raw = NA,
@@ -4996,6 +5029,9 @@ getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDC
     GRN = .makeObjectCompatible(GRN)
     
     checkmate::assertChoice(type, c("peaks", "rna"))
+    checkmate::assertFlag(asMatrix)
+    checkmate::assertFlag(includeIDColumn)
+    checkmate::assertFlag(includeFiltered)
     checkmate::assertFlag(permuted)
     
     if (type == "peaks") {
@@ -5196,7 +5232,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  background = FALSE,
         }
         
         if (type %in% c("TF_peaks", "peak_genes") ) {
-            message = "TF-gene correlations can only be added for types that include both TFs and peaks, but not for TF-peaks or peak-genes. Please adjust the parameter type accordingly or set include_TF_gene_correlations = FALSE"
+            message = "TF-gene correlations can only be added for types that include both TFs and genes, but not for TF-peaks or peak-genes. Please adjust the parameter type accordingly or set include_TF_gene_correlations = FALSE"
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
         
@@ -5266,7 +5302,7 @@ getGRNConnections <- function(GRN, type = "all.filtered",  background = FALSE,
         colsMissing = setdiff(colnames(GRN@annotation$genes), colnames(merged.df))
         if (length(colsMissing) > 0) {
             merged.df = merged.df %>%
-                dplyr::left_join(GRN@annotation$genes %>% dplyr::select(-"gene.type", -"gene.name"), by = "gene.ENSEMBL")
+                dplyr::left_join(GRN@annotation$genes %>% dplyr::select(-"gene.type", -"gene.name"), by = "gene.ENSEMBL", multiple = "all")
         }
     }
     
@@ -5310,17 +5346,21 @@ getParameters <- function(GRN, type = "parameter", name = "all") {
     
     checkmate::assertClass(GRN, "GRN")
     GRN = .addFunctionLogToObject(GRN)
+    checkmate::assertChoice(type, c("function", "parameter"))
+    
     
     GRN = .makeObjectCompatible(GRN)
     
-    checkmate::assertChoice(type, c("function", "parameter"))
+    
     
     if (type == "function") {
         
         checkmate::assertCharacter(name, any.missing = FALSE, len = 1)
         functionParameters = GRN@config$functionParameters[[name]]
         if (is.null(functionParameters)) {
-            checkmate::assertChoice(name, ls(paste0("package:", utils::packageName())))
+            message = paste0("Could not find details for function \"", name, "\" in the object. Either the function has not been run or it does not exist.\nOnly the following function names exist in the object: ", 
+                             paste0(names(GRN@config$functionParameters), collapse = ", "))
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         } 
         
         return(functionParameters)
@@ -5343,6 +5383,266 @@ getParameters <- function(GRN, type = "parameter", name = "all") {
 }
 
 
+
+#' Summarize a \code{\linkS4class{GRN}} object to a named list for comparison with other \code{\linkS4class{GRN}} objects. 
+#' 
+#' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
+
+#' @template GRN 
+#' @return A named list summarizing the GRN object. This function does **NOT** return a \code{\linkS4class{GRN}} object, but instead a named lsit with the
+#' following elements: 
+#' \itemize{
+#' \item \code{data}:
+#'  \itemize{
+#'  \item \code{peaks}, \code{genes} and \code{TFs}: 
+#'  \item \code{sharedSamples}: 
+#'  \item \code{metadata}: 
+#'  }
+#' \item \code{parameters} and \code{config}: GRN parameters and config information
+#'  \item \code{connections}: Connection summary for different connection types
+#'  \itemize{
+#'  \item \code{TF_peak}: TF-peak  (number of connections for different FDR thresholds)
+#'  \item \code{peak_genes}: Peak-gene 
+#'  \item \code{TF_peak_gene}: TF-peak-gene
+#'  }      
+#'  \item \code{network}: Network-related summary, including the number of nodes, edges, communities and enrichment for both the TF-peak-gene and TF-gene network
+#'  \itemize{
+#'  \item \code{TF_gene}
+#'  \item \code{TF_peak_gene}
+#'  }
+#' }
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' summary.l = getGRNSummary(GRN)
+#' @export
+getGRNSummary <- function(GRN) {
+    
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    fdr_toTest = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3)
+    res.list = list()
+    
+    res.list$data = list()
+    
+    if (!is.null(GRN@data$peaks$counts_metadata)) {
+        nPeaks_filt  = nPeaks(GRN, filter = TRUE)
+        nPeaks_all   = nPeaks(GRN, filter = FALSE)
+    } else {
+        nPeaks_filt =  nPeaks_all = NA
+    }
+    
+    scarcity_peaks_all = (length(GRN@data$peaks$counts) - Matrix::nnzero(GRN@data$peaks$counts)) / length(GRN@data$peaks$counts)
+    peaks.filt = getCounts(GRN, type = "peaks", asMatrix = TRUE)
+    scarcity_peaks_filt = (length(peaks.filt) - Matrix::nnzero(peaks.filt)) / length(peaks.filt)
+    
+    res.list$data$peaks = list("nFiltered" = nPeaks_filt, "all" =  nPeaks_all,
+                               "scarcity_all" = scarcity_peaks_all,
+                               "scarcity_filt" = scarcity_peaks_filt)
+    
+    if (!is.null(GRN@data$RNA$counts_metadata)) {
+        
+        nGenes_filt = nGenes(GRN, filter = TRUE)
+        nGenes_all  = nGenes(GRN, filter = FALSE)
+        
+    } else {
+        nGenes_filt =  nGenes_all = NA
+    }
+    
+    scarcity_RNA_all = (length(GRN@data$RNA$counts) - Matrix::nnzero(GRN@data$RNA$counts)) / length(GRN@data$RNA$counts)
+    RNA.filt = getCounts(GRN, type = "rna", asMatrix = TRUE)
+    scarcity_RNA_filt =  (length(RNA.filt) - Matrix::nnzero(RNA.filt)) / length(RNA.filt)
+    
+    res.list$data$genes = list("nFiltered" = nGenes_filt, "all" =  nGenes_all, 
+                               "scarcity_all" = scarcity_RNA_all,
+                               "scarcity_filt" = scarcity_RNA_filt)
+    
+    if (!is.null(GRN@data$RNA$counts_metadata) & !is.null(GRN@data$peaks$counts_metadata)) {
+        nSharedSamples = length(GRN@config$sharedSamples)
+    } else {
+        nSharedSamples = NA
+    }
+    res.list$data$sharedSamples = nSharedSamples
+    
+    if (!is.null(GRN@annotation$TFs)) {
+        nTF_withRNA = nrow(GRN@annotation$TFs)
+    } else {
+        nTF_withRNA = NA
+    }
+    
+    res.list$data$TFs = nTF_withRNA
+    
+    res.list$data$metadata = GRN@data$metadata
+    
+    res.list$parameters = GRN@config$parameters
+    
+    res.list$config = GRN@config
+    
+    ## CONNECTIONS  ##
+    res.list$connections = list()
+    res.list$connections$TF_peak = list()
+    
+    fdr_list = list()
+    
+    
+    if (!is.null(GRN@connections$TF_peaks$`0`$main)) {
+        
+        for (fdrCur in .getFDR_TF_peak_vector(GRN)) {
+            nCon = GRN@connections$TF_peaks$`0`$main %>%
+                dplyr::filter(.data$TF_peak.fdr <= fdrCur) %>%
+                nrow()
+            fdr_list[[paste0(fdrCur)]] = nCon
+        }
+        
+    } else {
+        
+        for (fdrCur in .getFDR_TF_peak_vector(GRN)) {
+            fdr_list[[paste0(fdrCur)]] = NA
+        }
+    }
+    res.list$connections$TF_peak$nConnections_fdr = fdr_list
+    
+    res.list$connections$peak_genes = list()
+    
+    if (!is.null(GRN@connections$peak_genes$`0`)) {
+        res.list$connections$peak_genes$nConnections = nrow(GRN@connections$peak_genes$`0`)
+    } else {
+        res.list$connections$peak_genes$nConnections = NA
+    }
+    
+    if (!is.null(GRN@stats$peak_genes)) {
+        res.list$connections$peak_genes$QC_summary = GRN@stats$peak_genes
+    } else {
+        res.list$connections$peak_genes$QC_summary = NA
+    }
+    
+    
+    if (!is.null(GRN@stats$connections)) {
+        res.list$connections$TF_peak_genes$summary = GRN@stats$connections
+    } else {
+        res.list$connections$TF_peak_genes$summary = NA
+    }
+    
+    res.list$connections$TF_peak_genes$all.filtered = list()
+    
+    if (!is.null(GRN@connections$all.filtered$`0`)) {
+        
+        nEntries = length(GRN@config$functionParameters$filterGRNAndConnectGenes)
+        max_TF_peak_FDR = GRN@config$functionParameters$filterGRNAndConnectGenes[[nEntries]]$parameters$TF_peak.fdr.threshold
+        max_peak_gene_FDR = GRN@config$functionParameters$filterGRNAndConnectGenes[[nEntries]]$parameters$peak_gene.fdr.threshold
+        
+        res.list$connections$TF_peak_genes$all.filtered$max_TF_peak_FDR = max_TF_peak_FDR
+        res.list$connections$TF_peak_genes$all.filtered$max_peak_gene_FDR = max_peak_gene_FDR
+        res.list$connections$TF_peak_genes$all.filtered$nConnections_real = nrow(GRN@connections$all.filtered$`0`)
+        res.list$connections$TF_peak_genes$all.filtered$table_real = GRN@connections$all.filtered$`0`
+        
+        res.list$connections$TF_peak_genes$all.filtered$nConnections_permuted = nrow(GRN@connections$all.filtered$`1`)
+        res.list$connections$TF_peak_genes$all.filtered$table_permuted = GRN@connections$all.filtered$`1`
+        
+        
+    } else {
+        res.list$connections$TF_peak_genes$all.filtered = NA
+    }
+    
+    res.list$network = list()
+    res.list$network$TF_gene = list()
+    res.list$network$TF_peak_gene = list()
+    
+    
+    if (!is.null(GRN@graph$TF_gene)) {
+        
+        res.list$network$TF_gene$nNodes = length(igraph::V(GRN@graph$TF_gene$graph))
+        res.list$network$TF_gene$nEdges = length(igraph::E(GRN@graph$TF_gene$graph))
+        
+        res.list$network$TF_peak_gene$nNodes = length(igraph::V(GRN@graph$TF_peak_gene$graph))
+        res.list$network$TF_peak_gene$nEdges = length(igraph::E(GRN@graph$TF_peak_gene$graph))
+        
+        # Community identification (no, yes and how many and how many nodes each)
+        
+        df = igraph::vertex.attributes(GRN@graph[["TF_gene"]]$graph) %>% as.data.frame() 
+        
+        if (!is.null(df) & "community" %in% colnames(df)) {
+            res.list$network$TF_gene$communities = df %>% 
+                dplyr::count(.data$community) %>% 
+                dplyr::arrange(dplyr::desc(.data$n))
+        } else {
+            res.list$network$TF_gene$communities = NA
+        }
+        
+        res.list$network$TF_gene$enrichment = list()
+        
+        if (!is.null(GRN@stats$Enrichment$general)) {
+            
+            res.list$network$TF_gene$enrichment$general = list()
+            summary.df = tribble(~ontology, ~rawp, ~nTerms)
+            for (ontologyCur in names(GRN@stats$Enrichment$general)) {
+                res.list$network$TF_gene$enrichment$general[[ontologyCur]] = list()
+                res.list$network$TF_gene$enrichment$general[[ontologyCur]]$parameters = GRN@stats$Enrichment$general[[ontologyCur]]$parameters
+                
+                for (rawp_cur in fdr_toTest) {
+                    nCon = GRN@stats$Enrichment$general[[ontologyCur]]$results %>%
+                        dplyr::filter(pval <= rawp_cur) %>%
+                        nrow()
+                    summary.df = tibble::add_row(summary.df, ontology = ontologyCur, rawp = rawp_cur, nTerms = nCon)
+                }
+                
+            }
+            res.list$network$TF_gene$enrichment$general$summary_allOntologies = summary.df
+            
+            
+        } else {
+            res.list$network$TF_gene$enrichment$general = NA
+        }
+        
+        ## Community and TF enrichment ##
+        for (entityCur in c("byCommunity", "byTF")) {
+            
+            if (!is.null(GRN@stats$Enrichment[[entityCur]])) {
+                
+                res.list$network$TF_gene$enrichment[[entityCur]] = list()
+                summary.df = tribble(~ontology, ~feature, ~rawp, ~nTerms)
+                
+                
+                for (featureCur in names(GRN@stats$Enrichment[[entityCur]])) {
+                    
+                    # Different structure, skip for now
+                    if (featureCur == "combined") next
+                    
+                    res.list$network$TF_gene$enrichment[[entityCur]][[featureCur]] = list()
+                    
+                    for (ontologyCur in names(GRN@stats$Enrichment[[entityCur]][[featureCur]])) {
+                        res.list$network$TF_gene$enrichment[[entityCur]][[featureCur]][[ontologyCur]] = list()
+                        res.list$network$TF_gene$enrichment[[entityCur]][[featureCur]][[ontologyCur]]$parameters = GRN@stats$Enrichment[[entityCur]][[featureCur]][[ontologyCur]]$parameters
+                        
+                        for (rawp_cur in fdr_toTest) {
+                            nCon = GRN@stats$Enrichment[[entityCur]][[featureCur]] [[ontologyCur]]$results %>%
+                                dplyr::filter(pval <= rawp_cur) %>%
+                                nrow()
+                            summary.df = tibble::add_row(summary.df, ontology = ontologyCur, feature = featureCur, rawp = rawp_cur, nTerms = nCon)
+                        }
+                        
+                    }
+                    
+                }
+                res.list$network$TF_gene$enrichment[[entityCur]]$summary_allOntologies = summary.df
+                
+                
+            } else {
+                res.list$network$TF_gene$enrichment[[entityCur]] = NA
+            }
+        }
+        
+        
+        
+    } # end if (!is.null(GRN@graph$TF_gene)) {
+    
+    .printExecutionTime(start)
+    res.list
+    
+}
 
 #' Optional convenience function to delete intermediate data from the function \code{\link{AR_classification_wrapper}} and summary statistics that may occupy a lot of space
 #' @export
@@ -5412,7 +5712,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     if (!is.null(slotName)) {
         futile.logger::flog.info(paste0("Data already exists in object (GRN@", slotName, "). Set forceRerun = TRUE to regenerate and overwrite."))
     } else {
-        futile.logger::flog.info(paste0("Data already exists in object. Set forceRerun = TRUE to regenerate and overwrite."))
+        futile.logger::flog.info(paste0("Data already exists in object or the specified file already exists. Set forceRerun = TRUE to regenerate and overwrite."))
     }
   
 }
@@ -5564,11 +5864,23 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
 }
 
 
-.checkExistanceFilteredConnections <- function(GRN) {
+.checkExistanceFilteredConnections <- function(GRN, returnLogical = FALSE) {
     
     if (is.null(GRN@connections$all.filtered[["0"]])) {
-        message = "Could not find filtered connections (the slot GRN@connections$all.filtered[[\"0\"]] is NULL). Run the function filterGRNAndConnectGenes."
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        
+        if (returnLogical) {
+            return(FALSE)
+        } else {
+            message = "Could not find filtered connections (the slot GRN@connections$all.filtered[[\"0\"]] is NULL). Run the function filterGRNAndConnectGenes."
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+
+    }
+    
+    if (returnLogical) {
+        return(TRUE)
+    } else {
+        return(NULL)
     }
 }
 
@@ -5687,6 +5999,12 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
   functionName = evalq(match.call(), parent.frame(1))[1]
   listName = gsub("\\(|\\)", "", functionName, perl = TRUE)
   listName = gsub("GRaNIE::", "", listName, fixed = TRUE)
+  
+  if (nchar(listName) > 200) {
+      message = paste0("Skipped storing function log as list name exceeds 200 characters. This should not happen and only occurs when functions from GraNIE are called in indirect ways via do.call, for example")
+     futile.logger::flog.info(message)
+     return(GRN)
+  }
   
   # Compatibility with old objects
   if (is.null(GRN@config$functionParameters)) {
@@ -5887,7 +6205,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
                           baseMean_log = log2(baseMean + 0.01))
         
         expression_TF.df = dplyr::filter(expression.df, .data$ENSEMBL_ID %in% GRN@annotation$TFs$TF.ENSEMBL) %>%
-            dplyr::left_join(GRN@annotation$TFs, by = c("ENSEMBL_ID" = "TF.ENSEMBL"))
+            dplyr::left_join(GRN@annotation$TFs, by = c("ENSEMBL_ID" = "TF.ENSEMBL"), multiple = "all")
         
         meanPeaks.df = tibble::tibble(peakID = getCounts(GRN, type = "peaks", permuted = FALSE)$peakID, 
                                       mean = rowMeans(getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE))) %>%
@@ -6125,6 +6443,7 @@ add_featureVariation <- function(GRN,
         if (printName) {
             printComma = FALSE
             TF.name = GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.name)
+            stopifnot(length(TF.name) == 1)
             if (TF.name != ID) {
                 nameCombined = paste0(nameCombined, " (")
                 nameCombined = paste0(nameCombined, TF.name)
@@ -6133,11 +6452,16 @@ add_featureVariation <- function(GRN,
            
         }
         if (printEnsemblID) {
+            printParanthesis = FALSE
             if (printName & printComma) {
                 nameCombined = paste0(nameCombined, ", ")
-            } 
+            } else {
+                nameCombined = paste0(nameCombined, " (")
+                printParanthesis = TRUE
+            }
             TF.ENSEMBL =  GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.ENSEMBL)
             nameCombined = paste0(nameCombined, TF.ENSEMBL)
+            if (printParanthesis) nameCombined = paste0(nameCombined, ")")
         }
         if ( printComma) nameCombined = paste0(nameCombined, ")")
     }
@@ -6146,6 +6470,16 @@ add_featureVariation <- function(GRN,
 }
 
 
+.printGene <- function(GRN, ID, printName = TRUE) {
+    
+    nameCombined = paste0(ID)
+    if (printName) {
+        gene.name = GRN@annotation$genes %>% dplyr::filter(gene.ENSEMBL == ID) %>% dplyr::pull(gene.name)
+        nameCombined = paste0(nameCombined, " (", gene.name, ")")
+    }
+    
+    nameCombined
+}
 
 
   

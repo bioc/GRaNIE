@@ -12,7 +12,7 @@ calculateCommunitiesEnrichment(
   background = "neighborhood",
   background_geneTypes = "all",
   selection = "byRank",
-  communities = seq_len(10),
+  communities = NULL,
   pAdjustMethod = "BH",
   forceRerun = FALSE
 )
@@ -30,7 +30,7 @@ As they are listed under \code{Suggests}, they may not yet be installed, and the
 \item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library. 
 For general information about the algorithms, see \url{https://academic.oup.com/bioinformatics/article/22/13/1600/193669}. \code{weight01} is a mixture between the \code{elim} and the \code{weight} algorithms.}
 
-\item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher.}
+\item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}. Statistical test to be used. Only relevant if ontology is GO related (\code{GO_BP}, \code{GO_MF}, \code{GO_CC}), and valid inputs are a subset of those supported by the \code{topGO} library (we had to remove some as they do not seem to work properly in \code{topGO} either), ignored otherwise. For the other ontologies the test statistic is always Fisher.}
 
 \item{background}{Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"all_RNA_filtered"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (\code{all_annotated}), all genes from the provided RNA data (\code{all_RNA}), all genes from the provided RNA data excluding those marked as filtered after executing \code{filterData} (\code{all_RNA_filtered}), or all the genes that are within the neighborhood of any peak (before applying any filters except for the user-defined \code{promoterRange} value in \code{addConnections_peak_gene}) (\code{neighborhood}).}
 
@@ -40,8 +40,12 @@ The special keyword \code{"all"} means no filter on gene type.}
 
 \item{selection}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities enrichment will by calculated based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.}
 
-\item{communities}{Numeric vector. Default \code{c(1:10)}. Depending on what was specified in the \code{display} parameter, 
-this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the GO enrichment for the first and fourth largest communities will be calculated if \code{display = "byLabel"}, the results for the communities labeled "1", and "4" will be plotted.}
+\item{communities}{\code{NULL} or numeric vector or character vector. Default \code{NULL}. 
+If set to \code{NULL}, all community enrichments that have been calculated before are plotted. 
+If a numeric vector is specified (when \code{selection = "byRank"}), the rank of the communities is specified.
+For example, \code{communities = c(1,4)} then denotes the first and fourth largest community.
+If a character vector is specified (when \code{selection = "byLabel"}), the name of the communities is specified instead.
+For example, \code{communities = c("1","4")} then denotes the communities with the names "1" and "4", which may or may not be the largest and fourth largest communities among all.}
 
 \item{pAdjustMethod}{Character. Default \code{"BH"}. One of: \code{"holm"}, \code{"hochberg"}, \code{"hommel"}, \code{"bonferroni"}, \code{"BH"}, \code{"BY"}, \code{"fdr"}. This parameter is only relevant for the following ontologies: KEGG, DO, Reactome. For the other ontologies, the algorithm serves as an adjustment.}
 

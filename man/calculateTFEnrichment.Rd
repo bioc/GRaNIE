@@ -21,11 +21,14 @@ calculateTFEnrichment(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{rankType}{Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. If set to custom, a set of TF names will have to be passed to the "TF.IDs" parameter.}
+\item{rankType}{Character. Default \code{"degree"}. One of: \code{"degree"}, \code{"EV"}, \code{"custom"}. This parameter will determine the criterion to be used to identify the "top" TFs. 
+If set to "degree", the function will select top TFs based on the number of connections to genes they have, i.e. based on their degree-centrality. 
+If set to \code{"EV"} it will select the top TFs based on their eigenvector-centrality score in the network. 
+If set to custom, a set of TF IDs will have to be passed to the "TF.IDs" parameter.}
 
 \item{n}{Numeric. Default 3. If this parameter is passed as a value between 0 and 1, it is treated as a percentage of top nodes. If the value is passed as an integer it will be treated as the number of top nodes. This parameter is not relevant if \code{rankType = "custom"}.}
 
-\item{TF.IDs}{Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF names for which the GO enrichment should be calculated should be passed to this parameter.}
+\item{TF.IDs}{Character vector. Default \code{NULL}. If the rank type is set to \code{"custom"}, a vector of TF IDs for which the GO enrichment should be calculated should be passed to this parameter.}
 
 \item{ontology}{Character vector of ontologies. Default \code{c("GO_BP", "GO_MF")}. 
 Valid values are \code{"GO_BP"}, \code{"GO_MF"}, \code{"GO_CC"}, \code{"KEGG"}, \code{"DO"}, and \code{"Reactome"}, 
@@ -37,7 +40,7 @@ As they are listed under \code{Suggests}, they may not yet be installed, and the
 \item{algorithm}{Character. Default \code{"weight01"}. One of: \code{"classic"}, \code{"elim"}, \code{"weight"}, \code{"weight01"}, \code{"lea"}, \code{"parentchild"}. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), ignored otherwise. Name of the algorithm that handles the GO graph structures. Valid inputs are those supported by the \code{topGO} library. 
 For general information about the algorithms, see \url{https://academic.oup.com/bioinformatics/article/22/13/1600/193669}. \code{weight01} is a mixture between the \code{elim} and the \code{weight} algorithms.}
 
-\item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}, \code{"globaltest"}, \code{"sum"}, \code{"ks.ties"}. Statistical test to be used. Only relevant if ontology is GO related (GO_BP, GO_MF, GO_CC), and valid inputs are those supported by the topGO library, ignored otherwise. For the other ontologies the test statistic is always Fisher.}
+\item{statistic}{Character. Default \code{"fisher"}. One of: \code{"fisher"}, \code{"ks"}, \code{"t"}. Statistical test to be used. Only relevant if ontology is GO related (\code{GO_BP}, \code{GO_MF}, \code{GO_CC}), and valid inputs are a subset of those supported by the \code{topGO} library (we had to remove some as they do not seem to work properly in \code{topGO} either), ignored otherwise. For the other ontologies the test statistic is always Fisher.}
 
 \item{background}{Character. Default \code{"neighborhood"}. One of: \code{"all_annotated"}, \code{"all_RNA"}, \code{"all_RNA_filtered"}, \code{"neighborhood"}. Set of genes to be used to construct the background for the enrichment analysis. This can either be all annotated genes in the reference genome (\code{all_annotated}), all genes from the provided RNA data (\code{all_RNA}), all genes from the provided RNA data excluding those marked as filtered after executing \code{filterData} (\code{all_RNA_filtered}), or all the genes that are within the neighborhood of any peak (before applying any filters except for the user-defined \code{promoterRange} value in \code{addConnections_peak_gene}) (\code{neighborhood}).}
 

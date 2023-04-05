@@ -966,6 +966,10 @@ The only exception is the function `getGRNConnections()` that can be used to ext
 the various columns that are returned from the function, see the
 corresponding R help ( `?getGRNConnections`).
 
+### Object summary
+
+A summary of a `GRN` object can be retrieved with the function `getGRNSummary()`. This returns a named list that summarizes all relevant aspects for a `GRN` object. For more details, see the R help.
+
 ## Original and normalized data, annotations and provided metadata
 
 ### Object data
@@ -1124,7 +1128,9 @@ TF-peak and ultimately the *eGRN* network, the directionality can be
 ignored and only those TF-peak links with small FDRs are kept,
 irrespective of the directionality.
 
+#### Correlation plots
 
+For a particular (set of) TF-peak pair(s), the underlying TF-peak data and the correlation can be visualized with  `plotCorrelations()`. For more information, see the R help for the function.
 
 ### Extra plots for the GC correction 
 
@@ -1446,6 +1452,10 @@ as expected for a well-calibrated background.
 
 <!-- # ``` -->
 
+#### Correlation plots
+
+For a particular (set of) peak-gene pair(s), the underlying peak-gene data and the correlation can be visualized with  `plotCorrelations()`. For more information, see the R help for the function.
+
 ## Filtered TF-peak-gene connections (*eGRN* table)
 
 ### Object data
@@ -1474,7 +1484,10 @@ The peak-gene connections are stored in `GRN@connections$$TF_genes.filtered`. Th
 
 ### Plots
 
-No plots are available here, but the *eGRN* can be visualized with `visualizeGRN()`. 
+For a particular (set of) TF-gene pair(s), the underlying TF-gene data and the correlation can be visualized with  `plotCorrelations()`. For more information, see the R help for the function.
+
+In addition, the *eGRN* can be visualized with `visualizeGRN()`. 
+
 
 ## Connection summary plots {#output_connectionSummary}
 

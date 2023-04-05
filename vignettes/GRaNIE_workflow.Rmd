@@ -409,7 +409,8 @@ Now that we added both TF-enhancers and enhancer-gene links to our `GRaNIE` obje
 GRN = filterGRNAndConnectGenes(GRN, TF_peak.fdr.threshold = 0.2,
                                peak_gene.fdr.threshold = 0.2, peak_gene.fdr.method = "BH", 
                                gene.types = c("protein_coding", "lincRNA"),
-                               allowMissingTFs = FALSE, allowMissingGenes = FALSE
+                               allowMissingTFs = FALSE, allowMissingGenes = FALSE,
+                               forceRerun = TRUE
                                )
 ```
 

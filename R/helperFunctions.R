@@ -172,12 +172,19 @@
         packageMessage = paste0("The package topGO is not installed but required when selecting any of the three following ontologies: GO_BP, GO_MF, GO_CC. Please install it and re-run this function or change the ontology.")
         .checkPackageInstallation("topGO", packageMessage) 
         
-        # This function is calle in the topGO:::.onAttach function and needs to be executed once otherwise
+        # This function is calling the topGO:::.onAttach function and needs to be executed once otherwise
         # errors like object 'GOBPTerm' of mode 'environment' was not found are thrown
         suppressMessages(topGO::groupGOTerms()) 
         
         checkmate::assertChoice(algorithm , topGO::whichAlgorithms())
         checkmate::assertChoice(statistic , topGO::whichTests())
+        
+        # Some statistics do not seem to work properly and cause errors in topGO, we exclude them here
+        if (statistic %in% c("sum", "globaltest", "ks.ties")) {
+            message = paste0("We stopped supporting the statsitic \"", statistic, "\" because it causes errors in topGO. Please choose a different statistic.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
     }
 }
 
@@ -343,11 +350,11 @@
 }
 
 #' @import grDevices
-.checkAndLogWarningsAndErrors <- function(object, checkResult, isWarning = FALSE) {
+.checkAndLogWarningsAndErrors <- function(object, message, isWarning = FALSE) {
   
-  checkmate::assert(checkmate::checkCharacter(checkResult, len = 1), checkmate::checkLogical(checkResult))
+  checkmate::assert(checkmate::checkCharacter(message, len = 1), checkmate::checkLogical(message))
   
-  if (checkResult != TRUE) {
+  if (message != TRUE) {
 
     objectPart = ""
     if (!is.null(object)) {
@@ -357,11 +364,11 @@
     
     lastPartError   = "# An error occurred. See details above. If you think this is a bug, please contact us. #\n"
     hashesStrError = paste0(paste0(rep("#", nchar(lastPartError) - 1), collapse = ""), "\n")
-    messageError    = paste0(objectPart, checkResult, "\n\n", hashesStrError, lastPartError, hashesStrError)
+    messageError    = paste0(objectPart, message, "\n\n", hashesStrError, lastPartError, hashesStrError)
     
     lastPartWarning = ". \nThis warning may or may not be ignored. Carefully check its significance and whether it may affect the results.\n"
     #hashesStrWarning = paste0(paste0(rep("#", nchar(lastPartWarning) - 1), collapse = ""), "\n")
-    messageWarning  = paste0(objectPart, checkResult, lastPartWarning) # , hashesStrWarning)
+    messageWarning  = paste0(objectPart, message, lastPartWarning) # , hashesStrWarning)
     
     
     
@@ -611,7 +618,7 @@
   }
  
     # TODO: as("lgCMatrix") may be a bit more space-saing BUT then we cannot add the isFiltered column to it that the code currently relies on
-  Matrix::Matrix(matrix, sparse = TRUE, dimnames = dimnames) %>% as("dMatrix")
+  Matrix::Matrix(matrix, sparse = TRUE, dimnames = dimnames) %>% methods::as("dMatrix")
 }
 
 #' @importFrom Matrix Matrix

@@ -27,7 +27,9 @@ addConnections_TF_peak(
 
 \item{plotDetails}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Print additional plots that may help for debugging and QC purposes? Note that these plots are currently less documented or not at all.}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
 
