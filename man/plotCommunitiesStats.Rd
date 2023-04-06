@@ -8,7 +8,7 @@ plotCommunitiesStats(
   GRN,
   outputFolder = NULL,
   basenameOutput = NULL,
-  display = "byRank",
+  selection = "byRank",
   communities = seq_len(5),
   topnGenes = 20,
   topnTFs = 20,
@@ -22,13 +22,23 @@ plotCommunitiesStats(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{basenameOutput}{\code{NULL} or character. Default \code{NULL}. Basename of the output files that are produced. If set to \code{NULL}, a default basename is chosen. If a custom basename is specified, all output files will have the chosen basename as file prefix, be careful with not overwriting already existing files (if \code{forceRerun} is set to \code{TRUE})}
 
-\item{display}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. Specify whether the communities will be displayed based on their rank, where the largest community (with most vertices) would have a rank of 1, or by their label. Note that the label is independent of the rank.}
+\item{selection}{Character. Default \code{"byRank"}. One of: \code{"byRank"}, \code{"byLabel"}. 
+Specify whether the communities will be selected based on their rank or explicitly by their label. 
+Note that the label is independent of the rank. When set to \code{"byRank"}, the largest 
+community (with most vertices) always has a rank of 1.}
 
-\item{communities}{Numeric vector. Default \code{seq_len(10)}. Depending on what was specified in the \code{display} parameter, this parameter would indicate either the rank or the label of the communities to be plotted. i.e. for \code{communities = c(1,4)}, if \code{display = "byRank"} the results for the first and fourth largest communities will be plotted. if \code{display = "byLabel"}, the results for the communities labeled \code{"1"}, and \code{"4"} will be plotted. If set to \code{NULL}, all communities will be plotted}
+\item{communities}{\code{NULL} or numeric vector or character vector. Default \code{NULL}. 
+If set to \code{NULL}, all community enrichments that have been calculated before are plotted. 
+If a numeric vector is specified (when \code{selection = "byRank"}), the rank of the communities is specified.
+For example, \code{communities = c(1,4)} then denotes the first and fourth largest community.
+If a character vector is specified (when \code{selection = "byLabel"}), the name of the communities is specified instead.
+For example, \code{communities = c("1","4")} then denotes the communities with the names "1" and "4", which may or may not be the largest and fourth largest communities among all.}
 
 \item{topnGenes}{Integer > 0. Default 20. Number of genes to plot, sorted by their rank or label.}
 

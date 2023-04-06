@@ -33,11 +33,11 @@ addConnections_peak_gene(
 
 \item{TADs_mergeOverlapping}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping TADs be merged? Only relevant if TADs are provided.}
 
-\item{shuffleRNACounts}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be permuted in addition to 
-testing random peak-gene pairs for the permuted background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but
+\item{shuffleRNACounts}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be shuffled in addition to 
+testing random peak-gene pairs for the background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but
 for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
-If set to \code{TRUE}, however, the RNA sample labels are in addition permuted so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
-Permuting twice randomizes the resulting eGRN even more. Note that this parameter and its influence is still being investigated. Until version 1.0.7, this parameter (although not existent explicitly)
+If set to \code{TRUE}, however, the RNA sample labels are in addition shuffled so that sample 1 counts from peak data are compared to sample 4 data from RNA, for example.
+Shuffling truly randomizes the resulting background eGRN. Note that this parameter and its influence is still being investigated. Until version 1.0.7, this parameter (although not existent explicitly)
 was implicitly set to \code{TRUE}.}
 
 \item{nCores}{Integer >0. Default 1. Number of cores to use. 
@@ -47,7 +47,9 @@ A value >1 requires the \code{BiocParallel} package (as it is listed under \code
 
 \item{plotGeneTypes}{List of character vectors. Default \code{list(c("all"), c("protein_coding"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. 
 Use a robust regression in addition to a non-robust one? Significantly increases overall running time.

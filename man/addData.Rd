@@ -16,6 +16,7 @@ addData(
   additionalParams.l = list(),
   allowOverlappingPeaks = FALSE,
   keepOriginalReadCounts = FALSE,
+  EnsemblVersion = NULL,
   forceRerun = FALSE
 )
 }
@@ -58,10 +59,13 @@ when overlapping peaks are found) or (the default) should an error be raised?}
 \item{keepOriginalReadCounts}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the original read counts as provided to the function be kept in addition to
 storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.}
 
+\item{EnsemblVersion}{\code{NULL} or Character(1). Default \code{NULL}. The Ensembl version to use for genome annotation retrieval via \code{biomaRt}, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}. 
+By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.}
+
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object, with added data from this function (e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
+An updated \code{\linkS4class{GRN}} object, with added data from this function(e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 }
 \description{
 This function adds both RNA and peak data to a \code{\linkS4class{GRN}} object, along with data normalization.

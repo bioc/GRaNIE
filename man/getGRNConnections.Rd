@@ -2,23 +2,12 @@
 % Please edit documentation in R/core.R
 \name{getGRNConnections}
 \alias{getGRNConnections}
-\title{Extract connections or links from a \code{\linkS4class{GRN}} object as da data frame.}
+\title{Extract connections or links from a \code{\linkS4class{GRN}} object as a data frame.}
 \usage{
 getGRNConnections(
   GRN,
   type = "all.filtered",
-  permuted = FALSE,
-  include_TF_gene_correlations = FALSE,
-  include_TFMetadata = FALSE,
-  include_peakMetadata = FALSE,
-  include_geneMetadata = FALSE,
-  include_variancePartitionResults = FALSE
-)
-
-getGRNConnections(
-  GRN,
-  type = "all.filtered",
-  permuted = FALSE,
+  background = FALSE,
   include_TF_gene_correlations = FALSE,
   include_TFMetadata = FALSE,
   include_peakMetadata = FALSE,
@@ -31,48 +20,74 @@ getGRNConnections(
 
 \item{type}{Character. One of \code{TF_peaks}, \code{peak_genes}, \code{TF_genes} or \code{all.filtered}. Default \code{all.filtered}. The type of connections to retrieve.}
 
-\item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
+\item{background}{Integer (0 or 1). Default \code{0}. Either \code{0} or \code{1}). Here, \code{0} refers to the real (foreground) while \code{1} to the background.}
 
-\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}. Only relevant for type = "all.filtered"}
+\item{include_TF_gene_correlations}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TFs and gene correlations be returned as well? If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_TF_gene_correlation}}.}
 
-\item{include_TFMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TF metadata be returned as well? Only relevant for type = "all.filtered"}
+\item{include_TFMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should TF metadata be returned as well?}
 
-\item{include_peakMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should peak metadata be returned as well?  Only relevant for type = "all.filtered"}
+\item{include_peakMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should peak metadata be returned as well?}
 
-\item{include_geneMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should gene metadata be returned as well?  Only relevant for type = "all.filtered"}
+\item{include_geneMetadata}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should gene metadata be returned as well?}
 
 \item{include_variancePartitionResults}{Logical. \code{TRUE} or \code{FALSE}. Default \code{FALSE}. 
 Should the results from the function \code{\link{add_featureVariation}} be included? 
-If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_featureVariation}}; otherwise, an error is thrown.
-Only relevant for type = "all.filtered"}
+If set to \code{TRUE}, they must have been computed beforehand with \code{\link{add_featureVariation}}; otherwise, an error is thrown.}
 }
 \value{
-A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object.
-
-A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object.
+A data frame with the requested connections. This function does **NOT** return a \code{\linkS4class{GRN}} object. Depending on the arguments, the
+data frame that is returned has different columns, which however can be divided into the following classes according to their name:
+\itemize{
+\item TF-related: Starting with \code{TF.}:
+ \itemize{
+ \item \code{TF.name} and \code{TF.ID}: Name / ID of the TF
+ \item \code{TF.ENSEMBL}: Ensembl ID (unique)
+ }
+\item peak-related: Starting with \code{peak.}: 
+ \itemize{
+ \item \code{peak.ID}: ID (coordinates)
+ \item \code{peak.mean}, \code{peak.median}, \code{peak.CV}: peak mean, median and its coefficient of variation (CV) across all samples
+ \item \code{peak.annotation}: Peak annotation as determined by \code{ChIPseeker} such as Promoter, 5’ UTR, 3’ UTR, Exon, Intron, Downstream, Intergenic
+ \item \code{peak.nearestGene*}: Additional metadata for the nearest gene such as position (\code{chr}, \code{start}, \code{end}, \code{strand}), 
+ name (\code{name}, \code{symbol} and \code{ENSEMBL}), and distance to the TSS (\code{distanceToTSS})
+ \item \code{peak.GC.perc}: GC percentage
+ }
+\item gene-related: Starting with \code{gene.}:
+ \itemize{
+ \item \code{gene.name} and \code{gene.ENSEMBL}: gene name and Ensembl ID
+ \item \code{gene.type}: gene type (such as \code{protein_coding}, \code{lincRNA}) as retrieved by \code{biomaRt}
+ \item \code{gene.mean}, \code{gene.median}, \code{gene.CV}: gene mean, median and its coefficient of variation (CV) across all samples
+ }
+ \item TF-peak-related: Starting with \code{TF_peak.}:
+ \itemize{
+ \item \code{TF_peak.r} and \code{TF_peak.r_bin}: Correlation coefficient of the TF-peak pair and its correlation bin (in bins of width 0.05, such as (-0.55,-0.5] for r = -0.53)
+ \item \code{TF_peak.fdr} and \code{TF_peak.fdr_direction}: TF-peak FDR and the directionality from which it was derived (see Methods in the paper, \code{pos} or \code{neg})
+ \item \code{TF_peak.connectionType}: TF-peak connection type. This is by default \code{expression}, meaning that expression was used to construct the TF and peak
+ }      
+ \item peak-gene-related: Starting with \code{peak_gene.}:
+ \itemize{
+ \item \code{peak_gene.distance}: Peak-gene distance (usually taken the TSS of the gene as reference unless specified otherwise, see the parameter \code{overlapTypeGene} for more information from \code{\link{addConnections_peak_gene}})
+ \item \code{peak_gene.r}: Correlation coefficient of the peak-gene pair
+ \item \code{peak_gene.p_raw} and \code{peak_gene.p_adj}: Raw and adjusted p-value of the peak-gene pair
+ }
+ \item TF-gene-related: Starting with \code{TF_gene.}:
+ \itemize{
+ \item \code{TF_gene.r}: Correlation coefficient of the TF-gene pair
+ \item \code{TF_gene.p_raw}: Raw  p-value of the TF-gene pair
+ }
+}
 }
 \description{
-Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
-\strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
-
-Returns stored connections/links (either TF-peak, peak-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}). 
+Returns stored connections/links (either TF-peak, peak-genes, TF-genes or the filtered set of connections as produced by \code{\link{filterGRNAndConnectGenes}}).
+Additional meta columns (TF, peak and gene metadata) can be added optionally. 
 \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 GRN_con.all.df = getGRNConnections(GRN)
-# See the Workflow vignette on the GRaNIE website for examples
-GRN = loadExampleObject()
-GRN_con.all.df = getGRNConnections(GRN)
 }
 \seealso{
-\code{\link{filterGRNAndConnectGenes}}
-
-\code{\link{add_featureVariation}}
-
-\code{\link{add_TF_gene_correlation}}
-
 \code{\link{filterGRNAndConnectGenes}}
 
 \code{\link{add_featureVariation}}

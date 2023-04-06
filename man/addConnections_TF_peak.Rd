@@ -13,7 +13,7 @@ addConnections_TF_peak(
   connectionTypes = c("expression"),
   removeNegativeCorrelation = c(FALSE),
   maxFDRToStore = 0.3,
-  addForPermuted = TRUE,
+  addForBackground = TRUE,
   useGCCorrection = FALSE,
   percBackground_size = 75,
   percBackground_resample = TRUE,
@@ -27,7 +27,9 @@ addConnections_TF_peak(
 
 \item{plotDetails}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Print additional plots that may help for debugging and QC purposes? Note that these plots are currently less documented or not at all.}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
 
@@ -37,13 +39,13 @@ addConnections_TF_peak(
 
 \item{maxFDRToStore}{Numeric[0,1]. Default 0.3. Maximum TF-peak FDR value to permanently store a particular TF-peak connection in the object? This parameter has a large influence on the overall memory size of the object, and we recommend not storing connections with a high FDR due to their sheer number.}
 
-\item{addForPermuted}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Add connections also for permuted data. Leave at \code{TRUE} unless you know what you are doing.}
+\item{addForBackground}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. Add connections also for background data. Leave at \code{TRUE} unless you know what you are doing.}
 
-\item{useGCCorrection}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs?}
+\item{useGCCorrection}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. EXPERIMENTAL. Should a GC-matched background be used when calculating FDRs? For more details, see the Package Details vignette.}
 
-\item{percBackground_size}{Numeric[0,100]. Default 75. EXPERIMENTAL. Description will follow. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
+\item{percBackground_size}{Numeric[0,100]. Default 75. EXPERIMENTAL. Percentage of the background to use as basis for sampling. If set to 0, an automatic iterative procedure will identify the maximum percentage so that all relevant GC bins with a rel. frequency above 5\% from the foreground can be matched. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
 
-\item{percBackground_resample}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
+\item{percBackground_resample}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. EXPERIMENTAL. Should resampling be enabled for those GC bins for which not enough background peaks are available?. For more details, see the Package Details vignette. Only relevant if \code{useGCCorrection} is set to \code{TRUE}, ignored otherwise.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

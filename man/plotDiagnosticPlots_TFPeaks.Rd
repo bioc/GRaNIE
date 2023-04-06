@@ -9,7 +9,7 @@ plotDiagnosticPlots_TFPeaks(
   outputFolder = NULL,
   basenameOutput = NULL,
   plotDetails = FALSE,
-  dataType = c("real", "permuted"),
+  dataType = c("real", "background"),
   nTFMax = NULL,
   plotAsPDF = TRUE,
   pdf_width = 12,
@@ -21,13 +21,15 @@ plotDiagnosticPlots_TFPeaks(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{basenameOutput}{\code{NULL} or character. Default \code{NULL}. Basename of the output files that are produced. If set to \code{NULL}, a default basename is chosen. If a custom basename is specified, all output files will have the chosen basename as file prefix, be careful with not overwriting already existing files (if \code{forceRerun} is set to \code{TRUE})}
 
 \item{plotDetails}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Print additional plots that may help for debugging and QC purposes? Note that these plots are currently less documented or not at all.}
 
-\item{dataType}{Character vector. One of, or both of, \code{"real"} or \code{"permuted"}. For which data type, real or permuted data, to produce the diagnostic plots?}
+\item{dataType}{Character vector. One of, or both of, \code{"real"} or \code{"background"}. For which type, real or background data, to produce the diagnostic plots?}
 
 \item{nTFMax}{\code{NULL} or Integer > 0. Default \code{NULL}. Maximum number of TFs to process. Can be used for testing purposes by setting this to a small number i(.e., 10)}
 
@@ -45,7 +47,7 @@ plotDiagnosticPlots_TFPeaks(
 An updated \code{\linkS4class{GRN}} object.
 }
 \description{
-Due to the number of plots that this functions produces, we currently provide only the option to plot as PDF. This may change in the future.
+Plot diagnostic plots for TF-peak connections for a \code{\linkS4class{GRN}} object
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

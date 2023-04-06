@@ -149,6 +149,15 @@
         res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene", "BSgenome.Mmusculus.UCSC.mm10"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "mm9") {
         res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene", "BSgenome.Mmusculus.UCSC.mm9"), baseMessage, returnLogical = returnLogical)
+    } else if (genomeAssembly == "rn6") {
+        res = .checkPackageInstallation(c("org.Rn.eg.db", "TxDb.Rnorvegicus.UCSC.rn6.refGene", "BSgenome.Rnorvegicus.UCSC.rn6"), baseMessage, returnLogical = returnLogical)
+    } else if (genomeAssembly == "rn7") {
+        res = .checkPackageInstallation(c("org.Rn.eg.db", "TxDb.Rnorvegicus.UCSC.rn7.refGene", "BSgenome.Rnorvegicus.UCSC.rn7"), baseMessage, returnLogical = returnLogical)
+    } else if (genomeAssembly == "dm6") {
+        res = .checkPackageInstallation(c("org.Dm.eg.db", "TxDb.Dmelanogaster.UCSC.dm6.ensGene", "BSgenome.Dmelanogaster.UCSC.dm6"), baseMessage, returnLogical = returnLogical)
+    } else {
+        message = "Genome not listed, this should not happen. Contact the author."
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
     if (returnLogical) return(res)
@@ -156,19 +165,26 @@
 }
 
 
-.checkPackage_topGO_and_arguments <- function (ontology, algorithm, statistic) {
+.checkPackage_topGO_and_arguments <- function(ontology, algorithm, statistic) {
     
     if (length(intersect(ontology, c("GO_BP", "GO_MF", "GO_CC"))) > 0) {
         
         packageMessage = paste0("The package topGO is not installed but required when selecting any of the three following ontologies: GO_BP, GO_MF, GO_CC. Please install it and re-run this function or change the ontology.")
         .checkPackageInstallation("topGO", packageMessage) 
         
-        # This function is calle in the topGO:::.onAttach function and needs to be executed once otherwise
+        # This function is calling the topGO:::.onAttach function and needs to be executed once otherwise
         # errors like object 'GOBPTerm' of mode 'environment' was not found are thrown
         suppressMessages(topGO::groupGOTerms()) 
         
         checkmate::assertChoice(algorithm , topGO::whichAlgorithms())
         checkmate::assertChoice(statistic , topGO::whichTests())
+        
+        # Some statistics do not seem to work properly and cause errors in topGO, we exclude them here
+        if (statistic %in% c("sum", "globaltest", "ks.ties")) {
+            message = paste0("We stopped supporting the statsitic \"", statistic, "\" because it causes errors in topGO. Please choose a different statistic.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
     }
 }
 
@@ -195,7 +211,7 @@
   patternAll = strsplit(pattern, ",")[[1]]
   checkmate::assertCharacter(patternAll, min.len = 1)
   
-  if(!verbose) futile.logger::flog.threshold(futile.logger::WARN)
+  if (!verbose) futile.logger::flog.threshold(futile.logger::WARN)
   futile.logger::flog.info(paste0("Found ", length(patternAll), " distinct pattern(s) in pattern string."))
   
   nFilesToProcessTotal = 0
@@ -228,7 +244,7 @@
     futile.logger::flog.info(paste0("The following", nFilesToProcessTotal, "files were found:\n", paste0(filesToProcess.vec, collapse = "\n ")))
   }
   
-  if(!verbose) futile.logger::flog.threshold(futile.logger::INFO)
+  if (!verbose) futile.logger::flog.threshold(futile.logger::INFO)
   
   filesToProcess.vec
   
@@ -334,11 +350,11 @@
 }
 
 #' @import grDevices
-.checkAndLogWarningsAndErrors <- function(object, checkResult, isWarning = FALSE) {
+.checkAndLogWarningsAndErrors <- function(object, message, isWarning = FALSE) {
   
-  checkmate::assert(checkmate::checkCharacter(checkResult, len = 1), checkmate::checkLogical(checkResult))
+  checkmate::assert(checkmate::checkCharacter(message, len = 1), checkmate::checkLogical(message))
   
-  if (checkResult != TRUE) {
+  if (message != TRUE) {
 
     objectPart = ""
     if (!is.null(object)) {
@@ -348,11 +364,11 @@
     
     lastPartError   = "# An error occurred. See details above. If you think this is a bug, please contact us. #\n"
     hashesStrError = paste0(paste0(rep("#", nchar(lastPartError) - 1), collapse = ""), "\n")
-    messageError    = paste0(objectPart, checkResult, "\n\n", hashesStrError, lastPartError, hashesStrError)
+    messageError    = paste0(objectPart, message, "\n\n", hashesStrError, lastPartError, hashesStrError)
     
     lastPartWarning = ". \nThis warning may or may not be ignored. Carefully check its significance and whether it may affect the results.\n"
     #hashesStrWarning = paste0(paste0(rep("#", nchar(lastPartWarning) - 1), collapse = ""), "\n")
-    messageWarning  = paste0(objectPart, checkResult, lastPartWarning) # , hashesStrWarning)
+    messageWarning  = paste0(objectPart, message, lastPartWarning) # , hashesStrWarning)
     
     
     
@@ -362,7 +378,7 @@
     } else {
       futile.logger::flog.error(messageError)
       # Close all open devices    
-      while (grDevices::dev.cur()>1) grDevices::dev.off()
+      while (grDevices::dev.cur() > 1) grDevices::dev.off()
       stop(messageError)
     }
   }
@@ -392,6 +408,20 @@
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)    
   }
   
+  # Check if there are any chr names that are not part of seqlengths, which causes an 'seqnames' contains sequence names with no entries in 'seqinfo' error
+  missingSeqs = unique(annotation$chr)[which(!unique(annotation$chr) %in% names(seqlengths))]
+  
+  if (length(missingSeqs) > 0) {
+      message = paste0("For ", length(missingSeqs), " chromosomes (", paste0(missingSeqs, collapse = ","), ") and a total of ", length(which(annotation$chr %in% missingSeqs)), 
+                       " peaks, their length was not found in biomaRt. These peaks will be discarded")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)    
+      
+      # Filter and refactor
+      annotation = annotation %>%
+          dplyr::filter(!.data$chr %in% missingSeqs) %>%
+          dplyr::mutate(chr = factor(.data$chr, levels = unique(.data$chr)))
+      
+  }
   gr = GenomicRanges::makeGRangesFromDataFrame(annotation, keep.extra.columns = TRUE, seqinfo = seqlengths, starts.in.df.are.0based = zeroBased, ...)
   
   # Check whether there are out-of-bound sequences, and abort if there are. This should not happen
@@ -416,6 +446,7 @@
       }
           
   }
+  
   # 
   # nExtraColumns = length(extraColumns)
   # 
@@ -430,17 +461,24 @@
 
 
 # Only needed here: get CG content peaks (can be made optional), and .populatePeakAnnotation (within ChipSeeker)
-.getGenomeObject <- function(genomeAssembly, type = "txbd") {
+.getGenomeObject <- function(genomeAssembly, type = "txbd", jasparRelease = 2022) {
     
-    checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName"))
-    checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10"))
+    checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName", "txID")) #txID: NCBI taxonomy ID
+    
+    if (type != "txID") {
+        checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn6", "rn7", "dm6"))
+    } else {
+        availableSpecies.df = rbioapi::rba_jaspar_species(release = jasparRelease)
+    }
     
     if (genomeAssembly == "hg38") {
-
+        
         if (type == "txbd") {
             obj <- TxDb.Hsapiens.UCSC.hg38.knownGene::TxDb.Hsapiens.UCSC.hg38.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Homo sapiens")]
         } else {
             obj = "org.Hs.eg.db"
         }
@@ -451,6 +489,8 @@
             obj <- TxDb.Hsapiens.UCSC.hg19.knownGene::TxDb.Hsapiens.UCSC.hg19.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
+        } else if(type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Homo sapiens")]
         } else {
             obj = "org.Hs.eg.db"
         }
@@ -462,6 +502,8 @@
             obj <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Mmusculus.UCSC.mm10::BSgenome.Mmusculus.UCSC.mm10
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Mus musculus")]
         } else {
             obj = "org.Mm.eg.db"
         }
@@ -472,14 +514,54 @@
             obj <- TxDb.Mmusculus.UCSC.mm9.knownGene::TxDb.Mmusculus.UCSC.mm9.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Mmusculus.UCSC.mm9::BSgenome.Mmusculus.UCSC.mm9
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Mus musculus")]
         } else {
             obj = "org.Mm.eg.db"
+        }
+        
+    } else if (genomeAssembly == "rn6") {
+        
+        if (type == "txbd") {
+            obj <- TxDb.Rnorvegicus.UCSC.rn6.refGene::TxDb.Rnorvegicus.UCSC.rn6.refGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Rnorvegicus.UCSC.rn6::BSgenome.Rnorvegicus.UCSC.rn6
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Rattus norvegicus")]
+        } else {
+            obj = "org.Rn.eg.db"
+        }
+        
+    }else if (genomeAssembly == "rn7") {
+        
+        if (type == "txbd") {
+            obj <- TxDb.Rnorvegicus.UCSC.rn7.refGene::TxDb.Rnorvegicus.UCSC.rn7.refGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Rnorvegicus.UCSC.rn7::BSgenome.Rnorvegicus.UCSC.rn7
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Rattus norvegicus")]
+        } else {
+            obj = "org.Rn.eg.db"
+        }
+        
+    } else if (genomeAssembly == "dm6") {
+        
+        if (type == "txbd") {
+            obj <- TxDb.Dmelanogaster.UCSC.dm6.ensGene::TxDb.Dmelanogaster.UCSC.dm6.ensGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Dmelanogaster.UCSC.dm6::BSgenome.Dmelanogaster.UCSC.dm6
+        } else if (type == "txID"){
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Drosophila melanogaster")]
+        } else {
+            obj = "org.Dm.eg.db"
         }
         
     }
     
     obj
 }
+
+
 
 # .getChrLengths <- function(genomeAssembly) {
 #   txdb = .getGenomeObject(genomeAssembly)
@@ -519,9 +601,9 @@
 .checkSelfOverlap <- function(subject) {
     
     overlapsCount = GenomicRanges::countOverlaps(subject, subject, 
-                                  minoverlap=1,
-                                  type="any",
-                                  ignore.strand=TRUE)
+                                  minoverlap = 1,
+                                  type = "any",
+                                  ignore.strand = TRUE)
     
     length(which(overlapsCount > 1))
     
@@ -532,25 +614,33 @@
 .asSparseMatrix <- function(matrix, convertNA_to_zero=TRUE, dimnames = NULL) {
   
   if (convertNA_to_zero) {
-    matrix[which(is.na(matrix))]= 0
+    matrix[which(is.na(matrix))] = 0
   }
  
-  Matrix::Matrix(matrix, sparse=TRUE, dimnames = dimnames)
+    # TODO: as("lgCMatrix") may be a bit more space-saing BUT then we cannot add the isFiltered column to it that the code currently relies on
+  Matrix::Matrix(matrix, sparse = TRUE, dimnames = dimnames) %>% methods::as("dMatrix")
 }
 
 #' @importFrom Matrix Matrix
-.asMatrixFromSparse <-function(matrix, convertZero_to_NA=TRUE) {
+.asMatrixFromSparse <- function(matrix, convertZero_to_NA=TRUE) {
   
-  if (methods::is(matrix,"dgeMatrix") | methods::is(matrix,"dgCMatrix") | methods::is(matrix,"dgRMatrix")) {
+  if (methods::is(matrix,"dgeMatrix") | methods::is(matrix,"dgCMatrix") | methods::is(matrix,"dgRMatrix") | methods::is(matrix,"lgCMatrix")) {
     dimNames = dimnames(matrix)
     matrix = as.matrix(matrix)
     
     if (convertZero_to_NA) {
-        matrix[which(matrix == 0)]= NA
+        matrix[which(matrix == 0)] = NA
     }
     
     dimnames(matrix) = dimNames
 
+  } else {
+      # 
+      # if (!is.matrix(matrix) & !is.data.frame(matrix)) {
+      #     message = paste0("Unknown sparse matrix type \"", class(matrix), "\", this should not happen. Contact the authors.")
+      #     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      # }
+     
   }
 
   matrix
@@ -594,7 +684,7 @@
   }
   
   if (!is.null(ncolExpected)) {
-    if (! ncol(tbl) %in% ncolExpected) {
+    if (!ncol(tbl) %in% ncolExpected) {
       message = paste0("The file ", file, " does not have the expected number of ", ncolExpected, " columns, but instead ", ncol(tbl), ".")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
@@ -656,7 +746,7 @@ isIntegerMatrix <- function(df) {
   
 }
 
-.getPermStr <- function (permutation) {
+.getPermStr <- function(permutation) {
   
   dplyr::if_else(permutation == 0, "Real data", "Permuted data")
 }
@@ -667,7 +757,7 @@ match.call.defaults <- function(asList = TRUE, ...) {
     call <- evalq(match.call(expand.dots = FALSE), parent.frame(2))
     formals <- evalq(formals(), parent.frame(2))
     
-    for(i in setdiff(names(formals), names(call)))
+    for (i in setdiff(names(formals), names(call)))
         call[i] <- list( formals[[i]] )
     
     
@@ -677,6 +767,9 @@ match.call.defaults <- function(asList = TRUE, ...) {
         match.call(sys.function(sys.parent(n = 2)), call)
     }
 }
+
+
+
 
 .firstLetterUppercase <- function(x) {
     substr(x, 1, 1) <- toupper(substr(x, 1, 1))
@@ -691,7 +784,7 @@ is.installed <- function(mypkg){
 # Taken from https://www.bioconductor.org/packages/release/bioc/vignettes/BiocFileCache/inst/doc/BiocFileCache.html
 .get_cache <- function() {
     # cache <- tools::R_user_dir(utils::packageName(), which="cache")
-    cache <- tools::R_user_dir("GRaNIE", which="cache")
+    cache <- tools::R_user_dir("GRaNIE", which = "cache")
     BiocFileCache::BiocFileCache(cache, ask = FALSE)
 }
 
@@ -705,17 +798,23 @@ is.installed <- function(mypkg){
 
 .getBiomartParameters <- function(genomeAssembly) {
     
-    if (grepl(x = genomeAssembly, pattern = "^hg\\d\\d")){
-        dataset = "hsapiens_gene_ensembl"
+    host = "https://www.ensembl.org"
+    
+    if (grepl(x = genomeAssembly, pattern = "^hg\\d+")) {
+        dataset = "hsapiens"
         if (genomeAssembly == "hg38") {
-            host = "https://www.ensembl.org"
         } else if (genomeAssembly == "hg19") {
-            host ="https://grch37.ensembl.org"
+            host = "https://grch37.ensembl.org"
         }
-    } else if (grep(x = genomeAssembly, pattern = "^mm\\d\\d")){
-        dataset = "mmusculus_gene_ensembl"
-        host = "https://www.ensembl.org"
+    } else if (grepl(x = genomeAssembly, pattern = "^mm\\d+")) {
+        dataset = "mmusculus"
+    } else if (grepl(x = genomeAssembly, pattern = "^rn\\d+")) {
+        dataset = "rnorvegicus"
+    } else if (grepl(x = genomeAssembly, pattern = "^dm\\d+")) {
+        dataset = "dmelanogaster"
     }
     
-    list(dataset = dataset, host = host)
+    
+    
+    list(dataset = paste0(dataset, "_gene_ensembl"), host = host)
 }

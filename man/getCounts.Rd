@@ -12,20 +12,11 @@ getCounts(
   includeIDColumn = TRUE,
   includeFiltered = FALSE
 )
-
-getCounts(
-  GRN,
-  type,
-  permuted = FALSE,
-  asMatrix = FALSE,
-  includeIDColumn = TRUE,
-  includeFiltered = FALSE
-)
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{type}{Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both permuted and non-permuted data can be retrieved, while for \code{peaks}, only the non-permuted one (i.e., 0) can be retrieved.}
+\item{type}{Character. Either \code{peaks} or \code{rna}. \code{peaks} corresponds to the counts for the open chromatin data, while \code{rna} refers to th RNA-seq counts. If set to \code{rna}, both real (foreground) and background data can be retrieved, while for \code{peaks}, only the real (i.e., the one with index \code{0}) can be retrieved.}
 
 \item{permuted}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the permuted data be taken (\code{TRUE}) or the non-permuted, original one (\code{FALSE})?}
 
@@ -37,20 +28,12 @@ getCounts(
 }
 \value{
 Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
-
-Data frame of counts, with the type as indicated by the function parameters. This function does **NOT** return a \code{\linkS4class{GRN}} object.
 }
 \description{
 Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
 \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
-
-Get counts for the various data defined in a \code{\linkS4class{GRN}} object.
-\strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 }
 \examples{
-# See the Workflow vignette on the GRaNIE website for examples
-GRN = loadExampleObject()
-counts.df = getCounts(GRN, type = "peaks", permuted = FALSE)
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
 counts.df = getCounts(GRN, type = "peaks", permuted = FALSE)

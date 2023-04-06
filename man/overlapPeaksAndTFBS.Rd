@@ -4,7 +4,7 @@
 \alias{overlapPeaksAndTFBS}
 \title{Overlap peaks and TFBS for a \code{\linkS4class{GRN}} object}
 \usage{
-overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
+overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE, ...)
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
@@ -13,12 +13,14 @@ overlapPeaksAndTFBS(GRN, nCores = 2, forceRerun = FALSE)
 A value >1 requires the \code{BiocParallel} package (as it is listed under \code{Suggests}, it may not be installed yet).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
+
+\item{...}{No default. Only relevant if \code{source = "JASPAR"} has been selected in \code{addTFBS}, ignored otherwise. Additional arguments for \code{motifmatchr::matchMotifs} such as custom background nucleotide frequencies or p-value cutoffs. For more information, type \code{?motifmatchr::matchMotifs}}
 }
 \value{
 An updated \code{\linkS4class{GRN}} object, with added data from this function (\code{GRN@data$TFs$TF_peak_overlap} in particular)
 }
 \description{
-Overlap peaks and TFBS for a \code{\linkS4class{GRN}} object
+If the source was set to \code{JASPAR} in \code{\link{addTFBS}}, the argument \code{nCores} is ignored.
 }
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples

@@ -1,3 +1,9 @@
+# GRaNIE 1.2.7 (2023-04-06)
+
+This major update brings GRaNIE in this release branch of Bioconductor to the latest version from the devel branch (1.3.34) before the code freeze for Bioconductor 3.16. Because of the heavy development for the GRaNIE package, we decided to provide the latest version also for Bioc 3.16 for people who do not immediately update to Bioc 3.17.
+
+For a full changelog, see the [GRaNIE webpage](https://grp-zaugg.embl-community.io/GRaNIE/news/index.html).
+
 
 # GRaNIE 1.2.4 (2023-01-31)
 

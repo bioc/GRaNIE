@@ -13,6 +13,7 @@ filterGRNAndConnectGenes(
   peak_gene.fdr.method = "BH",
   peak_gene.IHW.covariate = NULL,
   peak_gene.IHW.nbins = "auto",
+  outputFolder = NULL,
   gene.types = c("protein_coding"),
   allowMissingTFs = FALSE,
   allowMissingGenes = TRUE,
@@ -24,9 +25,9 @@ filterGRNAndConnectGenes(
   filterPeaks = NULL,
   TF_peak_FDR_selectViaCorBins = FALSE,
   filterLoops = TRUE,
-  outputFolder = NULL,
   resetGraphAndStoreInternally = TRUE,
-  silent = FALSE
+  silent = FALSE,
+  forceRerun = FALSE
 )
 }
 \arguments{
@@ -45,9 +46,13 @@ Method for adjusting p-values for multiple testing.
 If set to "IHW", the package \code{IHW} is required (as it is listed under \code{Suggests}, it may not be installed), 
 and independent hypothesis weighting will be performed, and a suitable covariate has to be specified for the parameter \code{peak_gene.IHW.covariate}.}
 
-\item{peak_gene.IHW.covariate}{Character. Default NULL. Name of the covariate to use for IHW (column name from the table thatis returned with the function \code{getGRNConnections}. Only relevant if \code{peak_gene.fdr.method} is set to "IHW". You have to make sure the specified covariate is suitable or IHW, see the diagnostic plots that are generated in this function for this. For many datasets, the peak-gene distance (called \code{peak_gene.distance} in the object) seems suitable.}
+\item{peak_gene.IHW.covariate}{Character. Default \code{NULL}. Name of the covariate to use for IHW (column name from the table that is returned with the function \code{getGRNConnections}. Only relevant if \code{peak_gene.fdr.method} is set to "IHW". You have to make sure the specified covariate is suitable for IHW, see the diagnostic plots that are generated in this function for this. For many datasets, the peak-gene distance (called \code{peak_gene.distance} in the object) seems suitable.}
 
 \item{peak_gene.IHW.nbins}{Integer or "auto". Default "auto". Number of bins for IHW. Only relevant if \code{peak_gene.fdr.method} is set to "IHW".}
+
+\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
+object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
+If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
 \item{gene.types}{Character vector of supported gene types. Default \code{c("protein_coding", "lincRNA")}. 
 Filter for gene types to retain, genes with gene types not listed here are filtered. The special keyword "all" indicates no filter and retains all gene types.
@@ -72,16 +77,16 @@ keeping backwards compatibility with \code{\linkS4class{GRN}} objects.}
 
 \item{filterPeaks}{Character vector. Default \code{NULL}. Vector of peak IDs (as named in the GRN object) to retain. All peaks not listed will be filtered out.}
 
-\item{TF_peak_FDR_selectViaCorBins}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Use a modified procedure for selecting TF-peak links that is based on the user-specified FDR but that retains also links that may have a higher FDR but a more extreme correlation.}
+\item{TF_peak_FDR_selectViaCorBins}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Use a modified procedure for selecting TF-peak links. Instead of selecting solely based on the user-specified FDR, this procedure first identifies the correlation bin closest to 0 that contains at least one significant TF-peak link according to the chosen TF_peak.fdr.threshold. This is done spearately for both FDR directions.  It then retains all TF-peak links that have a correlation bin at least as extreme as the identified pair. For example, if the correlation bin [0.35,0.40] contains a significant TF-peak link while [0,0.05], [0.05,0.10], ..., [0.30,0.35] do not, all TF-peak links with a correlation of at least 0.35 or above are selected (i.e, bins [0.35,0.40], [0.40,0.45], ..., [0.95,1.00]).  Thus, for the final selection, also links with a higher FDR but a more extreme correlation may be selected.}
 
 \item{filterLoops}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. If a TF regulates itself (i.e., the TF and the gene are the same entity), should such loops be filtered from the GRN?}
-
-\item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the object in \code{link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. We recommend specifying an absolute path.}
 
 \item{resetGraphAndStoreInternally}{\code{TRUE} or \code{FALSE}.  Default \code{TRUE}. If set to \code{TRUE}, the stored eGRN graph (slot \code{graph}) is reset due to the potentially changed connections that
 would otherwise cause conflicts in the information stored in the object. Also, a GRN object is returned. If set to \code{FALSE}, only the new filtered connections are returned and the object is not altered.}
 
 \item{silent}{\code{TRUE} or \code{FALSE}.  Default \code{FALSE}. Print progress messages and filter statistics.}
+
+\item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
 An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 

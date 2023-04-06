@@ -1,6 +1,6 @@
 Package: GRaNIE
 Title: GRaNIE: Reconstruction cell type specific gene regulatory networks including enhancers using chromatin accessibility and RNA-seq data
-Version: 1.2.6
+Version: 1.2.7
 Encoding: UTF-8
 Authors@R: c(person("Christian", "Arnold", email =
         "chrarnold@web.de", role = c("cre","aut")),
@@ -65,12 +65,20 @@ Suggests:
     BSgenome.Hsapiens.UCSC.hg38,
     BSgenome.Mmusculus.UCSC.mm10,
     BSgenome.Mmusculus.UCSC.mm9,
+    BSgenome.Rnorvegicus.UCSC.rn6,
+    BSgenome.Rnorvegicus.UCSC.rn7,
+    BSgenome.Dmelanogaster.UCSC.dm6,
     TxDb.Hsapiens.UCSC.hg19.knownGene,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
     TxDb.Mmusculus.UCSC.mm10.knownGene,
     TxDb.Mmusculus.UCSC.mm9.knownGene,
+    TxDb.Rnorvegicus.UCSC.rn6.refGene,
+    TxDb.Rnorvegicus.UCSC.rn7.refGene,
+    TxDb.Dmelanogaster.UCSC.dm6.ensGene,
     org.Hs.eg.db,
     org.Mm.eg.db,
+    org.Rn.eg.db,
+    org.Dm.eg.db,
     IHW,
     clusterProfiler,
     ReactomePA,
@@ -84,12 +92,17 @@ Suggests:
     robust,
     variancePartition,
     purrr,
-    EDASeq
+    EDASeq,
+    JASPAR2022,
+    TFBSTools,
+    motifmatchr,
+    rbioapi
 VignetteBuilder: knitr
 biocViews: Software, GeneExpression, GeneRegulation, NetworkInference, GeneSetEnrichment, BiomedicalInformatics, Genetics, Transcriptomics, ATACSeq, RNASeq, GraphAndNetwork, Regression, Transcription, ChIPSeq
 License: Artistic-2.0
 LazyData: false
 URL: https://grp-zaugg.embl-community.io/GRaNIE
 BugReports: https://git.embl.de/grp-zaugg/GRaNIE/issues
-RoxygenNote: 7.2.2
+RoxygenNote: 7.2.3
+Config/testthat/parallel: true
 Config/testthat/edition: 3
