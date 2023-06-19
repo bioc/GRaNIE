@@ -519,7 +519,21 @@
     n_min <- n_min[rownames(diffDensityMat)]
     #quantile(n_min)
     remove_smallN = which(n_min < par.l$internal$plot_minNoTFBS_heatmap)
-    cor(n_min[-remove_smallN], matrixStats::rowMaxs(diffDensityMat)[-remove_smallN], method = corMethod)
+    
+    dataX = n_min[-remove_smallN]
+    dataY = matrixStats::rowMaxs(diffDensityMat)[-remove_smallN]
+    if (corMethod %in% c("pearson", "spearman")) {
+        
+        res = cor(dataX, dataY, method = corMethod)
+        
+    } else if (corMethod == "bicor") {
+        
+        res = WGCNA::bicorAndPvalue(dataX, dataY, robustX = TRUE, robustY = TRUE)
+
+    }
+    
+    
+    
     
     factorClassificationPlot <- sort(median.cor.tfs, decreasing = TRUE)
     diffDensityMat_Plot = diffDensityMat[match(names(factorClassificationPlot), rownames(diffDensityMat)), ]

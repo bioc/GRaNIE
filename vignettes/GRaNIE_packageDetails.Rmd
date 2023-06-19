@@ -116,11 +116,13 @@ following options:
         -   `dm6`:
             `BiocManager::install(c("org.Dm.eg.db", "BSgenome.Dmelanogaster.UCSC.dm6", "TxDb.Dmelanogaster.UCSC.dm6.ensGene"))`
 
-    -   If you want to use the *JASPAR* database for TF and TFBS, you need the following extra packages:  `BiocManager::install(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"))`
+    -   If you want to use the *JASPAR* database for TF and TFBS, you
+        need the following extra packages:
+        `BiocManager::install(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"))`
 
     -   For all other optional packages, you may execute this line for
         installing them in one go:
-        `BiocManager::install(c("IHW", "robust", "csaw", "EDASeq", "ChIPseeker", "variancePartition", "ReactomePA", "DOSE", "clusterProfiler", "BiocFileCache", "BiocParallel"))`
+        `BiocManager::install(c("IHW", "WGCNA", "csaw", "EDASeq", "ChIPseeker", "variancePartition", "ReactomePA", "DOSE", "clusterProfiler", "BiocFileCache", "BiocParallel"))`
 
 ## Detailed information about the scope of the optional packages
 
@@ -161,8 +163,10 @@ and may be needed context-specifically:
         annotation, fully optional otherwise.
 
 -   **TF and TFBS related packages**
-    - **`JASPAR2022`**, **`TFBSTools`**, **`motifmatchr`**, **`rbioapi`**: Needed only when `source = "JASPAR"` for `addTFBS()` for using JASPAR 2022 TFs and TFBS
 
+    -   **`JASPAR2022`**, **`TFBSTools`**, **`motifmatchr`**,
+        **`rbioapi`**: Needed only when `source = "JASPAR"` for
+        `addTFBS()` for using JASPAR 2022 TFs and TFBS
 
 -   **Additional statistical packages and for enhanced functionality**
 
@@ -179,11 +183,10 @@ and may be needed context-specifically:
         `add_featureVariation()` to quantify multiple sources of
         biological and technical variation for features (TFs, peaks, and
         genes)
-    -   **`robust`**: Needed only when setting
-        `addRobustRegression = TRUE` in the functions
-        `addConnections_peak_gene()` and `add_TF_gene_correlation()` for
-        enabling robust regression (an experimental, largely
-        undocumented feature so far).
+    -   **`WGCNA`**: Needed only when setting `corMethod = "bicor"` in
+        multiple supported functions for enabling another type of robust
+        correlations as alternative to Spearman (an experimental,
+        largely undocumented feature so far).
 
 -   **Enrichment-associated packages**
 
@@ -209,7 +212,11 @@ figures and results](GRaNIE_workflow.html).
 
 # Example GRN object
 
-For user convenience, we provide the function `loadExampleObject()` that can load a supported GRN object from the `GRaNIE` package from an arbitrary URL into R. This function can be used, for example, to load an example object that contains a small number of TFs that we specifically prepared for package use and exploring the package.
+For user convenience, we provide the function `loadExampleObject()` that
+can load a supported GRN object from the `GRaNIE` package from an
+arbitrary URL into R. This function can be used, for example, to load an
+example object that contains a small number of TFs that we specifically
+prepared for package use and exploring the package.
 
 Simply run the following command:
 
@@ -224,7 +231,8 @@ and everything that the package can calculate is contained in the
 object. Thus, you can run any function after loading the example
 object.**
 
-For more details on where the data from the example object comes from, see the [workflow vignette with explanations](GRaNIE_workflow.html).
+For more details on where the data from the example object comes from,
+see the [workflow vignette with explanations](GRaNIE_workflow.html).
 
 # Input {#input}
 
@@ -294,27 +302,31 @@ data, see [here](#guidelines_singleCell).**
 
 ## TF and TFBS data {#input_TF}
 
-TF and TFBS data is mandatory as input. As of March 2023, we offer two different ways of how to
-import TF and TFBS data into `GRaNIE`.
+TF and TFBS data is mandatory as input. As of March 2023, we offer two
+different ways of how to import TF and TFBS data into `GRaNIE`.
 
 ### Importing custom TF and TFBS data
 
-First, we support the import of any TF and TFBS data irrespective of how it was generated or what it represents, thereby offering full flexibility for how our framework is used. The only drawback is that preparing the TF and TFBS data is a little more involved. This was the only and default way of how to use `GRaNIE` until February 2023. In what follows, we explain more details.
+First, we support the import of any TF and TFBS data irrespective of how
+it was generated or what it represents, thereby offering full
+flexibility for how our framework is used. The only drawback is that
+preparing the TF and TFBS data is a little more involved. This was the
+only and default way of how to use `GRaNIE` until February 2023. In what
+follows, we explain more details.
 
-Specifically, the package
-requires a `bed` file per TF with TF binding sites (TFBS). TFBS can
-either be in-silico predicted, or experimentally verified, as long as
-genome-wide TFBS can be used. For convenience and orientation, we
-provide TFBS predictions for HOCOMOCO-based TF motifs that were used
-with `PWMScan` for `hg19`, `hg38` and `mm10`. Check the [workflow
-vignette for an example](GRaNIE_workflow.html).
+Specifically, the package requires a `bed` file per TF with TF binding
+sites (TFBS). TFBS can either be in-silico predicted, or experimentally
+verified, as long as genome-wide TFBS can be used. For convenience and
+orientation, we provide TFBS predictions for HOCOMOCO-based TF motifs
+that were used with `PWMScan` for `hg19`, `hg38` and `mm10`. Check the
+[workflow vignette for an example](GRaNIE_workflow.html).
 
 **We recommend to download the full HOCOMOCO TFBS data from
 [here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs).
-In short, we provide example files for selected supported genome assemblies
-(*hg19*, *hg38* and *mm10*) that are fully compatible with `GRaNIE` as
-separate downloads. While we also provide TFBS data for FIMO, we
-recommend using HOCOMOCO.**
+In short, we provide example files for selected supported genome
+assemblies (*hg19*, *hg38* and *mm10*) that are fully compatible with
+`GRaNIE` as separate downloads. While we also provide TFBS data for
+FIMO, we recommend using HOCOMOCO.**
 
 However, you may also use your own TFBS data, and we provide full
 flexibility in doing so. Only some manual preparation is necessary.
@@ -337,8 +349,8 @@ the following:
     (e.g., `AHR.0.B` if the file for `AHR` is called
     `AHR.0.B_TFBS.bed.gz`).
 -   we provide example files for selected genome assemblies (*hg19*,
-    *hg38* and *mm10*) that are fully compatible with `GRaNIE` as separate
-    downloads. For more information, check
+    *hg38* and *mm10*) that are fully compatible with `GRaNIE` as
+    separate downloads. For more information, check
     [here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs).
 
 For more methodological details, details on how to construct these
@@ -347,12 +359,28 @@ files, their exact format etc we refer to `diffTF` paper and
 
 ### Importing TF and TFBS from the JASPAR databases directly in R
 
-As of March 2023, we additionally a more user-friendly way of importing TF and TFBS data from the various JASPAR databases that are available in R/Bioconductor: `JASPAR` 2014, 2016, 2018, 2022, and 2022. While we so far tested only with th newest `JASPAR2022` database / R package, the older ones should also work - if not, please let us know. Using `JASPAR2022` as TF database is much easier and also quicker from a user perspective, and none of the additional complexities that were mentioned above for the custom import apply here. For details, see the `addTFBS()` and `overlapPeaksAndTFBS()` functions.
+As of March 2023, we additionally a more user-friendly way of importing
+TF and TFBS data from the various JASPAR databases that are available in
+R/Bioconductor: `JASPAR` 2014, 2016, 2018, 2022, and 2022. While we so
+far tested only with th newest `JASPAR2022` database / R package, the
+older ones should also work - if not, please let us know. Using
+`JASPAR2022` as TF database is much easier and also quicker from a user
+perspective, and none of the additional complexities that were mentioned
+above for the custom import apply here. For details, see the `addTFBS()`
+and `overlapPeaksAndTFBS()` functions.
 
-Note that we also implemented an option to customize which TFBS collection to use from the `JASPAR2022` database via the function argument `JASPAR_useSpecificTaxGroup` from `addTFBS()`. For example, this feature can be used to specify the whole \code{vertebrates} TF collection irrespective of the genome assembly the data is in - which is useful for genomes such as rat or mouse, for which JASPAR only finds a few dozen TF at most if the specific genome was specified otherwise.
+Note that we also implemented an option to customize which TFBS
+collection to use from the `JASPAR2022` database via the function
+argument `JASPAR_useSpecificTaxGroup` from `addTFBS()`. For example,
+this feature can be used to specify the whole \code{vertebrates} TF
+collection irrespective of the genome assembly the data is in - which is
+useful for genomes such as rat or mouse, for which JASPAR only finds a
+few dozen TF at most if the specific genome was specified otherwise.
 
-
-Be aware, though, that you may want to compare your *eGRN* across different TF and TFBS data - we are currently investigating the effect of using `JASPAR2022` and cannot currently comment much on it. We will, however, update the vignette here once we have more results to share.
+Be aware, though, that you may want to compare your *eGRN* across
+different TF and TFBS data - we are currently investigating the effect
+of using `JASPAR2022` and cannot currently comment much on it. We will,
+however, update the vignette here once we have more results to share.
 
 ## Sample metadata (optional but highly recommended) {#input_metadata}
 
@@ -588,21 +616,26 @@ and our experiences from a limited number of datasets:
     resampled peaks) while (2) increasing the background size overall,
     which is better from a statistical sampling point of view. We think
     (2) outweighs (1) and therefore set the default to a relatively high
-    value, but we are still checking and experimenting with this
-    feature. This is why the GC correction is still marked as
-    experimental. On the other hand, a lower value will result in the
-    opposite of the two points mentioned above. As often in statistics
-    and science, it is about finding a good compromise.
+        value, but we are still checking and experimenting with this
+        feature. This is why the GC correction is still marked as
+        experimental. On the other hand, a lower value will result in
+        the opposite of the two points mentioned above. As often in
+        statistics and science, it is about finding a good compromise.
 
 [Judging how well the GC correction worked]{.underline}
 
-We also provide detailed QC plots that summarize both the GC
-background selection as well as the differences for teh TF-peak connections with and without GC correction. For more details, see [here](#output_TF_peak_GC).
+We also provide detailed QC plots that summarize both the GC background
+selection as well as the differences for teh TF-peak connections with
+and without GC correction. For more details, see
+[here](#output_TF_peak_GC).
 
 [Reproducibility of GC correction]{.underline}
 
-**Lastly, we need to emphasize that the GC correction, due to the random sampling from the background, is not deterministic and may yield a slightly different number of connections each time it is run. The more bins are resampled (see discussion above), the more differences may arise** 
-
+**Lastly, we need to emphasize that the GC correction, due to the random
+sampling from the background, is not deterministic and may yield a
+slightly different number of connections each time it is run. The more
+bins are resampled (see discussion above), the more differences may
+arise**
 
 ### TF Activity connections {#methods_TF_peak_TFActivity}
 
@@ -797,7 +830,7 @@ using the very same methods but with randomized data, as outlined
 above.** This allows us to judge and compare the connectivity for the
 real network as compared to a background *eGRN*.
 
-### Object and output details related to the background links  {#methods_background_objectDetails}
+### Object and output details related to the background links {#methods_background_objectDetails}
 
 In the `GRN` object (`GRN@connections` slot, to be specific), we label
 the background data with a `1`, while the original data is labeled as
@@ -821,13 +854,16 @@ Importantly, two types of networks are constructed:
 1.  *TF-peak-gene* network: The networks is tripartite and contains TF,
     peak, and gene nodes. For example, if a TF links to multiple peaks,
     all of which may link to the same target gene, these will be
-    represented by separate and different edges in the network. In essence, this graph is in principle the same as the filtered *eGRN* table as produced by `filterGRNAndConnectGenes()`.
+    represented by separate and different edges in the network. In
+    essence, this graph is in principle the same as the filtered *eGRN*
+    table as produced by `filterGRNAndConnectGenes()`.
 2.  *TF-gene network*: The networks is bipartite and contains only TF
     and gene, but not peak nodes. Thus, if a TF links to multiple peaks
     in the underlying set of filtered connections, all of which may link
     to the same target gene, these will be represented as only one edge
-    in the network after removing duplicate links. Also, particular edges may be removed from the graph such as direct  TF-TF edges, depending on the chosen parameters (e..g, `allowLoops`). 
-
+    in the network after removing duplicate links. Also, particular
+    edges may be removed from the graph such as direct TF-TF edges,
+    depending on the chosen parameters (e..g, `allowLoops`).
 
 For subsequent functions, either of the two networks is used, and the
 user can choose which type of network to use if both are possible (such
@@ -897,21 +933,42 @@ drawn or it looks not nice enough:
 reduce the size of the network and re-run as pointed above in the first
 point.**
 
-
-
 ## Feature variation quantification
 
-One of our latest features we added to the package is to use the `variancePartition` package to quantify and interpret the multiple sources of biological and technical variation from the features (TFs, peaks, and genes) in a `GRN` object. This can be done via the function `add_featureVariation()`. This can be helpful to identify where exactly the observed variation actually comes from, which we believe is useful information when checking *eGRNs* and particular elements of it. Note that this is still a work of progress, however, and we did not yet test this feature for many datasets.
+One of our latest features we added to the package is to use the
+`variancePartition` package to quantify and interpret the multiple
+sources of biological and technical variation from the features (TFs,
+peaks, and genes) in a `GRN` object. This can be done via the function
+`add_featureVariation()`. This can be helpful to identify where exactly
+the observed variation actually comes from, which we believe is useful
+information when checking *eGRNs* and particular elements of it. Note
+that this is still a work of progress, however, and we did not yet test
+this feature for many datasets.
 
-In essence, we run the main function `fitExtractVarPartModel` of the package `variancePartition`. This fits a linear (mixed) model to estimate the contribution of multiple sources of variation while simultaneously correcting for all other variables for the features in a `GRN` object (TFs, peaks, and genes), given particular metadata. The function reports the fraction of variance attributable to each metadata variable. As input, the normalized count matrices are used.
+In essence, we run the main function `fitExtractVarPartModel` of the
+package `variancePartition`. This fits a linear (mixed) model to
+estimate the contribution of multiple sources of variation while
+simultaneously correcting for all other variables for the features in a
+`GRN` object (TFs, peaks, and genes), given particular metadata. The
+function reports the fraction of variance attributable to each metadata
+variable. As input, the normalized count matrices are used.
 
-The formula used for model fitting can either be provided manually or set to `auto`. For the latter case, the formula will be build automatically based on all metadata variables as specified with the `metadata` parameter. By default, numerical variables will be modeled as fixed effects, while variables that are defined as factors or can be converted to factors (characters and logical variables) are modeled as random effects as recommended by the `variancePartition` package.
+The formula used for model fitting can either be provided manually or
+set to `auto`. For the latter case, the formula will be build
+automatically based on all metadata variables as specified with the
+`metadata` parameter. By default, numerical variables will be modeled as
+fixed effects, while variables that are defined as factors or can be
+converted to factors (characters and logical variables) are modeled as
+random effects as recommended by the `variancePartition` package.
 
-The user can also speciy whether to run the procedure only on the features from the filtered set of connections (the *eGRN*, the result of `filterGRNAndConnectGenes()`) or on all filters (that is, for all features irrespective of whether or not they are part of the final *eGRN*).
+The user can also speciy whether to run the procedure only on the
+features from the filtered set of connections (the *eGRN*, the result of
+`filterGRNAndConnectGenes()`) or on all filters (that is, for all
+features irrespective of whether or not they are part of the final
+*eGRN*).
 
-
-For more information where the information is stored in the `GRN` object and which QC plots are available, see [here](#output_featureVariation).
-
+For more information where the information is stored in the `GRN` object
+and which QC plots are available, see [here](#output_featureVariation).
 
 # Output {#output}
 
@@ -922,6 +979,7 @@ pipeline.
 ## GRN object and results stored within {#output_GRN}
 
 ### Object details
+
 **Our pipeline works and output a so-called `GRN` object. The goal is
 simple: All information is stored in it, and by keeping everything
 within one object and sharing it with others, they have all the
@@ -956,43 +1014,75 @@ parameters and object metadata, and `slotNames(GRN)` prints all
 available slots of the object.
 
 ### Results in the object
-During a typical `GRaNIE` analysis, almost all results are automatically stored
-in `GRN` object that is used as input (exceptions are indicated in the corresponding sections) and therefore,
-almost all functions return also the very same `GRN` object, containing in addition the results of the function.
 
-The only exception is the function `getGRNConnections()` that can be used to extract the resulting
-*eGRN* network from a `GRN` object and returns a separate data frame and
-**NOT** a `GRN` object. For more information and an explanation about
-the various columns that are returned from the function, see the
-corresponding R help ( `?getGRNConnections`).
+During a typical `GRaNIE` analysis, almost all results are automatically
+stored in `GRN` object that is used as input (exceptions are indicated
+in the corresponding sections) and therefore, almost all functions
+return also the very same `GRN` object, containing in addition the
+results of the function.
+
+The only exception is the function `getGRNConnections()` that can be
+used to extract the resulting *eGRN* network from a `GRN` object and
+returns a separate data frame and **NOT** a `GRN` object. For more
+information and an explanation about the various columns that are
+returned from the function, see the corresponding R help (
+`?getGRNConnections`).
 
 ### Object summary
 
-A summary of a `GRN` object can be retrieved with the function `getGRNSummary()`. This returns a named list that summarizes all relevant aspects for a `GRN` object. For more details, see the R help.
+A summary of a `GRN` object can be retrieved with the function
+`getGRNSummary()`. This returns a named list that summarizes all
+relevant aspects for a `GRN` object. For more details, see the R help.
 
 ## Original and normalized data, annotations and provided metadata
 
 ### Object data
 
-All user data is stored in `GRN@data`. This slot contains the following elements:
+All user data is stored in `GRN@data`. This slot contains the following
+elements:
 
-- `peaks`: Here, peaks data are stored, and the list contains the following elements: 
-    - `counts` stores the data after the user-selected normalization scheme has been performed (even if set to `none`)
-    - `counts_metadata` stores the peak metadata (peak location, ID, and whether or not it is marked as filtered with the current object settings)
-    - `counts_raw` is only present when the user used `keepOriginalReadCounts = TRUE` when running the `addData()` function. It stores the original, user-provided data before any normalization scheme. For memory reasons and because the raw counts are never directly used in the `GRaNIE` workflow, they are not stored by default (anymore).
-- `RNA`: Here, RNA data are stored, and the list contains the same elements as the peaks data, with one additional element:
-    - `GRN@data$RNA$counts_permuted_index`: A memory-saving representation of how to perform sample shuffling when permuting the data, which is the basis for constructing the background links for both TF-peak and peak-gene connections.
-- `metadata`: Data frame with the user-provided sample-specific metadata and a few additional metadata that were added when running `addData()`.
-- `TFs`: Here, TF-specific data are stored, and the list contains the following elements: 
-    - `TF_peak_overlap` stores the binary 0/1 TF-peak overlap matrix that denotes whether a particular TF has a putative/predicted TF binding site in a particular peak. This information comes from the provided TF and TFBS data from the functions `addTFBS()` and `overlapPeaksAndTFBS()` in particular 
-    - `classification` stores the TF classification results and is only present when the function `AR_classification_wrapper()` has been run successfully. For more information, see [here](#output_AR)
-
+-   `peaks`: Here, peaks data are stored, and the list contains the
+    following elements:
+    -   `counts` stores the data after the user-selected normalization
+        scheme has been performed (even if set to `none`)
+    -   `counts_metadata` stores the peak metadata (peak location, ID,
+        and whether or not it is marked as filtered with the current
+        object settings)
+    -   `counts_raw` is only present when the user used
+        `keepOriginalReadCounts = TRUE` when running the `addData()`
+        function. It stores the original, user-provided data before any
+        normalization scheme. For memory reasons and because the raw
+        counts are never directly used in the `GRaNIE` workflow, they
+        are not stored by default (anymore).
+-   `RNA`: Here, RNA data are stored, and the list contains the same
+    elements as the peaks data, with one additional element:
+    -   `GRN@data$RNA$counts_permuted_index`: A memory-saving
+        representation of how to perform sample shuffling when permuting
+        the data, which is the basis for constructing the background
+        links for both TF-peak and peak-gene connections.
+-   `metadata`: Data frame with the user-provided sample-specific
+    metadata and a few additional metadata that were added when running
+    `addData()`.
+-   `TFs`: Here, TF-specific data are stored, and the list contains the
+    following elements:
+    -   `TF_peak_overlap` stores the binary 0/1 TF-peak overlap matrix
+        that denotes whether a particular TF has a putative/predicted TF
+        binding site in a particular peak. This information comes from
+        the provided TF and TFBS data from the functions `addTFBS()` and
+        `overlapPeaksAndTFBS()` in particular
+    -   `classification` stores the TF classification results and is
+        only present when the function `AR_classification_wrapper()` has
+        been run successfully. For more information, see
+        [here](#output_AR)
 
 ### Plots
 
-No plots are specifically available for the count data, but the PCA plots can be used to visualize the variability in the normalized count data for both paks and RNA (see [here](#output_PCA) for more details).
+No plots are specifically available for the count data, but the PCA
+plots can be used to visualize the variability in the normalized count
+data for both paks and RNA (see [here](#output_PCA) for more details).
 
-For the TF classification, output plots are available, see [here](#output_AR) for more details.
+For the TF classification, output plots are available, see
+[here](#output_AR) for more details.
 
 ## PCA plots and results {#output_PCA}
 
@@ -1001,7 +1091,6 @@ For the TF classification, output plots are available, see [here](#output_AR) fo
 Currently, the actual PCA result data are not stored in the `GRN`
 object, but we may change this. We will update the Vignette once this is
 done and mention it in the News/Changelog.
-
 
 ### Plots
 
@@ -1050,29 +1139,48 @@ available and briefly explained in the following:
 
 <!--  ``` -->
 
-
-
 ## TF-peak results and diagnostic plots {#output_TF_peak}
 
 ### Object data
-The TF-peak connections are stored in `GRN@connections$TF_peaks`. This list is structured as follows:
 
-- the first level constitutes, in analogy to many other places within the object, whether the real or background links are stored. For more details, see [here](#methods_background_objectDetails).
-- inside both real and background links (i.e., within `GRN@connections$TF_peaks[["0"]]` and `GRN@connections$TF_peaks[["1"]]`), a list with two elements is stored:
-    
-    - `main`, containing a data frame with the actual TF-peak connections along with additional properties
-    - `connectionStats`, containing a summary of the empirical FDR procedure, stratified by *TF*, *correlation bin*, *FDR direction* and *TF connection type*. This slots also contains details on GC-specific information if activated (see parameter `useGCCorrection = TRUE` in `addConnections_TF_peak`)
-    
+The TF-peak connections are stored in `GRN@connections$TF_peaks`. This
+list is structured as follows:
+
+-   the first level constitutes, in analogy to many other places within
+    the object, whether the real or background links are stored. For
+    more details, see [here](#methods_background_objectDetails).
+
+-   inside both real and background links (i.e., within
+    `GRN@connections$TF_peaks[["0"]]` and
+    `GRN@connections$TF_peaks[["1"]]`), a list with two elements is
+    stored:
+
+    -   `main`, containing a data frame with the actual TF-peak
+        connections along with additional properties
+    -   `connectionStats`, containing a summary of the empirical FDR
+        procedure, stratified by *TF*, *correlation bin*, *FDR
+        direction* and *TF connection type*. This slots also contains
+        details on GC-specific information if activated (see parameter
+        `useGCCorrection = TRUE` in `addConnections_TF_peak`)
+
 The slot `GRN@stats$GC` is also populated:
 
-- Irrespective of whether or not a GC correction has been done, overall statistics for the user-provided peaks with respect to GC properties and relative frequencies are stored in `GRN@stats$GC$peaks`.
-- If the GC adjustment of the background has been performed, additional elements within `GRN@stats$GC` are stored:
-    - `TFs_GC_correction`: A data frame that summarized the GC correction on the TF and GC bin level
-    - `TFs_GC_correction_plots`: For each TF, the GC plots for each TF are stored, namely the same two plots that were part of the output plots (see below). For example, to plot the first plot of the TF `AIRE.0.C`, simply type `GRN@stats$GC$TFs_GC_correction_plots$AIRE.0.C[[1]]`.
-
-
+-   Irrespective of whether or not a GC correction has been done,
+    overall statistics for the user-provided peaks with respect to GC
+    properties and relative frequencies are stored in
+    `GRN@stats$GC$peaks`.
+-   If the GC adjustment of the background has been performed,
+    additional elements within `GRN@stats$GC` are stored:
+    -   `TFs_GC_correction`: A data frame that summarized the GC
+        correction on the TF and GC bin level
+    -   `TFs_GC_correction_plots`: For each TF, the GC plots for each TF
+        are stored, namely the same two plots that were part of the
+        output plots (see below). For example, to plot the first plot of
+        the TF `AIRE.0.C`, simply type
+        `GRN@stats$GC$TFs_GC_correction_plots$AIRE.0.C[[1]]`.
 
 ### Plots
+
 We provide multiple QC plots for the TF-peak connections as part of the
 output, as explained in the following.
 
@@ -1130,29 +1238,76 @@ irrespective of the directionality.
 
 #### Correlation plots
 
-For a particular (set of) TF-peak pair(s), the underlying TF-peak data and the correlation can be visualized with  `plotCorrelations()`. For more information, see the R help for the function.
+For a particular (set of) TF-peak pair(s), the underlying TF-peak data
+and the correlation can be visualized with `plotCorrelations()`. For
+more information, see the R help for the function.
 
-### Extra plots for the GC correction 
+### Extra plots for the GC correction
 
-When GC background adjustment was activated (`useGCCorrection = TRUE` in the function `addConnections_TF_peak()`), additional QC plots can optionally be generated with the function `plotDiagnosticPlots_TFPeaks_GC()`. They summarize all relevant data and adjustments related to the GC adjustment. **Note that this function is not run automatically as part of the regular TF-peak diagnostic plots at the moment when `plotDiagnosticPlots_TFPeaks()` is executed.**
+When GC background adjustment was activated (`useGCCorrection = TRUE` in
+the function `addConnections_TF_peak()`), additional QC plots can
+optionally be generated with the function
+`plotDiagnosticPlots_TFPeaks_GC()`. They summarize all relevant data and
+adjustments related to the GC adjustment. **Note that this function is
+not run automatically as part of the regular TF-peak diagnostic plots at
+the moment when `plotDiagnosticPlots_TFPeaks()` is executed.**
 
 #### TF-specific plots
 
-For each TF, 2 plots (1 per page in the corresponding PDF file) are produced. One shows the relative frequency of each of the GC bins, stratified by the peak set origin (foreground, background before and after GC adjustment), the second the absolute frequencies (log10 + 1 transformed). For the first plot, GC bins for which resampling was performed are additionally labeled with a percentage value that indicates which percentage of the required number of peaks was actually available in the background. Thus, a value of 95% indicates that only 5% of peaks where missing to have the required number of peaks available in the background (small number of resampled peaks), while a value of 5% indicates the opposite: a large resampling happened to select the required number of peaks, and a potential sampling bias from the small number of peaks to select from in the first place may have occurred. 
+For each TF, 2 plots (1 per page in the corresponding PDF file) are
+produced. One shows the relative frequency of each of the GC bins,
+stratified by the peak set origin (foreground, background before and
+after GC adjustment), the second the absolute frequencies (log10 + 1
+transformed). For the first plot, GC bins for which resampling was
+performed are additionally labeled with a percentage value that
+indicates which percentage of the required number of peaks was actually
+available in the background. Thus, a value of 95% indicates that only 5%
+of peaks where missing to have the required number of peaks available in
+the background (small number of resampled peaks), while a value of 5%
+indicates the opposite: a large resampling happened to select the
+required number of peaks, and a potential sampling bias from the small
+number of peaks to select from in the first place may have occurred.
 
-Typically, though, resampling happens only for extreme GC bins that have a relatively low relative percentage in the foreground. Ideally, one should see a perfect match between foreground and GC-adjusted background in the plots, both in relative frequencies (page 1) and absolute numbers (page 2) for as many GC bins as possible. The number of GC bins for which resampling occurred should be as small as possible, on the other hand.
-
+Typically, though, resampling happens only for extreme GC bins that have
+a relatively low relative percentage in the foreground. Ideally, one
+should see a perfect match between foreground and GC-adjusted background
+in the plots, both in relative frequencies (page 1) and absolute numbers
+(page 2) for as many GC bins as possible. The number of GC bins for
+which resampling occurred should be as small as possible, on the other
+hand.
 
 #### Overall summary
 
-The pages after summarize further aspects of the GC adjustment in the form of heatmaps. Each page shows the heatmap for a particular variable, each row in the heatmap is a TF, and columns are either the peak GC bins (stratified into ten bins, see above) or the TF-peak correlation bins (40 bins, in steps of 0.05, see above).  The color scale is either blue-white-red (for negative and positive scales), white-red (for only positive ones) or black-white (for binary variables).
+The pages after summarize further aspects of the GC adjustment in the
+form of heatmaps. Each page shows the heatmap for a particular variable,
+each row in the heatmap is a TF, and columns are either the peak GC bins
+(stratified into ten bins, see above) or the TF-peak correlation bins
+(40 bins, in steps of 0.05, see above). The color scale is either
+blue-white-red (for negative and positive scales), white-red (for only
+positive ones) or black-white (for binary variables).
 
-1. Details for peak GC bins from either foreground or background that are the basis for the bin-specific FDR calculation (labeled *GC adjustment details* in the plot title)
-As the legend indicates, variables are either foreground or background (`n.bg.needed`, `n.bg.needed.ratio`, `n.bg.needed.ratio.atLeast1`) associated, belong to both (`n`, `peak_width mean`, `peak_width sd`, `n_rel` ) or they capture the difference of foreground and background (`diff_fg_bg`). For each plot, TFs are clustered according to their similarity, so the TF ordering differs for each plot.
- 
+1.  Details for peak GC bins from either foreground or background that
+    are the basis for the bin-specific FDR calculation (labeled *GC
+    adjustment details* in the plot title) As the legend indicates,
+    variables are either foreground or background (`n.bg.needed`,
+    `n.bg.needed.ratio`, `n.bg.needed.ratio.atLeast1`) associated,
+    belong to both (`n`, `peak_width mean`, `peak_width sd`, `n_rel` )
+    or they capture the difference of foreground and background
+    (`diff_fg_bg`). For each plot, TFs are clustered according to their
+    similarity, so the TF ordering differs for each plot.
 
-2. TF-peak connection summary from the actual connections before and after the GC background adjustment (labeled *GRN connections* in the plot title) as stored in `GRN@connections$TF_peaks`. Four plots are shown, three of which show absolute numbers (`n_beforeGC`, `n_afterGC`, `n_diff_abs`) and one a relative number (`n_diff_rel`, calculated as `n_afterGC` / `n_beforeGC`). For ratios that R deems as *Infinite* like this (e.g, 1 connection after GC correction but no connection without it - `1 / 0`), we set the ratio to a value of either the maximum of all finite values in the heatmap or a hard-coded value of 10 - depending on what the maximum of these two values is. Unlike the heatmaps above, TFs are not clustered here but appear in the same  alphabetical order on every plot.
-
+2.  TF-peak connection summary from the actual connections before and
+    after the GC background adjustment (labeled *GRN connections* in the
+    plot title) as stored in `GRN@connections$TF_peaks`. Four plots are
+    shown, three of which show absolute numbers (`n_beforeGC`,
+    `n_afterGC`, `n_diff_abs`) and one a relative number (`n_diff_rel`,
+    calculated as `n_afterGC` / `n_beforeGC`). For ratios that R deems
+    as *Infinite* like this (e.g, 1 connection after GC correction but
+    no connection without it - `1 / 0`), we set the ratio to a value of
+    either the maximum of all finite values in the heatmap or a
+    hard-coded value of 10 - depending on what the maximum of these two
+    values is. Unlike the heatmaps above, TFs are not clustered here but
+    appear in the same alphabetical order on every plot.
 
 ## Activator-repressor classification results and diagnostic plots {#output_AR}
 
@@ -1270,27 +1425,32 @@ In the following, the 3 plot types are briefly explained:
 
     <!-- # ``` -->
 
-
-
 ## Peak-gene results and diagnostic plots {#output_peak_gene}
 
 ### Object data
 
-The peak-gene connections are stored in `GRN@connections$peak_genes`. This list is structured as follows:
+The peak-gene connections are stored in `GRN@connections$peak_genes`.
+This list is structured as follows:
 
-- the first level constitutes, in analogy to many other places within the object, whether the real or background links are stored. For more details, see [here](#methods_background_objectDetails).
-- inside both real and background links (i.e., within `GRN@connections$peak_genes[["0"]]` and `GRN@connections$peak_genes[["1"]]`), a data frame with the peak-gene connections along with additional metadata (`peak.ID`, `gene.ENSEMBL`, `peak_gene.distance`) and statistical properties are stored (`peak_gene.r`, `peak_gene.p_raw`)
+-   the first level constitutes, in analogy to many other places within
+    the object, whether the real or background links are stored. For
+    more details, see [here](#methods_background_objectDetails).
+-   inside both real and background links (i.e., within
+    `GRN@connections$peak_genes[["0"]]` and
+    `GRN@connections$peak_genes[["1"]]`), a data frame with the
+    peak-gene connections along with additional metadata (`peak.ID`,
+    `gene.ENSEMBL`, `peak_gene.distance`) and statistical properties are
+    stored (`peak_gene.r`, `peak_gene.p_raw`)
 
-    
 ### Plots
 
 The function `plotDiagnosticPlots_peakGene()` or indirectly the function
-`addConnections_peak_gene()` (when `plotDiagnosticPlots = TRUE`)
-plots various diagnostic plots for the peak-gene
-links that are imperative for understanding the biological system and
-resulting *eGRN*. In what follows, we describe them briefly, along with
-some notes on expected patterns, implications etc. Note that this
-section is subject to regular change.
+`addConnections_peak_gene()` (when `plotDiagnosticPlots = TRUE`) plots
+various diagnostic plots for the peak-gene links that are imperative for
+understanding the biological system and resulting *eGRN*. In what
+follows, we describe them briefly, along with some notes on expected
+patterns, implications etc. Note that this section is subject to regular
+change.
 
 <!-- # ```{r, echo=FALSE, fig.cap="<i>Summary peak-gene QC figure</i>", out.width = '100%'} -->
 
@@ -1454,46 +1614,71 @@ as expected for a well-calibrated background.
 
 #### Correlation plots
 
-For a particular (set of) peak-gene pair(s), the underlying peak-gene data and the correlation can be visualized with  `plotCorrelations()`. For more information, see the R help for the function.
+For a particular (set of) peak-gene pair(s), the underlying peak-gene
+data and the correlation can be visualized with `plotCorrelations()`.
+For more information, see the R help for the function.
 
 ## Filtered TF-peak-gene connections (*eGRN* table)
 
 ### Object data
 
-The peak-gene connections are stored in `GRN@connections$all.filtered`. This list is structured as follows:
+The peak-gene connections are stored in `GRN@connections$all.filtered`.
+This list is structured as follows:
 
-- the first level constitutes, in analogy to many other places within the object, whether the real or background links are stored. For more details, see [here](#methods_background_objectDetails).
-- inside both real and background links (i.e., within `GRN@connections$all.filtered[["0"]]` and `GRN@connections$all.filtered[["1"]]`), a data frame with the TF-peak-gene connections along with additional metadata and statistical properties are stored. This table is not to be used directly, however; instead, the function `getGRNConnections()` has to be used to retrieve them and add additional information as needed along with it.
-
+-   the first level constitutes, in analogy to many other places within
+    the object, whether the real or background links are stored. For
+    more details, see [here](#methods_background_objectDetails).
+-   inside both real and background links (i.e., within
+    `GRN@connections$all.filtered[["0"]]` and
+    `GRN@connections$all.filtered[["1"]]`), a data frame with the
+    TF-peak-gene connections along with additional metadata and
+    statistical properties are stored. This table is not to be used
+    directly, however; instead, the function `getGRNConnections()` has
+    to be used to retrieve them and add additional information as needed
+    along with it.
 
 ### Plots
 
-No plots are available here, but the *eGRN* can be visualized with `visualizeGRN()`. 
-
+No plots are available here, but the *eGRN* can be visualized with
+`visualizeGRN()`.
 
 ## TF-gene connections
 
 ### Object data
 
+The peak-gene connections are stored in
+`GRN@connections$$TF_genes.filtered`. This list is structured as
+follows:
 
-The peak-gene connections are stored in `GRN@connections$$TF_genes.filtered`. This list is structured as follows:
-
-- the first level constitutes, in analogy to many other places within the object, whether the real or background links are stored. For more details, see [here](#methods_background_objectDetails).
-- inside both real and background links (i.e., within `GRN@connections$$TF_genes.filtered[["0"]]` and `GRN@connections$$TF_genes.filtered[["1"]]`), a data frame with the TF-gene connections along with additional metadata and statistical properties are stored. This table is not to be used directly, however; instead, the function `getGRNConnections()` with `include_TF_gene_correlations` has to be used to retrieve them.
-
+-   the first level constitutes, in analogy to many other places within
+    the object, whether the real or background links are stored. For
+    more details, see [here](#methods_background_objectDetails).
+-   inside both real and background links (i.e., within
+    `GRN@connections$$TF_genes.filtered[["0"]]` and
+    `GRN@connections$$TF_genes.filtered[["1"]]`), a data frame with the
+    TF-gene connections along with additional metadata and statistical
+    properties are stored. This table is not to be used directly,
+    however; instead, the function `getGRNConnections()` with
+    `include_TF_gene_correlations` has to be used to retrieve them.
 
 ### Plots
 
-For a particular (set of) TF-gene pair(s), the underlying TF-gene data and the correlation can be visualized with  `plotCorrelations()`. For more information, see the R help for the function.
+For a particular (set of) TF-gene pair(s), the underlying TF-gene data
+and the correlation can be visualized with `plotCorrelations()`. For
+more information, see the R help for the function.
 
-In addition, the *eGRN* can be visualized with `visualizeGRN()`. 
-
+In addition, the *eGRN* can be visualized with `visualizeGRN()`.
 
 ## Connection summary plots {#output_connectionSummary}
 
 ### Object data
 
-The results of the function `generateStatsSummary()` is stored in `GRN@stats$connections`. This table contains a lot of information, including but not limited to the various parameters the function iterated over to generate multiple *eGRNs* for different parameter thresholds and combinations such as the number of distinct TFs, peaks, genes, their connectivity, etc.
+The results of the function `generateStatsSummary()` is stored in
+`GRN@stats$connections`. This table contains a lot of information,
+including but not limited to the various parameters the function
+iterated over to generate multiple *eGRNs* for different parameter
+thresholds and combinations such as the number of distinct TFs, peaks,
+genes, their connectivity, etc.
 
 ### Plots
 
@@ -1548,33 +1733,49 @@ boxplot, as exemplified with the following Figure:
 
 ### Object data
 
-The actual graph structure is stored in `GRN@graph` after successful execution of the function `build_eGRN_graph()`.It contains two different kind of graphs, namely the *TF-peak-gene* and the *TF-gene* graph. Each of them is associated with a list element with the same name, which stores also the table that was used to create the graph along with the graph itself and the used parameters for creating it.
-
+The actual graph structure is stored in `GRN@graph` after successful
+execution of the function `build_eGRN_graph()`.It contains two different
+kind of graphs, namely the *TF-peak-gene* and the *TF-gene* graph. Each
+of them is associated with a list element with the same name, which
+stores also the table that was used to create the graph along with the
+graph itself and the used parameters for creating it.
 
 ### Plots
 
-The function `visualizeGRN()` can be used for visualization of the *eGRN* graph.
-
+The function `visualizeGRN()` can be used for visualization of the
+*eGRN* graph.
 
 ## Community information
 
 ### Object data
 
-The identified communities for each node are stored within `igraph` objects in `GRN@graph$TF_gene$clusterGraph` (retrievable via `GRN@graph$TF_gene$clusterGraph$membership`, for example) and as vertex attributes in `GRN@graph$TF_gene$graph` (retrievable via `igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community`, for example). 
-
+The identified communities for each node are stored within `igraph`
+objects in `GRN@graph$TF_gene$clusterGraph` (retrievable via
+`GRN@graph$TF_gene$clusterGraph$membership`, for example) and as vertex
+attributes in `GRN@graph$TF_gene$graph` (retrievable via
+`igraph::vertex.attributes(GRN@graph$TF_gene$graph)$community`, for
+example).
 
 ### Plots
 
-The function `visualizeGRN()` can be used for visualization of the identified communities in the *eGRN* graph. The functions `plotCommunitiesStats()` and `plotCommunitiesEnrichment()` can be used for plotting and summarizing community properties and enrichments, respectively.
-
+The function `visualizeGRN()` can be used for visualization of the
+identified communities in the *eGRN* graph. The functions
+`plotCommunitiesStats()` and `plotCommunitiesEnrichment()` can be used
+for plotting and summarizing community properties and enrichments,
+respectively.
 
 ## Enrichment results and plots {#output_enrichment}
 
 ### Object data
 
-All enrichment results are stored inside `GRN@stats$Enrichment` . This contains a nested list with the named elements `general`, `byCommunity`, and `byTF` for general, community-specific and TF-specific enrichments, respectively.
+All enrichment results are stored inside `GRN@stats$Enrichment` . This
+contains a nested list with the named elements `general`, `byCommunity`,
+and `byTF` for general, community-specific and TF-specific enrichments,
+respectively.
 
-Inside each of these elements, there is further nesting by the chosen ontology (e.g, ``GO_BP`), and whether results or the parameters of the enrichment function should be retrieved.
+Inside each of these elements, there is further nesting by the chosen
+ontology (e.g, \``GO_BP`), and whether results or the parameters of the
+enrichment function should be retrieved.
 
 ### Plots
 
@@ -1612,21 +1813,27 @@ The output is structured in analogy to the community enrichment, but
 instead of communities, the regulon that a particular TF spans is chosen
 as subnetwork (i.e., all genes the TF is connected to).
 
-
-## Feature variation quantification  {#output_featureVariation}
+## Feature variation quantification {#output_featureVariation}
 
 ### Object data
 
-The results are added to `GRN@stats$variancePartition` as well as within the various feature-related elements of `GRN@annotation`. The former slot and results can be used for the various diagnostic and plotting functions from the `variancePartition` package.
+The results are added to `GRN@stats$variancePartition` as well as within
+the various feature-related elements of `GRN@annotation`. The former
+slot and results can be used for the various diagnostic and plotting
+functions from the `variancePartition` package.
 
-The easiest way to retrieve and include the results into the final *eGRN* is to rerun the function `getGRNConnections()` and set `include_variancePartitionResults = TRUE`, as the results are NOT added automatically to `GRN@connections$all.filtered` either.
-
+The easiest way to retrieve and include the results into the final
+*eGRN* is to rerun the function `getGRNConnections()` and set
+`include_variancePartitionResults = TRUE`, as the results are NOT added
+automatically to `GRN@connections$all.filtered` either.
 
 ### Plots
 
-QC plots for the feature variation results are available via the function `plotDiagnosticPlots_featureVariation()`. 
+QC plots for the feature variation results are available via the
+function `plotDiagnosticPlots_featureVariation()`.
 
-We are currently working on updating details for this section. Stay tuned, coming soon!
+We are currently working on updating details for this section. Stay
+tuned, coming soon!
 
 # Guidelines, Recommendations, Limitations, Scope {#guidelines}
 
@@ -1704,6 +1911,40 @@ TFBS in general also increases the number of 1s and therefore the
 foreground also more noisy if the TFBS list contains too many false
 positives. As always in biology, this is a trade-off.
 
+
+## Choice of correlation methods for TF-peak, peak-gene, TF-gene connections and outlier robustness
+
+This section is partially based on and inspired by [this nice summary
+about association measures in the context of gene expression
+networks](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3586947/).
+
+We currently offer 3 different choices for how to measure the
+correlation (generally defined as an association measure that is used to
+estimate the relationships between two random variables) between
+different pairs of features such as TF-peaks, TF-genes, and peak-genes.
+All correlation coefficients take on values between −1 and 1 where
+negative values indicate an inverse relationship.
+
+1.  Pearson correlation, which measures the extent of a linear
+    relationship, is the most widely used correlation measure and well
+    known so that no further explanations are necessary here. It is,
+    however, very prone to outliers, which is why we offer two
+    additional measures of correlation that are deemed to be more
+    robust.
+2.  Spearman correlation is based on ranks, and measures the extent of a
+    monotonic relationship between x and y. it is also well known and
+    less susceptible to individual outliers.
+3.  Biweight midcorrelation or short *bicor* is a median based
+    correlation measure, and has been found to be more robust than the
+    Pearson correlation but often more powerful than the Spearman
+    correlation. In particular, it has been shown to be more robust in
+    evaluating similarity in gene expression networks and is often used
+    for weighted correlation network analysis.
+
+The choice depends on the user, and is dependent on whether or not the data contain outlier points that may heavily affect the correlation measures. While we generally advise to remove obvious outlier samples, as identified in a PCA, for example, from the analysis altogether in case they come from a single sample, in other cases this may not be the best approach and a more robust correlation measure such as Spearman or bicor seems more appropriate. We are currently also testing and evaluating which of them are best under different criteria and data typoes. For single-cell derived data, this choice seems to be particularly relevant.
+
+
+
 ## Peak-gene p-values accuracy and violations {#guidelines_peakGene}
 
 As outlined already [above](#guidelines_noSamples), the peak-gene
@@ -1748,9 +1989,6 @@ $parameters$nCores
 
 $parameters$corMethod
 [1] "pearson"
-
-$parameters$addRobustRegression
-[1] FALSE
 
 $parameters$forceRerun
 [1] FALSE
@@ -1815,5 +2053,6 @@ reduced.
 
 # References {#refs}
 
-1.  [GRaNIE and GRaNPA
-    biorxiv](https://www.biorxiv.org/content/10.1101/2021.12.18.473290v3)
+    1.  [GRaNIE and GRaNPA: inference and evaluation of enhancer-mediated gene regulatory networks](https://www.embopress.org/doi/full/10.15252/msb.202311627)
+
+    2. [Comparison of co-expression measures: mutual information, correlation, and model based indices](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3586947/)

@@ -100,7 +100,7 @@ library(GRaNIE)
 
 ## Install suggested, additional packages for full functionality
 
-When installing *GRaNIE*, all required dependency packages are automatically installed. In addition, *GRaNIE* needs some additional packages for special functionality, packages that are not strictly necessary for the workflow but which enhance the functionality, may be required depending on certain parameters (such as your genome assembly version), or may be required only when using a particular functionality (such as the `robust` package for robust regression). The package will automatically check if any of these packages are missing during execution, and inform the user when a package is missing, along with a line to copy for pasting into R for installation.
+When installing *GRaNIE*, all required dependency packages are automatically installed. In addition, *GRaNIE* needs some additional packages for special functionality, packages that are not strictly necessary for the workflow but which enhance the functionality, may be required depending on certain parameters (such as your genome assembly version), or may be required only when using a particular functionality (such as the `WGCNA` package for a more robust correlation method called *bicor* that is based on medians). The package will automatically check if any of these packages are missing during execution, and inform the user when a package is missing, along with a line to copy for pasting into R for installation.
 
 ## Note on version compatibility and errors in the vignette
 

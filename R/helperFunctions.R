@@ -155,6 +155,8 @@
         res = .checkPackageInstallation(c("org.Rn.eg.db", "TxDb.Rnorvegicus.UCSC.rn7.refGene", "BSgenome.Rnorvegicus.UCSC.rn7"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "dm6") {
         res = .checkPackageInstallation(c("org.Dm.eg.db", "TxDb.Dmelanogaster.UCSC.dm6.ensGene", "BSgenome.Dmelanogaster.UCSC.dm6"), baseMessage, returnLogical = returnLogical)
+    } else if (genomeAssembly == "rheMac10") {
+        res = .checkPackageInstallation(c("org.Mmu.eg.db", "TxDb.Mmulatta.UCSC.rheMac10.refGene", "BSgenome.Mmulatta.UCSC.rheMac10"), baseMessage, returnLogical = returnLogical)
     } else {
         message = "Genome not listed, this should not happen. Contact the author."
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
@@ -278,7 +280,7 @@
 }
 
 
-.execInParallelGen <- function(nCores, returnAsList = TRUE, listNames = NULL, iteration, abortIfErrorParallel = TRUE, verbose = TRUE, functionName, ...) {
+.execInParallelGen <- function(nCores, returnAsList = TRUE, listNames = NULL, iteration, abortIfErrorParallel = FALSE, verbose = TRUE, functionName, ...) {
   
   start.time  <-  Sys.time()
   
@@ -296,29 +298,33 @@
     message = paste0("The package BiocParallel is not installed but required if more than 1 core should be used as requested. Please install it and re-run this function to speed-up the computation time or set the nCores parameter to 1 to disable parallel computation.")
     .checkPackageInstallation("BiocParallel", message)
     
+    checkFailedTasks = TRUE
+    
     res.l = tryCatch( {
         BiocParallel::bplapply(iteration, functionName, ..., BPPARAM = .initBiocParallel(nCores))
       
-    }#, error = function(e) {
-    #     warning("An error occured while executing the function with multiple CPUs. Trying again using only only one CPU...")
-    #     lapply(iteration, functionName, ...)
-    # }
+    }, error = function(e) {
+        futile.logger::flog.warn(paste0("The following error occured while executing the function with multiple CPUs using BiocParallel: ", e, ". Trying again using only 1 core..."))
+        checkFailedTasks = FALSE
+        lapply(iteration, functionName, ...)
+     }
     )
     
     failedTasks = which(!BiocParallel::bpok(res.l))
-    if (length(failedTasks) > 0) {
-      warning("At least one task failed while executing in parallel, attempting to rerun those that failed: ",res.l[[failedTasks[1]]])
-      if (abortIfErrorParallel) stop()
-      
-      res.l = tryCatch( {
+    if (checkFailedTasks && length(failedTasks) > 0) {
+        futile.logger::flog.warn(paste0("At least one task failed while executing in parallel, attempting to rerun those that failed: ", res.l[[failedTasks[1]]]))
+        
+        if (abortIfErrorParallel) stop()
+        
+        res.l = tryCatch( {
           BiocParallel::bplapply(iteration, functionName, ..., BPPARAM = .initBiocParallel(nCores), BPREDO = res.l)
         
-      }, error = function(e) {
+        }, error = function(e) {
         warning("Once again, an error occured while executing the function with multiple CPUs. Trying again using only only one CPU...")
         if (abortIfErrorParallel) stop()
         lapply(iteration, functionName, ...)
-      }
-      )
+        }
+        )
     }
     
   } else {
@@ -466,7 +472,7 @@
     checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName", "txID")) #txID: NCBI taxonomy ID
     
     if (type != "txID") {
-        checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn6", "rn7", "dm6"))
+        checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn6", "rn7", "dm6", "rheMac10"))
     } else {
         availableSpecies.df = rbioapi::rba_jaspar_species(release = jasparRelease)
     }
@@ -477,7 +483,7 @@
             obj <- TxDb.Hsapiens.UCSC.hg38.knownGene::TxDb.Hsapiens.UCSC.hg38.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Hsapiens.UCSC.hg38::BSgenome.Hsapiens.UCSC.hg38
-        } else if (type == "txID"){
+        } else if (type == "txID") {
             obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Homo sapiens")]
         } else {
             obj = "org.Hs.eg.db"
@@ -489,7 +495,7 @@
             obj <- TxDb.Hsapiens.UCSC.hg19.knownGene::TxDb.Hsapiens.UCSC.hg19.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
-        } else if(type == "txID"){
+        } else if (type == "txID") {
             obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Homo sapiens")]
         } else {
             obj = "org.Hs.eg.db"
@@ -502,7 +508,7 @@
             obj <- TxDb.Mmusculus.UCSC.mm10.knownGene::TxDb.Mmusculus.UCSC.mm10.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Mmusculus.UCSC.mm10::BSgenome.Mmusculus.UCSC.mm10
-        } else if (type == "txID"){
+        } else if (type == "txID") {
             obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Mus musculus")]
         } else {
             obj = "org.Mm.eg.db"
@@ -514,7 +520,7 @@
             obj <- TxDb.Mmusculus.UCSC.mm9.knownGene::TxDb.Mmusculus.UCSC.mm9.knownGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Mmusculus.UCSC.mm9::BSgenome.Mmusculus.UCSC.mm9
-        } else if (type == "txID"){
+        } else if (type == "txID") {
             obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Mus musculus")]
         } else {
             obj = "org.Mm.eg.db"
@@ -526,7 +532,7 @@
             obj <- TxDb.Rnorvegicus.UCSC.rn6.refGene::TxDb.Rnorvegicus.UCSC.rn6.refGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Rnorvegicus.UCSC.rn6::BSgenome.Rnorvegicus.UCSC.rn6
-        } else if (type == "txID"){
+        } else if (type == "txID") {
             obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Rattus norvegicus")]
         } else {
             obj = "org.Rn.eg.db"
@@ -538,7 +544,7 @@
             obj <- TxDb.Rnorvegicus.UCSC.rn7.refGene::TxDb.Rnorvegicus.UCSC.rn7.refGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Rnorvegicus.UCSC.rn7::BSgenome.Rnorvegicus.UCSC.rn7
-        } else if (type == "txID"){
+        } else if (type == "txID") {
             obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Rattus norvegicus")]
         } else {
             obj = "org.Rn.eg.db"
@@ -550,10 +556,24 @@
             obj <- TxDb.Dmelanogaster.UCSC.dm6.ensGene::TxDb.Dmelanogaster.UCSC.dm6.ensGene
         } else if (type == "BSgenome") {
             obj <- BSgenome.Dmelanogaster.UCSC.dm6::BSgenome.Dmelanogaster.UCSC.dm6
-        } else if (type == "txID"){
+        } else if (type == "txID") {
             obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Drosophila melanogaster")]
         } else {
             obj = "org.Dm.eg.db"
+        }
+        
+    } else if (genomeAssembly == "rheMac10") {
+        
+        if (type == "txbd") {
+            obj <- TxDb.Mmulatta.UCSC.rheMac10.refGene::TxDb.Mmulatta.UCSC.rheMac10.refGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Mmulatta.UCSC.rheMac10::BSgenome.Mmulatta.UCSC.rheMac10
+        } else if (type == "txID") {
+            
+            # rheMac not available in species list, selecting here the more general Verterbates selection instead then
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Vertebrata")]
+        } else {
+            obj = "org.Mmu.eg.db"
         }
         
     }
@@ -796,7 +816,7 @@ is.installed <- function(mypkg){
   }
 }
 
-.getBiomartParameters <- function(genomeAssembly) {
+.getBiomartParameters <- function(genomeAssembly, useSuffix = FALSE) {
     
     host = "https://www.ensembl.org"
     
@@ -816,5 +836,20 @@ is.installed <- function(mypkg){
     
     
     
-    list(dataset = paste0(dataset, "_gene_ensembl"), host = host)
+    list(dataset = paste0(dataset, 
+                          dplyr::if_else(useSuffix, "_gene_ensembl", "")), host = host)
+}
+
+.correlateData <- function(x, y, corMethod) {
+    
+    if (corMethod %in% c("pearson", "spearman")) {
+        
+        cor.res = suppressWarnings(cor(x,y, method = corMethod))
+        
+    } else if (corMethod == "bicor") {
+        
+        cor.res = suppressWarnings(WGCNA::bicor(x, y))
+    }
+    
+    cor.res
 }

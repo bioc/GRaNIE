@@ -7,7 +7,6 @@
 add_TF_gene_correlation(
   GRN,
   corMethod = "pearson",
-  addRobustRegression = FALSE,
   nCores = 1,
   forceRerun = FALSE
 )
@@ -15,11 +14,9 @@ add_TF_gene_correlation(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
-
-\item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. 
-Use a robust regression in addition to a non-robust one? Significantly increases overall running time.
-If set to \code{TRUE}, the package \code{robust} is required (as it is listed under \code{Suggests}, it may not be installed).}
+\item{corMethod}{Character. One of \code{pearson}, \code{spearman} or \code{bicor}. Default \code{pearson}. Method for calculating the correlation coefficient. 
+For \code{pearson} and \code{spearman} , see \link{cor} for details. \code{bicor} denotes the *biweight midcorrelation*, a correlation measure based on medians as
+calculated by \code{WGCNA::bicorAndPvalue}. Both \code{spearman} and \code{bicor} are considered more robust measures that are less prone to be affected by outliers.}
 
 \item{nCores}{Integer >0. Default 1. Number of cores to use. 
 A value >1 requires the \code{BiocParallel} package (as it is listed under \code{Suggests}, it may not be installed yet).}
