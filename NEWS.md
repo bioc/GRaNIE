@@ -1,3 +1,26 @@
+# GRaNIE 1.4.1 (2023-06-19)
+
+- version jump due to new Bioconductor development cycle
+- updated the release version of GRaNIE to the current dev. cycle (1.5.1) due to the important changes outlined below
+
+## New features and stability improvements
+- we replaced `biomaRt` for the full genome annotation retrieval in `addData` with a different approach that is more reliable, as we had more and more issues with `biomaRt` in the recent past. While using the old `biomaRt` approach is still an option, the default is now to use the `AnnotationHub` package from Bioconductor. This makes GRaNIE overall more stable and less reliant on `biomaRt` due to the strict timeouts and query size restrictions.
+
+# GRaNIE 1.3.36 (2023-05-09)
+
+## New features and vignette updates
+- a new correlation method has been implemented that replaces the "old" robust method (via `addRobustRegression`) that was available as an experimental feature until now. It is implemented in the `WGCNA` package and called *biweight midcorrelation* or short *bicor*, a robust type of correlation based on medians that can be used as an alternative to Spearman correlation. Biweight midcorrelation has been shown to be more robust in evaluating similarity in gene expression networks and is often used for weighted correlation network analysis. In addition, this new correlation type can now also be selected for the TF-peak correlations, which was not possible before. Lastly, the code has been cleaned and simplified and all instances of `addRobustRegression` have been removed and replaced by a new third option `bicor` (in addition to Pearson and Spearman, as before) for the `corMethod` argument in multiple functions that support this feature. All vignettes have been updated accordingly.
+- in `addData`, when a `DESeq2` size factor normalization is selected by the user, it is now explicitly checked whether enough genes are available that contain no 0 values on which the size factor normalization is based on. If this is not the case (the default and hard-coded limit is currently set to a minimum of 100), an error is thrown. This becomes particularly relevant for single-cell derived data with a high fraction of 0s, and prevents a normalization based on very few genes and improves the error messages that `DESeq2` throws otherwise for an improved user experience.
+
+
+# GRaNIE 1.3.35 (2023-05-08)
+
+## Bugfixes and stability improvements
+- improved the stability of the `biomaRt` call, which did not work as originally intended in case of temporary connection failures. Now, calls to `biomaRt` are attempted up to 40 times to increase the chances of not suffering from connection issues. Also, the approach to deal with `BiocParallel` failures has been changed.
+
+## Paper acceptance and publication update
+- **We are particularly excited to announce that the GRaNIE and GRaNPA paper is finally out! See [here for the final article in Molecular Systems Biology](https://www.embopress.org/doi/full/10.15252/msb.202311627).**
+
 # GRaNIE 1.3.34 (2023-03-29)
 
 ## Bugfixes

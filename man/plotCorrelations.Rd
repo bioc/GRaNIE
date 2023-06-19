@@ -14,7 +14,8 @@ plotCorrelations(
   TF_peak_maxFDR = 0.2,
   peak_gene_max_rawP = 0.2,
   TF_gene_max_rawP = 0.2,
-  n_random = 10,
+  nMax = 10,
+  nSelectionType = "random",
   dataType = c("real"),
   corMethod = NULL,
   outputFolder = NULL,
@@ -49,13 +50,18 @@ Only applicable when \code{type = "TF-gene"} or \code{type = "peak-gene"}.}
 
 \item{TF_gene_max_rawP}{Numeric[0,1]. Default 0.2. Filter for TF-gene pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "TF-gene"}.}
 
-\item{n_random}{Numeric(1). Default 10. Filter for all types of pairs: maximum number of randomly selected pairs that fulfill all other filters that should be plotted.
+\item{nMax}{Numeric(1). Default 10. Filter for all types of pairs: maximum number of selected pairs that fulfill all other filters that should be plotted.
 If set to 0, this filter will be disabled and all pairs that fulfill the user-defined criteria will be plotted. If set to a value > 0, different pairs may be selected each time the function is run
  (if the total number of remaining pairs is large enough)}
 
+\item{nSelectionType}{\code{random} or \code{top}. Default \code{top}. Only applicable if \code{nMax} is set to a value > 0. 
+If set to \code{top}, only the top features will be plotted while \code{random} plots randomly selected features.}
+
 \item{dataType}{Character vector. One of, or both of, \code{"real"} or \code{"background"}. For which type, real or background data, to produce the diagnostic plots?}
 
-\item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
+\item{corMethod}{Character. One of \code{pearson}, \code{spearman} or \code{bicor}. Default \code{pearson}. Method for calculating the correlation coefficient. 
+For \code{pearson} and \code{spearman} , see \link{cor} for details. \code{bicor} denotes the *biweight midcorrelation*, a correlation measure based on medians as
+calculated by \code{WGCNA::bicorAndPvalue}. Both \code{spearman} and \code{bicor} are considered more robust measures that are less prone to be affected by outliers.}
 
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
 object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
@@ -72,8 +78,6 @@ If a folder is provided, while we recommend specifying an absolute path, a relat
 \item{pdf_height}{Number >0. Default 12. Height of the PDF, in cm.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
-
-\item{peak_gene_max_adjP}{Numeric[0,1]. Default 0.2. Filter for peak-gene pairs: Which maximum adjusted p-value should a pair to plot have? Only applicable when \code{type = "peak-gene"}.}
 }
 \value{
 An updated \code{\linkS4class{GRN}} object.
@@ -84,5 +88,5 @@ The user can select multiple filters to plot only pairs of interest. The data th
 \examples{
 # See the Workflow vignette on the GRaNIE website for examples
 GRN = loadExampleObject()
-GRN = plotCorrelations(GRN, n_random = 1, min_abs_r = 0.8, plotsPerPage = c(1,1), plotAsPDF = FALSE)
+GRN = plotCorrelations(GRN, nMax = 1, min_abs_r = 0.8, plotsPerPage = c(1,1), plotAsPDF = FALSE)
 }

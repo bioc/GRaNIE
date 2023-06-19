@@ -30,7 +30,9 @@ AR_classification_wrapper(
 object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
 If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
-\item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
+\item{corMethod}{Character. One of \code{pearson}, \code{spearman} or \code{bicor}. Default \code{pearson}. Method for calculating the correlation coefficient. 
+For \code{pearson} and \code{spearman} , see \link{cor} for details. \code{bicor} denotes the *biweight midcorrelation*, a correlation measure based on medians as
+calculated by \code{WGCNA::bicorAndPvalue}. Both \code{spearman} and \code{bicor} are considered more robust measures that are less prone to be affected by outliers.}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

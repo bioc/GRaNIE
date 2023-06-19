@@ -43,7 +43,7 @@ addTFBS(
 \item{EnsemblVersion}{\code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
 By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.}
 
-\item{JASPAR_useSpecificTaxGroup}{\code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? 
+\item{JASPAR_useSpecificTaxGroup}{\code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? This is useful for genomes that are not human or mouse for which JASPAR otherwise returns too few TFs otherwise.
 If set to \code{NULL}, the specific genome version as provided in the object is used within \code{TFBSTools::getMatrixSet} in the \code{opts} list for \code{species}, 
 while \code{tax_group} will be used instead if this argument is not set to \code{NULL}. For example, it can be set to \code{vertebrates} to use the vertebrates TF collection.
 For more details, see \code{?TFBSTools::getMatrixSet}.}

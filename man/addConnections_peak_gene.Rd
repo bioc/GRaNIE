@@ -16,7 +16,6 @@ addConnections_peak_gene(
   plotDiagnosticPlots = TRUE,
   plotGeneTypes = list(c("all"), c("protein_coding")),
   outputFolder = NULL,
-  addRobustRegression = FALSE,
   forceRerun = FALSE
 )
 }
@@ -25,7 +24,9 @@ addConnections_peak_gene(
 
 \item{overlapTypeGene}{Character. \code{"TSS"} or \code{"full"}. Default \code{"TSS"}. If set to \code{"TSS"}, only the TSS of the gene is used as reference for finding genes in the neighborhood of a peak. If set to \code{"full"}, the whole annotated gene (including all exons and introns) is used instead.}
 
-\item{corMethod}{Character. \code{pearson} or \code{spearman}. Default \code{pearson}. Method for calculating the correlation coefficient. See \link{cor} for details.}
+\item{corMethod}{Character. One of \code{pearson}, \code{spearman} or \code{bicor}. Default \code{pearson}. Method for calculating the correlation coefficient. 
+For \code{pearson} and \code{spearman} , see \link{cor} for details. \code{bicor} denotes the *biweight midcorrelation*, a correlation measure based on medians as
+calculated by \code{WGCNA::bicorAndPvalue}. Both \code{spearman} and \code{bicor} are considered more robust measures that are less prone to be affected by outliers.}
 
 \item{promoterRange}{Integer >=0. Default 250000. The size of the neighborhood in bp to correlate peaks and genes in vicinity. Only peak-gene pairs will be correlated if they are within the specified range. Increasing this value leads to higher running times and more peak-gene pairs to be associated, while decreasing results in the opposite.}
 
@@ -50,10 +51,6 @@ A value >1 requires the \code{BiocParallel} package (as it is listed under \code
 \item{outputFolder}{Character or \code{NULL}. Default \code{NULL}. If set to \code{NULL}, the default output folder as specified when initiating the 
 object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
 If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
-
-\item{addRobustRegression}{\code{TRUE} or \code{FALSE}. EXPERIMENTAL. Default \code{FALSE}. 
-Use a robust regression in addition to a non-robust one? Significantly increases overall running time.
-If set to \code{TRUE}, the package \code{robust} is required (as it is listed under \code{Suggests}, it may not be installed).}
 
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }

@@ -1461,11 +1461,9 @@ plotDiagnosticPlots_peakGene <- function(GRN,
     
     options(dplyr.summarise.inform = FALSE) 
     
-    includeRobustCols = FALSE
     #Either take all or the filtered set of connections
     if (useFiltered) {
       
-      # TODO: Robust columns filter
       peakGeneCorrelations.all = 
         rbind(dplyr::select(GRN@connections$all.filtered[["0"]], dplyr::everything()) %>%
                 dplyr::mutate(class = paste0("real_",range))) %>%
@@ -1473,14 +1471,6 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                 dplyr::mutate(class = paste0("random_",range)))
       
     } else {
-      
-      robustColumns = c("peak_gene.p_raw.robust", "peak_gene.bias_M_p.raw", "peak_gene.bias_LS_p.raw", "peak_gene.r_robust")
-      if (all(robustColumns %in% colnames(GRN@connections$peak_genes[["0"]]))) {
-        includeRobustCols = TRUE
-        cols_keep = c(cols_keep, robustColumns)
-      }
-      
-      
       
       if (!"peak.GC.perc" %in% colnames(GRN@annotation$peaks)) {
           GRN@annotation$peaks$peak.GC.perc = NA
@@ -1520,15 +1510,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
     # Oddity of cut: When breaks is specified as a single number, the range of the data is divided into breaks pieces of equal length, and then the outer limits are moved away by 0.1% of the range to ensure that the extreme values both fall within the break intervals. 
     levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1] = 
       gsub("(-\\d+)", "0", levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1], perl = TRUE)
-    
-    
-    if (includeRobustCols) {
-      peakGeneCorrelations.all = peakGeneCorrelations.all %>%
-        dplyr::mutate(peak_gene.p_raw.robust.class = 
-                        cut(.data$peak_gene.p_raw.robust, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE))
-    }
-    
-    
+
     # Prepare plots #
     
     colors_class = c("black", "black")
@@ -2003,22 +1985,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
           plot(g)
         }
         pageCounter = pageCounter + 1
-        
-        if (includeRobustCols) {
-          
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            
-            g = ggplot2::ggplot(peakGeneCorrelations.all[indexFilt,], ggplot2::aes(.data$peak_gene.p_raw.robust, color = .data$peak_gene.distance_class_abs)) + ggplot2::geom_density() + 
-              ggplot2::ggtitle(paste0("Density of the raw p-value distributions\n(stratified by whether r is positive)")) + 
-              ggplot2::facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
-              ggplot2::scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
-              ggplot2::theme_bw()
-            plot(g)
-          }
-          pageCounter = pageCounter + 1
-          
-          
-        }
+
         
       } # end if (length(indexFilt) > 0)
       
@@ -2445,12 +2412,13 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' Only applicable when \code{type = "TF-peak"} or \code{type = "peak-gene"}. 
 #' @param gene.IDs Character(). Default \code{NULL}. Character vector of gene IDs (Ensembl) to include. If set to \code{NULL}, this filter will be ignored. 
 #' Only applicable when \code{type = "TF-gene"} or \code{type = "peak-gene"}. 
-#' @param n_random Numeric(1). Default 10. Filter for all types of pairs: maximum number of randomly selected pairs that fulfill all other filters that should be plotted.
+#' @param nMax Numeric(1). Default 10. Filter for all types of pairs: maximum number of selected pairs that fulfill all other filters that should be plotted.
 #' If set to 0, this filter will be disabled and all pairs that fulfill the user-defined criteria will be plotted. If set to a value > 0, different pairs may be selected each time the function is run
 #'  (if the total number of remaining pairs is large enough)
+#' @param nSelectionType \code{random} or \code{top}. Default \code{top}. Only applicable if \code{nMax} is set to a value > 0. 
+#' If set to \code{top}, only the top features will be plotted while \code{random} plots randomly selected features.
 #' @param min_abs_r Numeric[0,1]. Default 0. Filter for all types of pairs: Minimum correlation coefficient (absolute value) required to include a particular pair.
 #' @param TF_peak_maxFDR Numeric[0,1]. Default 0.2. Filter for TF-peak pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "TF-peak"}. 
-#' @param peak_gene_max_adjP Numeric[0,1]. Default 0.2. Filter for peak-gene pairs: Which maximum adjusted p-value should a pair to plot have? Only applicable when \code{type = "peak-gene"}. 
 #' @param peak_gene_max_rawP Numeric[0,1]. Default 0.2. Filter for peak-gene pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "peak-gene"}. 
 #' @param TF_gene_max_rawP Numeric[0,1]. Default 0.2. Filter for TF-gene pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "TF-gene"}. 
 #' @template outputFolder
@@ -2466,12 +2434,12 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
-#' GRN = plotCorrelations(GRN, n_random = 1, min_abs_r = 0.8, plotsPerPage = c(1,1), plotAsPDF = FALSE)
+#' GRN = plotCorrelations(GRN, nMax = 1, min_abs_r = 0.8, plotsPerPage = c(1,1), plotAsPDF = FALSE)
 #' @export
 plotCorrelations <- function(GRN, type = "all.filtered", 
                              TF.IDs = NULL, peak.IDs = NULL, gene.IDs = NULL, 
                              min_abs_r = 0, TF_peak_maxFDR = 0.2, peak_gene_max_rawP = 0.2, TF_gene_max_rawP = 0.2,
-                             n_random = 10,
+                             nMax = 10, nSelectionType = "random",
                              dataType = c("real"), corMethod = NULL,
                              outputFolder = NULL, 
                              basenameOutput = NULL, 
@@ -2492,9 +2460,11 @@ plotCorrelations <- function(GRN, type = "all.filtered",
     checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
     
     checkmate::assertSubset(dataType, c("real", "background"), empty.ok = FALSE)
-    checkmate::assert(checkmate::checkNull(corMethod), checkmate::checkChoice(corMethod, c("pearson", "spearman")))
+    checkmate::assert(checkmate::checkNull(corMethod), checkmate::checkChoice(corMethod, c("pearson", "spearman", "bicor")))
     
-    checkmate::assertNumber(n_random, lower = 0)
+    checkmate::assertNumber(nMax, lower = 0)
+    checkmate::assertChoice(nSelectionType, c("random", "top"))
+    
     checkmate::assertNumber(TF_peak_maxFDR, lower = 0, upper = 1)
     checkmate::assertNumber(peak_gene_max_rawP, lower = 0, upper = 1)
     checkmate::assertNumber(TF_gene_max_rawP, lower = 0, upper = 1)
@@ -2549,19 +2519,20 @@ plotCorrelations <- function(GRN, type = "all.filtered",
         
         if ("TF-peak" %in% type) {
             
-            plots.l = .plotCorrelation_TF_peak(GRN, permIndex, plotAllFiltered, TF.IDs, peak.IDs, TF_peak_maxFDR, min_abs_r, n_random, corMethod)
+            plots.l = .plotCorrelation_TF_peak(GRN, permIndex, plotAllFiltered, TF.IDs, peak.IDs, TF_peak_maxFDR, min_abs_r, nMax, nSelectionType, corMethod)
             
         } 
         
         if ( "peak-gene" %in% type) {
             
-            plots.l = c(plots.l, .plotCorrelation_peak_gene(GRN, permIndex, plotAllFiltered, peak.IDs, gene.IDs, peak_gene_max_rawP, min_abs_r, n_random, corMethod))
+            plots.l = c(plots.l, 
+                        .plotCorrelation_peak_gene(GRN, permIndex, plotAllFiltered, peak.IDs, gene.IDs, peak_gene_max_rawP, min_abs_r, nMax, nSelectionType, corMethod))
             
         } 
         
         if ("TF-gene" %in% type) {
             
-            plots.l = c(plots.l, .plotCorrelation_TF_gene(GRN, permIndex, plotAllFiltered, TF.IDs, gene.IDs, TF_gene_max_rawP, min_abs_r, n_random, corMethod))
+            plots.l = c(plots.l, .plotCorrelation_TF_gene(GRN, permIndex, plotAllFiltered, TF.IDs, gene.IDs, TF_gene_max_rawP, min_abs_r, nMax, corMethod))
         } 
         if (length(plots.l) > 0) {
             futile.logger::flog.info(paste0(" Plotting", ifelse(!is.null(file), paste0(" to file ", file), " directly"), ". This may take a while."))
@@ -2579,15 +2550,21 @@ plotCorrelations <- function(GRN, type = "all.filtered",
     GRN
 }
 
-.plotCorrelation_TF_peak <- function(GRN, permIndex, plotAllFiltered, TF.IDs, peak.IDs, TF_peak_maxFDR, min_abs_r, n_random, corMethod, digits_round = 3) {
+.plotCorrelation_TF_peak <- function(GRN, permIndex, plotAllFiltered, TF.IDs, peak.IDs, TF_peak_maxFDR, min_abs_r, nMax, nSelectionType, corMethod, digits_round = 3) {
     
     filters = c()
-    if (n_random > 0) filters = c(filters, paste0("random (max=", n_random, ")"))
+    if (nMax > 0)       filters = c(filters, paste0("Subselection (max=", nMax, ")"))
     if (TF_peak_maxFDR < 1) filters = c(filters, paste0("FDR (max=", TF_peak_maxFDR, ")"))
-    if (min_abs_r > 0) filters = c(filters, paste0("Correlation coefficient (abs) (min=", min_abs_r, ")"))
-    if (!is.null(TF.IDs)) filters = c(filters, paste0("TF IDs only: ", paste0(unique(TF.IDs), collapse = ", ")))
-    if (!is.null(peak.IDs)) filters = c(filters, paste0("peak IDs only: ", paste0(unique(peak.IDs), collapse = ", ")))
+    if (min_abs_r > 0)      filters = c(filters, paste0("Correlation coefficient (abs) (min=", min_abs_r, ")"))
     
+    if (!is.null(TF.IDs) && !is.null(peak.IDs)) {
+        filters = c(filters, paste0("Specific TF-peak pairs only: ", paste(TF.IDs, peak.IDs, sep = "+", collapse = ", ")))
+    } else {
+        if (!is.null(TF.IDs))   filters = c(filters, paste0("TF IDs only: ", paste0(unique(TF.IDs), collapse = ", ")))
+        if (!is.null(peak.IDs)) filters = c(filters, paste0("peak IDs only: ", paste0(unique(peak.IDs), collapse = ", ")))
+        
+    }
+
     
     futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
     
@@ -2612,25 +2589,42 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             data.df = GRN@connections$TF_peaks[[permIndexCur]]$main
         }
         
-        
-        if (!is.null(TF.IDs)) {
-            data.df = dplyr::filter(data.df, .data$TF.ID %in% TF.IDs)
+        if (!is.null(TF.IDs) && !is.null(peak.IDs)) { 
+            
+            if (length(TF.IDs) != length(peak.IDs)) {
+                message = paste0("If both TF and peak IDs are given, both must have the same length.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+
+            IDs_keep = paste0(TF.IDs, "_", peak.IDs)
+            data.df = data.df %>% 
+                dplyr::mutate(IDs_combined = paste0(.data$TF.ID, "_", .data$peak.ID)) %>% 
+                dplyr::filter(.data$IDs_combined %in% IDs_keep) 
+            
+            # Enforce the same order
+            data.df = dplyr::slice(data.df, match(IDs_keep, .data$IDs_combined))
+            
+            
+        } else {
+            
+            if (!is.null(TF.IDs)) {
+                data.df = dplyr::filter(data.df, .data$TF.ID %in% TF.IDs)
+            }
+            
+            if (!is.null(peak.IDs)) {
+                data.df = dplyr::filter(data.df, .data$peak.ID %in% peak.IDs)
+            }
         }
         
-        if (!is.null(peak.IDs)) {
-            data.df = dplyr::filter(data.df, .data$peak.ID %in% peak.IDs)
-        }
+       
         
         
         data.df = data.df %>%
             dplyr::filter(.data$TF_peak.fdr <= TF_peak_maxFDR,
                           abs(.data$TF_peak.r) >= min_abs_r)
         
+        data.df = .maxFilter(data.df, nMax, nSelectionType)
         
-        
-        if (n_random > 0) {
-            data.df = dplyr::slice_sample(data.df, n = n_random)
-        }
         
         if (.checkForZeroPlots(data.df) ) {
             return(list())
@@ -2666,7 +2660,8 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             values.df = tibble::tibble(x = countsRNA[TF.ENSEMBL, GRN@config$sharedSamples] %>% as.vector(), 
                                        y = countsPeaks[peak.IDs2[i], GRN@config$sharedSamples] %>% as.vector())
             
-            cor_cur = cor(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), method = corMethod)
+            cor_cur = .correlateData(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), corMethod)
+            
             
             # Check whether we have this pair in the TF-peak and all.filtered connections
             con.subset.df = GRN@connections$TF_peaks[[permIndexCur]]$main %>%
@@ -2717,15 +2712,23 @@ plotCorrelations <- function(GRN, type = "all.filtered",
 }
 
 
-.plotCorrelation_peak_gene <- function(GRN, permIndex, plotAllFiltered, peak.IDs, gene.IDs, p_raw, min_abs_r, n_random, corMethod, digits_round = 3) {
+.plotCorrelation_peak_gene <- function(GRN, permIndex, plotAllFiltered, peak.IDs, gene.IDs, p_raw, min_abs_r, nMax, nSelectionType, corMethod, digits_round = 3) {
     
     
     filters = c()
-    if (n_random > 0) filters = c(filters, paste0("random (max=", n_random, ")"))
+    if (nMax > 0) filters = c(filters, paste0("Subselection  (max=", nMax, ")"))
     if (p_raw < 1) filters = c(filters, paste0("Raw p-value (max=", p_raw, ")"))
     if (min_abs_r > 0) filters = c(filters, paste0("Correlation coefficient (abs) (min=", min_abs_r, ")"))
-    if (!is.null(peak.IDs)) filters = c(filters, paste0("peak IDs only: ", paste0(unique(peak.IDs), collapse = ", ")))
-    if (!is.null(gene.IDs)) filters = c(filters, paste0("Gene IDs only: ", paste0(unique(gene.IDs), collapse = ", ")))
+    
+    if (!is.null(peak.IDs) && !is.null(gene.IDs)) {
+        filters = c(filters, paste0("Specific peak-gene pairs only: ", paste(peak.IDs, gene.IDs, sep = "+", collapse = ", ")))
+    } else {
+        if (!is.null(peak.IDs)) filters = c(filters, paste0("peak IDs only: ", paste0(unique(peak.IDs), collapse = ", ")))
+        if (!is.null(gene.IDs)) filters = c(filters, paste0("Gene IDs only: ", paste0(unique(gene.IDs), collapse = ", ")))
+        
+    }
+    
+
     
     
     futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
@@ -2750,25 +2753,42 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             data.df = GRN@connections$peak_genes[[permIndexCur]]
         }
         
-        
-        if (!is.null(peak.IDs)) {
-            data.df = dplyr::filter(data.df, .data$peak.ID %in% peak.IDs)
+        if (!is.null(peak.IDs) && !is.null(gene.IDs)) { 
+            
+            if (length(gene.IDs) != length(peak.IDs)) {
+                message = paste0("If both peak and gene IDs are given, both must have the same length.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            IDs_keep = paste0(peak.IDs, "_", gene.IDs)
+            data.df = data.df %>% 
+                dplyr::mutate(IDs_combined = paste0(.data$peak.ID, "_", .data$gene.ENSEMBL)) %>% 
+                dplyr::filter(.data$IDs_combined %in% IDs_keep) 
+            
+            # Enforce the same order
+            data.df = dplyr::slice(data.df, match(IDs_keep, .data$IDs_combined))
+            
+            
+        } else {
+
+            if (!is.null(peak.IDs)) {
+                data.df = dplyr::filter(data.df, .data$peak.ID %in% peak.IDs)
+            }
+            
+            if (!is.null(gene.IDs)) {
+                data.df = dplyr::filter(data.df, .data$gene.ENSEMBL %in% gene.IDs)
+            }
         }
         
-        if (!is.null(gene.IDs)) {
-            data.df = dplyr::filter(data.df, .data$gene.ENSEMBL %in% gene.IDs)
-        }
+       
         
         
         data.df = data.df %>%
             dplyr::filter(.data$peak_gene.p_raw <= p_raw,
                           abs(.data$peak_gene.r) >= min_abs_r)
         
-        
-        
-        if (n_random > 0) {
-            data.df = dplyr::slice_sample(data.df, n = n_random)
-        }
+        data.df = .maxFilter(data.df, nMax, nSelectionType)
+
         
         if (.checkForZeroPlots(data.df) ) {
             return(list())
@@ -2797,7 +2817,8 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             values.df = tibble::tibble(y = countsRNA[gene.IDs2[i], GRN@config$sharedSamples] %>% as.vector(), 
                                        x = countsPeaks[peak.IDs2[i], GRN@config$sharedSamples] %>% as.vector())
             
-            cor_cur = cor(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), method = corMethod)
+            cor_cur = .correlateData(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), corMethod)
+            
             
             # Check whether we have this pair in the peak-gene and all.filtered connections
             con.subset.df = GRN@connections$peak_genes[[permIndexCur]] %>%
@@ -2849,14 +2870,22 @@ plotCorrelations <- function(GRN, type = "all.filtered",
 }
 
 
-.plotCorrelation_TF_gene <- function(GRN, permIndex, plotAllFiltered, TF.IDs, gene.IDs, p_raw, min_abs_r, n_random, corMethod, digits_round = 3) {
+.plotCorrelation_TF_gene <- function(GRN, permIndex, plotAllFiltered, TF.IDs, gene.IDs, p_raw, min_abs_r, nMax, nSelectionType, corMethod, digits_round = 3) {
     
     filters = c()
-    if (n_random > 0) filters = c(filters, paste0("random (max=", n_random, ")"))
+    if (nMax > 0) filters = c(filters, paste0("Subselection (max=", nMax, ")"))
     if (p_raw < 1) filters = c(filters, paste0("Raw p-value (max=", p_raw, ")"))
     if (min_abs_r > 0) filters = c(filters, paste0("Correlation coefficient (abs) (min=", min_abs_r, ")"))
-    if (!is.null(TF.IDs)) filters = c(filters, paste0("TF IDs only: ", paste0(unique(TF.IDs), collapse = ", ")))
-    if (!is.null(gene.IDs)) filters = c(filters, paste0("Gene IDs only: ", paste0(unique(gene.IDs), collapse = ", ")))
+    
+    if (!is.null(TF.IDs) && !is.null(gene.IDs)) {
+        filters = c(filters, paste0("Specific TF-gene pairs only: ", paste(TF.IDs, gene.IDs, sep = "+", collapse = ", ")))
+    } else {
+        if (!is.null(TF.IDs)) filters = c(filters, paste0("TF IDs only: ", paste0(unique(TF.IDs), collapse = ", ")))
+        if (!is.null(gene.IDs)) filters = c(filters, paste0("Gene IDs only: ", paste0(unique(gene.IDs), collapse = ", ")))
+        
+    }
+    
+
     
     
     futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
@@ -2881,25 +2910,39 @@ plotCorrelations <- function(GRN, type = "all.filtered",
         }
         data.df = GRN@connections$TF_genes.filtered[[permIndexCur]]
         
-        
-        if (!is.null(TF.IDs)) {
-            data.df = dplyr::filter(data.df, .data$TF.ID %in% TF.IDs)
+        if (!is.null(TF.IDs) && !is.null(gene.IDs)) { 
+            
+            if (length(gene.IDs) != length(TF.IDs)) {
+                message = paste0("If both TF and gene IDs are given, both must have the same length.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            IDs_keep = paste0(TF.IDs, "_", gene.IDs)
+            data.df = data.df %>% 
+                dplyr::mutate(IDs_combined = paste0(.data$TF.ID, "_", .data$gene.ENSEMBL)) %>% 
+                dplyr::filter(.data$IDs_combined %in% IDs_keep) 
+            
+            # Enforce the same order
+            data.df = dplyr::slice(data.df, match(IDs_keep, .data$IDs_combined))
+            
+            
+        } else {
+            
+            if (!is.null(TF.IDs)) {
+                data.df = dplyr::filter(data.df, .data$TF.ID %in% TF.IDs)
+            }
+            
+            if (!is.null(gene.IDs)) {
+                data.df = dplyr::filter(data.df, .data$gene.ENSEMBL %in% gene.IDs)
+            }
         }
-        
-        if (!is.null(gene.IDs)) {
-            data.df = dplyr::filter(data.df, .data$gene.ENSEMBL %in% gene.IDs)
-        }
-        
+
         
         data.df = data.df %>%
             dplyr::filter(.data$TF_gene.p_raw <= p_raw,
                           abs(.data$TF_gene.r) >= min_abs_r)
         
-        
-        
-        if (n_random > 0) {
-            data.df = dplyr::slice_sample(data.df, n = n_random)
-        }
+        data.df = .maxFilter(data.df, nMax, nSelectionType)
         
         if (.checkForZeroPlots(data.df) ) {
             return(list())
@@ -2930,7 +2973,9 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             #                            y = GRN@data$RNA$counts[rowIndexGene,])
             # 
             # 
-            cor_cur = cor(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), method = corMethod)
+            
+            cor_cur = .correlateData(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), corMethod)
+
             
             # Check whether we have this pair in the TF-gene filtered connections
             con.subset.df = GRN@connections$TF_genes.filtered[[permIndexCur]] %>%
@@ -2975,6 +3020,23 @@ plotCorrelations <- function(GRN, type = "all.filtered",
     
     plots.l
 }
+
+.maxFilter <- function(data.df, nMax, nSelectionType) {
+    
+    if (nMax > 0) {
+        
+        if (nSelectionType == "random") {
+            data.df = dplyr::slice_sample(data.df, n = nMax)
+        } else {
+            data.df = dplyr::slice_head(data.df, n = nMax)
+        }
+        
+    }
+    
+    data.df
+}
+
+
 
 .produceCorrelationPlot <- function(values, title, label_x, label_y) {
     

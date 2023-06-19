@@ -25,9 +25,9 @@ A very detailed documentation for the latest development version of the package 
 
 
 ### Citation
-**If you use our packages, please use the following citation (we will update it once the paper has been officially published):**
+**If you use our packages, please use the following citation:**
 
-GRaNIE and GRaNPA: Inference and evaluation of enhancer-mediated gene regulatory networks applied to study macrophages. Aryan Kamal, Christian Arnold, Annique Claringbould, Rim Moussa, Neha Daga, Daria Nogina, Maksim Kholmatov, Nila Servaas, Sophia Mueller-Dott, Armando Reyes-Palomares, Giovanni Palla, Olga Sigalova, Daria Bunina, Caroline Pabst, Judith B. Zaugg. bioRxiv 2021.12.18.473290; doi: https://doi.org/10.1101/2021.12.18.473290
+Kamal, A., Arnold, C., Claringbould, A., Moussa, R., Servaas, N.H., Kholmatov, M., Daga, N., Nogina, D., Mueller‐Dott, S., Reyes‐Palomares, A. and Palla, G., 2023. GRaNIE and GRaNPA: inference and evaluation of enhancer‐mediated gene regulatory networks. Molecular Systems Biology, p.e11627.; doi: [https://doi.org/10.15252/msb.202311627](https://doi.org/10.15252/msb.202311627)
 
 ### Bug Reports, Feature Requests and Contact Information
 

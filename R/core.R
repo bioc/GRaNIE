@@ -19,13 +19,13 @@
 #' @export
 #' @importFrom stats sd median cor cor.test quantile
 initializeGRN <- function(objectMetadata = list(),
-                          outputFolder = ".", 
+                          outputFolder = ".",
                           genomeAssembly) {
   
   start = Sys.time()   
     
   checkmate::assert(checkmate::checkNull(objectMetadata), checkmate::checkList(objectMetadata))
-  checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn6", "rn7", "dm6"))
+  checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn6", "rn7", "dm6","rheMac10"))
   
   # Check individual metadata components that they are only characters but not actual data objects
   for (i in seq_len(length(objectMetadata))) {
@@ -164,6 +164,7 @@ initializeGRN <- function(objectMetadata = list(),
 #' storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.
 #' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. The Ensembl version to use for genome annotation retrieval via \code{biomaRt}, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}. 
 #' By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
+#' @param genomeAnnotationSource \code{AnnotationHub} or \code{biomaRt}. Default \code{AnnotationHub}. Annotation source to retrieve genome annotation data from.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with added data from this function(e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 #' @seealso \code{\link{plotPCA_all}}
@@ -183,6 +184,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                     allowOverlappingPeaks= FALSE,
                     keepOriginalReadCounts = FALSE,
                     EnsemblVersion = NULL,
+                    genomeAnnotationSource = "AnnotationHub",
                     forceRerun = FALSE) {
   
   start = Sys.time()
@@ -210,7 +212,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   checkmate::assertFlag(allowOverlappingPeaks)
   checkmate::assert(checkmate::checkNull(EnsemblVersion), checkmate::assertSubset(as.character(EnsemblVersion), biomaRt::listEnsemblArchives()$version))
   
-
+  checkmate::assertChoice(genomeAnnotationSource, c("biomaRt", "AnnotationHub"))
   
   checkmate::assertFlag(forceRerun)
   
@@ -419,7 +421,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     
 
 
-    GRN = .populateGeneAnnotation(GRN, EnsemblVersion = EnsemblVersion)
+    GRN = .populateGeneAnnotation(GRN, EnsemblVersion = EnsemblVersion, genomeAnnotationSource = genomeAnnotationSource)
     
   } else {
       .printDataAlreadyExistsMessage()
@@ -530,49 +532,108 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 }
 
 #' @importFrom biomaRt useEnsembl getBM
-.retrieveAnnotationData <- function(genomeAssembly, EnsemblVersion = NULL) {
+#' @importFrom ensembldb genes
+.retrieveAnnotationData <- function(genomeAssembly, EnsemblVersion = NULL, source = "AnnotationHub") {
     
-    futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt for ", genomeAssembly, "... This may take a while"))
+    checkmate::assertChoice(source, c("biomaRt", "AnnotationHub"))
     
-    params.l = .getBiomartParameters(genomeAssembly)
-    
-    
-    columnsToRetrieve = c("chromosome_name", "start_position", "end_position",
-                          "strand", "ensembl_gene_id", "gene_biotype", "external_gene_name")
-    
-    geneAnnotation <- NULL
-    attempt <- 0
-    mirrors = c('www', 'uswest', 'useast', 'asia')
-    while (!is.data.frame(geneAnnotation) && attempt <= 3 ) {
-        attempt <- attempt + 1
-        geneAnnotation = tryCatch({ 
-            ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
-            biomaRt::getBM(attributes = columnsToRetrieve, mart = ensembl)
+    if (source == "biomaRt") {
+        
+        futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt for ", genomeAssembly, "... This may take a while"))
+        
+        params.l = .getBiomartParameters(genomeAssembly, useSuffix = TRUE)
+        
+        
+        columnsToRetrieve = c("chromosome_name", "start_position", "end_position",
+                              "strand", "ensembl_gene_id", "gene_biotype", "external_gene_name")
+        
+        geneAnnotation <- NULL
+        mirrorIndex <- 0
+        attemptsDone = 0
+        maxAttempts = 40
+        mirrors = c('www', 'uswest', 'useast', 'asia')
+        while (!is.data.frame(geneAnnotation) && attemptsDone <= maxAttempts) {
+            mirrorIndex <- (mirrorIndex %% 4) + 1
+            attemptsDone = attemptsDone + 1
+            
+            geneAnnotation = tryCatch({ 
+                ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[mirrorIndex])
+                biomaRt::getBM(attributes = columnsToRetrieve, mart = ensembl)
+                
+            } , error = function(e) {
+                futile.logger::flog.warn(paste0("Attempt ", attemptsDone, " out of ", maxAttempts, " failed. Another automatic attempt will be performed using a different mirror. The error message was: ", e))
+            }
+            )
+        } 
+        
+        
+        if (!is.data.frame(geneAnnotation)) {
+            
+            error_Biomart = paste0("A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl despite trying ", 
+                                   maxAttempts, 
+                                   " times via different mirrors. This is often caused by an unresponsive Ensembl site.", 
+                                   " Try again at a later time. Note that this error is not caused by GRaNIE but external services.")
+            .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
+            return(NULL)
             
         }
-        )
-    } 
-
-  
-    if (!is.data.frame(geneAnnotation)) {
         
-        error_Biomart = "A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl. This is often caused by an unresponsive Ensembl site. Try again at a later time. Note that this error is not caused by GRaNIE but external services."
-        .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
-        return(NULL)
+        futile.logger::flog.info(paste0("Retrieving genome annotation succeeded"))
+        
+        
+        
+        genes.df = geneAnnotation %>%
+            tibble::as_tibble() %>%
+            dplyr::filter(stringr::str_length(.data$chromosome_name) <= 5) %>%
+            dplyr::mutate(chromosome_name = paste0("chr", .data$chromosome_name)) %>%
+            dplyr::rename(gene.chr = "chromosome_name", gene.start = "start_position", gene.end = "end_position", 
+                          gene.strand = "strand", gene.ENSEMBL = "ensembl_gene_id", gene.type = "gene_biotype", gene.name = "external_gene_name") %>%
+            tidyr::replace_na(list(gene.type = "unknown")) %>%
+            dplyr::mutate_if(is.character, as.factor) %>%
+            dplyr::mutate(gene.type = dplyr::recode_factor(.data$gene.type, lncRNA = "lincRNA")) %>%  # there seems to be a name change from lincRNA -> lncRNA, lets change it here 
+            dplyr::mutate(gene.strand = factor(.data$gene.strand, levels = c(1,-1), labels = c("+", "-")))
+        
+        
+    } else if (source == "AnnotationHub") {
+
+        AnnotationHub::setAnnotationHubOption("ASK", FALSE)
+        ah <- AnnotationHub::AnnotationHub()
+        
+        # TODO: Save metadata somewhere in object
+        snapshotDate = AnnotationHub::snapshotDate(ah)
+        
+        params.l = .getBiomartParameters(genomeAssembly, useSuffix = FALSE)
+        if (genomeAssembly == "hg19") {
+            message = "AnnotationHub genome retrieval with hg19 as genome assembly is not yet supported / implemented. Please use biomaRt instead as annotation source for the parameter genomeAnnotationSource in addData."
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+        results = AnnotationHub::query(ah, c("EnsDb", params.l$dataset))
+        annotationDatasets <- as.data.frame(mcols(results))
+        
+        # Find newest Ensembl ID automatically
+        
+        newestAnno.title = tail(annotationDatasets$title, 1)
+        newestAnno.ID = tail(rownames(annotationDatasets), 1)
+        
+        
+        ens.newest <- ah[[newestAnno.ID]]
+        genes.df = as.data.frame(suppressWarnings(ensembldb::genes(ens.newest))) %>%
+            tibble::as_tibble() %>%
+            dplyr::mutate(gene.chr = paste0("chr", seqnames)) %>%
+            dplyr::select(-seqnames) %>%
+            dplyr::rename(gene.ENSEMBL = "gene_id", gene.start = "start", gene.end = "end",
+                          gene.strand = "strand", gene.name = "gene_name", gene.type = "gene_biotype") %>%
+            dplyr::select("gene.chr", "gene.start", "gene.end", "gene.strand", "gene.ENSEMBL", "gene.type", "gene.name") %>%
+            tidyr::replace_na(list(gene.type = "unknown")) %>%
+            #  dplyr::mutate(gene.strand = factor(.data$gene.strand, levels = c(1,-1,0), labels = c("+", "-", "*"))) %>%
+            dplyr::mutate_if(is.character, as.factor) %>%
+            dplyr::mutate(gene.type = dplyr::recode_factor(.data$gene.type, lncRNA = "lincRNA")) 
         
     }
     
-    geneAnnotation %>%
-        tibble::as_tibble() %>%
-        dplyr::filter(stringr::str_length(.data$chromosome_name) <= 5) %>%
-        dplyr::mutate(chromosome_name = paste0("chr", .data$chromosome_name)) %>%
-        dplyr::rename(gene.chr = "chromosome_name", gene.start = "start_position", gene.end = "end_position", 
-                      gene.strand = "strand", gene.ENSEMBL = "ensembl_gene_id", gene.type = "gene_biotype", gene.name = "external_gene_name") %>%
-        tidyr::replace_na(list(gene.type = "unknown")) %>%
-        dplyr::mutate_if(is.character, as.factor) %>%
-        dplyr::mutate(gene.type = dplyr::recode_factor(.data$gene.type, lncRNA = "lincRNA")) %>%  # there seems to be a name change from lincRNA -> lncRNA, lets change it here 
-        dplyr::mutate(gene.strand = factor(.data$gene.strand, levels = c(1,-1), labels = c("+", "-")))
-    
+    genes.df
+   
 }
 
 
@@ -592,15 +653,24 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                                   peak.CV = CV_peaks)
   
   GRN@annotation$peaks = metadata_peaks
+  
 
-  if (!is.installed("ChIPseeker") | !.checkAndLoadPackagesGenomeAssembly(GRN@config$parameters$genomeAssembly, returnLogical = TRUE)) {
+  if (!is.installed("ChIPseeker") | 
+      !.checkAndLoadPackagesGenomeAssembly(GRN@config$parameters$genomeAssembly, returnLogical = TRUE) | 
+      GRN@config$parameters$genomeAssembly %in% c("dm6")) {
       if (!is.installed("ChIPseeker")) {
           packageMessage = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
                                   " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
           .checkPackageInstallation("ChIPseeker", packageMessage, isWarning = TRUE)
       } else {
           
-          # annotation packages missing, message will already been thrown
+          if (GRN@config$parameters$genomeAssembly %in% c("dm6")) {
+              packageMessage = paste0("For the genome dm6, ChiIPseeker cannot be used due to differences in the ID columns that are returned (Entrez ID and not Ensembl ID).")
+              .checkPackageInstallation("ChIPseeker", packageMessage, isWarning = TRUE)
+          }
+          
+          # otherwise, annotation packages missing, message will already been thrown
+          
       }
       
   } else {
@@ -662,7 +732,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   
 }
 
-.populateGeneAnnotation <- function(GRN, EnsemblVersion = NULL) {
+.populateGeneAnnotation <- function(GRN, EnsemblVersion = NULL, genomeAnnotationSource = "AnnotationHub") {
 
 
   countsRNA.m  = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = TRUE)
@@ -674,7 +744,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
   rowMedians_rna = matrixStats::rowMedians(countsRNA.m)
   CV_rna = matrixStats::rowSds(countsRNA.m) /  rowMeans_rna
   
-  genomeAnnotation.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly, EnsemblVersion = EnsemblVersion)
+  genomeAnnotation.df = .retrieveAnnotationData(GRN@config$parameters$genomeAssembly, EnsemblVersion = EnsemblVersion, source = genomeAnnotationSource)
   
   metadata_rna = tibble::tibble(gene.ENSEMBL = rownames(countsRNA.m), 
                                 gene.mean = rowMeans_rna, 
@@ -939,6 +1009,11 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
         futile.logger::flog.info(paste0(" Normalizing data using the package DESeq2 with a standard size factor normalization."))
         
+        
+        # Check whether enough genes have non-zero counts to actually estimate size factors reasonably
+        .checkSizeFactorEligibility(dd)
+        
+        
         dd = DESeq2::estimateSizeFactors(dd)
         dataNorm = DESeq2::counts(dd, normalized = TRUE)
         
@@ -949,6 +1024,25 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     }
     
     dataNorm
+}
+
+.checkSizeFactorEligibility <- function(dd, minRows = 10) {
+    
+    counts_raw = DESeq2::counts(dd, normalized = FALSE)
+    
+    counts_raw[counts_raw == 0] <- NA
+    nRows_nonZero =  nrow(counts_raw[stats::complete.cases(counts_raw),])
+    
+    if (nRows_nonZero == 0) {
+        message = paste0(" Every feature contains at least one zero, cannot compute log geometric means for the DESeq2 size factor normalization. This happens when the input data contain too many zeroes and happens particularly often for single-cell derived data. Decrease the number of 0s by either decreasing the number of samples or by increasing the sequencing depth.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    if (nRows_nonZero < minRows) {
+        message = paste0(" Almost every feature (except ", nRows_nonZero, ") contain at least one zero. DESeq2 size factor normalization based on so few features may become unreliable. This happens when the input data contain too many zeroes and happens particularly often for single-cell derived data. Decrease the number of 0s by either decreasing the number of samples or by increasing the sequencing depth.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+    }
+    
 }
 
 
@@ -1405,7 +1499,7 @@ filterData <- function(GRN,
 #' @param nTFMax \code{NULL} or Integer[1,]. Default \code{NULL}. Maximal number of TFs to import. Can be used for testing purposes, e.g., setting to 5 only imports 5 TFs even though the whole \code{motifFolder} has many more TFs defined.
 #' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
 #' By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
-#' @param JASPAR_useSpecificTaxGroup \code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? 
+#' @param JASPAR_useSpecificTaxGroup \code{NULL} or Character(1). Default \code{NULL}. Should a tax group instead of th specific genome assembly be used for retrieving the TF list? This is useful for genomes that are not human or mouse for which JASPAR otherwise returns too few TFs otherwise.
 #' If set to \code{NULL}, the specific genome version as provided in the object is used within \code{TFBSTools::getMatrixSet} in the \code{opts} list for \code{species}, 
 #' while \code{tax_group} will be used instead if this argument is not set to \code{NULL}. For example, it can be set to \code{vertebrates} to use the vertebrates TF collection.
 #' For more details, see \code{?TFBSTools::getMatrixSet}.
@@ -1420,7 +1514,7 @@ filterData <- function(GRN,
 addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all", 
                     translationTable = "translationTable.csv",  translationTable_sep = " ", filesTFBSPattern = "_TFBS", fileEnding = ".bed", 
                     nTFMax = NULL, EnsemblVersion = NULL,
-                    JASPAR_useSpecificTaxGroup = NULL, JASPAR_removeAmbiguousTFs =TRUE,
+                    JASPAR_useSpecificTaxGroup = NULL, JASPAR_removeAmbiguousTFs = TRUE,
                     forceRerun = FALSE, ...) {
     
     start = Sys.time()
@@ -1529,26 +1623,32 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         TFs.df = tibble::tibble(ID = IDsWithTFBSPredictions, TF.name = TFsWithTFBSPredictions) %>%
             dplyr::mutate(TF.name.lowercase = tolower(.data$TF.name))
 
-        params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly)
+        params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly, useSuffix = TRUE)
         
         futile.logger::flog.info(paste0("Retrieving gene annotation for JASPAR TFs. This may take a while."))
         
         mapping.df <- NULL
-        attempt <- 0
+        mirrorIndex <- 0
+        attemptsDone = 0
+        maxAttempts = 40
         mirrors = c('www', 'uswest', 'useast', 'asia')
-        while (!is.data.frame(mapping.df) && attempt <= 3 ) {
-            attempt <- attempt + 1
+        while (!is.data.frame(mapping.df) && attemptsDone <= maxAttempts ) {
+            mirrorIndex <- (mirrorIndex %% 4) + 1
+            attemptsDone = attemptsDone + 1
+            
             mapping.df = tryCatch({ 
-                ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[attempt])
+                ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[mirrorIndex])
                 biomaRt::getBM(attributes = c("external_gene_name", "ensembl_gene_id"),
                                filters = "external_gene_name",
                                values = TFsWithTFBSPredictions,
                                mart = ensembl) %>%
-                    dplyr::rename(SYMBOL = external_gene_name,
-                                  ENSEMBL = ensembl_gene_id) %>%
-                    dplyr::mutate(SYMBOL.lowercase = tolower(SYMBOL)) %>%
+                    dplyr::rename(SYMBOL = "external_gene_name",
+                                  ENSEMBL = "ensembl_gene_id") %>%
+                    dplyr::mutate(SYMBOL.lowercase = tolower("SYMBOL")) %>%
                     dplyr::full_join(TFs.df, by = c("SYMBOL.lowercase" = "TF.name.lowercase"), multiple = "all")
                 
+            }, error = function(e) {
+                futile.logger::flog.warn(paste0("Attempt ", attemptsDone, " out of ", maxAttempts, " failed. Another automatic attempt will be performed using a different mirror. The error message was: ", e))
             })
         } 
         
@@ -1558,8 +1658,11 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             return(NULL)
         }
         
+        futile.logger::flog.info(paste0("Retrieving gene annotation was successful."))
+        
+        
         table_distinct_id = mapping.df %>%
-            dplyr::pull("ID") %>%
+            dplyr::pull(.data$ID) %>%
             table()
         
         TFs_unique = mapping.df %>%
@@ -1567,7 +1670,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             dplyr::filter(!is.na(.data$ENSEMBL)) %>%
             dplyr::summarise(n = dplyr::n()) %>%
             dplyr::filter(.data$n == 1) %>%
-            dplyr::pull("ID")
+            dplyr::pull(.data$ID)
             
            
         ambiguousTFs = names(which(table_distinct_id > 1))
@@ -1968,8 +2071,12 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
   
   # counts for peaks may be 0 throughout, then a warning is thrown
   
+  dataX = t(dplyr::select(matrix1.norm.TFs.df, -"ENSEMBL"))
+  dataY = t(dplyr::select(matrix_peaks, -"peakID"))
+  
   #If the sd is zero, a warning is issued. We suppress it here to not confuse users as this is being dealt with later by ignoring the NA entries
-  cor.m = suppressWarnings(t(cor(t(dplyr::select(matrix1.norm.TFs.df, -"ENSEMBL")), t(dplyr::select(matrix_peaks, -"peakID")), method = corMethod)))
+  
+  cor.m = t(.correlateData(dataX, dataY, corMethod))
   
   colnames(cor.m) = matrix1.norm.TFs.df$ENSEMBL
   rownames(cor.m) = matrix_peaks$peakID
@@ -2272,7 +2379,7 @@ AR_classification_wrapper <- function(GRN, significanceThreshold_Wilcoxon = 0.05
   checkmate::assertNumber(plot_minNoTFBS_heatmap, lower = 1)
   checkmate::assertFlag(deleteIntermediateData)
   checkmate::assertFlag(plotDiagnosticPlots)
-  checkmate::assertChoice(corMethod, c("pearson", "spearman"))
+  checkmate::assertChoice(corMethod, c("pearson", "bicor", "spearman"))
   checkmate::assertFlag(forceRerun)
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
@@ -2502,7 +2609,7 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
 
   checkmate::assertFlag(plotDiagnosticPlots)
   checkmate::assertFlag(plotDetails)
-  checkmate::assertChoice(corMethod, c("pearson", "spearman"))
+  checkmate::assertChoice(corMethod, c("pearson", "bicor", "spearman"))
   checkmate::assertFlag(addForBackground)
   
   GRN = .checkAndUpdateConnectionTypes(GRN) # For compatibility with older versions
@@ -2558,7 +2665,8 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
                                       removeNegativeCorrelation = removeNegativeCorrelation, 
                                       maxFDRToStore = maxFDRToStore, useGCCorrection = useGCCorrection,
                                       percBackground_size = percBackground_size, threshold_percentage = 0.05,
-                                      percBackground_resample = percBackground_resample, plotDetails = plotDetails)
+                                      percBackground_resample = percBackground_resample, plotDetails = plotDetails
+                                      )
       
       # TODO: remove extra columns again
       GRN@connections$TF_peaks[[permIndex]]$main            = .optimizeSpaceGRN(stats::na.omit(resFDR.l[["main"]]))
@@ -2647,7 +2755,7 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
                                      GRN@annotation$TFs, 
                                      corMethod,
                                      whitespacePrefix = "  ")
-    
+
 
     allTF = intersect(colnames(peak_TF_overlap.df), colnames(peaksCor.m))
     checkmate::assertIntegerish(length(allTF), lower = 1)
@@ -3108,7 +3216,6 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
 #' @template plotDiagnosticPlots
 #' @param plotGeneTypes List of character vectors. Default \code{list(c("all"), c("protein_coding"))}. Each list element may consist of one or multiple gene types that are plotted collectively in one PDF. The special keyword \code{"all"} denotes all gene types that are found (be aware: this typically contains 20+ gene types, see \url{https://www.gencodegenes.org/pages/biotypes.html} for details).
 #' @template outputFolder
-#' @template addRobustRegression
 #' @template forceRerun
 #' @seealso \code{\link{plotDiagnosticPlots_peakGene}}
 #' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function. 
@@ -3124,7 +3231,6 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                      plotDiagnosticPlots = TRUE, 
                                      plotGeneTypes = list(c("all"), c("protein_coding")), 
                                      outputFolder = NULL,
-                                     addRobustRegression = FALSE,
                                      forceRerun = FALSE) {
   
   start = Sys.time() 
@@ -3135,7 +3241,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   GRN = .makeObjectCompatible(GRN)
   
   checkmate::assertChoice(overlapTypeGene, c("TSS", "full"))
-  checkmate::assertChoice(corMethod, c("pearson", "spearman"))
+  checkmate::assertChoice(corMethod, c("pearson", "bicor", "spearman"))
   checkmate::assertIntegerish(promoterRange, lower = 0)
   checkmate::assert(checkmate::testNull(TADs), checkmate::testDataFrame(TADs))
   checkmate::assertFlag(TADs_mergeOverlapping)
@@ -3147,13 +3253,9 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
   
   checkmate::assert(checkmate::testNull(outputFolder), checkmate::testDirectoryExists(outputFolder))
-  checkmate::assertFlag(addRobustRegression)
   checkmate::assertFlag(forceRerun)
   
-  if (addRobustRegression) {
-      packageMessage = paste0("The package robust is not installed, but needed here due to addRobustRegression = TRUE. Please install it and re-run this function or change addRobustRegression to FALSE.")
-      .checkPackageInstallation("robust", packageMessage)  
-  }
+  .checkPackageRobust(corMethod)
   
   # As this is independent of the underlying GRN, it has to be done only once
   
@@ -3195,9 +3297,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                        randomizePeakGeneConnections = randomizePeakGeneConnections,
                                        shuffleRNA = shuffleRNACounts,
                                        overlapTypeGene = overlapTypeGene,
-                                       nCores = nCores,
-                                       debugMode_nPlots = 0,
-                                       addRobustRegression = addRobustRegression
+                                       nCores = nCores
         )
       
     }
@@ -3359,9 +3459,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
                                            randomizePeakGeneConnections = FALSE, 
                                            shuffleRNA = FALSE,
                                            nCores = 1,
-                                           chunksize = 50000,
-                                           addRobustRegression = TRUE,
-                                           debugMode_nPlots = 0) {
+                                           chunksize = 50000) {
   
   start.all = Sys.time()
   
@@ -3522,17 +3620,14 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   maxRow = nrow(overlaps.sub.filt.df)
   startIndexMax = ceiling(maxRow / chunksize) - 1 # -1 because we count from 0 onwards
   
-  
-  if (debugMode_nPlots > 0) {
-    nCores = 1
-  }
+
   
   
   res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, 
-                             functionName = .correlateData, 
+                             functionName = .correlateDataWrapper, 
                              chunksize = chunksize, maxRow = maxRow, 
                              counts1 = countsPeaks.clean, counts2 = countsRNA.clean, map1 = map_peaks, map2 = map_rna, 
-                             corMethod = corMethod, debugMode_nPlots = debugMode_nPlots, addRobustRegression = addRobustRegression)
+                             corMethod = corMethod)
   
   res.m  = do.call(rbind, res.l)
   
@@ -3544,9 +3639,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
   
   selectColumns = c("peak.ID", "gene.ENSEMBL", "peak_gene.distance", "tad.ID", "r", "p.raw")
-  if (addRobustRegression) {
-    selectColumns = c(selectColumns, "p_raw.robust", "r_robust", "bias_M_p.raw", "bias_LS_p.raw")
-  }
+  
 
   # Make data frame and adjust p-values
   res.df = suppressMessages(tibble::as_tibble(res.m) %>%
@@ -3565,13 +3658,6 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     dplyr::rename(peak_gene.r = "r", 
                   peak_gene.p_raw = "p.raw")
   
-  if (addRobustRegression) {
-    res.df = dplyr::rename(res.df, 
-                           peak_gene.p_raw.robust = "p_raw.robust", 
-                           peak_gene.r_robust = "r_robust",
-                           peak_gene.bias_M_p.raw = "bias_M_p.raw",
-                           peak_gene.bias_LS_p.raw = "bias_LS_p.raw")
-  }
   
   if (is.null(TADs)) {
     res.df = dplyr::select(res.df, -"tad.ID")
@@ -3585,18 +3671,12 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 }
 
 #' @import ggplot2
-.correlateData <- function(startIndex, chunksize, maxRow, counts1, counts2, map1, map2, corMethod, debugMode_nPlots = 0, addRobustRegression = TRUE) {
+.correlateDataWrapper <- function(startIndex, chunksize, maxRow, counts1, counts2, map1, map2, corMethod) {
   
   start = chunksize * startIndex + 1
   end = min(start +  chunksize - 1, maxRow)
   
-  if (addRobustRegression) {
-    res.m = matrix(NA, ncol = 6, nrow = end - start + 1, 
-                   dimnames = list(NULL, c("p.raw", "r", "p_raw.robust", "r_robust", "bias_M_p.raw", "bias_LS_p.raw")))
-  } else {
-    res.m = matrix(NA, ncol = 2, nrow = end - start + 1, dimnames = list(NULL, c("p.raw", "r")))
-  }
-  
+  res.m = matrix(NA, ncol = 2, nrow = end - start + 1, dimnames = list(NULL, c("p.raw", "r")))
   
   rowCur = 0
   nPlotted = 0
@@ -3615,56 +3695,22 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     # This restores the previous functionality of proper shuffling for the background RNA-seq data
     data2   = unlist(counts2[map2[i],])[names(data1)]
     
-    res =  suppressWarnings(stats::cor.test(data1, data2, method = corMethod))
-    
-    res.m[rowCur, "p.raw"] = res$p.value
-    res.m[rowCur, "r"]     = res$estimate
-    
-    if (addRobustRegression) {
+    if (corMethod %in% c("pearson", "spearman")) {
         
-      lmRob.sum = tryCatch( {
-        summary(robust::lmRob(data1 ~data2))
+        res =  suppressWarnings(stats::cor.test(data1, data2, method = corMethod))
         
-      }, error = function(e) {
-        # warning("Error running lmRob")
-      }, warning = function(w) {
-        # dont print anything
-      }
-      )
-      
-      if (methods::is(lmRob.sum, "summary.lmRob")) {
-        res.m[rowCur, "p_raw.robust"]       = lmRob.sum$coefficients[2,4]
-        # TODO: This is no r
-        res.m[rowCur, "r_robust"]           = lmRob.sum$coefficients[2,1]
-        res.m[rowCur, "bias_M_p.raw"]       = lmRob.sum$biasTest[1,2]
-        res.m[rowCur, "bias_LS_p.raw"]      = lmRob.sum$biasTest[2,2]
-      }
+        res.m[rowCur, "p.raw"] = res$p.value
+        res.m[rowCur, "r"]     = res$estimate
+    
+    } else if (corMethod == "bicor") {
+        
+        res =  WGCNA::bicorAndPvalue(data1, data2, robustX = TRUE, robustY = TRUE)
+        res.m[rowCur, "p.raw"]       = res$p
+        res.m[rowCur, "r"]           = res$bicor
     }
     
     # https://stats.stackexchange.com/questions/205614/p-values-and-significance-in-rlm-mass-package-r
-    
-    
-    if (nPlotted < debugMode_nPlots & res$p.value < 0.02) {
-      dataCur.df = tibble::tibble(data_Peaks = unlist(counts1[map1[i],]), 
-                                  data_RNA = unlist(counts2[map2[i],]) )
-      
-      # TODO: perm and GRN not known here
-      stop("Not implemeneted yet")
-      # g = ggplot2::ggplot(dataCur.df, ggplot2::aes(data1, data2)) + ggplot2::geom_point() + ggplot2::geom_smooth(method = "lm") + 
-      #   ggplot2::ggtitle(paste0(getCounts(GRN, type = "peaks", permuted = FALSE)$peakID[map1[i]], 
-      #                  ", ", 
-      #                  getCounts(GRN, type = "rna", permuted = as.logical(perm))$ENSEMBL[map2 [i]], 
-      #                  ", p = ", round(res$p.value, 3))) + 
-      #   ggplot2::theme_bw()
-      # plot(g)
-      # 
-      # nPlotted = nPlotted + 1
-    }
-    
-    if (debugMode_nPlots > 0 & nPlotted >= debugMode_nPlots) {
-      return(res.m)
-    }
-    
+   
   }
   
   
@@ -4360,7 +4406,6 @@ filterGRNAndConnectGenes <- function(GRN,
 #' @export
 #' @template GRN
 #' @template corMethod
-#' @template addRobustRegression
 #' @template nCores
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
@@ -4368,7 +4413,7 @@ filterGRNAndConnectGenes <- function(GRN,
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' GRN = add_TF_gene_correlation(GRN, forceRerun = FALSE)
-add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegression = FALSE, nCores = 1, forceRerun = FALSE) {
+add_TF_gene_correlation <- function(GRN, corMethod = "pearson", nCores = 1, forceRerun = FALSE) {
   
   start = Sys.time() 
   
@@ -4377,15 +4422,11 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
   
   GRN = .makeObjectCompatible(GRN)
   
-  checkmate::assertChoice(corMethod, c("pearson", "spearman"))
-  checkmate::assertFlag(addRobustRegression)
+  checkmate::assertChoice(corMethod, c("pearson", "bicor", "spearman"))
   checkmate::assertIntegerish(nCores, lower = 1)
   checkmate::assertFlag(forceRerun)
   
-  if (addRobustRegression) {
-      packageMessage = paste0("The package robust is not installed, but needed here due to addRobustRegression = TRUE. Please install it and re-run this function or change addRobustRegression to FALSE.")
-      .checkPackageInstallation("robust", packageMessage)  
-  }
+  .checkPackageRobust(corMethod)
   
   if (is.null(GRN@connections$TF_genes.filtered) | forceRerun) {
     
@@ -4428,23 +4469,15 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
         chunksize = 10000
         startIndexMax = ceiling(maxRow / chunksize) - 1 # -1 because we count from 0 onwards
         
-        debugMode_nPlots = 0
-        if (debugMode_nPlots > 0) {
-          nCores = 1
-        }
         
-        res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, functionName = .correlateData, 
+        res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, functionName = .correlateDataWrapper, 
                                    chunksize = chunksize, maxRow = maxRow, counts1 = countsRNA.clean, counts2 = countsRNA.clean, 
-                                   map1 = map_TF, map2 = map_gene, corMethod = corMethod, debugMode_nPlots = debugMode_nPlots, addRobustRegression = addRobustRegression)
+                                   map1 = map_TF, map2 = map_gene, corMethod = corMethod)
         
         res.m  = do.call(rbind, res.l)
         
         
         selectColumns = c("gene.ENSEMBL", "TF.ENSEMBL", "r", "p.raw", "TF.ID")
-        if (addRobustRegression) {
-          selectColumns = c(selectColumns, "p_raw.robust", "r_robust", "bias_M_p.raw", "bias_LS_p.raw")
-        }
-        
         
         futile.logger::flog.info(paste0("  Done. Construct the final table, this may result in an increased number of TF-gene pairs due to different TF names linked to the same Ensembl ID."))
         
@@ -4464,24 +4497,10 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", addRobustRegress
           dplyr::select("TF.ID", "TF.ENSEMBL", "gene.ENSEMBL", tidyselect::everything())
         
         
-        if (addRobustRegression) {
-          res.df = dplyr::rename(res.df, 
-                                 TF_gene.p_raw.robust = "p_raw.robust", 
-                                 TF_gene.r_robust = "r_robust",
-                                 TF_gene.bias_M_p.raw = "bias_M_p.raw",
-                                 TF_gene.bias_LS_p.raw = "bias_LS_p.raw")
-        }
-        
       } else {
-        futile.logger::flog.info(paste0(" Nothing to do, skip."))
-       
-          
-        if (addRobustRegression) {
-          res.df = tibble::tribble(~TF.ID, ~TF.ENSEMBL, ~gene.ENSEMBL, ~TF_gene.r, ~TF_gene.p_raw, ~TF_gene.p_raw.robust, 
-                                   ~TF_gene.r_robust, ~TF_gene.bias_M_p.raw, ~TF_gene.bias_LS_p.raw)
-        } else {
-          res.df = tibble::tribble(~TF.ID, ~TF.ENSEMBL, ~gene.ENSEMBL, ~TF_gene.r, ~TF_gene.p_raw)
-        }
+            futile.logger::flog.info(paste0(" Nothing to do, skip."))
+
+            res.df = tibble::tribble(~TF.ID, ~TF.ENSEMBL, ~gene.ENSEMBL, ~TF_gene.r, ~TF_gene.p_raw)
         
       }
       
@@ -5828,10 +5847,10 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         for (i in as.character(0:.getMaxPermutation(GRN))) {
             if (!is.null(GRN@connections$TF_peaks[[as.character(i)]])) {
                 if (!"TF.ID" %in% colnames(GRN@connections$TF_peaks[[i]]$main)) {
-                    GRN@connections$TF_peaks[[i]]$main = dplyr::rename(GRN@connections$TF_peaks[[i]]$main, TF.ID = TF.name)
+                    GRN@connections$TF_peaks[[i]]$main = dplyr::rename(GRN@connections$TF_peaks[[i]]$main, TF.ID = "TF.name")
                 }
                 if (!"TF.ID" %in% colnames(GRN@connections$TF_peaks[[i]]$connectionStats)) {
-                    GRN@connections$TF_peaks[[i]]$connectionStats = dplyr::rename(GRN@connections$TF_peaks[[i]]$connectionStats, TF.ID = TF.name)
+                    GRN@connections$TF_peaks[[i]]$connectionStats = dplyr::rename(GRN@connections$TF_peaks[[i]]$connectionStats, TF.ID = "TF.name")
                 }
             }
         }
@@ -5841,7 +5860,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         for (i in as.character(0:.getMaxPermutation(GRN))) {
             if (!is.null(GRN@connections$TF_genes.filtered[[as.character(i)]])) {
                 if (!"TF.ID" %in% colnames(GRN@connections$TF_genes.filtered[[i]])) {
-                    GRN@connections$TF_genes.filtered[[i]] = dplyr::rename(GRN@connections$TF_genes.filtered[[i]], TF.ID = TF.name)
+                    GRN@connections$TF_genes.filtered[[i]] = dplyr::rename(GRN@connections$TF_genes.filtered[[i]], TF.ID = "TF.name")
                 }
             }
         }
@@ -5851,7 +5870,7 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
         for (i in as.character(0:.getMaxPermutation(GRN))) {
             if (!is.null(GRN@connections$all.filtered[[as.character(i)]])) {
                 if (!"TF.ID" %in% colnames(GRN@connections$all.filtered[[i]])) {
-                    GRN@connections$all.filtered[[i]] = dplyr::rename(GRN@connections$all.filtered[[i]], TF.ID = TF.name)
+                    GRN@connections$all.filtered[[i]] = dplyr::rename(GRN@connections$all.filtered[[i]], TF.ID = "TF.name")
                 }
             }
         }
@@ -5884,6 +5903,15 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
     }
 }
 
+.checkPackageRobust <- function(corMethod) {
+    
+    if (corMethod == "bicor") {
+        packagename = "WGCNA"
+        packageMessage = paste0("The package ", packagename, " is not installed, but needed here due to corMethod = \"", corMethod, "\". Please install it and re-run this function or change the value of corMethod.")
+        .checkPackageInstallation(packagename, packageMessage)  
+    }
+    
+}
 
 .checkOutputFolder <- function(GRN, outputFolder) {
   
@@ -5943,6 +5971,8 @@ changeOutputDirectory <- function(GRN, outputDirectory = ".") {
                   TF_peak.connectionType = as.factor(.data$TF_peak.connectionType))
   
 }
+
+
 
 .getOutputFileName <- function(name) {
   
@@ -6371,10 +6401,8 @@ add_featureVariation <- function(GRN,
         }
         
         data.l = list()
-        #TODO
-        data.l[["RNA"]] <- getCounts(GRN, type = "rna", permuted = FALSE, includeFiltered = FALSE, includeIDColumn = FALSE)
-          
-        data.l[["peaks"]] <-  getCounts(GRN, type = "peaks", permuted = FALSE, includeFiltered = FALSE, includeIDColumn = FALSE)
+        data.l[["RNA"]]   <- getCounts(GRN, type = "rna",   permuted = FALSE, includeFiltered = FALSE, includeIDColumn = FALSE)
+        data.l[["peaks"]] <- getCounts(GRN, type = "peaks", permuted = FALSE, includeFiltered = FALSE, includeIDColumn = FALSE)
         
         
         for (dataType in c("RNA", "peaks")) {
@@ -6442,7 +6470,7 @@ add_featureVariation <- function(GRN,
         
         if (printName) {
             printComma = FALSE
-            TF.name = GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.name)
+            TF.name = GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID == ID) %>% dplyr::pull(.data$TF.name)
             stopifnot(length(TF.name) == 1)
             if (TF.name != ID) {
                 nameCombined = paste0(nameCombined, " (")
@@ -6459,7 +6487,7 @@ add_featureVariation <- function(GRN,
                 nameCombined = paste0(nameCombined, " (")
                 printParanthesis = TRUE
             }
-            TF.ENSEMBL =  GRN@annotation$TFs %>% dplyr::filter(TF.ID == ID) %>% dplyr::pull(TF.ENSEMBL)
+            TF.ENSEMBL =  GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID == ID) %>% dplyr::pull(.data$TF.ENSEMBL)
             nameCombined = paste0(nameCombined, TF.ENSEMBL)
             if (printParanthesis) nameCombined = paste0(nameCombined, ")")
         }
@@ -6474,7 +6502,7 @@ add_featureVariation <- function(GRN,
     
     nameCombined = paste0(ID)
     if (printName) {
-        gene.name = GRN@annotation$genes %>% dplyr::filter(gene.ENSEMBL == ID) %>% dplyr::pull(gene.name)
+        gene.name = GRN@annotation$genes %>% dplyr::filter(.data$gene.ENSEMBL == ID) %>% dplyr::pull(.data$gene.name)
         nameCombined = paste0(nameCombined, " (", gene.name, ")")
     }
     
