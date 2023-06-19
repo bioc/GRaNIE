@@ -1,4 +1,6 @@
-# GRaNIE 1.3.37-1.3.38 (2023-06-19)
+# GRaNIE 1.5.1 (2023-06-19)
+
+- version jump due to new Bioconductor development cycle
 
 ## New features and stability improvements
 - we replaced `biomaRt` for the full genome annotation retrieval in `addData` with a different approach that is more reliable, as we had more and more issues with `biomaRt` in the recent past. While using the old `biomaRt` approach is still an option, the default is now to use the `AnnotationHub` package from Bioconductor. This makes GRaNIE overall more stable and less reliant on `biomaRt` due to the strict timeouts and query size restrictions.

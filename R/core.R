@@ -164,7 +164,7 @@ initializeGRN <- function(objectMetadata = list(),
 #' storing the rad counts after a (if any) normalization? This increases the memory footprint of the object because 2 additional count matrices have to be stored.
 #' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. The Ensembl version to use for genome annotation retrieval via \code{biomaRt}, which is only used to populate the gene annotation metadata that is stored in \code{GRN@annotation$genes}. 
 #' By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
-#' @param genomeAnnotationSource \code{AnnotationHub} or \code{biomRt}. Default \code{AnnotationHub}. Annotation source to retrieve genome annotation data from.
+#' @param genomeAnnotationSource \code{AnnotationHub} or \code{biomaRt}. Default \code{AnnotationHub}. Annotation source to retrieve genome annotation data from.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with added data from this function(e.g., slots \code{GRN@data$peaks} and \code{GRN@data$RNA})
 #' @seealso \code{\link{plotPCA_all}}
