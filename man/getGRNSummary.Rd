@@ -4,10 +4,12 @@
 \alias{getGRNSummary}
 \title{Summarize a \code{\linkS4class{GRN}} object to a named list for comparison with other \code{\linkS4class{GRN}} objects.}
 \usage{
-getGRNSummary(GRN)
+getGRNSummary(GRN, silent = FALSE)
 }
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
+
+\item{silent}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the function be silent and print nothing?}
 }
 \value{
 A named list summarizing the GRN object. This function does **NOT** return a \code{\linkS4class{GRN}} object, but instead a named lsit with the

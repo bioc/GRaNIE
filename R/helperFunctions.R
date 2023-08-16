@@ -816,7 +816,7 @@ is.installed <- function(mypkg){
   }
 }
 
-.getBiomartParameters <- function(genomeAssembly, useSuffix = FALSE) {
+.getBiomartParameters <- function(genomeAssembly, suffix = "") {
     
     host = "https://www.ensembl.org"
     
@@ -836,9 +836,84 @@ is.installed <- function(mypkg){
     
     
     
-    list(dataset = paste0(dataset, 
-                          dplyr::if_else(useSuffix, "_gene_ensembl", "")), host = host)
+    list(dataset = paste0(dataset, suffix), host = host)
 }
+
+
+.biomart_getEnsembl <- function(biomart, version, host, dataset, maxAttempts = 40) {
+    
+    ensembl <- NULL
+    mirrorIndex <- 0
+    attemptsDone = 0
+    
+    mirrors = c('www', 'uswest', 'useast', 'asia')
+    while (!"Mart" %in% class(ensembl) && attemptsDone <= maxAttempts ) {
+        mirrorIndex <- (mirrorIndex %% 4) + 1
+        attemptsDone = attemptsDone + 1
+        
+        ensembl = tryCatch({ 
+            biomaRt::useEnsembl(biomart = biomart , version = version, host = host,  
+                                dataset = dataset, mirror = mirrors[mirrorIndex])
+            
+            
+        }, error = function(e) {
+            futile.logger::flog.warn(paste0("Attempt ", attemptsDone, " out of ", maxAttempts, " failed. Another automatic attempt will be performed using a different mirror. The error message was: ", e))
+        })
+    } 
+    
+    if (!"Mart" %in% class(ensembl)) {
+        
+        error_Biomart = paste0("A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl despite trying ", 
+                               maxAttempts, 
+                               " times via different mirrors. This is often caused by an unresponsive Ensembl site.", 
+                               " Try again at a later time. Note that this error is not caused by GRaNIE but external services.")
+        .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
+        return(NULL)
+        
+    } 
+    
+    futile.logger::flog.info(paste0("Retrieving BioMart database succeeded"))
+    
+    ensembl
+}
+
+.callBiomart <- function(mart, attributes = NULL, values = "", filters = "", maxAttempts = 40) {
+    
+    result.df <- NULL
+    attemptsDone = 0
+
+    while (!is.data.frame(result.df) && attemptsDone <= maxAttempts ) {
+        attemptsDone = attemptsDone + 1
+        
+        result.df = tryCatch({ 
+            biomaRt::getBM(attributes = attributes,
+                           filters = filters,
+                           values = values,
+                           mart = mart) 
+            
+        }, error = function(e) {
+            futile.logger::flog.warn(paste0("Attempt ", attemptsDone, " out of ", maxAttempts, " failed. Another automatic attempt will be performed using a different mirror. The error message was: ", e))
+        })
+    } 
+    
+    if (!is.data.frame(result.df)) {
+        
+        error_Biomart = paste0("A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl despite trying ", 
+                               maxAttempts, 
+                               " times via different mirrors. This is often caused by an unresponsive Ensembl site.", 
+                               " Try again at a later time. Note that this error is not caused by GRaNIE but external services.")
+        .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
+        return(NULL)
+        
+    } 
+    
+    futile.logger::flog.info(paste0("Retrieving genome annotation succeeded"))
+    
+    result.df
+    
+    
+}
+
 
 .correlateData <- function(x, y, corMethod) {
     

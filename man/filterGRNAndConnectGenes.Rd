@@ -8,6 +8,7 @@ filterGRNAndConnectGenes(
   GRN,
   TF_peak.fdr.threshold = 0.2,
   TF_peak.connectionTypes = "all",
+  peak.SNP_filter = list(min_nSNPs = 0, filterType = "orthogonal"),
   peak_gene.p_raw.threshold = NULL,
   peak_gene.fdr.threshold = 0.2,
   peak_gene.fdr.method = "BH",
@@ -36,6 +37,12 @@ filterGRNAndConnectGenes(
 \item{TF_peak.fdr.threshold}{Numeric[0,1]. Default 0.2. Maximum FDR for the TF-peak links. Set to 1 or NULL to disable this filter.}
 
 \item{TF_peak.connectionTypes}{Character vector. Default \code{all}. TF-peak connection types to consider. The special keyword \code{all} denotes all connection types (e.g., \code{expression} and \code{TFActivity}) that are found in the \code{\linkS4class{GRN}} object. By default, only \code{expression} is present in the object, so \code{all} and \code{expression} are usually equivalent unless calculation of TF-peak links based on TF activity has also been enabled.}
+
+\item{peak.SNP_filter}{Named list. Default \code{list(min_nSNPs = 0, filterType = "orthogonal")}. Filters related to SNP data if they have 
+been added with the function \code{\link{addSNPData}}, ignored otherwise. The named list must contain at least two elements:
+First, \code{min_nSNPs}, an integer >= 0 that denotes how many SNPs a peak has to overlap with at least to pass the filter or be considered for inclusion.
+Second, \code{filterType}, a character that must either be \code{orthogonal} or \code{extra} and denotes whether the SNP filter is orthogonal to the other filters (i.e, an alternative way of when a peak is considered for being kept) or whether the SNP filter is in addition to all other filters.
+For more help, see the Vignettes.}
 
 \item{peak_gene.p_raw.threshold}{Numeric[0,1]. Default NULL. Threshold for the peak-gene connections, based on the raw p-value. All peak-gene connections with a larger raw p-value will be filtered out.}
 

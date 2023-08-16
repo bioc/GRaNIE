@@ -416,9 +416,12 @@ columns are ignored.
 For more details, see the R help (`?addConnections_peak_gene`) and the
 [Methods](#methods_peakGene).
 
-## SNP data (optional, coming soon) {#input_SNP}
+## SNP data (optional) {#input_SNP}
 
-We also plan to integrate SNP data soon, stay tuned!
+Optionally, SNP data can also be integrated into our framework via the function `addSNPData()`. The main idea is to annotate each peak with the information whether it overlaps any of the user-provided SNPs (and how many), and use this extra annotation later on for creating the TF-peak-gene *eGRN* within `filterGRNAndConnectGenes()`. For more information, see [here](#methods_TF_peak_gene_links).
+
+SNP IDs have to be provided with their corresponding rsIDs, and the genomic position is retrieved automatically within `addSNPData()` by using `biomaRt`.
+
 
 ## TF activity data (optional, coming soon)
 
@@ -747,7 +750,8 @@ Importantly, as for TF-peaks, we also employ a shuffling-based approach
 to calculate background peak-gene links, as described in detail
 [here](#methods_background).
 
-## Building eGRNs: Linking TF-peak and peak-gene links and filtering
+## Building eGRNs: Linking TF-peak and peak-gene links and filtering  {#methods_TF_peak_gene_links}
+
 
 As `GRaNIE` models TF-peak and peak-gene links independently from one
 another, the package function `filterGRNAndConnectGenes()` can be used
@@ -763,6 +767,12 @@ compared to the method of Benjamini and Hochberg by assigning
 data-driven weights to each hypothesis. For more details, see, for
 example,
 [here](https://bioconductor.org/packages/release/bioc/html/IHW.html).
+
+When SNPs have been integrated (see [here](#input_SNP)), the user can choose whether to
+1. additionally add a SNP filter to keep or discard TF-peak-gene connections (e.g. by requiring a minimum number of SNPs that have to overlap a peak)
+2. keep peaks (either as part of TF-peak or peak-gene connections) if they overlap with a user-defined minimum number of SNPs (e.g, at least 1).
+
+**Thus, integrating SNPs can either reduce the size of *eGRN* by adding another filtering step or increase it by extending the criteria for which we find a peak relevant enough: In addition to being connected to a TF, a peak may also be kept just because it overlaps with a SNP (independent of any TF connection).**
 
 After successful execution, the filtered TF-peak-gene network is stored
 in `GRN@connections$all.filtered` (both real and background *eGRN*). It
@@ -903,24 +913,23 @@ process (BP) enrichment can be retrieved from
 that were used to run the enrichment are correspondingly stored in
 `GRN@stats$Enrichment$byTF$E2F7.0.B$GO_BP$parameters`.
 
-## Network visualization
+## Network visualization and visualization filtering {#network-visualization}
 
-We also provide the function `visualizeGRN()` to visualize a filtered
-*eGRN* network. It is very easy to invoke, but provides many options to
+### General comments
+We also provide the functions `visualizeGRN()` to visualize a filtered
+*eGRN* network as well as `filterConnectionsForPlotting()` to filter a *eGRN* just for visualization 
+purposes. They are both very easy to invoke, but provide many options to
 customize the output and the way the graph is drawn. We recommend to
-explore the options in the R help (`?visualizeGRN`). Note that we use
-the provided network visualization methods from the `igraph` package.
+explore the options in the R help (`?visualizeGRN` and `filterConnectionsForPlotting()`). Note that we use
+the provided network visualization methods from the `igraph` package for `visualizeGRN()`.
 
-It works well for small to medium-sized networks that contain a few
-hundred edges, but may fail for larger *eGRNs*. Drawing thousands of
+### Changing the visualization parameters and layout
+
+Visualizing the whole network usually works well for small to medium-sized networks that contain up to a few hundred edges, but may fail for larger *eGRNs*. Drawing thousands of
 nodes and edges at once without losing readability is almost impossible.
 However, here are a few tips on what you can do if your *eGRN* cannot be
 drawn or it looks not nice enough:
 
--   reduce the number of connections by filtering the network more
-    stringently and re-run the visualization, potentially also by
-    subsetting your network to particular TFs or genes. Simply rerun the
-    function `filterGRNAndConnectGenes()` and `build_eGRN_graph()`
 -   increase the value of the parameter `maxEdgesToPlot` to say 1000 or
     even more, and check whether the *eGRN* can be drawn. It may also
     help to increase the dimensions of the PDF (if `plotAsPDF = TRUE`)
@@ -928,10 +937,17 @@ drawn or it looks not nice enough:
 -   change the visualization layout by changing the `layout` parameter.
     Try all of the supported layouts (see `?visualizeGRN` for a list),
     maybe one looks good enough.
+    
+### Filtering the network for visualization purposes
 
-**If none of the plotting-related parameters work better, you can only
-reduce the size of the network and re-run as pointed above in the first
-point.**
+If none of the plotting-related parameters improve the visualization or if you want
+ to visually explore the network for particular features of the network (such as specific TFs, peaks, or genes), 
+you can use `filterConnectionsForPlotting()` to filter a *eGRN* just for visualization 
+purposes. This reduces the number of nodes and edges to plot and gives the user ultimate flexibility of what to visualize. For example, you can filter the network to just visualize the part of the network that is connected to a specific set of TFs (i.e, their regulons).
+
+
+Alternatively, you can also re-filter the network again more stringently using `filterGRNAndConnectGenes()`, but then all subsequent analyses have to be rerun as well (e.g., `build_eGRN_graph()` and all enrichment functions). This may reduce the multiple testing burden for peak-gene p-values and recover connections that may not have passed the filter beforehand.
+
 
 ## Feature variation quantification
 

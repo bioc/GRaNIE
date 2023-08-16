@@ -57,7 +57,7 @@ If set to 0, this filter will be disabled and all pairs that fulfill the user-de
 \item{nSelectionType}{\code{random} or \code{top}. Default \code{top}. Only applicable if \code{nMax} is set to a value > 0. 
 If set to \code{top}, only the top features will be plotted while \code{random} plots randomly selected features.}
 
-\item{dataType}{Character vector. One of, or both of, \code{"real"} or \code{"background"}. For which type, real or background data, to produce the diagnostic plots?}
+\item{dataType}{Character vector. One of, or both of, \code{real} or \code{background}. Default \code{real}. For which type, real or background data, to produce the diagnostic plots?}
 
 \item{corMethod}{Character. One of \code{pearson}, \code{spearman} or \code{bicor}. Default \code{pearson}. Method for calculating the correlation coefficient. 
 For \code{pearson} and \code{spearman} , see \link{cor} for details. \code{bicor} denotes the *biweight midcorrelation*, a correlation measure based on medians as

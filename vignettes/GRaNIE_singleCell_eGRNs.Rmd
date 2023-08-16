@@ -112,11 +112,12 @@ For the 10x multiome, we so far used the WNN graph for UMAP visualization and su
 In a nutshell, these are the functions we may run here:
 
 1. `FindClusters` with a specific `resolution` value that we usually vary between 0.1 and 20. Reasonable cluster resolutions are data and question dependent. For recommendations, see the notes below.
-2. `AggregateExpression` to aggregate counts within each cluster to cluster pseudocounts based on their (cluster) identities. We so far used the function with `slot = "counts"` to avoid prior exponentiation of the data . Each cluster forms a sample as used in the `GRaNIE` analysis. 
+2. `AggregateExpression` to aggregate counts within each cluster to cluster pseudocounts based on their (cluster) identities. Each cluster forms a sample as used in the `GRaNIE` analysis.  Importantly, we found that **mean** count aggregation works better than **sum** count aggregation: For the former, the resulting eGRNs from `GraNIE` are more stable and similar to each other as compared to the eGRNs that come from the sum count aggregation.
+
 
 ## Choosing the right number of clusters
 
-**We strongly suggest choosing a resolution that gives at least 10 clusters, as fewer clusters (or samples consequently in the `GRaNIE` analysis) can cause statistical issues and artifacts as observed in the enhancer-gene diagnostic plots for some datasets**. If the desired number of clusters is smaller than 10, pay close(r) attention to the enhancer-gene QC plots, in particular whether the signal from the randomized connections looks flat (enough). For more details, see the [Package Details](GRaNIE_packageDetails.html#output_peak_gene).
+**We strongly suggest choosing a resolution that gives at least 20-30 clusters, as fewer clusters (or samples consequently in the `GRaNIE` analysis) can cause statistical issues and artifacts as observed in the enhancer-gene diagnostic plots for some datasets**. If the desired number of clusters is small, pay close(r) attention to the enhancer-gene QC plots, in particular whether the signal from the randomized connections looks flat (enough). For more details, see the [Package Details](GRaNIE_packageDetails.html#output_peak_gene).
 
 **On the other extreme, too many clusters will result in data that becomes too scares - especially the ATAC-seq data suffers from scarcity**. Throughout our experiments, we have seen that when having too many clusters (close to or more than 100, for example), the scarcity of ATAC becomes so big that either man peaks are filtered out in the `filterData()` function or that the abundance of zeros results in very few connections in the *eGRN*. Thus, we advise on an intermediate level of cluster that is also plausible biologically, but testing different cluster resolutions is generally also a good idea for initial exploration.
 

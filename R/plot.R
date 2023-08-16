@@ -2423,7 +2423,7 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @param TF_gene_max_rawP Numeric[0,1]. Default 0.2. Filter for TF-gene pairs: Which maximum FDR should a pair to plot have? Only applicable when \code{type = "TF-gene"}. 
 #' @template outputFolder
 #' @template basenameOutput
-#' @param dataType Character vector. One of, or both of, \code{"real"} or \code{"background"}. For which type, real or background data, to produce the diagnostic plots?
+#' @param dataType Character vector. One of, or both of, \code{real} or \code{background}. Default \code{real}. For which type, real or background data, to produce the diagnostic plots?
 #' @template corMethod
 #' @template plotAsPDF
 #' @param plotsPerPage Integer vector of length 2. Default \code{c(2,2)}. How man plots should be put on one page? The first number denotes the number of rows, the second one the number of columns.
@@ -4580,17 +4580,32 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     #grn.merged = getGRNConnections(GRN, background = background, type = "all.filtered")
     # check that it's in sync with the @ graph
     if (graph == "TF-gene") {
+        
+        # For compatibility reasons with older object versions
+        if (!"includeForPlotting" %in% colnames(GRN@graph$TF_gene$table)) {
+            GRN@graph$TF_gene$table$includeForPlotting = TRUE
+        } 
+        
         grn.merged = GRN@graph$TF_gene$table %>%
             dplyr::rename(TF.ID = "V1_name")
+        
+        grn.merged = dplyr::filter(grn.merged, .data$includeForPlotting == TRUE)
         
         edges_final = grn.merged %>%
             dplyr::rename(from = "TF.ID", to = "V2") %>%
             dplyr::mutate(weight = 1, R = 1, linetype = "solid")
         
-    }else{
+    } else {
+        
+        # For compatibility reasons with older object versions
+        if (!"includeForPlotting" %in% colnames(GRN@graph$TF_peak_gene$table)) {
+            GRN@graph$TF_peak_gene$table$includeForPlotting = TRUE
+        } 
         
         grn.merged = GRN@graph$TF_peak_gene$table %>%
             dplyr::rename(TF.ID = "V1_name") 
+        
+        grn.merged = dplyr::filter(grn.merged, .data$includeForPlotting == TRUE)
         
         grn.merged$V1[!is.na(grn.merged$TF.ID)] = as.character(grn.merged$TF.ID[!is.na(grn.merged$TF.ID)]) # replace TF ensembl with TF name
         

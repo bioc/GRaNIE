@@ -220,6 +220,113 @@ build_eGRN_graph <- function(GRN, model_TF_gene_nodes_separately = FALSE,
 }
 
 
+
+#' Filter connections for subsequent visualization with `visualizeGRN()` from the filtered eGRN
+#' 
+#' This helper function provides an easy and flexible way to retain particular connections for plotting and discard all others. Note that this filtering is only
+#' relevant and applicable for the function `visualizeGRN()` and ignored anywhere else. This makes it possible to visualize only specific TF regulons or to plot only
+#' connections that fulfill particular filter criteria. Due to the flexibility of the implementation by allowing arbitrary filters that are passed directly to
+#' \code{dplyr::filter}, users can visually investigate the eGRN, which is particularly useful when the eGRNs is large and has many connections.
+
+#' @template GRN
+#' @param plotAll \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should all connections be included for plotting? 
+#' If set to \code{TRUE}, all connections are marked for plotting and everything else is ignored. This resets any previous setting.
+#' If set \code{FALSE}, the filter expressions (if any) are used to determine which connection to plot
+#' @param ... An arbitrary set of arguments that is used directly, without modification, as input for dplyr::filter and therefore has to be valid expression that dplyr::filter understands.
+#' The filtering is based on the \code{all.filtered} table as stored in \code{GRN@connections$all.filtered$`0`}. Thus, the specific filters can be completely
+#' arbitrary for ultimate flexibility and must only adhere to the column names and types as defined in \code{GRN@connections$all.filtered$`0`}. See the examples also for what you can do. 
+#' @template forceRerun
+#' @export
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' GRN = filterConnectionsForPlotting (GRN, plotAll = FALSE, TF.ID == "E2F6.0.A")
+#' GRN = filterConnectionsForPlotting (GRN, plotAll = FALSE, TF_peak.r > 0.7 | TF_peak.fdr < 0.2)
+#' GRN = filterConnectionsForPlotting (GRN, plotAll = FALSE, TF_peak.r > 0.7, TF_peak.fdr < 0.2)
+#' @return An updated \code{\linkS4class{GRN}} object, with added data from this function.
+filterConnectionsForPlotting <- function(GRN, 
+                                         plotAll = TRUE,
+                                         ..., 
+                                         forceRerun = FALSE) {
+    
+    start = Sys.time()
+    
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertFlag(plotAll)
+    checkmate::assertFlag(forceRerun)
+    
+    if (forceRerun | !"includeForPlotting" %in% colnames(GRN@graph$TF_peak_gene$table) | !"includeForPlotting" %in% colnames(GRN@graph$TF_gene$table)) {
+        
+        filterArgs <- setdiff(as.character(match.call(expand.dots = TRUE)), as.character(match.call(expand.dots = FALSE)))
+
+        if (plotAll | length(filterArgs) == 0) {
+            
+            GRN@graph$TF_gene$table$includeForPlotting = TRUE
+            GRN@graph$TF_peak_gene$table$includeForPlotting = TRUE
+            futile.logger::flog.info(paste0(" Include all connections for GRN visualization"))
+
+        } else {
+            
+            futile.logger::flog.info(paste0(" Filter connections for GRN visualization"))
+
+            # Reset includeForPlotting, exclude everything first
+            GRN@graph$TF_gene$table$includeForPlotting = FALSE
+            GRN@graph$TF_peak_gene$table$includeForPlotting = FALSE
+            
+            # connectionsRetained = dplyr::filter(GRN@connections$all.filtered$`0`, TF.ID == "E2F6.0.A")
+           connectionsRetained = dplyr::filter(GRN@connections$all.filtered$`0`, ...)
+           
+           futile.logger::flog.info(paste0(" Keep connections for a total of ", nrow(connectionsRetained), " connections"))
+           
+           if (nrow(connectionsRetained) == 0) {
+               message = paste0(" No connections are left for plotting. Make sure this was intended.")
+               .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+           }
+           
+           TF_gene.con = paste0(GRN@graph$TF_gene$table$V1, "_", GRN@graph$TF_gene$table$V2)
+           TF_gene.con.filt = paste0(connectionsRetained$TF.ENSEMBL, "_", connectionsRetained$gene.ENSEMBL)
+          
+           
+           rowsRetain_TF_gene = which(TF_gene.con %in% TF_gene.con.filt)
+           GRN@graph$TF_gene$table$includeForPlotting[rowsRetain_TF_gene] = TRUE
+           
+           # More complicated for TF-peak-gene because there are 2 different connection types
+           # Approach for now is to re-create the split table from the filtered connections
+           TF_peak_gene.con.filt2 = connectionsRetained %>%
+               dplyr::select("TF.ENSEMBL", "peak.ID", "gene.ENSEMBL") 
+           
+           TF_peak.filt2 = TF_peak_gene.con.filt2 %>%
+               dplyr::mutate(ID_new = paste0(.data$TF.ENSEMBL, "_", .data$peak.ID)) %>%
+               dplyr::pull("ID_new") %>%
+               unique()
+           
+           TF_gene.filt2 = TF_peak_gene.con.filt2 %>%
+               dplyr::mutate(ID_new = paste0(.data$TF.ENSEMBL, "_", .data$gene.ENSEMBL)) %>%
+               dplyr::pull("ID_new") %>%
+               unique()
+           
+          igraph.IDs = GRN@graph$TF_peak_gene$table %>%
+               dplyr::mutate(ID_new = paste0(.data$V1, "_", .data$V2)) %>%
+               dplyr::pull("ID_new")
+          
+          GRN@graph$TF_peak_gene$table$includeForPlotting = igraph.IDs %in% c(TF_peak.filt2, TF_gene.filt2)
+           
+           
+        }
+        
+        
+    } else {
+        .printDataAlreadyExistsMessage()
+    }
+    
+    GRN
+
+}
+
 #' Perform all network-related statistical and descriptive analyses, including community and enrichment analyses. See the functions it executes in the @seealso section below.
 #' 
 #' A convenience function that calls all network-related functions in one-go, using selected default parameters and a set of adjustable ones also. 

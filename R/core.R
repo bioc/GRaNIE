@@ -448,7 +448,9 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 .checkOverlappingPeaks <- function(GRN, allowOverlappingPeaks) {
     
     # Assume 0-based exclusive format, see https://arnaudceol.wordpress.com/2014/09/18/chromosome-coordinate-systems-0-based-1-based/ and http://genome.ucsc.edu/FAQ/FAQformat.html#format1 for details
-    consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), GRN@config$parameters$genomeAssembly, zeroBased = TRUE)
+    consensus.gr   = .constructGRanges(GRN@data$peaks$counts_metadata, 
+                                       seqlengths = .getChrLengths(GRN@config$parameters$genomeAssembly), 
+                                       GRN@config$parameters$genomeAssembly, zeroBased = TRUE)
     
     overlappingPeaks = which(GenomicRanges::countOverlaps(consensus.gr ,consensus.gr) > 1)
     
@@ -541,48 +543,17 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
         futile.logger::flog.info(paste0("Retrieving genome annotation data from biomaRt for ", genomeAssembly, "... This may take a while"))
         
-        params.l = .getBiomartParameters(genomeAssembly, useSuffix = TRUE)
+        params.l = .getBiomartParameters(genomeAssembly, suffix = "_gene_ensembl")
         
         
         columnsToRetrieve = c("chromosome_name", "start_position", "end_position",
                               "strand", "ensembl_gene_id", "gene_biotype", "external_gene_name")
         
-        geneAnnotation <- NULL
-        mirrorIndex <- 0
-        attemptsDone = 0
-        maxAttempts = 40
-        mirrors = c('www', 'uswest', 'useast', 'asia')
-        while (!is.data.frame(geneAnnotation) && attemptsDone <= maxAttempts) {
-            mirrorIndex <- (mirrorIndex %% 4) + 1
-            attemptsDone = attemptsDone + 1
-            
-            geneAnnotation = tryCatch({ 
-                ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[mirrorIndex])
-                biomaRt::getBM(attributes = columnsToRetrieve, mart = ensembl)
-                
-            } , error = function(e) {
-                futile.logger::flog.warn(paste0("Attempt ", attemptsDone, " out of ", maxAttempts, " failed. Another automatic attempt will be performed using a different mirror. The error message was: ", e))
-            }
-            )
-        } 
+        ensembl = .biomart_getEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]])
         
-        
-        if (!is.data.frame(geneAnnotation)) {
-            
-            error_Biomart = paste0("A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl despite trying ", 
-                                   maxAttempts, 
-                                   " times via different mirrors. This is often caused by an unresponsive Ensembl site.", 
-                                   " Try again at a later time. Note that this error is not caused by GRaNIE but external services.")
-            .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
-            return(NULL)
-            
-        }
-        
-        futile.logger::flog.info(paste0("Retrieving genome annotation succeeded"))
-        
-        
-        
-        genes.df = geneAnnotation %>%
+        results.df = .callBiomart(mart =  ensembl, attributes = columnsToRetrieve) 
+  
+        genes.df = results.df %>%
             tibble::as_tibble() %>%
             dplyr::filter(stringr::str_length(.data$chromosome_name) <= 5) %>%
             dplyr::mutate(chromosome_name = paste0("chr", .data$chromosome_name)) %>%
@@ -602,7 +573,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         # TODO: Save metadata somewhere in object
         snapshotDate = AnnotationHub::snapshotDate(ah)
         
-        params.l = .getBiomartParameters(genomeAssembly, useSuffix = FALSE)
+        params.l = .getBiomartParameters(genomeAssembly, suffix = "")
         if (genomeAssembly == "hg19") {
             message = "AnnotationHub genome retrieval with hg19 as genome assembly is not yet supported / implemented. Please use biomaRt instead as annotation source for the parameter genomeAnnotationSource in addData."
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
@@ -635,6 +606,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     genes.df
    
 }
+
 
 
 .populatePeakAnnotation <- function(GRN) {
@@ -1623,42 +1595,23 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         TFs.df = tibble::tibble(ID = IDsWithTFBSPredictions, TF.name = TFsWithTFBSPredictions) %>%
             dplyr::mutate(TF.name.lowercase = tolower(.data$TF.name))
 
-        params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly, useSuffix = TRUE)
+        params.l <- .getBiomartParameters(GRN@config$parameters$genomeAssembly, suffix = "_gene_ensembl")
         
         futile.logger::flog.info(paste0("Retrieving gene annotation for JASPAR TFs. This may take a while."))
         
-        mapping.df <- NULL
-        mirrorIndex <- 0
-        attemptsDone = 0
-        maxAttempts = 40
-        mirrors = c('www', 'uswest', 'useast', 'asia')
-        while (!is.data.frame(mapping.df) && attemptsDone <= maxAttempts ) {
-            mirrorIndex <- (mirrorIndex %% 4) + 1
-            attemptsDone = attemptsDone + 1
-            
-            mapping.df = tryCatch({ 
-                ensembl = biomaRt::useEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]], mirror = mirrors[mirrorIndex])
-                biomaRt::getBM(attributes = c("external_gene_name", "ensembl_gene_id"),
-                               filters = "external_gene_name",
-                               values = TFsWithTFBSPredictions,
-                               mart = ensembl) %>%
-                    dplyr::rename(SYMBOL = "external_gene_name",
-                                  ENSEMBL = "ensembl_gene_id") %>%
-                    dplyr::mutate(SYMBOL.lowercase = tolower("SYMBOL")) %>%
-                    dplyr::full_join(TFs.df, by = c("SYMBOL.lowercase" = "TF.name.lowercase"), multiple = "all")
-                
-            }, error = function(e) {
-                futile.logger::flog.warn(paste0("Attempt ", attemptsDone, " out of ", maxAttempts, " failed. Another automatic attempt will be performed using a different mirror. The error message was: ", e))
-            })
-        } 
         
-        if (!is.data.frame(mapping.df)) {
-            error_Biomart = "A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl. This is often caused by an unresponsive Ensembl site. Try again at a later time. Note that this error is not caused by GRaNIE but external services."
-            .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
-            return(NULL)
-        }
+        ensembl = .biomart_getEnsembl(biomart = "genes", version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]])
         
-        futile.logger::flog.info(paste0("Retrieving gene annotation was successful."))
+        results.df = .callBiomart(mart =  ensembl, 
+                                  attributes = c("external_gene_name", "ensembl_gene_id"),
+                                  filters = "external_gene_name",
+                                  values = TFsWithTFBSPredictions) 
+        
+        mapping.df = results.df %>%
+            dplyr::rename(SYMBOL = "external_gene_name",
+                          ENSEMBL = "ensembl_gene_id") %>%
+            dplyr::mutate(SYMBOL.lowercase = tolower("SYMBOL")) %>%
+            dplyr::full_join(TFs.df, by = c("SYMBOL.lowercase" = "TF.name.lowercase"), multiple = "all")
         
         
         table_distinct_id = mapping.df %>%
@@ -3737,6 +3690,11 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @template GRN
 #' @param TF_peak.fdr.threshold Numeric[0,1]. Default 0.2. Maximum FDR for the TF-peak links. Set to 1 or NULL to disable this filter.
 #' @template TF_peak.connectionTypes
+#' @param peak.SNP_filter Named list. Default \code{list(min_nSNPs = 0, filterType = "orthogonal")}. Filters related to SNP data if they have 
+#' been added with the function \code{\link{addSNPData}}, ignored otherwise. The named list must contain at least two elements:
+#' First, \code{min_nSNPs}, an integer >= 0 that denotes how many SNPs a peak has to overlap with at least to pass the filter or be considered for inclusion.
+#' Second, \code{filterType}, a character that must either be \code{orthogonal} or \code{extra} and denotes whether the SNP filter is orthogonal to the other filters (i.e, an alternative way of when a peak is considered for being kept) or whether the SNP filter is in addition to all other filters.
+#' For more help, see the Vignettes.
 #' @param peak_gene.p_raw.threshold Numeric[0,1]. Default NULL. Threshold for the peak-gene connections, based on the raw p-value. All peak-gene connections with a larger raw p-value will be filtered out.
 #' @param peak_gene.fdr.threshold Numeric[0,1]. Default 0.2. Threshold for the peak-gene connections, based on the FDR. All peak-gene connections with a larger FDR will be filtered out.
 #' @param peak_gene.fdr.method Character. Default "BH". One of: "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none", "IHW". 
@@ -3776,9 +3734,16 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 #' @importFrom magrittr `%>%`
 #' @importFrom ggplot2 `%+%`
 #' @export
+#' 
+
+# TODO: Find a new compatible way to return also, or specifically peaks that overlap a SNP when SNP information is present
+# SNP_min, only keep if TF + SNPs, or only SNPs, 
+# peak_keep_min_nSNPs
+# peak.SNP_filter = list(min_nSNPs = 0, ignoreTF = TRUE)
 filterGRNAndConnectGenes <- function(GRN,
                                      TF_peak.fdr.threshold = 0.2, 
                                      TF_peak.connectionTypes = "all",
+                                     peak.SNP_filter = list(min_nSNPs = 0, filterType = "orthogonal"),
                                      peak_gene.p_raw.threshold = NULL, 
                                      peak_gene.fdr.threshold= 0.2,
                                      peak_gene.fdr.method = "BH",
@@ -3814,8 +3779,22 @@ filterGRNAndConnectGenes <- function(GRN,
   if (peak_gene.fdr.method == "IHW") {
       checkmate::assertCharacter(peak_gene.IHW.covariate, min.chars = 1, len = 1)
   }
-  
   checkmate::assert(checkmate::checkIntegerish(peak_gene.IHW.nbins, lower = 1), checkmate::checkSubset(peak_gene.IHW.nbins, "auto"))
+  
+  checkmate::assert(checkmate::checkNull(peak.SNP_filter), checkmate::checkList(peak.SNP_filter))
+  if (!is.null(peak.SNP_filter)) {
+      checkmate::assertSubset(c("min_nSNPs", "filterType"), names(peak.SNP_filter))
+      checkmate::assertIntegerish(peak.SNP_filter$min_nSNPs, lower = 0)
+      checkmate::assertSubset(peak.SNP_filter$filterType, c("orthogonal", "extra"))
+      
+      if (peak.SNP_filter$min_nSNPs > 0) {
+          if (!all(c("SNP_n", "SNP_rsid", "SNP_start") %in% colnames(GRN@data$peaks$counts_metadata))) {
+              message = "Could not find SNP information in GRN@data$peaks$counts_metadata. Either run addSNPData beforehand or set peak.SNP_filter to NULL."
+              .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+          }   
+      }
+    
+  }
   
   checkmate::assertSubset(gene.types, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
   
@@ -4011,6 +3990,22 @@ filterGRNAndConnectGenes <- function(GRN,
               futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering peaks: ", nrow(grn.filt)))
           }
           
+
+          if (!is.null(peak.SNP_filter) && peak.SNP_filter$min_nSNPs > 0 && peak.SNP_filter$filterType == "extra") {
+              
+              
+              futile.logger::flog.info(paste0(" Filter peaks based on their minimum number of SNPs they overlap with. Threshold here: ", peak.SNP_filter$min_nSNPs))
+              futile.logger::flog.info(paste0("  Number of TF-peak rows before filtering peaks: ", nrow(grn.filt)))
+              
+              grn.filt = grn.filt %>%
+                  dplyr::left_join(GRN@data$peaks$counts_metadata %>% dplyr::select("peakID", tidyselect::starts_with("SNP_")), by = c("peak.ID" = "peakID")) %>%
+                  dplyr::rename(peak.SNP_n = "SNP_n", peak.SNP_rsid = "SNP_rsid", peak.SNP_start = "SNP_start")
+
+              grn.filt = dplyr::filter(grn.filt, .data$SNP_n >= peak.SNP_filter$min_nSNPs)
+              futile.logger::flog.info(paste0("  Number of TF-peak rows after filtering for peaks with at least ", peak.SNP_filter$min_nSNPs, " overlapping SNPs: ", nrow(grn.filt)))
+          }
+          
+          
           # Filters on peak-genes
           
           futile.logger::flog.info("2. Filter peak-gene connections")
@@ -4036,6 +4031,20 @@ filterGRNAndConnectGenes <- function(GRN,
               futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering by gene type: ", nrow(peakGeneCorrelations)))
           }
           
+         
+   
+          if (!is.null(peak.SNP_filter) && peak.SNP_filter$min_nSNPs > 0 && peak.SNP_filter$filterType == "extra") {
+              
+              futile.logger::flog.info(paste0(" Filter peak-genes based on their minimum number of SNPs they overlap with. Threshold here: ", peak.SNP_filter$min_nSNPs))
+              futile.logger::flog.info(paste0("  Number of peak-gene rows before filtering peaks: ", nrow(peakGeneCorrelations)))
+              
+              peakGeneCorrelations = peakGeneCorrelations %>%
+                  dplyr::left_join(GRN@data$peaks$counts_metadata %>% dplyr::select("peakID", tidyselect::starts_with("SNP_")), by = c("peak.ID" = "peakID")) %>%
+                  dplyr::rename(peak.SNP_n = "SNP_n", peak.SNP_rsid = "SNP_rsid", peak.SNP_start = "SNP_start")
+              
+              peakGeneCorrelations = dplyr::filter(peakGeneCorrelations, .data$SNP_n >= peak.SNP_filter$min_nSNPs)
+              futile.logger::flog.info(paste0("  Number of peak-gene rows after filtering for peaks with at least ", peak.SNP_filter$min_nSNPs, " overlapping SNPs: ", nrow(peakGeneCorrelations)))
+          }
           
           
           
@@ -4043,8 +4052,25 @@ filterGRNAndConnectGenes <- function(GRN,
           # Now we need the connected genes. All fitters that are independent of that have been done
           # Don't warn about the coercing of factors etc
           
-          if (allowMissingTFs) {
+
+          if (allowMissingTFs | (!is.null(peak.SNP_filter) && peak.SNP_filter$min_nSNPs > 0 && peak.SNP_filter$filterType == "orthogonal")) {
               grn.filt = suppressWarnings(dplyr::full_join(grn.filt, peakGeneCorrelations, by = "peak.ID"))
+              
+              if (!allowMissingTFs) {
+                  
+                  # Add SNP data first time
+                  grn.filt = grn.filt %>%
+                      dplyr::left_join(GRN@data$peaks$counts_metadata %>% dplyr::select("peakID", tidyselect::starts_with("SNP_")), by = c("peak.ID" = "peakID")) %>%
+                      dplyr::rename(peak.SNP_n = "SNP_n", peak.SNP_rsid = "SNP_rsid", peak.SNP_start = "SNP_start")
+                  
+                  futile.logger::flog.info(paste0(" Keeping peaks if they either have a TF connected OR if they overlap with at least ", peak.SNP_filter$min_nSNPs, " SNPs"))
+
+                  
+                  # Keep only connections without a TF iff the peak overlaps SNPs
+                  grn.filt = grn.filt %>%
+                      dplyr::filter(.data$peak.SNP_n >= peak.SNP_filter$min_nSNPs | !is.na(.data$TF.ID))
+              }
+              
           } else {
               grn.filt = suppressWarnings(dplyr::left_join(grn.filt, peakGeneCorrelations, by = "peak.ID"))
           }
@@ -4153,7 +4179,7 @@ filterGRNAndConnectGenes <- function(GRN,
                   IHW.res = .performIHW(pvalues = grn.filt$peak_gene.p_raw[indexes], 
                                         covariates = covariate_val[indexes] %>% unlist() %>% unname(), 
                                         alpha = peak_gene.fdr.threshold, nbins = peak_gene.IHW.nbins,
-                                        permutation =permutationCur,
+                                        permutation = permutationCur,
                                         pdfFile = outputFile_IHW)
                   
                   
@@ -4523,115 +4549,135 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", nCores = 1, forc
 
 ######### SNP functions ################
 
+#' Add SNP information to a \code{\linkS4class{GRN}} object. 
+#' 
+#' This function accepts a vector of SNP IDs (rsID), retrieves their genomic positions and 
+#' overlaps them with the peaks to extend the peak metadata (`GRN@data$peaks$counts_metadata`) by storing the number, positions and rsids of all
+#' overlapping SNPs per peak  (new columns starting with `SNP_`).
+#' 
+#' `biomaRt` is used to retrieve genomic positions for the user-defined SNPs, which can take a long time depending
+#' on the number of SNPs provided.
+#' 
+#' @export
+#' @template GRN
+#' @param SNP_IDs Character vector. No default. Vector of SNP IDs (rsID) that should be integrated and overlapped with the peaks.
+#' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
+#' By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
+#' @template forceRerun
+#' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
+#' @examples 
+#' # See the Workflow vignette on the GRaNIE website for examples
+#' GRN = loadExampleObject()
+#' GRN = addSNPData(GRN, SNP_IDs = c("rs7570219", "rs6445264", "rs12067275"), forceRerun = FALSE)
+#' 
 
-# Not ready and not tested
-addSNPOverlap <- function(grn, SNPData, col_chr = "chr", col_pos = "pos", col_peakID = "peakID", 
-                          genomeAssembly_peaks, genomeAssembly_SNP, addAllColumns = TRUE) {
-  
-  start = Sys.time()
-  futile.logger::flog.info(paste0("Adding SNP overlap"))
-  
-  futile.logger::flog.info(paste0(" Checking validity of input"))
-  checkmate::assertDataFrame(SNPData, min.rows = 1)
-  checkmate::assertSubset(c(col_chr, col_pos), colnames(SNPData), empty.ok = FALSE)
-  checkmate::assertSubset(c(col_peakID), colnames(grn), empty.ok = FALSE)
-  
-  if (genomeAssembly_peaks != genomeAssembly_SNP) {
+# SNP_IDs = c("rs7041847", "rs17584499", "rs55688149", "rs74340846", "rs77994054", "rs13078546", "rs765898159", "rs10788928", 
+#             "rs6787151",  "rs74181299", "rs111524356", "rs12694917", "rs141033168", "rs2121266",  "rs3024493",  "rs12119474", 
+#             "rs78773383", "rs75579810", "rs521734", "rs7570219",  "rs6445264",  "rs12067275" )
+
+
+addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, forceRerun = FALSE) {
+
+    start = Sys.time()   
     
-    message = "Genome assemblies of peaks and SNPs must be identical"
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  if (!all(grepl("chr", unlist(SNPData[, col_chr])))) {
-    SNPData[, col_chr] = paste0("chr", SNPData[, col_chr])
-  }
-  
-  # Check for chr23 = chrX
-  if (genomeAssembly_SNP %in% c("hg19", "hg38")) {
-    index_chr23 = which(grepl("chr23", SNPData[, col_chr]))
-    if (length(index_chr23) > 0) {
-      message = paste0(" Chr23 found in SNP data. Renaming to chrX")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      SNPData[index_chr23, col_chr] = stringr::str_replace(SNPData[index_chr23, col_chr], "chr23", "chrX")
+    checkmate::assertClass(GRN, "GRN")
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertCharacter(SNP_IDs, min.chars = 5, any.missing = FALSE, min.len = 1)
+    
+    checkmate::assert(checkmate::checkNull(EnsemblVersion), checkmate::assertSubset(as.character(EnsemblVersion), biomaRt::listEnsemblArchives()$version))
+    checkmate::assertFlag(forceRerun)
+    
+    
+    SNP_IDs = unique(SNP_IDs)
+
+    if (!all(c("SNP_n", "SNP_rsid", "SNP_start") %in% colnames(GRN@data$peaks$counts_metadata)) | forceRerun) {
+        
+        
+        GRN@data$peaks$counts_metadata = dplyr::select(GRN@data$peaks$counts_metadata, -tidyselect::starts_with("SNP_") )
+        
+        futile.logger::flog.info(paste0(" Quering biomaRt for ", length(SNP_IDs), " rsid annotation, this may take a while, particularly if the number of provided IDs is large"))
+        
+        
+        genomeAssembly = GRN@config$parameters$genomeAssembly
+        params.l = .getBiomartParameters(genomeAssembly, suffix = "_snp")
+        
+        ensembl = .biomart_getEnsembl(biomart = "snp" , version = EnsemblVersion, host = params.l[["host"]],  dataset = params.l[["dataset"]])
+        
+        results.df = .callBiomart(mart =  ensembl, attributes = c("refsnp_id", "chr_name", "chrom_start", "chrom_end"), 
+                                  filters = "snp_filter",
+                                  values = SNP_IDs, maxAttempts = 5) 
+        
+        results.df =  results.df %>%
+            dplyr::rename(seqnames = "chr_name", start = "chrom_start", end = "chrom_end", annotation = "refsnp_id") %>%
+            dplyr::mutate(seqnames = paste0("chr", .data$seqnames)) %>%
+            dplyr::select("seqnames", "start", "end", "annotation")
+        
+        futile.logger::flog.info(paste0("  Retrieved annotation for a total of ", nrow(results.df), " SNPs out of ", length(SNP_IDs), " that were provided" ))
+        
+        # Filter SNPs with chromosomes that are not in the genome assembly
+        results.filt.df = results.df %>%
+            dplyr::filter(.data$seqnames %in% names(.getChrLengths(genomeAssembly)))
+        
+        nFiltered = nrow(results.df) - nrow(results.filt.df)
+        if (nFiltered > 0) futile.logger::flog.info(paste0("  Filtered ", nFiltered , " due to chromosome names" ))
+        
+        
+        # Overlap peaks with SNPs and add a metadata column in peak annotation
+        
+        # TODO Clarify zeroBased, this changes the SNP position by 0 if set to TRUE
+        SNPs.gr = .constructGRanges(results.filt.df, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly = genomeAssembly, zeroBased = FALSE)
+        
+        peaks.gr  = .constructGRanges(GRN@data$peaks$counts_metadata, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
+     
+        futile.logger::flog.info(paste0(" Overlapping peaks and SNPs"))
+        
+        overlapsAll = GenomicRanges::findOverlaps(peaks.gr, SNPs.gr, 
+                                                  minoverlap = 1,
+                                                  type = "any", select = "all",
+                                                  ignore.strand = TRUE)
+        
+
+        
+        query_row_ids   = S4Vectors::queryHits(overlapsAll)
+        subject_row_ids = S4Vectors::subjectHits(overlapsAll)
+        
+        query_overlap_df     = as.data.frame(S4Vectors::elementMetadata(peaks.gr)[query_row_ids, "peakID"])
+        subject_overlap_df   = as.data.frame( SNPs.gr)[subject_row_ids, c("seqnames", "start", "annotation")]
+        
+        overlaps.df = cbind.data.frame(query_overlap_df,subject_overlap_df) %>% dplyr::mutate(seqnames = as.character(.data$seqnames))
+        colnames(overlaps.df) = c("peakID", "SNP_chr", "SNP_start", "SNP_rsid")
+        
+        # Summarize on the peak level before integrating
+        overlaps.grouped.df = overlaps.df %>%
+            dplyr::group_by(.data$peakID) %>%
+            dplyr::summarise(SNP_n = dplyr::n(), 
+                             SNP_rsid = paste0(.data$SNP_rsid, collapse = ","), 
+                             SNP_start = paste0(.data$SNP_start, collapse = ",")) 
+        
+        GRN@data$peaks$counts_metadata = dplyr::left_join(GRN@data$peaks$counts_metadata, overlaps.grouped.df, by = "peakID", multiple = "all")
+        GRN@data$peaks$counts_metadata$SNP_n[which(is.na(GRN@data$peaks$counts_metadata$SNP_n))] = 0
+        
+        futile.logger::flog.info(paste0(" Added SNP information to GRN@data$peaks$counts_metadata"))
+        
+        futile.logger::flog.info(paste0(" Statistics: "))
+        for (i in 0:max(GRN@data$peaks$counts_metadata$SNP_n)) {
+            futile.logger::flog.info(paste0("  Number of peaks with ", i, " SNP overlaps: ", dplyr::filter(GRN@data$peaks$counts_metadata, .data$SNP_n == i) %>% nrow()))
+        }
+        
+    } else {
+        
+        .printDataAlreadyExistsMessage()
+        
     }
-  }
-  
-  futile.logger::flog.info(paste0(" Overlapping peaks and SNPs"))
-  txdb = .getGenomeObject(genomeAssembly_SNP)
-  # GRanges for peaks and SNP
-  
-  SNPData.mod = SNPData
-  SNPData.mod$chr = as.character(SNPData.mod[, col_chr])
-  SNPData.mod$end = as.numeric(SNPData.mod[, col_pos])
-  SNPData.mod$start = as.numeric(SNPData.mod[, col_pos])
-  
-  SNPs.gr = .constructGRanges(dplyr::select(SNPData.mod, "chr", {{col_pos}}, "end"), seqlengths = GenomeInfoDb::seqlengths(txdb), genomeAssembly_SNP,  
-                              start.field = col_pos, seqnames.field = col_chr)
-  
-  
-  
-  peaks.df = .createDF_fromCoordinates(as.character(unlist(unique(grn[,col_peakID]))), col_peakID)
-  
-  txdb = .getGenomeObject(genomeAssembly_peaks)
-  peaks.gr = .constructGRanges(peaks.df, seqlengths = GenomeInfoDb::seqlengths(txdb), genomeAssembly_peaks)
-  
-  # Overlap
-  overlapsAll = GenomicRanges::findOverlaps(peaks.gr, SNPs.gr, 
-                                            minoverlap = 1,
-                                            type = "any",
-                                            select = "all",
-                                            ignore.strand = TRUE)
-  
-  futile.logger::flog.info(paste0(" Summarizing overlap"))
-  
-  query_row_ids   = S4Vectors::queryHits(overlapsAll)
-  subject_row_ids = S4Vectors::subjectHits(overlapsAll)
-  
-  query_overlap_df     = as.data.frame(S4Vectors::elementMetadata(peaks.gr)[query_row_ids, col_peakID])
-  subject_overlap_df   = as.data.frame( SNPs.gr)[subject_row_ids, c("seqnames", "start")]
-  
-  overlaps.df = cbind.data.frame(query_overlap_df,subject_overlap_df) %>% dplyr::mutate(seqnames = as.character(.data$seqnames))
-  colnames(overlaps.df) = c("peakID", "SNP_chr", "SNP_start")
-  
-  if (addAllColumns) {
     
-    overlaps.df = dplyr::left_join(overlaps.df, SNPData.mod, by = c("SNP_chr" = "chr", "SNP_start" = "start")) %>% dplyr::select(-"end")
-  }
-  
-  
-  myfun <- function(x) {
-    paste0(x,collapse = "|")
-  }
-  
-  colnamesNew = setdiff(colnames(overlaps.df), col_peakID)
-  overlaps.summarized.df =  overlaps.df %>%
-    dplyr::group_by(.data$peak) %>%
-    dplyr::summarise_at(colnamesNew, myfun) %>%
-    dplyr::ungroup()
-  
-  # Add no of SNPs also as column
-  overlaps.summarized.df = overlaps.summarized.df %>%
-    dplyr::mutate(SNP_nOverlap = stringr::str_count(.data$SNP_chr, stringr::fixed("|")) + 1)
-  
-  grn.SNPs = dplyr::left_join(grn, overlaps.summarized.df, by = col_peakID)
-  
-  .printExecutionTime(start)
-  
-  grn.SNPs
-  
+    .printExecutionTime(start, prefix = "")
+    GRN
+        
 }
 
-# TODO: Only called for SNPs
-.createDF_fromCoordinates <- function(IDs, colnameID = "peakID") {
-  
-  splits = strsplit(as.character(IDs), split = c(":|-"), fixed = FALSE,  perl = TRUE)
-  df = tibble::tibble(      chr   = sapply(splits,"[[", 1),
-                            start = as.numeric(sapply(splits,"[[", 2)),
-                            end   = as.numeric(sapply(splits,"[[", 3))) %>%
-    dplyr::mutate({{colnameID}} := paste0(.data$chr, ":", .data$start, "-",.data$end))
-  
-  df
-}
+
 
 
 ####### STATS #########
@@ -5408,6 +5454,7 @@ getParameters <- function(GRN, type = "parameter", name = "all") {
 #' \strong{Note: This function, as all \code{get} functions from this package, does NOT return a \code{\linkS4class{GRN}} object.}
 
 #' @template GRN 
+#' @param silent \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should the function be silent and print nothing? 
 #' @return A named list summarizing the GRN object. This function does **NOT** return a \code{\linkS4class{GRN}} object, but instead a named lsit with the
 #' following elements: 
 #' \itemize{
@@ -5435,7 +5482,7 @@ getParameters <- function(GRN, type = "parameter", name = "all") {
 #' GRN = loadExampleObject()
 #' summary.l = getGRNSummary(GRN)
 #' @export
-getGRNSummary <- function(GRN) {
+getGRNSummary <- function(GRN, silent = FALSE) {
     
     start = Sys.time()
     checkmate::assertClass(GRN, "GRN")
@@ -5603,7 +5650,7 @@ getGRNSummary <- function(GRN) {
                 
                 for (rawp_cur in fdr_toTest) {
                     nCon = GRN@stats$Enrichment$general[[ontologyCur]]$results %>%
-                        dplyr::filter(pval <= rawp_cur) %>%
+                        dplyr::filter(.data$pval <= rawp_cur) %>%
                         nrow()
                     summary.df = tibble::add_row(summary.df, ontology = ontologyCur, rawp = rawp_cur, nTerms = nCon)
                 }
@@ -5638,7 +5685,7 @@ getGRNSummary <- function(GRN) {
                         
                         for (rawp_cur in fdr_toTest) {
                             nCon = GRN@stats$Enrichment[[entityCur]][[featureCur]] [[ontologyCur]]$results %>%
-                                dplyr::filter(pval <= rawp_cur) %>%
+                                dplyr::filter(.data$pval <= rawp_cur) %>%
                                 nrow()
                             summary.df = tibble::add_row(summary.df, ontology = ontologyCur, feature = featureCur, rawp = rawp_cur, nTerms = nCon)
                         }
@@ -5658,7 +5705,7 @@ getGRNSummary <- function(GRN) {
         
     } # end if (!is.null(GRN@graph$TF_gene)) {
     
-    .printExecutionTime(start)
+    if (!silent) .printExecutionTime(start)
     res.list
     
 }

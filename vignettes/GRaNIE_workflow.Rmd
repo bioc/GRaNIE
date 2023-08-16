@@ -498,19 +498,26 @@ GRN = build_eGRN_graph(GRN, forceRerun = TRUE)
 
 As you can see, some details about the TF-peak-gene and TF-gene are shown as output. As mentioned before, the graph is constructed based on the filtered connections as calculated and stored by `filterGRNAndConnectGenes()`. Importantly, the graph is reset whenever the function `filterGRNAndConnectGenes()` is called either directly or indirectly via `generateStatsSummary()`.
 
-## Visualize the filtered `eGRN`
+## Visualize the `eGRN`
 
 The `GRaNIE` package also offers a function to visualize a filtered `eGRN` network! It is very easy to invoke, but provides many options to customize the output and the way the graph is drawn. We recommend to explore the options in the R help (`?getGRNConnections`), and here just run the default visualization. By default, `eGRNs` with 500 edges or less can be plotted with the default options, which prevents from plotting large number of networks that cannot be visualized nicely anyway. However, this can be customized to also draw larger networks (see the parameter `maxEdgesToPlot` and the notes below) and is being utilized here:
 
-```{r visualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, fig.cap="<i>eGRN example visualization</i>", fig.height = 9, class.output="scroll-200"}
+```{r visualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, fig.cap="<i>eGRN example visualization</i>", fig.height = 6, class.output="scroll-200"}
 GRN = visualizeGRN(GRN, plotAsPDF = FALSE, maxEdgesToPlot = 1000)
 
 ```
 
 We can see some highly connected TFs and that they actually seem to co-regulate some shared genes. The selection of TFs here for this toy dataset was based on highly connected TFs across all TF, though, so for a larger list of TFs, expect to see some TFs being not connected much or at all, though.
 
+Visualizing a larger network is naturally more challenging. If your visualization does not work or it does not look clear or nice enough, check out the [Package Details](GRaNIE_packageDetails.html#network-visualization) for recommendations.  We now also provide the function `filterConnectionsForPlotting()` to filter a *eGRN* just for visualization 
+purposes. This reduces the number of nodes and edges to plot and gives the user ultimate flexibility of what to visualize. For example, you can filter the network to just visualize the part of the network that is connected to a specific set of TFs (i.e, their regulons). The filter criteria can be flexibly defined via `dplyr` style syntax as either one or multiple arguments, see the example that follows:
 
-**Non surprisingly, visualizing a larger network can be more challenging. If your visualization does not work or it looks not as expected, check out the [Package Details](GRaNIE_packageDetails.html#network-visualization) for recommendations.**
+```{r filterAndVisualizeGRN, echo=TRUE, include=TRUE, eval = TRUE, fig.cap="<i>eGRN example visualization with extra filtering</i>", fig.height = 6, class.output="scroll-200"}
+GRN = filterConnectionsForPlotting(GRN, plotAll = FALSE, TF.ID == "E2F7.0.B" | stringr::str_starts(TF.ID, "ETV"))
+GRN = visualizeGRN(GRN, plotAsPDF = FALSE)
+
+```
+
 
 
 ## Network and enrichment analyses for filtered connections
