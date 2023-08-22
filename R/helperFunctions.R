@@ -872,7 +872,7 @@ is.installed <- function(mypkg){
         
     } 
     
-    futile.logger::flog.info(paste0("Retrieving BioMart database succeeded"))
+    futile.logger::flog.info(paste0(" Retrieving BioMart database succeeded"))
     
     ensembl
 }
@@ -907,7 +907,7 @@ is.installed <- function(mypkg){
         
     } 
     
-    futile.logger::flog.info(paste0("Retrieving genome annotation succeeded"))
+    futile.logger::flog.info(paste0(" Retrieving genome annotation succeeded"))
     
     result.df
     

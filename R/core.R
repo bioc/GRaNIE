@@ -311,13 +311,13 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
                                                  normalization = normalization_peaks,
                                                  additionalParams = additionalParams.l
                                             ) %>%
-                            as_tibble(rownames = "peakID") %>%
+                            tibble::as_tibble(rownames = "peakID") %>%
                             dplyr::select("peakID", tidyselect::everything())
     
     countsRNA.norm.df    = .normalizeCountMatrix(GRN, data = counts_rna %>% tibble::column_to_rownames("ENSEMBL") %>% as.matrix(), 
                                                  normalization = normalization_rna,
                                                  additionalParams = additionalParams.l) %>%
-                            as_tibble(rownames = "ENSEMBL") %>%
+                            tibble::as_tibble(rownames = "ENSEMBL") %>%
                             dplyr::select("ENSEMBL", tidyselect::everything())
     
 
@@ -591,8 +591,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         ens.newest <- ah[[newestAnno.ID]]
         genes.df = as.data.frame(suppressWarnings(ensembldb::genes(ens.newest))) %>%
             tibble::as_tibble() %>%
-            dplyr::mutate(gene.chr = paste0("chr", seqnames)) %>%
-            dplyr::select(-seqnames) %>%
+            dplyr::mutate(gene.chr = paste0("chr", .data$seqnames)) %>%
+            dplyr::select(-"seqnames") %>%
             dplyr::rename(gene.ENSEMBL = "gene_id", gene.start = "start", gene.end = "end",
                           gene.strand = "strand", gene.name = "gene_name", gene.type = "gene_biotype") %>%
             dplyr::select("gene.chr", "gene.start", "gene.end", "gene.strand", "gene.ENSEMBL", "gene.type", "gene.name") %>%
@@ -4549,34 +4549,53 @@ add_TF_gene_correlation <- function(GRN, corMethod = "pearson", nCores = 1, forc
 
 ######### SNP functions ################
 
-#' Add SNP information to a \code{\linkS4class{GRN}} object. 
+#' Add SNP data to a \code{\linkS4class{GRN}} object and associate SNPs to peaks. 
 #' 
 #' This function accepts a vector of SNP IDs (rsID), retrieves their genomic positions and 
 #' overlaps them with the peaks to extend the peak metadata (`GRN@data$peaks$counts_metadata`) by storing the number, positions and rsids of all
-#' overlapping SNPs per peak  (new columns starting with `SNP_`).
+#' overlapping SNPs per peak  (new columns starting with `SNP_`). 
+#' Optionally, SNPs in LD with the user-provided SNPs can be identified using the \code{LDlinkR} package. Note that only SNPs in LD are associated with a peak for those SNPs directly overlapping a peak. 
+#' That is, if a user-provided SNP does not overlap with any peak, neither the SNP itself nor any of the SNPs in LD will be associated with any peak, even if an LD SNP overlaps another peak.
+#' The results of are stored in \code{GRN@annotation$SNPs} (full, unfiltered table) and \code{GRN@annotation$SNPs_filtered} (filtered table), 
+#' and rapid re-filtering is possible without re-querying the database (time-consuming)
 #' 
 #' `biomaRt` is used to retrieve genomic positions for the user-defined SNPs, which can take a long time depending
-#' on the number of SNPs provided.
+#' on the number of SNPs provided. Similarly, querying the \code{LDlink} servers may take a long time. 
 #' 
 #' @export
 #' @template GRN
 #' @param SNP_IDs Character vector. No default. Vector of SNP IDs (rsID) that should be integrated and overlapped with the peaks.
 #' @param EnsemblVersion \code{NULL} or Character(1). Default \code{NULL}. Only relevant if \code{source} is not set to \code{custom}, ignored otherwise. The Ensembl version to use for the retrieval of gene IDs from their provided database names (e.g., JASPAR) via \code{biomaRt}.
 #' By default (\code{NULL}), the newest version is selected for the most recent genome assembly versions is used (see \code{biomaRt::listEnsemblArchives()} for supported versions). This parameter can override this to use a custom (older) version instead.
+#' @param add_SNPs_LD \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should SNPs in LD with any of the user-provided SNPs that overlap a peak be identified and added to the peak? 
+#' If set to \code{TRUE}, \code{LDlinkR::LDproxy_batch} will be used to identify SNPs in LD based on the 
+#' user-provided \code{SNP_IDs} argument, a specific (set of) populations (argument \code{population}) and a value for \code{r2d}.
+#' The full table (stored in \code{GRN@annotation$SNPs}) is then subsequently filtered, see also the \code{filter} argument.
+#' @param requeryLD \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Only applicable if \code{add_SNPs_LD = TRUE} and ignored otherwise.
+#' Should \code{LDlinkR::LDproxy_batch} be re-executed if already present? As this
+#' is very time-consuming, querying the database is only performed if this parameter is set to \code{TRUE} or if \code{GRN@annotation$SNPs} is missing.
+#' @param population Character vector. Default \code{CEU}. Only applicable if \code{add_SNPs_LD = TRUE} and ignored otherwise.
+#' Population code(s) from the 1000 Genomes project to be used for \code{LDlinkR::LDproxy_batch}.
+#' Multiple codes are allowed. For all valid codes, see \url{https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/README_populations.md} 
+#' @param r2d \code{r2} or \code{d}. Default \code{r2}. Only applicable if \code{add_SNPs_LD = TRUE} and ignored otherwise.
+#' See the help of the function \code{LDlinkR::LDproxy_batch} for more details.
+#' @param token Character or \code{NULL}. Default \code{NULL}. Only applicable if \code{add_SNPs_LD = TRUE} and ignored otherwise. 
+#' \code{LDlink} provided user token. Register for token at https://ldlink.nih.gov/?tab=apiaccess. 
+#' Has to be done only once and is very simple and straight forward but unfortunately necessary. An example, non-functional token is \code{2c49a3b54g04}.
+#' @param filter Character. Default \code{R2 > 0.8}. Only applicable if \code{add_SNPs_LD = TRUE} and ignored otherwise.
+#' Filter criteria for the output table as generated by \code{LDlinkR::LDproxy_batch}.
+#' \code{dplyr::filter} style is used to specify filters, and multiple filtering criteria can be used (e.g., \code{R2 > 0.8 & MAF > 0.01}).
+#' The filtered table is stored in \code{GRN@annotation$SNPs_filtered}. Note that re-filtering is quick without the need to re-query the database unless \code{requeryLD = TRUE}.
 #' @template forceRerun
 #' @return An updated \code{\linkS4class{GRN}} object, with additional information added from this function.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
 #' GRN = addSNPData(GRN, SNP_IDs = c("rs7570219", "rs6445264", "rs12067275"), forceRerun = FALSE)
-#' 
-
-# SNP_IDs = c("rs7041847", "rs17584499", "rs55688149", "rs74340846", "rs77994054", "rs13078546", "rs765898159", "rs10788928", 
-#             "rs6787151",  "rs74181299", "rs111524356", "rs12694917", "rs141033168", "rs2121266",  "rs3024493",  "rs12119474", 
-#             "rs78773383", "rs75579810", "rs521734", "rs7570219",  "rs6445264",  "rs12067275" )
-
-
-addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, forceRerun = FALSE) {
+addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, 
+                       add_SNPs_LD = FALSE, requeryLD = FALSE, population = "CEU", r2d = "r2", token = NULL, 
+                       filter = "R2 > 0.8",
+                       forceRerun = FALSE) {
 
     start = Sys.time()   
     
@@ -4584,9 +4603,11 @@ addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, forceRerun = FALSE) 
     
     GRN = .makeObjectCompatible(GRN)
     
-    checkmate::assertCharacter(SNP_IDs, min.chars = 5, any.missing = FALSE, min.len = 1)
+    checkmate::assertCharacter(SNP_IDs, min.chars = 4, any.missing = FALSE, min.len = 1)
     
     checkmate::assert(checkmate::checkNull(EnsemblVersion), checkmate::assertSubset(as.character(EnsemblVersion), biomaRt::listEnsemblArchives()$version))
+    checkmate::assertFlag(add_SNPs_LD)
+    checkmate::assertFlag(requeryLD)
     checkmate::assertFlag(forceRerun)
     
     
@@ -4594,6 +4615,87 @@ addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, forceRerun = FALSE) 
 
     if (!all(c("SNP_n", "SNP_rsid", "SNP_start") %in% colnames(GRN@data$peaks$counts_metadata)) | forceRerun) {
         
+        # Identify SNPs in LD
+        if (add_SNPs_LD) {
+
+            
+            # Check genome, must be hg19 or hg38
+            genomeQuery = dplyr::case_when(GRN@config$parameters$genomeAssembly == "hg38" ~ "grch38_high_coverage" ,
+                             GRN@config$parameters$genomeAssembly == "hg19" ~ "grch37",
+                             TRUE ~ NA)
+
+            if (is.na(genomeQuery)) {
+                message = paste0("For querying SNPS for LD, the genome must be either hg19 or hg38 but not ", GRN@config$parameters$genomeAssembly)
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            }
+            
+            file_SNPs = paste0("combined_query_snp_list_", genomeQuery, ".txt")
+            
+            if (requeryLD | is.null(GRN@annotation$SNPs)) {
+                
+                packageMessage = paste0("The package LDlinkR is not installed but required for this function.")
+                .checkPackageInstallation("LDlinkR", packageMessage, isWarning = FALSE)
+                
+                checkmate::assertCharacter(token, len = 1, min.chars = 5)
+                checkmate::assertCharacter(population, min.len = 1)
+                checkmate::assertChoice(r2d, c("r2", "d"))
+                
+                futile.logger::flog.info(paste0(" Calling LDlinkR::LDproxy_batch for ", length(SNP_IDs), " rsid. This may take a while, particularly if the number of provided IDs is large"))
+                
+                tryCatch({ 
+                     LDlinkR::LDproxy_batch(SNP_IDs, pop = population, token = token, 
+                                                 append = TRUE, r2d = r2d, genome_build = genomeQuery)
+                    
+                    
+                }, error = function(e) {
+                    futile.logger::flog.warn(paste0("An error occured for LDlinkR::LDproxy_batch. The error message was: ", e))
+                })
+            
+                if (!file.exists(file_SNPs)) {
+                    
+                    error_Biomart = paste0("A temporary error occured with LDlinkR::LDproxy_batch. This may be caused by an unresponsive webserver or the expted file ", file_SNPs, " could not be found/read.", 
+                                           " Try again at a later time. Note that this error is not caused by GRaNIE but external services.")
+                    .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = FALSE)
+                    return(NULL)
+                    
+                } 
+                
+                
+                futile.logger::flog.info(paste0(" Finished retrieving all SNPs in LD"))
+                snps.df = readr::read_tsv(file_SNPs, skip = 1, col_names = FALSE, show_col_types = FALSE)
+                
+                colnames(snps.df) = c("row_number", "query_snp", "RS_Number", "Coord", "Alleles", "MAF", "Distance" ,  "Dprime", "R2", 
+                                      "Correlated_Alleles", "FORGEdb", "RegulomeDB", "Function")
+                
+                GRN@annotation$SNPs = snps.df %>%
+                    dplyr::select("query_snp", "RS_Number", "Coord", "MAF", "Distance", "Dprime", "R2") %>%
+                    dplyr::filter(.data$RS_Number != ".")
+                    
+                    pos.df = stringr::str_split_fixed(GRN@annotation$SNPs$Coord, pattern = ":", n = 2)
+                    colnames(pos.df) = c("SNP_chr", "SNP_start")
+                    
+                    GRN@annotation$SNPs = cbind(GRN@annotation$SNPs, pos.df) %>%
+                        dplyr::select(-"Coord")
+                    
+            } else {
+                futile.logger::flog.info(paste0(" Not re-querying LDlink database as results already found in object"))
+                
+                checkmate::assertSubset(c("query_snp", "RS_Number", "SNP_chr", "SNP_start", "MAF", "Distance", "Dprime", "R2"), colnames(GRN@annotation$SNPs))
+            }
+            
+            checkmate::assertCharacter(filter, len = 1, min.chars = 1)
+            
+            # FILTER
+            futile.logger::flog.info(paste0(" Filtering SNP information using the filter ", filter))
+            futile.logger::flog.info(paste0("  Number of rows before filtering: ", nrow(GRN@annotation$SNPs)))
+            GRN@annotation$SNPs_filtered = dplyr::filter(GRN@annotation$SNPs, !!!rlang::parse_exprs(paste(filter, collapse = ";")))
+            futile.logger::flog.info(paste0("  Number of rows after filtering : ", nrow(GRN@annotation$SNPs_filtered)))
+          
+        } else {
+            futile.logger::flog.info(paste0(" Not retrieving SNPS in LD, use only user-provided SNPs"))
+            
+        }
+       
         
         GRN@data$peaks$counts_metadata = dplyr::select(GRN@data$peaks$counts_metadata, -tidyselect::starts_with("SNP_") )
         
@@ -4614,7 +4716,7 @@ addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, forceRerun = FALSE) 
             dplyr::mutate(seqnames = paste0("chr", .data$seqnames)) %>%
             dplyr::select("seqnames", "start", "end", "annotation")
         
-        futile.logger::flog.info(paste0("  Retrieved annotation for a total of ", nrow(results.df), " SNPs out of ", length(SNP_IDs), " that were provided" ))
+        futile.logger::flog.info(paste0(" Retrieved annotation for a total of ", nrow(results.df), " SNPs out of ", length(SNP_IDs), " that were provided" ))
         
         # Filter SNPs with chromosomes that are not in the genome assembly
         results.filt.df = results.df %>%
@@ -4646,15 +4748,44 @@ addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, forceRerun = FALSE) 
         query_overlap_df     = as.data.frame(S4Vectors::elementMetadata(peaks.gr)[query_row_ids, "peakID"])
         subject_overlap_df   = as.data.frame( SNPs.gr)[subject_row_ids, c("seqnames", "start", "annotation")]
         
-        overlaps.df = cbind.data.frame(query_overlap_df,subject_overlap_df) %>% dplyr::mutate(seqnames = as.character(.data$seqnames))
+        overlaps.df = cbind.data.frame(query_overlap_df,subject_overlap_df) %>% dplyr::mutate(seqnames = as.character(.data$seqnames)) %>% tibble::as_tibble()
         colnames(overlaps.df) = c("peakID", "SNP_chr", "SNP_start", "SNP_rsid")
+        
+        if (add_SNPs_LD) {
+            overlaps.df = dplyr::left_join(overlaps.df, 
+                                            GRN@annotation$SNPs_filtered %>% dplyr::select("query_snp", "RS_Number", "SNP_chr", "SNP_start"), 
+                                            by = c("SNP_rsid" = "query_snp"), multiple = "all") %>%
+                dplyr::mutate(association = dplyr::if_else(.data$SNP_rsid == .data$RS_Number, "overlap", "LD"))
+            
+
+                # Fill NA values and correct start positions
+                NA_rows = which(is.na(overlaps.df$RS_Number))
+                overlaps.df$RS_Number[NA_rows] =  overlaps.df$SNP_rsid[NA_rows]
+                overlaps.df$association[NA_rows] =  "user"
+                overlaps.df$SNP_chr.y[NA_rows] =  overlaps.df$SNP_chr.x[NA_rows]
+                overlaps.df$SNP_start.y[NA_rows] =  overlaps.df$SNP_start.x[NA_rows]
+                
+                
+                overlaps.df = overlaps.df %>%
+                    dplyr::select(-"SNP_chr.x", -"SNP_start.x", -"SNP_rsid") %>%
+                    dplyr::rename(SNP_chr = "SNP_chr.y", SNP_start = "SNP_start.y", SNP_rsid = "RS_Number")
+                
+                # Some SNPs may now be classified as "LD" although they ALSO overlap the peak in fact
+                
+            
+            # TODO: NA values for SNP and wrong SNP position for LD cases
+        } else {
+            overlaps.df = dplyr::mutate(overlaps.df, association = "user")
+        }
+        
         
         # Summarize on the peak level before integrating
         overlaps.grouped.df = overlaps.df %>%
             dplyr::group_by(.data$peakID) %>%
             dplyr::summarise(SNP_n = dplyr::n(), 
                              SNP_rsid = paste0(.data$SNP_rsid, collapse = ","), 
-                             SNP_start = paste0(.data$SNP_start, collapse = ",")) 
+                             SNP_start = paste0(.data$SNP_start, collapse = ","),
+                             SNP_origin = paste0(.data$association, collapse = ",")) 
         
         GRN@data$peaks$counts_metadata = dplyr::left_join(GRN@data$peaks$counts_metadata, overlaps.grouped.df, by = "peakID", multiple = "all")
         GRN@data$peaks$counts_metadata$SNP_n[which(is.na(GRN@data$peaks$counts_metadata$SNP_n))] = 0
@@ -4662,8 +4793,8 @@ addSNPData <- function(GRN, SNP_IDs, EnsemblVersion = NULL, forceRerun = FALSE) 
         futile.logger::flog.info(paste0(" Added SNP information to GRN@data$peaks$counts_metadata"))
         
         futile.logger::flog.info(paste0(" Statistics: "))
-        for (i in 0:max(GRN@data$peaks$counts_metadata$SNP_n)) {
-            futile.logger::flog.info(paste0("  Number of peaks with ", i, " SNP overlaps: ", dplyr::filter(GRN@data$peaks$counts_metadata, .data$SNP_n == i) %>% nrow()))
+        for (i in sort(unique(GRN@data$peaks$counts_metadata$SNP_n))) {
+            futile.logger::flog.info(paste0("  Number of peaks with ", i, " SNPs associated: ", dplyr::filter(GRN@data$peaks$counts_metadata, .data$SNP_n == i) %>% nrow()))
         }
         
     } else {
@@ -5643,7 +5774,7 @@ getGRNSummary <- function(GRN, silent = FALSE) {
         if (!is.null(GRN@stats$Enrichment$general)) {
             
             res.list$network$TF_gene$enrichment$general = list()
-            summary.df = tribble(~ontology, ~rawp, ~nTerms)
+            summary.df = tibble::tribble(~ontology, ~rawp, ~nTerms)
             for (ontologyCur in names(GRN@stats$Enrichment$general)) {
                 res.list$network$TF_gene$enrichment$general[[ontologyCur]] = list()
                 res.list$network$TF_gene$enrichment$general[[ontologyCur]]$parameters = GRN@stats$Enrichment$general[[ontologyCur]]$parameters
@@ -5669,7 +5800,7 @@ getGRNSummary <- function(GRN, silent = FALSE) {
             if (!is.null(GRN@stats$Enrichment[[entityCur]])) {
                 
                 res.list$network$TF_gene$enrichment[[entityCur]] = list()
-                summary.df = tribble(~ontology, ~feature, ~rawp, ~nTerms)
+                summary.df = tibble::tribble(~ontology, ~feature, ~rawp, ~nTerms)
                 
                 
                 for (featureCur in names(GRN@stats$Enrichment[[entityCur]])) {

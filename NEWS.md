@@ -1,9 +1,10 @@
-# GRaNIE 1.5.2 (2023-08-14)
+
+# GRaNIE 1.5.2-1.5.3 (2023-08-20)
 
 ## New features 
 - say hello to a new function `filterConnectionsForPlotting()` that can be used to include or exclude particular connections from the stored eGRN for visualization purposes only (!). Note that this filter only applies to visualization and enables a flexible system to visually explore particular features of the stored eGRN. THis is particularly handy when the eGRN is large. For more details, see the help pages of the new function.
 - similarly, the function `visualizeGRN()` now by default only visualizes connections that are marked as such (the result from `filterConnectionsForPlotting()`) - that is, it excludes connections that the user beforehand excluded from plotting. This allows to specifically plot only part of the eGRN network and explore specific T&F regulons, for example, a feature that before was not so easy to do.
-- It is now possible to integrate SNP information into `GRaNIE` via the new function `addSNPData()`. For more information, [see the Package vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#input_SNP).
+- It is now possible to **integrate SNP data into `GRaNIE` via the new function `addSNPData()`**. For more information, [see the Package vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#input_SNP).
 
 # GRaNIE 1.5.1 (2023-06-19)
 
