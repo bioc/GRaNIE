@@ -1,8 +1,18 @@
+# GRaNIE 1.5.5-1.5.6 (2023-10-26)
+
+## Bug fixes
+- fixed an accidentally recently introduced bug that caused an error in `addTFBS` when using the JASPAR database
+- made the code more error prone related to `AnnotationHub` and caching annotation data in cases when the cache directory is corrupted or deleted
+
+# GRaNIE 1.5.4 (2023-09-11)
+
+## Workflow changes
+- we modified the function `filterData` for cases when too few peaks survive the filtering. Before, the function threw an error when the number of peaks left was < 1000. Due to the error, the original GRN object was not updated in such a case and one could accidentally continue with the normal workflow because the GRN object before the filtering would be taken as input instead for subsequent functions. Now, only a warning is produced.
 
 # GRaNIE 1.5.2-1.5.3 (2023-08-20)
 
 ## New features 
-- say hello to a new function `filterConnectionsForPlotting()` that can be used to include or exclude particular connections from the stored eGRN for visualization purposes only (!). Note that this filter only applies to visualization and enables a flexible system to visually explore particular features of the stored eGRN. THis is particularly handy when the eGRN is large. For more details, see the help pages of the new function.
+- say hello to a new function `filterConnectionsForPlotting()` that can be used to include or exclude particular connections from the stored eGRN for visualization purposes only (!). Note that this filter only applies to visualization and enables a flexible system to visually explore particular features of the stored eGRN. This is particularly handy when the eGRN is large. For more details, see the help pages of the new function.
 - similarly, the function `visualizeGRN()` now by default only visualizes connections that are marked as such (the result from `filterConnectionsForPlotting()`) - that is, it excludes connections that the user beforehand excluded from plotting. This allows to specifically plot only part of the eGRN network and explore specific T&F regulons, for example, a feature that before was not so easy to do.
 - It is now possible to **integrate SNP data into `GRaNIE` via the new function `addSNPData()`**. For more information, [see the Package vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#input_SNP).
 

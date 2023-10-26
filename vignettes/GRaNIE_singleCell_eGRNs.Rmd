@@ -157,7 +157,7 @@ Depending on the number of clusters, `GRaNIE` may run a little longer than the t
 
 # Scripts and example data
 
-In our main repository for `GRaNIE` (outside Bioconductor), we provide a set of scripts that can help setting up a `GRaNIE` analysis for 10x multiome data. The scripts are located [here](https://git.embl.de/grp-zaugg/GRaNIE/-/tree/master/misc/singleCell). If you run into issues with the scripts, let us know!
+If you are interested, we can provide a set of scripts that can help setting up a `GRaNIE` analysis for 10x multiome data. They are still in development, and will be made available here once they are mature enough.
 
 ## Data processing and `GRaNIE` preparation
 We provide a script to takes  a `Seurat` object with `ATAC` and `RNA` assays as input and processes the data according to what we described here in this vignette, performs 10 and more clustering runs for resolutions between 0.5 and 20 (user-adjustable) and produces the properly processed count and metadata files that can be directly used as input for `GRaNIE`. 
