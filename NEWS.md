@@ -1,4 +1,6 @@
-# GRaNIE 1.5.5-1.5.6 (2023-10-26)
+# GRaNIE 1.7.1 (2023-10-26)
+
+- version jump due to new Bioconductor development cycle
 
 ## Bug fixes
 - fixed an accidentally recently introduced bug that caused an error in `addTFBS` when using the JASPAR database
