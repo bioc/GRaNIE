@@ -535,6 +535,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 
 #' @importFrom biomaRt useEnsembl getBM
 #' @importFrom ensembldb genes
+#' @importFrom tools R_user_dir
 .retrieveAnnotationData <- function(genomeAssembly, EnsemblVersion = NULL, source = "AnnotationHub") {
     
     checkmate::assertChoice(source, c("biomaRt", "AnnotationHub"))
@@ -568,7 +569,24 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     } else if (source == "AnnotationHub") {
 
         AnnotationHub::setAnnotationHubOption("ASK", FALSE)
-        ah <- AnnotationHub::AnnotationHub()
+        
+        # Try error in casr that cache is corrupt
+        ah <- tryCatch({ 
+            AnnotationHub::AnnotationHub()
+  
+        }, error = function(e) {
+            
+            futile.logger::flog.warn(paste0("An error occured for AnnotationHub::AnnotationHub(). The error message was: ", e))
+            
+            # See https://rdrr.io/bioc/AnnotationHub/f/vignettes/TroubleshootingTheCache.Rmd
+            futile.logger::flog.info("Trying to fix automatically and re-generate the cache, this may take a while...")
+            cache_dir = tools::R_user_dir("AnnotationHub", which = "cache") 
+            bfc <- BiocFileCache::BiocFileCache(cache_dir)
+            res <- BiocFileCache::bfcquery(bfc, "annotationhub.index.rds", field = "rname", exact = TRUE)
+            BiocFileCache::bfcremove(bfc, rids = res$rid)
+            AnnotationHub::AnnotationHub()
+        })
+        
         
         # TODO: Save metadata somewhere in object
         snapshotDate = AnnotationHub::snapshotDate(ah)
@@ -1268,8 +1286,9 @@ filterData <- function(GRN,
   futile.logger::flog.info(paste0("Number of remaining peaks: ", length(peaks_toKeep)))
   
   if (length(peaks_toKeep) < 1000) {
-      message = paste0("Too few peaks (", length(peaks_toKeep), ") remain after filtering. At least 1000 peaks must remain. Adjust the filtering settings.")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+      message = paste0("Too few peaks (", length(peaks_toKeep), ") remain after filtering. At least 1000 peaks should remain. We strongly advise to adjust the filtering settings.")
+      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+     
   }
   
   GRN@data$peaks$counts_metadata$isFiltered  = !GRN@data$peaks$counts_metadata$peakID  %in% peaks_toKeep
@@ -1278,7 +1297,7 @@ filterData <- function(GRN,
   
   
   if (!is.null(GRN@data$TFs$TF_peak_overlap)) {
-      # TODO
+
       GRN@data$TFs$TF_peak_overlap[, "isFiltered"] = as.integer(!rownames(GRN@data$TFs$TF_peak_overlap) %in% peaks_toKeep)
   }
   
@@ -1610,7 +1629,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         mapping.df = results.df %>%
             dplyr::rename(SYMBOL = "external_gene_name",
                           ENSEMBL = "ensembl_gene_id") %>%
-            dplyr::mutate(SYMBOL.lowercase = tolower("SYMBOL")) %>%
+            dplyr::mutate(SYMBOL.lowercase = tolower(.data$SYMBOL)) %>%
             dplyr::full_join(TFs.df, by = c("SYMBOL.lowercase" = "TF.name.lowercase"), multiple = "all")
         
         
@@ -2702,6 +2721,12 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
     
     counts_peaks = getCounts(GRN, type = "peaks", permuted = FALSE)
     
+    if (nrow(counts_peaks) == 0) {
+        message = "There were no unfiltered peaks left. Rerun filterData and make sure that not all peaks are filtered."
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        
+    }
+    
     # Filtering of the matrices happens automatically within the next function
     peaksCor.m = .correlateMatrices( matrix1 = counts_connectionTypeCur, 
                                      matrix_peaks = counts_peaks, 
@@ -2712,6 +2737,8 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
 
     allTF = intersect(colnames(peak_TF_overlap.df), colnames(peaksCor.m))
     checkmate::assertIntegerish(length(allTF), lower = 1)
+   
+
     
     futile.logger::flog.info(paste0(" Run FDR calculations for ", length(allTF), " TFs for which TFBS predictions and ",
                                     connectionTypeCur, " data for the corresponding gene are available."))
