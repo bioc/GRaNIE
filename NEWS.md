@@ -1,3 +1,8 @@
+# GRaNIE 1.7.2 (2023-12-08)
+
+## Improvements
+- `plotPCA_all()` now also stores all screeplot and PCA results in the object within `GRN@stats$PCA`
+
 # GRaNIE 1.7.1 (2023-10-26)
 
 - version jump due to new Bioconductor development cycle

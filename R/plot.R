@@ -20,7 +20,7 @@ utils::globalVariables("where")
 #' @template pdf_width
 #' @template pdf_height
 #' @template pages
-#' @return An updated \code{\linkS4class{GRN}} object. 
+#' @return An updated \code{\linkS4class{GRN}} object with the data of the screeplot and PCA stored in GRN@stats$PCA. Already existing slots are overwritten.
 #' @examples 
 #' # See the Workflow vignette on the GRaNIE website for examples
 #' GRN = loadExampleObject()
@@ -50,6 +50,10 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   
   outputFolder = .checkOutputFolder(GRN, outputFolder)
   
+  if (is.null(GRN@stats$PCA)) {
+      GRN@stats$PCA = list()
+  }
+  
   if (is.null(GRN@data$metadata)) {
     message = "Slot GRN@data$metadata is NULL"
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
@@ -76,7 +80,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
         futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
                                         " RNA data for all shared samples. This may take a few minutes"))
         
-        .plot_PCA_wrapper(GRN, counts = matrixCur, topn = topn, 
+        GRN = .plot_PCA_wrapper(GRN, slot = "rna", counts = matrixCur, topn = topn, 
                           transformation = transformationCur, 
                           logTransformDensity = logTransformDensity, 
                           file = fileCur, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
@@ -101,7 +105,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
         futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
                                         " peaks data for all shared samples. This may take a few minutes"))
         
-        .plot_PCA_wrapper(GRN, matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
+        GRN = .plot_PCA_wrapper(GRN, slot = "peaks", matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
         
     } else {
         futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
@@ -117,8 +121,14 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 }
 
 
-.plot_PCA_wrapper <- function(GRN, counts, transformation = "vst", scale = TRUE, logTransformDensity, file, topn, pdf_width, pdf_height, pages = NULL, plotAsPDF) {
+.plot_PCA_wrapper <- function(GRN, slot, counts, transformation = "vst", scale = TRUE, logTransformDensity, file, topn, pdf_width, pdf_height, pages = NULL, plotAsPDF) {
   
+  # Reset PCA results slot
+    if (is.null(GRN@stats$PCA[[slot]])) {
+        GRN@stats$PCA[[slot]] = list()
+    }
+
+    
   checkmate::assertChoice(transformation, c("vst", "log2", "none"))
   checkmate::assertIntegerish(topn, lower = 50, any.missing = FALSE,min.len = 1)
   
@@ -183,10 +193,16 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   }
   pageCounter = pageCounter + 1
   
-  for (topn in topn) {
+  for (topnCur in topn) {
+      
+      listnameCur = paste0("topn", topnCur)
+      
+      if (is.null(GRN@stats$PCA[[slot]][[listnameCur]])) {
+          GRN@stats$PCA[[slot]][[listnameCur]] = list()
+      }
     
     # select the ntop genes by variance
-    select <- order(rv, decreasing = TRUE)[seq_len(min(topn, length(rv)))]
+    select <- order(rv, decreasing = TRUE)[seq_len(min(topnCur, length(rv)))]
     
     # perform a PCA on the data in assay(x) for the selected genes
     # For already normalized data, scale is not necessary
@@ -201,6 +217,8 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
       dplyr::mutate(variation_sum = cumsum(.data$variation),
                     pos = seq_len(nPCS))
     
+    GRN@stats$PCA[[slot]][[listnameCur]][["data_screeplot"]] = screeplot.df
+
     # 1. Scree plot
     if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
       
@@ -208,7 +226,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
         ggplot2::xlab("Principal component (PC)") + ggplot2::ylab("Explained variation / Cumultative sum (in %)") + 
         ggplot2::geom_point(data = screeplot.df, ggplot2::aes(.data$pos, .data$variation_sum), color = "red") + 
         ggplot2::geom_line(data = screeplot.df, ggplot2::aes(.data$pos, .data$variation_sum), color = "red") +
-        ggplot2::ggtitle(paste0("Screeplot for top ", topn, " variable features")) + 
+        ggplot2::ggtitle(paste0("Screeplot for top ", topnCur, " variable features")) + 
         ggplot2::theme_bw()
       
       plot(g)
@@ -219,19 +237,22 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
       metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = TRUE, verbose = FALSE)
       .plotPCA_QC(pcaResult = pca, dataCols = colnames(counts.transf), metadataTable = metadata, metadataColumns = metadata_columns, 
-                  varn = topn, metadataColumns_fill = metadata_columns, 
+                  varn = topnCur, metadataColumns_fill = metadata_columns, 
                   file = NULL, logTransform = FALSE)
     }
     pageCounter = pageCounter + 1
     
     
     # 3. Correlation plots colored by metadata
+    if (is.null(GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]])) {
+        GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]] = list()
+    }
     metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = FALSE, verbose = FALSE)
     for (varCur in metadata_columns) {
       
       if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
         
-        plotTitle = paste0("Top ", topn, " variable features, colored by \n", varCur)
+        plotTitle = paste0("Top ", topnCur, " variable features, colored by \n", varCur)
         
         skipLegend = FALSE
         vecCur = metadata[, varCur] %>% unlist()
@@ -249,12 +270,18 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
           group = metadata[[varCur]]
           
           # assembly the data for the plot
-          d <- data.frame(PC1 = pca$x[,1], PC2 = pca$x[,2], group = group, intgroup.df, name = colnames(counts.transf))
+          d <- data.frame(group = group, intgroup.df, name = colnames(counts.transf))
+          
+          for (pcCur in 1:min(10, ncol(pca$x))) {
+              d[colnames(pca$x)[pcCur]] = pca$x[,pcCur]
+          }
           
           d = d %>%
             dplyr::mutate_if(is.character, as.factor) %>%
             dplyr::mutate_if(is.logical, as.factor)
           
+          # Save the PCA data somewhere
+          GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]] [[varCur]] = d
           
           g = g = ggplot2::ggplot(data = d, ggplot2::aes(x = .data$PC1, y = .data$PC2, color = group)) + 
             ggplot2::geom_point(size = 3) + 
@@ -305,6 +332,8 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
   
   .checkPageNumberValidity(pages, pageCounter)
   if (plotAsPDF) grDevices::dev.off()
+  
+  GRN
   
 }
 
