@@ -47,7 +47,7 @@ If a folder is provided, while we recommend specifying an absolute path, a relat
 \item{forceRerun}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Force execution, even if the GRN object already contains the result. Overwrites the old results.}
 }
 \value{
-An updated \code{\linkS4class{GRN}} object.
+An updated \code{\linkS4class{GRN}} object with the data of the screeplot and PCA stored in GRN@stats$PCA. Already existing slots are overwritten.
 }
 \description{
 Produce a PCA plot of the data from a \code{\linkS4class{GRN}} object
