@@ -15,6 +15,5 @@ _pkgdown.yml
 .RData
 GRaNIE.Rproj
 fixBugs_RELASE_GRaNIE.sh
-logo.png
 R/unreleased.R
 R/unreleased_test
