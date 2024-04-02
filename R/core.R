@@ -575,7 +575,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         maxAttempts = 10
         ah = .getAnnotationHub(maxAttempts = maxAttempts)
         
-        if (!class(ah) == "AnnotationHub") {
+        if (!is(ah, "AnnotationHub")) {
             message = paste0("AnnotationHub genome failed despite attempting ", maxAttempts, " times")
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
         }
@@ -3486,7 +3486,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       
       futile.logger::flog.info(paste0("  Found ", nrow(knownLinks.df), " distinct peak-gene links based on the provided bait-OE information that overlap with either peaks or genes."))
       
-      knownLinks.filt.df = knownLinks.df %>% dplyr::filter(!is.na(bait.ID), !is.na(OE.ID))
+      knownLinks.filt.df = knownLinks.df %>% dplyr::filter(!is.na(.data$bait.ID), !is.na(.data$OE.ID))
       
       futile.logger::flog.info(paste0("  Found ", nrow(knownLinks.filt.df), " distinct peak-gene links based on the provided bait-OE information that overlap with both peaks and genes. Filtered ", 
                                       nrow(knownLinks.df) - nrow(knownLinks.filt.df), " pairs because either the bait did not overlap any genes or because the OE coordinates did not overlap any peaks as defined in the object."))

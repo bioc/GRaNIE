@@ -79,14 +79,14 @@
             cache_dir = tools::R_user_dir("AnnotationHub", which = "cache") 
             unlink(cache_dir, recursive = TRUE)
             
-            getAnnotationHub(curAttempt = curAttempt + 1, maxAttempts = maxAttempts)
+            AnnotationHub::getAnnotationHub(curAttempt = curAttempt + 1, maxAttempts = maxAttempts)
             # bfc <- BiocFileCache::BiocFileCache(cache_dir)
             # res <- BiocFileCache::bfcquery(bfc, "annotationhub.index.rds", field = "rname", exact = TRUE)
             # BiocFileCache::bfcremove(bfc, rids = res$rid)
             # AnnotationHub::AnnotationHub()
         })
         
-        if (class(ah) == "AnnotationHub") {
+        if (is(ah, "AnnotationHub")) {
             return(ah)
         }
         
