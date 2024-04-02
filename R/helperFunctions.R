@@ -61,6 +61,42 @@
     futile.logger::flog.info(paste0(" Finished writing plots"))
 }
 
+.getAnnotationHub <- function(curAttempt = 1, maxAttempts = 10) {
+    
+    if (curAttempt < maxAttempts) {
+        
+        Sys.sleep(curAttempt * 3)
+        
+        ah <- tryCatch({ 
+            AnnotationHub::AnnotationHub()
+            
+        }, error = function(e) {
+            
+            futile.logger::flog.warn(paste0("An error occured for AnnotationHub::AnnotationHub(). The error message was: ", e))
+            
+            # See https://rdrr.io/bioc/AnnotationHub/f/vignettes/TroubleshootingTheCache.Rmd
+            futile.logger::flog.info("Trying to fix automatically and re-generate the cache, this may take a while...")
+            cache_dir = tools::R_user_dir("AnnotationHub", which = "cache") 
+            unlink(cache_dir, recursive = TRUE)
+            
+            getAnnotationHub(curAttempt = curAttempt + 1, maxAttempts = maxAttempts)
+            # bfc <- BiocFileCache::BiocFileCache(cache_dir)
+            # res <- BiocFileCache::bfcquery(bfc, "annotationhub.index.rds", field = "rname", exact = TRUE)
+            # BiocFileCache::bfcremove(bfc, rids = res$rid)
+            # AnnotationHub::AnnotationHub()
+        })
+        
+        if (class(ah) == "AnnotationHub") {
+            return(ah)
+        }
+        
+        
+    }
+
+    
+
+}
+
 .startLogger <- function(logfile, level, removeOldLog = TRUE, appenderName = "consoleAndFile", verbose = TRUE) {
   
   checkmate::assertChoice(level, c("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"))
@@ -768,7 +804,7 @@ isIntegerMatrix <- function(df) {
 
 .getPermStr <- function(permutation) {
   
-  dplyr::if_else(permutation == 0, "Real data", "Permuted data")
+  dplyr::if_else(permutation == 0, "real data", "permuted data")
 }
 
 

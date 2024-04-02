@@ -24,7 +24,9 @@ addTFBS(
 \arguments{
 \item{GRN}{Object of class \code{\linkS4class{GRN}}}
 
-\item{source}{Character. One of \code{custom}, \code{JASPAR}. Default \code{custom}. If a custom source is being used, further details about the motif folder and files will be provided (see the other function arguments). If set to \code{JASPAR}, the \href{https://bioconductor.org/packages/release/data/annotation/html/JASPAR2022.html}{JASPAR2022} database is used.}
+\item{source}{Character. One of \code{custom}, \code{JASPAR2022} or \code{JASPAR2024}. Default \code{custom}. If a custom source is being used, further details about the motif folder and files will be provided (see the other function arguments). 
+If set to \code{JASPAR2022}, the \href{https://bioconductor.org/packages/release/data/annotation/html/JASPAR2022.html}{JASPAR2022} database is used.
+If set to \code{JASPAR2024}, the \href{https://bioconductor.org/packages/release/data/annotation/html/JASPAR2024.html}{JASPAR2024} database is used.}
 
 \item{motifFolder}{Character. No default. Only relevant if \code{source = "custom"}. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details. The folder must also contain a so-called translation table, see the argument \code{translationTable} for details.}
 

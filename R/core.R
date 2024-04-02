@@ -568,25 +568,18 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
     } else if (source == "AnnotationHub") {
 
+        futile.logger::flog.info(paste0("Retrieving genome annotation data from AnnotationHub for ", genomeAssembly, "... This may take a while"))
+        
         AnnotationHub::setAnnotationHubOption("ASK", FALSE)
         
-        # Try error in casr that cache is corrupt
-        ah <- tryCatch({ 
-            AnnotationHub::AnnotationHub()
-  
-        }, error = function(e) {
-            
-            futile.logger::flog.warn(paste0("An error occured for AnnotationHub::AnnotationHub(). The error message was: ", e))
-            
-            # See https://rdrr.io/bioc/AnnotationHub/f/vignettes/TroubleshootingTheCache.Rmd
-            futile.logger::flog.info("Trying to fix automatically and re-generate the cache, this may take a while...")
-            cache_dir = tools::R_user_dir("AnnotationHub", which = "cache") 
-            bfc <- BiocFileCache::BiocFileCache(cache_dir)
-            res <- BiocFileCache::bfcquery(bfc, "annotationhub.index.rds", field = "rname", exact = TRUE)
-            BiocFileCache::bfcremove(bfc, rids = res$rid)
-            AnnotationHub::AnnotationHub()
-        })
+        maxAttempts = 10
+        ah = .getAnnotationHub(maxAttempts = maxAttempts)
         
+        if (!class(ah) == "AnnotationHub") {
+            message = paste0("AnnotationHub genome failed despite attempting ", maxAttempts, " times")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+    
         
         # TODO: Save metadata somewhere in object
         snapshotDate = AnnotationHub::snapshotDate(ah)
@@ -674,7 +667,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     # Add ChIPSeeker anotation
     peaks.annotated = suppressMessages(ChIPseeker::annotatePeak(
       consensusPeaks.gr,
-      tssRegion = c(-5000, 5000), # extended from 3kb to 5
+      tssRegion = c(-5000, 5000), # extended from -5kb to 5
       TxDb = .getGenomeObject(genomeAssembly, type = "txbd"),
       level = "gene", 
       assignGenomicAnnotation = TRUE,  # the default
@@ -1480,7 +1473,9 @@ filterData <- function(GRN,
 #' For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. We provide example files for selected supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.
 #' 
 #' @template GRN 
-#' @param source Character. One of \code{custom}, \code{JASPAR}. Default \code{custom}. If a custom source is being used, further details about the motif folder and files will be provided (see the other function arguments). If set to \code{JASPAR}, the \href{https://bioconductor.org/packages/release/data/annotation/html/JASPAR2022.html}{JASPAR2022} database is used.
+#' @param source Character. One of \code{custom}, \code{JASPAR2022} or \code{JASPAR2024}. Default \code{custom}. If a custom source is being used, further details about the motif folder and files will be provided (see the other function arguments). 
+#' If set to \code{JASPAR2022}, the \href{https://bioconductor.org/packages/release/data/annotation/html/JASPAR2022.html}{JASPAR2022} database is used.
+#' If set to \code{JASPAR2024}, the \href{https://bioconductor.org/packages/release/data/annotation/html/JASPAR2024.html}{JASPAR2024} database is used.
 #' @param motifFolder Character. No default. Only relevant if \code{source = "custom"}. Path to the folder that contains the TFBS predictions. The files must be in BED format, 6 columns, one file per TF. See the other parameters for more details. The folder must also contain a so-called translation table, see the argument \code{translationTable} for details.
 #' @param TFs Character vector. Default \code{all}. Only relevant if \code{source = "custom"}. Vector of TF names to include. The special keyword \code{all} can be used to include all TF found in the folder as specified by \code{motifFolder}. If \code{all} is specified anywhere, all TFs will be included. TF names must otherwise match the file names that are found in the folder, without the file suffix.
 #' @param translationTable Character. Default \code{translationTable.csv}. Only relevant if \code{source = "custom"}. Name of the translation table file that is also located in the folder along with the TFBS files. This file must have the following structure: at least 2 columns, called \code{ENSEMBL} and \code{ID}. \code{ID} denotes the ID for the TF that is used throughout the pipeline (e.g., AHR) and the prefix of how the corresponding file is called (e.g., \code{AHR.0.B} if the file for AHR is called \code{AHR.0.B_TFBS.bed.gz}), while \code{ENSEMBL} denotes the ENSEMBL ID (dot suffix; e.g., ENSG00000106546, are removed automatically if present). 
@@ -1513,7 +1508,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
     
     GRN = .makeObjectCompatible(GRN)
     
-    checkmate::assertSubset(source, c("custom", "JASPAR"))
+    checkmate::assertSubset(source, c("custom", "JASPAR2022", "JASPAR2024"))
     
     if (source == "custom") {
         
@@ -1526,15 +1521,15 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             checkmate::assertCharacter(fileEnding, len = 1, min.chars = 1)
             checkmate::assertCharacter(translationTable_sep, len = 1, min.chars = 1)
         }
-    } else if (source == "JASPAR") {
+    } else if (source == "JASPAR2022" | source == "JASPAR2024") {
         
         if (!is.null(motifFolder)) {
             message = paste0("When using the JASPAR database, the motifFolder, along with other function parameters, is ignored")
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         }
 
-        packageMessage = paste0("At least one of the packages JASPAR2022, TFBSTools, motifmatchr, rbioapi are not installed, but needed here due to source = \"JASPAR\". Please install and re-run this function.")
-        .checkPackageInstallation(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"), packageMessage)  
+        packageMessage = paste0("At least one of the packages ", source, ", TFBSTools, motifmatchr, rbioapi are not installed, but needed here due to source = \"", source, "\". Please install and re-run this function.")
+        .checkPackageInstallation(c(source, "TFBSTools", "motifmatchr", "rbioapi"), packageMessage)  
         
         checkmate::assert(checkmate::checkNull(JASPAR_useSpecificTaxGroup), 
                           checkmate::checkSubset(JASPAR_useSpecificTaxGroup, c("plants", "vertebrates", "insects", "urochordat", "nematodes", "fungi")))
@@ -1589,9 +1584,9 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
                                filesTFBSPattern, fileEnding, TFs, nTFMax, EnsemblVersion,
                                JASPAR_useSpecificTaxGroup = NULL, JASPAR_removeAmbiguousTFs = TRUE, ...) {
     
-    if (source == "JASPAR") {
+    if (source == "JASPAR2022" | source == "JASPAR2024") {
         
-        futile.logger::flog.info(paste0("Querying JASPAR 2022 database. This may take a while."))
+        futile.logger::flog.info(paste0("Querying ", source, " database. This may take a while."))
         # get TF gene names from JASPAR
         
         if (!is.null(JASPAR_useSpecificTaxGroup)) {
@@ -1601,7 +1596,12 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
             options_JASPAR = list(species = .getGenomeObject(GRN@config$parameters$genomeAssembly, "txID"), ...)
         }
         
-        PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2022::JASPAR2022, opts = options_JASPAR) 
+        if (source == "JASPAR2022") {
+            PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2022::JASPAR2022, opts = options_JASPAR) 
+        } else if (source == "JASPAR2024") {
+            PFMatrixList <- TFBSTools::getMatrixSet(JASPAR2024::JASPAR2024, opts = options_JASPAR) 
+        }
+        
         
         
         GRN@config$parameters$internal$PFMatrixList = PFMatrixList
@@ -3173,8 +3173,6 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
 
 
 
-
-
 #' Add peak-gene connections to a \code{\linkS4class{GRN}} object
 #' 
 #' After the execution of this function, QC plots can be plotted with the function \code{\link{plotDiagnosticPlots_peakGene}} unless this has already been done by default due to \code{plotDiagnosticPlots = TRUE}
@@ -3186,6 +3184,18 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
 #' @param  promoterRange Integer >=0. Default 250000. The size of the neighborhood in bp to correlate peaks and genes in vicinity. Only peak-gene pairs will be correlated if they are within the specified range. Increasing this value leads to higher running times and more peak-gene pairs to be associated, while decreasing results in the opposite.
 #' @param TADs Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.
 #' @param TADs_mergeOverlapping \code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping TADs be merged? Only relevant if TADs are provided.
+#' @param knownLinks \code{NULL} or a data frame with exactly two columns. Both columns must be of type character and they must both contain 
+#' genomic coordinates in the usual format: \code{chr:start-end}, while the 2 separators between the three elements can be chosen by the user.
+#' The first column denotes the **bait**, the promoter coordinates that are overlapped with the genes (usually their TSS, unless specified 
+#' otherwise via the parameter \code{overlapTypeGene}, while the second column denotes the **other end (OE)** coordinates, which is overlapped with the
+#' peaks/enhancers from the GRN object. 
+#' **NOTE: The provided column names are ignored and column 1 is interpreted as bait column and column 2 as OE column unless column names are exactly `bait` and `OE`.**.  
+#' For more details, see the Workflow vignette.)
+#' @param knownLinks_separator Character vector of length 1 or 2. Default \code{c(":", "-")}. Separator(s) for the character columns that specify the genomic locations.
+#' The first entry splits the chromosome from the position, while the second entry splits the start and end coordinates. If only one separator is given, the same will be used for both. 
+#' @param knownLinks_useExclusively \code{TRUE} or \code{FALSE}. Default \code{FALSE}. If kept at \code{FALSE} (the default),
+#' specified \code{knownLinks} will be used in addition to the regular peak-gene links that are identified via the default method. 
+#' If set to \code{TRUE}, only the \code{knownLinks} will be used.
 #' @param shuffleRNACounts \code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be shuffled in addition to 
 #' testing random peak-gene pairs for the background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but
 #' for each pair, the counts from peak and RNA that are correlated are matched (i.e., sample 1 counts from peak data are compared to sample 1 counts from RNA).
@@ -3206,6 +3216,7 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
 addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "pearson",
                                      promoterRange = 250000, 
                                      TADs = NULL, TADs_mergeOverlapping = FALSE,
+                                     knownLinks = NULL, knownLinks_separator = c(":", "-"), knownLinks_useExclusively = FALSE,
                                      shuffleRNACounts = TRUE,
                                      nCores = 4, 
                                      plotDiagnosticPlots = TRUE, 
@@ -3225,6 +3236,9 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   checkmate::assertIntegerish(promoterRange, lower = 0)
   checkmate::assert(checkmate::testNull(TADs), checkmate::testDataFrame(TADs))
   checkmate::assertFlag(TADs_mergeOverlapping)
+  checkmate::assertDataFrame(knownLinks, types = c("character", "character"), min.rows = 1, ncols = 2, null.ok = TRUE)
+  checkmate::assertCharacter(knownLinks_separator, min.len = 1, max.len = 2)
+  checkmate::assertFlag(knownLinks_useExclusively)
   checkmate::assertIntegerish(nCores, lower = 1)
   checkmate::assertFlag(plotDiagnosticPlots) 
   checkmate::assertFlag(shuffleRNACounts)
@@ -3250,37 +3264,21 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     
     # Check which gene types are available for the particular genome annotation
-    # Use all of them to collect statistics. Filtering can be done later
-    # Just remove NA
+    # Use all of them to collect statistics. Filtering can be done later. Just remove NA
     gene.types = unique(GRN@annotation$genes$gene.type) %>% stats::na.omit()
-    
-    
-    for (permutationCur in 0:.getMaxPermutation(GRN)) {
-      
-      futile.logger::flog.info(paste0("\n", .getPermStr(permutationCur), "\n"))
-      
-      if (permutationCur == 0) {
-        futile.logger::flog.info(paste0("Calculate peak-gene correlations for neighborhood size ", promoterRange))
-        randomizePeakGeneConnections = FALSE
-      } else {
-        futile.logger::flog.info(paste0("Calculate random peak-gene correlations for neighborhood size ", promoterRange))
-        randomizePeakGeneConnections = TRUE
-      }
-      
-      GRN@connections$peak_genes[[as.character(permutationCur)]] = 
-        .calculatePeakGeneCorrelations(GRN, permutationCur,
+
+    GRN = .calculatePeakGeneCorrelations(GRN,
                                        TADs = TADs,
+                                       knownLinks = knownLinks, knownLinks_separator, knownLinks_useExclusively,
                                        mergeOverlappingTADs = TADs_mergeOverlapping,
                                        neighborhoodSize = promoterRange,
                                        gene.types = as.character(gene.types),
                                        corMethod = corMethod,
-                                       randomizePeakGeneConnections = randomizePeakGeneConnections,
                                        shuffleRNA = shuffleRNACounts,
                                        overlapTypeGene = overlapTypeGene,
-                                       nCores = nCores
-        )
+                                       nCores = nCores)
       
-    }
+    
     
   } else {
       .printDataAlreadyExistsMessage()
@@ -3298,157 +3296,23 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 
 }
 
-.calculatePeakGeneOverlaps <- function(GRN, allPeaks, peak_TAD_mapping = NULL, neighborhoodSize = 250000, genomeAssembly, 
-                                       gene.types, overlapTypeGene = "TSS", removeEnsemblNA = TRUE) {
-  
-  start = Sys.time()
-  futile.logger::flog.info(paste0("Calculate peak gene overlaps..."))
-  
-  # EXTEND PEAKS #
-  
-  
-  # Add Hi-C domain data to query metadata if available
-  if (!is.null(peak_TAD_mapping)) {
-    
-    futile.logger::flog.info(paste0("Integrate Hi-C data to extend peaks"))
-    
-    futile.logger::flog.info(paste0(" For peaks overlapping multiple TADs, use the union of all to define the neighborhood"))
-    peak_TAD_mapping = peak_TAD_mapping %>%
-      dplyr::group_by(.data$peakID) %>%
-      dplyr::mutate(tadStart2 = min(.data$tadStart), # If a peak overlaps multiple TADs, merge them
-                    tadEnd2   = max(.data$tadEnd),  # If a peak overlaps multiple TADs, merge them
-                    tad.ID_all = paste0(.data$tad.ID, collapse = "|")) %>%
-      dplyr::slice(1) %>%
-      dplyr::ungroup()
-    
-    query   = .constructGRanges(peak_TAD_mapping, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
-    
-    # Remove rows with NA for the TAD 
-    peaksNATAD = which(is.na(query$tad.ID))
-    if (length(peaksNATAD) > 0) {
-      futile.logger::flog.info(paste0(" ", length(peaksNATAD), " out of ", length(query), " peaks will not be tested for gene associations because they had no associated TAD"))
-      query = query[!is.na(query$tad.ID)]
-    }
-    
-    # Store original start and end positions before modifying them
-    query$orig_start = start(query)
-    query$orig_end   = end(query)
-    
-    # Extend GRanges by integrating Hi-C data. Use the newly defined TAD coordinates
-    start(query) = suppressMessages(query$tadStart2)
-    end(query)   = suppressMessages(query$tadEnd2)
-    
-    
-  } else {
-    
-    # Without Hi-C data, we simply extend the ranges by a user-defined amount of bp, 250 kb being the default
-    futile.logger::flog.info(paste0("Extend peaks based on user-defined extension size of ", neighborhoodSize, " up- and downstream."))
-    
-    query   = .constructGRanges(allPeaks, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
-    
-    # Store original start and end positions before modifying them
-    query$orig_start = start(query)
-    query$orig_end   = end(query)
-    
-    suppressWarnings({start(query) = start(query) - neighborhoodSize})
-    suppressWarnings({end(query)   = end(query) + neighborhoodSize})
-    
-    # Correct negative 
-  }
-  
-  # correct ranges if within the promoterRange from the chr. starts and ends
-  query = GenomicRanges::trim(query)
 
-  subject = GRN@annotation$genes %>%
-      dplyr::select(-"gene.mean", -"gene.median", -"gene.CV") %>%
-      dplyr::filter(!is.na(.data$gene.start), !is.na(.data$gene.end))
-  
-  if (!is.null(gene.types)) {
-      if (!"all" %in% gene.types) {
-          subject = dplyr::filter(subject, .data$gene.type %in% gene.types)
-      }
-  }
-      
-  
-  requiredColnames = c("gene.ENSEMBL","gene.type", "gene.name")
-  checkmate::assertSubset(requiredColnames, colnames(subject), empty.ok = FALSE)
-  
-  subject.gr = GenomicRanges::makeGRangesFromDataFrame(subject, keep.extra.columns = TRUE)
-
-  if (overlapTypeGene == "TSS") {
-    # Take only the 5' end of the gene (start site and NOT the full gene length)
-    end(subject.gr) = start(subject.gr)
-  } 
-  
-  overlapsAll = suppressWarnings(GenomicRanges::findOverlaps(query, subject.gr, 
-                                            minoverlap = 1,
-                                            type = "any",
-                                            select = "all",
-                                            ignore.strand = TRUE))
-  
-  query_row_ids  = S4Vectors::queryHits(overlapsAll)
-  subject_rowids = S4Vectors::subjectHits(overlapsAll)
-  
-  
-  
-  #subject_overlap_df = as.data.frame(S4Vectors::elementMetadata(subject)[subject_rowids, c("ENSEMBL","ENTREZID", "SYMBOL")])
-  subject_overlap_df = as.data.frame(S4Vectors::elementMetadata(subject.gr)[subject_rowids, requiredColnames])
-  subject_overlap_df$gene.chr = as.character(GenomeInfoDb::seqnames(subject.gr))[subject_rowids]
-  subject_overlap_df$gene.start = start(subject.gr)[subject_rowids]
-  subject_overlap_df$gene.end   = end(subject.gr)  [subject_rowids]
-  
-  # Some entries in here will have only NAs
-  
-  query_overlap_df = as.data.frame(S4Vectors::elementMetadata(query)  [query_row_ids, "peakID"])
-  
-  query_overlap_df$ext_peak_chr    = as.character(GenomeInfoDb::seqnames(query))[query_row_ids]
-  query_overlap_df$ext_peak_start  = start(query)[query_row_ids]
-  query_overlap_df$ext_peak_end    = end(query)  [query_row_ids]
-  query_overlap_df$orig_peak_start = query$orig_start[query_row_ids]
-  query_overlap_df$orig_peak_end   = query$orig_end  [query_row_ids]    
-  
-  overlaps.df = cbind.data.frame(query_overlap_df, subject_overlap_df)
-  colnames(overlaps.df)[1] = c("peak.ID")
-  
-  # Always compute distance to 5' of the gene:gene.start
-  
-  overlaps.sub.df = overlaps.df %>%
-    dplyr::distinct() %>%
-    dplyr::mutate(peak_gene.distance = dplyr::case_when(gene.start >= orig_peak_start & gene.start <= orig_peak_end ~ 0L,
-                                                        TRUE ~ pmin(abs(orig_peak_start - gene.start), abs(orig_peak_end - gene.start))))
-  
-  if (removeEnsemblNA) {
-    overlaps.sub.df = dplyr::filter(overlaps.sub.df, !is.na(.data$gene.ENSEMBL))
-  }
-  
-  .printExecutionTime(start)
-  
-  overlaps.sub.df
-  
-}
-
-
-
-.calculatePeakGeneCorrelations <- function(GRN, perm,
+.calculatePeakGeneCorrelations <- function(GRN,
                                            TADs = NULL, 
                                            mergeOverlappingTADs = FALSE, 
+                                           knownLinks, knownLinks_separator, knownLinks_useExclusively,
                                            neighborhoodSize = 250000,
                                            gene.types = c("protein_coding"),
                                            overlapTypeGene = "TSS",
                                            corMethod = "pearson",
-                                           randomizePeakGeneConnections = FALSE, 
                                            shuffleRNA = FALSE,
                                            nCores = 1,
                                            chunksize = 50000) {
   
   start.all = Sys.time()
-  
-  genomeAssembly = GRN@config$parameters$genomeAssembly
-  
+  futile.logger::flog.info(paste0("\nPreparing data\n"))
 
-  if (is.null(nCores)) {
-    nCores = 1
-  }
+  genomeAssembly = GRN@config$parameters$genomeAssembly
   
   consensusPeaks = GRN@data$peaks$counts_metadata %>% dplyr::filter(!.data$isFiltered)
   # Preprocess TAD boundaries
@@ -3523,7 +3387,6 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     peak.TADs.df = suppressWarnings(dplyr::left_join(consensusPeaks, overlaps.df, by = "peakID") )
     
-    
     nPeaks = nrow(consensusPeaks)
     nPeaksWithOutTAD = length(which(is.na(peak.TADs.df$tad.ID)))
     futile.logger::flog.info(paste0(" Out of the ", nPeaks, " peaks, ", nPeaksWithOutTAD, " peaks are not within a TAD domain. These will be ignored for subsequent overlaps"))   
@@ -3541,114 +3404,419 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     
     peak.TADs.df = NULL
   }
-  # if a peak overlaps with a gene, should the same gene be reported as the connection?
   
-  # OVERLAP OF PEAKS AND EXTENDED GENES
-  overlaps.sub.df = .calculatePeakGeneOverlaps(GRN, allPeaks = consensusPeaks, peak.TADs.df, 
-                                               neighborhoodSize = neighborhoodSize, 
-                                               genomeAssembly = genomeAssembly, 
-                                               gene.types = gene.types, overlapTypeGene = overlapTypeGene) 
+  if (!is.null(knownLinks)) {
+      
+      futile.logger::flog.info(paste0(" Known links have been provided by the user. They will be used ", 
+                                      dplyr::if_else(knownLinks_useExclusively, "as a replacement for the neigborhood-based approach", "in addition to previously defined links.")))
+      
+      futile.logger::flog.info(paste0(" Parsing known links and identifying peak-gene pairs from the data to add. If you receive an error in the following, make sure you used the right column separators.."))
+      
+      if (!all(colnames(knownLinks) %in% c("bait", "OE"))) {
+          colnames(knownLinks) = c("bait", "OE")
+      }
+      
+      
+      regEx = stringr::regex(paste0(knownLinks_separator, collapse = "|"))
+      
+      # bait and OE (other end)
+      knownLinks.all = knownLinks %>% tidyr::separate_wider_delim("bait", regEx, names = c("bait.chr", "bait.start", "bait.end")) %>% 
+          tidyr::separate_wider_delim("OE", regEx, names = c("OE.chr", "OE.start", "OE.end")) %>%
+          dplyr::mutate(bait.start = as.numeric(.data$bait.start), bait.end = as.numeric(.data$bait.end),
+                        OE.start = as.numeric(.data$OE.start), OE.end = as.numeric(.data$OE.end),
+                        bait.ID = paste0(.data$bait.chr, ":", .data$bait.start, "-", .data$bait.end),
+                        OE.ID   = paste0(.data$OE.chr, ":", .data$OE.start, "-", .data$OE.end),
+                        bait_OE.ID = paste0(.data$bait.ID, "_", .data$OE.ID))
+      
+      futile.logger::flog.info(paste0(" Found ", nrow(knownLinks.all), " bait-OE links that were user-provided."))
+      n_knownLinks = length(unique(knownLinks.all$bait_OE.ID))
+     
+      
+      bait.df = knownLinks.all %>% dplyr::select(dplyr::contains("bait")) %>%
+          dplyr::rename(chr = "bait.chr", start = "bait.start", end = "bait.end") %>%
+          dplyr::distinct()
+      
+      
+      OE.df = knownLinks.all %>% dplyr::select(dplyr::contains("OE")) %>%
+          dplyr::rename(chr = "OE.chr", start = "OE.start", end = "OE.end") %>%
+          dplyr::mutate(ext_peak.chr = .data$chr, ext_peak.start = .data$start, ext_peak.end = .data$end) %>%
+          dplyr::distinct()
+      
+      # Genomic ranges out of it
+      bait.gr = .constructGRanges(bait.df, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
+      OE.gr   = .constructGRanges(OE.df, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
+      
+      # Overlap with peaks and genes
+      # Bait = promoter(s), other end = enhancer(s).
+      futile.logger::flog.info(paste0(" Overlapping manually provided links with peaks and genes as defined in the object"))
+      
+      consensusPeaks.gr  = .constructGRanges(consensusPeaks, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
+      
+      
+      overlapsAll = GenomicRanges::findOverlaps(OE.gr, consensusPeaks.gr, minoverlap = 1, type = "any", select = "all", ignore.strand = TRUE)
+      
+      query_row_ids   = S4Vectors::queryHits(overlapsAll)
+      subject_row_ids = S4Vectors::subjectHits(overlapsAll)
+      
+      query_overlap_df     = as.data.frame(S4Vectors::elementMetadata(OE.gr)[query_row_ids,])
+      subject_overlap_df   = as.data.frame(consensusPeaks.gr)[subject_row_ids, c("seqnames", "start", "end", "peakID")]
+      
+      overlaps.OE.df = cbind.data.frame(query_overlap_df,subject_overlap_df) %>% dplyr::mutate(seqnames = as.character(.data$seqnames)) %>% tibble::as_tibble()
+      colnames(overlaps.OE.df) = c("OE.ID", "bait_OE.ID", "ext_peak.chr", "ext_peak.start", "ext_peak.end", "orig_peak.chr", "orig_peak.start", "orig_peak.end", "peak.ID")
+      
+      
+      genes.gr = .makeGenomicRangeGenes(GRN@annotation$genes, gene.types, overlapTypeGene)
+      
+      overlapsAll = suppressWarnings(GenomicRanges::findOverlaps(bait.gr, genes.gr, minoverlap = 1, type = "any", select = "all", ignore.strand = TRUE))
+      
+      query_row_ids   = S4Vectors::queryHits(overlapsAll)
+      subject_row_ids = S4Vectors::subjectHits(overlapsAll)
+      
+      query_overlap_df     = as.data.frame(S4Vectors::elementMetadata(bait.gr)[query_row_ids,])
+      subject_overlap_df   = as.data.frame(genes.gr)[subject_row_ids, c("seqnames", "start", "end", "gene.ENSEMBL", "gene.type", "gene.name")]
+      
+      overlaps.bait.df = cbind.data.frame(query_overlap_df,subject_overlap_df) %>% dplyr::mutate(seqnames = as.character(.data$seqnames)) %>% tibble::as_tibble()
+      colnames(overlaps.bait.df)[1:5] = c("bait.ID", "bait_OE.ID", "gene.chr", "gene.start", "gene.end")
+      
+      # Merge by bait_OE_ID
+      knownLinks.df = suppressWarnings(dplyr::full_join(overlaps.bait.df, overlaps.OE.df, by = "bait_OE.ID", multiple = "all"))
+      
+      futile.logger::flog.info(paste0("  From the ", n_knownLinks, " originally defined distinct bait-OE pairs, found ", length(unique(knownLinks.df$bait_OE.ID)), " distinct bait-OE pairs that overlap with either peaks or genes."))
+      
+      
+      futile.logger::flog.info(paste0("  Found ", nrow(knownLinks.df), " distinct peak-gene links based on the provided bait-OE information that overlap with either peaks or genes."))
+      
+      knownLinks.filt.df = knownLinks.df %>% dplyr::filter(!is.na(bait.ID), !is.na(OE.ID))
+      
+      futile.logger::flog.info(paste0("  Found ", nrow(knownLinks.filt.df), " distinct peak-gene links based on the provided bait-OE information that overlap with both peaks and genes. Filtered ", 
+                                      nrow(knownLinks.df) - nrow(knownLinks.filt.df), " pairs because either the bait did not overlap any genes or because the OE coordinates did not overlap any peaks as defined in the object."))
+      
+      
+      stats_all = table(knownLinks.filt.df$bait_OE.ID)
+      futile.logger::flog.info(paste0("   Statistics for the number of distinct peak-gene pairs that were added per bait-OE link:"))
+      futile.logger::flog.info(paste0("   Min: ", min(stats_all), ", median: ", median(stats_all), ", max: ", max(stats_all), ". Exact distribution:"))
+      stats_all2 = table(stats_all)
+      for (i in 1:length(stats_all2)) {
+          futile.logger::flog.info(paste0("    ", names(stats_all2)[i], ": ", stats_all2[i], " bait-OE pairs"))
+          
+      }
+
+      
+  } else {
+      
+      knownLinks.filt.df = NULL
+  }
   
   # Renaming necessary because currently, consensusPeaks contains peakID and 
   if (!is.null(TADs)) {
       peak.TADs.df = dplyr::rename(peak.TADs.df, peak.ID = "peakID")
   }
   
-  overlaps.sub.filt.df = overlaps.sub.df %>%
-    dplyr::mutate(gene.ENSEMBL = gsub("\\..+", "", .data$gene.ENSEMBL, perl = TRUE)) # Clean ENSEMBL IDs
-  
-  # Only now we shuffle to make sure the background of possible connections is the same as in the foreground, as opposed to completely random
-  # which would also include peak-gene connections that are not in the foreground at all
-  if (randomizePeakGeneConnections) {
-    futile.logger::flog.info(paste0(" Randomize gene-peak links by shuffling the peak IDs."))
-    overlaps.sub.filt.df$peak.ID = sample(overlaps.sub.filt.df$peak.ID, replace = FALSE)
-    overlaps.sub.filt.df$peak_gene.distance = NA
-    
+  # OVERLAP OF PEAKS AND EXTENDED GENES
+  if (!is.null(knownLinks) & nrow(knownLinks.filt.df) > 0 & knownLinks_useExclusively) {
+      
+      overlaps.sub.filt.df = tibble::tribble(~peak.ID, ~ext_peak.chr , ~ext_peak.start, ~ext_peak.end , ~orig_peak.start , ~orig_peak.end, 
+                            ~gene.ENSEMBL, ~gene.type, ~gene.name, ~gene.chr, ~gene.start, ~gene.end, ~peak_gene.distance, ~source)
+      
+  } else {
+
+      overlaps.sub.df = .calculatePeakGeneOverlaps(GRN, allPeaks = consensusPeaks, peak.TADs.df, 
+                                                   neighborhoodSize = neighborhoodSize, 
+                                                   genomeAssembly = genomeAssembly, 
+                                                   gene.types = gene.types, overlapTypeGene = overlapTypeGene) 
+      
+      overlaps.sub.filt.df = overlaps.sub.df %>%
+          dplyr::mutate(gene.ENSEMBL = gsub("\\..+", "", .data$gene.ENSEMBL, perl = TRUE), # Clean ENSEMBL IDs
+                        source = as.factor(dplyr::if_else(is.null(TADs), "neighborhood", "TADs"))) %>%
+          tibble::as_tibble() 
   }
   
+
+  # Add manually defined links
+  if (!is.null(knownLinks)) {
+
+      # orig: coordinates from original peak from object 
+      # ext_: new peak coordinates (OE)
+      overlaps.sub.filt.df$bait_OE.ID = NA
+      
+      # Calculate all other attributes and source column
+      knownLinks.filt.df = knownLinks.filt.df %>%
+          dplyr::mutate(source = "knownLinks") %>% # Now correct the wrong gene end and put the original gene end
+          dplyr::select(-"gene.end") %>%
+          dplyr::left_join(GRN@annotation$genes %>% dplyr::select("gene.ENSEMBL", "gene.end"), by = "gene.ENSEMBL") %>%
+          dplyr::mutate(peak_gene.distance = dplyr::case_when(  orig_peak.chr != gene.chr ~ NA,
+                                                                gene.start >= orig_peak.start & gene.start <= orig_peak.end ~ 0L,
+                                                                TRUE ~ pmin(abs(orig_peak.start - gene.start), abs(orig_peak.end - gene.start)))) %>%
+          dplyr::select(colnames(overlaps.sub.filt.df), "bait_OE.ID") %>% # Enforce same order and column names + new ID for bait-OE
+          dplyr::group_by(.data$peak.ID, .data$gene.ENSEMBL) %>%
+          dplyr::filter(dplyr::row_number() == 1) %>% # Use only the first example of each unique combination
+          dplyr::ungroup()
+ 
+      overlaps.sub.filt.df = rbind(overlaps.sub.filt.df, knownLinks.filt.df)
+      
+      # Eliminate duplicates again
+      nRowsBefore = nrow(overlaps.sub.filt.df)
+      overlaps.sub.filt.df = overlaps.sub.filt.df %>%
+          dplyr::group_by(.data$peak.ID, .data$gene.ENSEMBL) %>%
+          dplyr::filter(dplyr::row_number() == 1) %>% # Use only the first example of each unique combination
+          dplyr::ungroup()
+      
+      nRowsAfter = nrow(overlaps.sub.filt.df)
+      if (nRowsAfter != nRowsBefore) {
+          futile.logger::flog.info(paste0("Eliminated ", nRowsBefore - nRowsAfter, " duplicate peak - gene entries due to the addition of the known links..."))
+
+      }
+  }
+
   
   # Set to empty df to simplify the code below
   if (is.null(peak.TADs.df)) {
     peak.TADs.df = tibble::tibble(peak.ID = "", tad.ID = "")
   }
   
-  # ITERATE THROUGH ALL PEAK_GENE PAIRS
-  if (shuffleRNA) {
-      shuffleRNA = as.logical(perm) # only for perm = 1 this will actually be true
-  } else {
-      shuffleRNA = FALSE
+  futile.logger::flog.info(paste0("Source distribution of peak-gene links:"))
+  stats_src = table(overlaps.sub.filt.df$source)
+  for (i in 1:length(stats_src)) {
+      futile.logger::flog.info(paste0(" ", names(stats_src)[i], ": ", stats_src[i]))
+      
   }
+
+  futile.logger::flog.info(paste0("\nFinished preparing data\n"))
+  
+
+  for (permCur in as.logical(0:.getMaxPermutation(GRN))) {
+      
+      futile.logger::flog.info(paste0("\nCalculate peak-gene correlations for ", .getPermStr(permCur), "\n"))
+      
+      # Only now we shuffle to make sure the background of possible connections is the same as in the foreground, as opposed to completely random
+      # which would also include peak-gene connections that are not in the foreground at all
+      if (permCur) {
+          futile.logger::flog.info(paste0(" Randomize gene-peak links by shuffling the peak IDs."))
+          overlaps.sub.filt.df$peak.ID = sample(overlaps.sub.filt.df$peak.ID, replace = FALSE)
+          overlaps.sub.filt.df$peak_gene.distance = NA
+          
+      }
+      
+      # Should RNA data be shuffled?
+      shuffleRNA = dplyr::if_else(shuffleRNA, permCur, FALSE)
+
+      countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted = FALSE, includeIDColumn = FALSE)
+      countsRNA.clean   = getCounts(GRN, type = "rna", permuted = shuffleRNA, includeIDColumn = FALSE)
+      
+      # Cleverly construct the count matrices so we do the correlations in one go
+      map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted = FALSE)$peakID)
+      map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = shuffleRNA)$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
+      
+      # There should not be any NA because it is about the peaks
+      stopifnot(all(!is.na(map_peaks)))
+      # Some NAs might be expected, given our annotation contains all known genes
+      stopifnot(!all(is.na(map_rna)))
+      
+      #res.m = matrix(NA, ncol = 2, nrow = nrow(overlaps.sub.filt.df), dimnames = list(NULL, c("p.raw", "peak_gene.r")))
+      
+      futile.logger::flog.info(paste0(" Iterate through ", nrow(overlaps.sub.filt.df), " peak-gene combinations and calculate correlations using ", nCores, " cores. This may take a few minutes."))
+      
+      # parallel version of computing peak-gene correlations
+      maxRow = nrow(overlaps.sub.filt.df)
+      startIndexMax = ceiling(maxRow / chunksize) - 1 # -1 because we count from 0 onwards
+      
+      
+      res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, 
+                                 functionName = .correlateDataWrapper, 
+                                 chunksize = chunksize, maxRow = maxRow, 
+                                 counts1 = countsPeaks.clean, counts2 = countsRNA.clean, map1 = map_peaks, map2 = map_rna, 
+                                 corMethod = corMethod)
+      
+      res.m  = do.call(rbind, res.l)
+      
+      futile.logger::flog.info(paste0(" Finished with calculating correlations, creating final data frame and filter NA rows due to missing RNA-seq data"))
+      
+      # Neighborhood size not relevant for TADs
+      if (!is.null(TADs)) {
+          neighborhoodSize = -1
+      }
+      
+      selectColumns = c("peak.ID", "gene.ENSEMBL", "source", "peak_gene.distance", "tad.ID", "bait_OE.ID", "r", "p.raw")
+      
+      # Make data frame and adjust p-values
+      res.df = suppressMessages(tibble::as_tibble(res.m) %>%
+                                    dplyr::mutate(peak.ID = getCounts(GRN, type = "peaks", permuted = FALSE)$peakID[map_peaks],
+                                                  gene.ENSEMBL = getCounts(GRN, type = "rna", permuted = permCur)$ENSEMBL[map_rna]) %>%
+                                    dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>%  # For some peak-gene combinations, no RNA-Seq data was available, these NAs are filtered
+                                    # Add gene annotation and distance
+                                    dplyr::left_join(overlaps.sub.filt.df, by = c("gene.ENSEMBL", "peak.ID"), multiple = "all") %>%
+                                    # Integrate TAD IDs also
+                                    dplyr::left_join(dplyr::select(peak.TADs.df, "peak.ID", "tad.ID"), by = c("peak.ID")) %>%
+                                    
+                                    dplyr::select(tidyselect::all_of(selectColumns))) %>%
+          dplyr::mutate(peak.ID = as.factor(.data$peak.ID),
+                        gene.ENSEMBL = as.factor(.data$gene.ENSEMBL), 
+                        tad.ID = as.factor(.data$tad.ID)) %>%
+          dplyr::rename(peak_gene.r = "r", 
+                        peak_gene.p_raw = "p.raw",
+                        peak_gene.tad_ID = "tad.ID",
+                        peak_gene.source = "source",
+                        peak_gene.bait_OE_ID = "bait_OE.ID")
+
+      if (is.null(TADs)) {
+          res.df = dplyr::select(res.df, -"peak_gene.tad_ID")
+      }
+      if (is.null(knownLinks)) {
+          res.df = dplyr::select(res.df, -"peak_gene.bait_OE_ID")
+      }
+      
+      futile.logger::flog.info(paste0(" Finished. Final number of rows after filtering: ", nrow(res.df)))
+      
+      
+      .printExecutionTime(start.all)
+
+      GRN@connections$peak_genes[[as.character(as.integer(permCur))]] = res.df
+  }
+  
+  GRN
+  
  
-  
-  countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted = FALSE, includeIDColumn = FALSE)
-  countsRNA.clean   = getCounts(GRN, type = "rna", permuted = shuffleRNA, includeIDColumn = FALSE)
-  
-  # Cleverly construct the count matrices so we do the correlations in one go
-  map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted = FALSE)$peakID)
-  map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = shuffleRNA)$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
-  
-  # There should not b any NA because it is about the peaks
-  stopifnot(all(!is.na(map_peaks)))
-  # Some NAs might be expected, given our annotation contains all known genes
-  stopifnot(!all(is.na(map_rna)))
-  
-  #res.m = matrix(NA, ncol = 2, nrow = nrow(overlaps.sub.filt.df), dimnames = list(NULL, c("p.raw", "peak_gene.r")))
-  
-  futile.logger::flog.info(paste0(" Iterate through ", nrow(overlaps.sub.filt.df), " peak-gene combinations and calculate correlations using ", nCores, " cores. This may take a few minutes."))
-  
-  # parallel version of computing peak-gene correlations
-  maxRow = nrow(overlaps.sub.filt.df)
-  startIndexMax = ceiling(maxRow / chunksize) - 1 # -1 because we count from 0 onwards
-  
-
-  
-  
-  res.l = .execInParallelGen(nCores, returnAsList = TRUE, listNames = NULL, iteration = 0:startIndexMax, verbose = FALSE, 
-                             functionName = .correlateDataWrapper, 
-                             chunksize = chunksize, maxRow = maxRow, 
-                             counts1 = countsPeaks.clean, counts2 = countsRNA.clean, map1 = map_peaks, map2 = map_rna, 
-                             corMethod = corMethod)
-  
-  res.m  = do.call(rbind, res.l)
-  
-  futile.logger::flog.info(paste0(" Finished with calculating correlations, creating final data frame and filter NA rows due to missing RNA-seq data"))
-  futile.logger::flog.info(paste0(" Initial number of rows: ", nrow(res.m)))
-  # Neighborhood size not relevant for TADs
-  if (!is.null(TADs)) {
-    neighborhoodSize = -1
-  }
-  
-  selectColumns = c("peak.ID", "gene.ENSEMBL", "peak_gene.distance", "tad.ID", "r", "p.raw")
-  
-
-  # Make data frame and adjust p-values
-  res.df = suppressMessages(tibble::as_tibble(res.m) %>%
-                              dplyr::mutate(peak.ID = getCounts(GRN, type = "peaks", permuted = FALSE)$peakID[map_peaks],
-                                            gene.ENSEMBL = getCounts(GRN, type = "rna", permuted = as.logical(perm))$ENSEMBL[map_rna]) %>%
-                              dplyr::filter(!is.na(.data$gene.ENSEMBL)) %>%  # For some peak-gene combinations, no RNA-Seq data was available, these NAs are filtered
-                              # Add gene annotation and distance
-                              dplyr::left_join(overlaps.sub.filt.df, by = c("gene.ENSEMBL", "peak.ID"), multiple = "all") %>%
-                              # Integrate TAD IDs also
-                              dplyr::left_join(dplyr::select(peak.TADs.df, "peak.ID", "tad.ID"), by = c("peak.ID")) %>%
-                              
-                              dplyr::select(tidyselect::all_of(selectColumns))) %>%
-    dplyr::mutate(peak.ID = as.factor(.data$peak.ID),
-                  gene.ENSEMBL = as.factor(.data$gene.ENSEMBL), 
-                  tad.ID = as.factor(.data$tad.ID)) %>%
-    dplyr::rename(peak_gene.r = "r", 
-                  peak_gene.p_raw = "p.raw")
-  
-  
-  if (is.null(TADs)) {
-    res.df = dplyr::select(res.df, -"tad.ID")
-  }
-  
-  futile.logger::flog.info(paste0(" Finished. Final number of rows: ", nrow(res.df)))
-  
-  
-  .printExecutionTime(start.all)
-  res.df
 }
+
+
+.makeGenomicRangeGenes <- function(genes, gene.types, overlapTypeGene = "TSS", requiredColnames = c("gene.ENSEMBL","gene.type", "gene.name")) {
+    
+    subject = genes %>%
+        dplyr::select(-"gene.mean", -"gene.median", -"gene.CV") %>%
+        dplyr::filter(!is.na(.data$gene.start), !is.na(.data$gene.end))
+    
+    if (!is.null(gene.types)) {
+        if (!"all" %in% gene.types) {
+            subject = dplyr::filter(subject, .data$gene.type %in% gene.types)
+        }
+    }
+    
+    checkmate::assertSubset(requiredColnames, colnames(subject), empty.ok = FALSE)
+    
+    subject.gr = GenomicRanges::makeGRangesFromDataFrame(subject, keep.extra.columns = TRUE)
+    
+    if (overlapTypeGene == "TSS") {
+        # Take only the 5' end of the gene (start site and NOT the full gene length)
+        end(subject.gr) = start(subject.gr)
+    } 
+    
+    subject.gr
+}
+
+.calculatePeakGeneOverlaps <- function(GRN, allPeaks, peak_TAD_mapping = NULL, neighborhoodSize = 250000, genomeAssembly, 
+                                       gene.types, overlapTypeGene = "TSS", removeEnsemblNA = TRUE) {
+    
+    start = Sys.time()
+    futile.logger::flog.info(paste0("Calculate peak gene overlaps based on either a fixed neighborhood size or defined TADs..."))
+    
+    # EXTEND PEAKS #
+    
+    
+    # Add Hi-C domain data to query metadata if available
+    if (!is.null(peak_TAD_mapping)) {
+        
+        futile.logger::flog.info(paste0("Integrate Hi-C data to extend peaks"))
+        
+        futile.logger::flog.info(paste0(" For peaks overlapping multiple TADs, use the union of all to define the neighborhood"))
+        peak_TAD_mapping = peak_TAD_mapping %>%
+            dplyr::group_by(.data$peakID) %>%
+            dplyr::mutate(tadStart2 = min(.data$tadStart), # If a peak overlaps multiple TADs, merge them
+                          tadEnd2   = max(.data$tadEnd),  # If a peak overlaps multiple TADs, merge them
+                          tad.ID_all = paste0(.data$tad.ID, collapse = "|")) %>%
+            dplyr::slice(1) %>%
+            dplyr::ungroup()
+        
+        query   = .constructGRanges(peak_TAD_mapping, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
+        
+        # Remove rows with NA for the TAD 
+        peaksNATAD = which(is.na(query$tad.ID))
+        if (length(peaksNATAD) > 0) {
+            futile.logger::flog.info(paste0(" ", length(peaksNATAD), " out of ", length(query), " peaks will not be tested for gene associations because they had no associated TAD"))
+            query = query[!is.na(query$tad.ID)]
+        }
+        
+        # Store original start and end positions before modifying them
+        query$orig_start = start(query)
+        query$orig_end   = end(query)
+        
+        # Extend GRanges by integrating Hi-C data. Use the newly defined TAD coordinates
+        start(query) = suppressMessages(query$tadStart2)
+        end(query)   = suppressMessages(query$tadEnd2)
+        
+        
+    } else {
+        
+        # Without Hi-C data, we simply extend the ranges by a user-defined amount of bp, 250 kb being the default
+        futile.logger::flog.info(paste0("Extend peaks based on user-defined extension size of ", neighborhoodSize, " up- and downstream."))
+        
+        query   = .constructGRanges(allPeaks, seqlengths = .getChrLengths(genomeAssembly), genomeAssembly)
+        
+        # Store original start and end positions before modifying them
+        query$orig_start = start(query)
+        query$orig_end   = end(query)
+        
+        suppressWarnings({start(query) = start(query) - neighborhoodSize})
+        suppressWarnings({end(query)   = end(query) + neighborhoodSize})
+        
+        # Correct negative 
+    }
+    
+    # correct ranges if within the promoterRange from the chr. starts and ends
+    query = GenomicRanges::trim(query)
+    
+    subject.gr = .makeGenomicRangeGenes(GRN@annotation$genes, gene.types, overlapTypeGene)
+    
+   
+    
+    
+    overlapsAll = suppressWarnings(GenomicRanges::findOverlaps(query, subject.gr, 
+                                                               minoverlap = 1,
+                                                               type = "any",
+                                                               select = "all",
+                                                               ignore.strand = TRUE))
+    
+    query_row_ids  = S4Vectors::queryHits(overlapsAll)
+    subject_rowids = S4Vectors::subjectHits(overlapsAll)
+    
+    requiredColnames = c("gene.ENSEMBL","gene.type", "gene.name")
+    
+    #subject_overlap_df = as.data.frame(S4Vectors::elementMetadata(subject)[subject_rowids, c("ENSEMBL","ENTREZID", "SYMBOL")])
+    subject_overlap_df = as.data.frame(S4Vectors::elementMetadata(subject.gr)[subject_rowids, requiredColnames])
+    subject_overlap_df$gene.chr = as.character(GenomeInfoDb::seqnames(subject.gr))[subject_rowids]
+    subject_overlap_df$gene.start = start(subject.gr)[subject_rowids]
+    subject_overlap_df$gene.end   = end(subject.gr)  [subject_rowids]
+    
+    # Some entries in here will have only NAs
+    
+    query_overlap_df = as.data.frame(S4Vectors::elementMetadata(query)  [query_row_ids, "peakID"])
+    
+    query_overlap_df$ext_peak.chr    = as.character(GenomeInfoDb::seqnames(query))[query_row_ids]
+    query_overlap_df$ext_peak.start  = start(query)[query_row_ids]
+    query_overlap_df$ext_peak.end    = end(query)  [query_row_ids]
+    query_overlap_df$orig_peak.start = query$orig_start[query_row_ids]
+    query_overlap_df$orig_peak.end   = query$orig_end  [query_row_ids]    
+    
+    overlaps.df = cbind.data.frame(query_overlap_df, subject_overlap_df)
+    colnames(overlaps.df)[1] = c("peak.ID")
+    
+    # Always compute distance to 5' of the gene:gene.start
+    
+    overlaps.sub.df = overlaps.df %>%
+        dplyr::distinct() %>%
+        dplyr::mutate(peak_gene.distance = dplyr::case_when(gene.start >= orig_peak.start & gene.start <= orig_peak.end ~ 0L,
+                                                            TRUE ~ pmin(abs(orig_peak.start - gene.start), abs(orig_peak.end - gene.start))))
+    
+    if (removeEnsemblNA) {
+        overlaps.sub.df = dplyr::filter(overlaps.sub.df, !is.na(.data$gene.ENSEMBL))
+    }
+    
+    .printExecutionTime(start)
+    
+    overlaps.sub.df
+    
+}
+
+
 
 #' @import ggplot2
 .correlateDataWrapper <- function(startIndex, chunksize, maxRow, counts1, counts2, map1, map2, corMethod) {
@@ -5381,9 +5549,15 @@ getCounts <- function(GRN, type,  permuted = FALSE, asMatrix = FALSE, includeIDC
 #'  }      
 #'  \item peak-gene-related: Starting with \code{peak_gene.}:
 #'  \itemize{
-#'  \item \code{peak_gene.distance}: Peak-gene distance (usually taken the TSS of the gene as reference unless specified otherwise, see the parameter \code{overlapTypeGene} for more information from \code{\link{addConnections_peak_gene}})
+#'  \item \code{peak_gene.source}: Source/Origin of the identified connection. Either \code{neighborhood}, \code{TADs} or \code{knownLinks}, 
+#'  depending on the parameters used when running the function \code{\link{addConnections_peak_gene}}
+#'  \item \code{peak_gene.bait_OE_ID}: Only present when known links have been provided (see \code{\link{addConnections_peak_gene}}). This column denotes the original IDs of the bait and OE coordinates that identified this link.
+#'  \item \code{peak_gene.tad_ID}: Only present when TADs have been provided (see \code{\link{addConnections_peak_gene}}). This column denotes the original ID of the TAD ID that identified this link.
+#'  \item \code{peak_gene.distance}: Peak-gene distance (usually taken the TSS of the gene as reference unless specified otherwise, see the parameter \code{overlapTypeGene} for more information from \code{\link{addConnections_peak_gene}}).
+#'  If the peak-gene connection is across chromosomes (as defined by the known links, see \code{\link{addConnections_peak_gene}}), the distance is set to NA.
 #'  \item \code{peak_gene.r}: Correlation coefficient of the peak-gene pair
 #'  \item \code{peak_gene.p_raw} and \code{peak_gene.p_adj}: Raw and adjusted p-value of the peak-gene pair
+
 #'  }
 #'  \item TF-gene-related: Starting with \code{TF_gene.}:
 #'  \itemize{

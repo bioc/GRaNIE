@@ -1,3 +1,13 @@
+
+# GRaNIE 1.7.3-1.7.4 (2024-04-03)
+
+## New features 
+- We offer an exciting new feature: Integrating Capture Hi-C or more generally known promoter-enhancer interactions directly into the GRaNIE framework to complement / guide the peak-gene search. For more information, [see the Package vignette](https://grp-zaugg.embl-community.io/GRaNIE/articles/GRaNIE_packageDetails.html#input_HiC_capture) and the R help for `addConnections_peak_gene()`.
+- Added support for the new `JASPAR2024` package and TF motives.
+
+## Bug fixes
+- small bug fixes
+
 # GRaNIE 1.7.2 (2023-12-08)
 
 ## Improvements

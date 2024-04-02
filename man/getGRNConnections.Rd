@@ -66,7 +66,12 @@ data frame that is returned has different columns, which however can be divided 
  }      
  \item peak-gene-related: Starting with \code{peak_gene.}:
  \itemize{
- \item \code{peak_gene.distance}: Peak-gene distance (usually taken the TSS of the gene as reference unless specified otherwise, see the parameter \code{overlapTypeGene} for more information from \code{\link{addConnections_peak_gene}})
+ \item \code{peak_gene.source}: Source/Origin of the identified connection. Either \code{neighborhood}, \code{TADs} or \code{knownLinks}, 
+ depending on the parameters used when running the function \code{\link{addConnections_peak_gene}}
+ \item \code{peak_gene.bait_OE_ID}: Only present when known links have been provided (see \code{\link{addConnections_peak_gene}}). This column denotes the original IDs of the bait and OE coordinates that identified this link.
+ \item \code{peak_gene.tad_ID}: Only present when TADs have been provided (see \code{\link{addConnections_peak_gene}}). This column denotes the original ID of the TAD ID that identified this link.
+ \item \code{peak_gene.distance}: Peak-gene distance (usually taken the TSS of the gene as reference unless specified otherwise, see the parameter \code{overlapTypeGene} for more information from \code{\link{addConnections_peak_gene}}).
+ If the peak-gene connection is across chromosomes (as defined by the known links, see \code{\link{addConnections_peak_gene}}), the distance is set to NA.
  \item \code{peak_gene.r}: Correlation coefficient of the peak-gene pair
  \item \code{peak_gene.p_raw} and \code{peak_gene.p_adj}: Raw and adjusted p-value of the peak-gene pair
  }

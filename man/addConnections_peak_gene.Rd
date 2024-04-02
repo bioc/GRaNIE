@@ -11,6 +11,9 @@ addConnections_peak_gene(
   promoterRange = 250000,
   TADs = NULL,
   TADs_mergeOverlapping = FALSE,
+  knownLinks = NULL,
+  knownLinks_separator = c(":", "-"),
+  knownLinks_useExclusively = FALSE,
   shuffleRNACounts = TRUE,
   nCores = 4,
   plotDiagnosticPlots = TRUE,
@@ -33,6 +36,21 @@ calculated by \code{WGCNA::bicorAndPvalue}. Both \code{spearman} and \code{bicor
 \item{TADs}{Data frame with TAD domains. Default \code{NULL}. If provided, the neighborhood of a peak is defined by the TAD domain the peak is in rather than a fixed-sized neighborhood. The expected format is a BED-like data frame with at least 3 columns in this particular order: chromosome, start, end, the 4th column is optional and will be taken as ID column. All additional columns as well as column names are ignored. For the first 3 columns, the type is checked as part of a data integrity check.}
 
 \item{TADs_mergeOverlapping}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. Should overlapping TADs be merged? Only relevant if TADs are provided.}
+
+\item{knownLinks}{\code{NULL} or a data frame with exactly two columns. Both columns must be of type character and they must both contain 
+genomic coordinates in the usual format: \code{chr:start-end}, while the 2 separators between the three elements can be chosen by the user.
+The first column denotes the **bait**, the promoter coordinates that are overlapped with the genes (usually their TSS, unless specified 
+otherwise via the parameter \code{overlapTypeGene}, while the second column denotes the **other end (OE)** coordinates, which is overlapped with the
+peaks/enhancers from the GRN object. 
+**NOTE: The provided column names are ignored and column 1 is interpreted as bait column and column 2 as OE column unless column names are exactly `bait` and `OE`.**.  
+For more details, see the Workflow vignette.)}
+
+\item{knownLinks_separator}{Character vector of length 1 or 2. Default \code{c(":", "-")}. Separator(s) for the character columns that specify the genomic locations.
+The first entry splits the chromosome from the position, while the second entry splits the start and end coordinates. If only one separator is given, the same will be used for both.}
+
+\item{knownLinks_useExclusively}{\code{TRUE} or \code{FALSE}. Default \code{FALSE}. If kept at \code{FALSE} (the default),
+specified \code{knownLinks} will be used in addition to the regular peak-gene links that are identified via the default method. 
+If set to \code{TRUE}, only the \code{knownLinks} will be used.}
 
 \item{shuffleRNACounts}{\code{TRUE} or \code{FALSE}. Default \code{TRUE}. Should the RNA sample labels be shuffled in addition to 
 testing random peak-gene pairs for the background? When set to \code{FALSE}, only peak-gene pairs are shuffled, but

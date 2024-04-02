@@ -118,7 +118,7 @@ following options:
 
     -   If you want to use the *JASPAR* database for TF and TFBS, you
         need the following extra packages:
-        `BiocManager::install(c("JASPAR2022", "TFBSTools", "motifmatchr", "rbioapi"))`
+        `BiocManager::install(c("JASPAR2024", "TFBSTools", "motifmatchr", "rbioapi"))`
 
     -   For all other optional packages, you may execute this line for
         installing them in one go:
@@ -140,7 +140,7 @@ and may be needed context-specifically:
         additional peak annotation in combination with `ChIPseeker` (see
         below) or if the chosen peak normalization method is GC-based
         (`EDASeq_GC_peaks`, `gcqn_peaks`)**
-        
+
         -   `org.Hs.eg.db`: Needed only for `hg19` or `hg38`
         -   `org.Mm.eg.db`: Needed only for `mm9` or `mm10`
         -   `org.Rn.eg.db`: Needed only for `rn6` or `rn7`
@@ -159,16 +159,16 @@ and may be needed context-specifically:
             `TxDb.Rnorvegicus.UCSC.rn7.refGene`: Needed only for `rn7`
         -   `BSgenome.Dmelanogaster.UCSC.dm6`,
             `TxDb.Dmelanogaster.UCSC.dm6.ensGene`: Needed only for `dm6`
-            
+
     -   **`ChIPseeker`**: Not needed strictly speaking, but used only
-            for the function `addData()` to provide additional peak
-            annotation, fully optional otherwise.
+        for the function `addData()` to provide additional peak
+        annotation, fully optional otherwise.
 
 -   **TF and TFBS related packages**
 
-    -   **`JASPAR2022`**, **`TFBSTools`**, **`motifmatchr`**,
+    -   **`JASPAR2024`**, **`TFBSTools`**, **`motifmatchr`**,
         **`rbioapi`**: Needed only when `source = "JASPAR"` for
-        `addTFBS()` for using JASPAR 2022 TFs and TFBS
+        `addTFBS()` for using JASPAR 2024 TFs and TFBS
 
 -   **Additional statistical packages and for enhanced functionality**
 
@@ -195,10 +195,11 @@ and may be needed context-specifically:
     -   **`topGO`**, **`ReactomePA`**, **`DOSE`**,
         **`clusterProfiler`**: Needed only for all enrichment functions
         for `GO`, `Reactome`, `DO`, and `KEGG` respectively
-        
-- **SNP-related extra packages**
 
-    - **`LDlinkR`**: Needed only for `addSNPData()` to add SNP LD information.
+-   **SNP-related extra packages**
+
+    -   **`LDlinkR`**: Needed only for `addSNPData()` to add SNP LD
+        information.
 
 -   **Computational efficacy**
 
@@ -367,16 +368,18 @@ files, their exact format etc we refer to `diffTF` paper and
 
 As of March 2023, we additionally a more user-friendly way of importing
 TF and TFBS data from the various JASPAR databases that are available in
-R/Bioconductor: `JASPAR` 2014, 2016, 2018, 2022, and 2022. While we so
-far tested only with th newest `JASPAR2022` database / R package, the
-older ones should also work - if not, please let us know. Using
-`JASPAR2022` as TF database is much easier and also quicker from a user
+R/Bioconductor: `JASPAR` 2022 and 2024. While we so
+far tested only with the `JASPAR2022` database / R package, the
+other ones should also work - if not, please let us know. Using
+`JASPAR2024` as TF database is much easier and also quicker from a user
 perspective, and none of the additional complexities that were mentioned
-above for the custom import apply here. For details, see the `addTFBS()`
+above for the custom import apply here. However, we do note that HOCOMOCO v12 
+produces larger GRNs from our (limited) test experience.
+For details, see the `addTFBS()`
 and `overlapPeaksAndTFBS()` functions.
 
 Note that we also implemented an option to customize which TFBS
-collection to use from the `JASPAR2022` database via the function
+collection to use from the `JASPAR` database via the function
 argument `JASPAR_useSpecificTaxGroup` from `addTFBS()`. For example,
 this feature can be used to specify the whole \code{vertebrates} TF
 collection irrespective of the genome assembly the data is in - which is
@@ -385,7 +388,8 @@ few dozen TF at most if the specific genome was specified otherwise.
 
 Be aware, though, that you may want to compare your *eGRN* across
 different TF and TFBS data - we are currently investigating the effect
-of using `JASPAR2022` and cannot currently comment much on it. We will,
+of using `JASPAR` motives and cannot currently comment much on it except what we sumamrized above:
+HOCOMOCO v12 produces larger GRNs from our (limited) test experience. We will,
 however, update the vignette here once we have more results to share.
 
 ## Sample metadata (optional but highly recommended) {#input_metadata}
@@ -422,14 +426,35 @@ columns are ignored.
 For more details, see the R help (`?addConnections_peak_gene`) and the
 [Methods](#methods_peakGene).
 
+## Capture Hi-C data / known promoter-enhancer links (optional) {#input_HiC_capture}
+
+It is now also possible to input, in addition to or as replacement of
+the regular peak-gene links (see [here](#methods_peakGene)), known links
+that can either be Capture Hi-C links or more generally known
+promoter-enhancer links. If provided, the coordinates for both **bait**
+(the promoter coordinates) as well as **other end (OE)** coordinates
+(the enhancers) are overlapped with the gene promoters and
+peaks/enhancers as defined in the object, and the corresponding pair is
+added to the list of pairs to test for correlation, irrespective of
+their genomic distance. In principle, this even works for links that are
+defined on different chromosomes.
+
 ## SNP data (optional) {#input_SNP}
 
-Optionally, SNP data can also be integrated into our framework via the function `addSNPData()`. The main idea is to annotate each peak with the information whether it overlaps any of the user-provided SNPs (and how many), and use this extra annotation later on for creating the TF-peak-gene *eGRN* within `filterGRNAndConnectGenes()`. For more information, see [here](#methods_TF_peak_gene_links).
+Optionally, SNP data can also be integrated into our framework via the
+function `addSNPData()`. The main idea is to annotate each peak with the
+information whether it overlaps any of the user-provided SNPs (and how
+many), and use this extra annotation later on for creating the
+TF-peak-gene *eGRN* within `filterGRNAndConnectGenes()`. For more
+information, see [here](#methods_TF_peak_gene_links).
 
-Optionally, we now also support identifying SNPS that are in LD with any of the user-provided SNPs to expand the set of SNPs that are peak-associated. For more details, see `addSNPData()`.
+Optionally, we now also support identifying SNPS that are in LD with any
+of the user-provided SNPs to expand the set of SNPs that are
+peak-associated. For more details, see `addSNPData()`.
 
-SNP IDs have to be provided with their corresponding rsIDs, and the genomic position is retrieved automatically within `addSNPData()` by using `biomaRt`.
-
+SNP IDs have to be provided with their corresponding `rsIDs`, and the
+genomic position is retrieved automatically within `addSNPData()` by
+using `biomaRt`.
 
 ## TF activity data (optional, coming soon)
 
@@ -746,8 +771,15 @@ options to decide which peak-gene pairs to test for correlation:
     correlation. Noteworthy, peaks located outside of any TAD domain are
     ignored. The user has furthermore the choice to specify whether
     overlapping TADs should be merged beforehand or not.
+3.  If other known promoter-enhancer links are provided, these are taken
+    either in addition to the links as identified above or as a
+    replacement thereof, depending on the parameter
+    `knownLinks_useExclusively` that was provided as part of the
+    function call. If multiple promoter-enhancer peaks overlap with the provided user-defined links, all unique
+    combinations are taken and added to the list of peak-gene pairs to test. By default, only the TSS of genes is checked for overlap, 
+    while this can be changed with the parameter `overlapTypeGene` in analogy to how it works everywhere else.
 
-For both approaches, the user can select between two options of how to
+For all approaches, the user can select between two options of how to
 exactly calculate the distance between a peak and a gene. That is, which
 part of the gene is taken as reference point: the 5' end (TSS, the
 default) or the full gene including all exons and introns. For more
@@ -758,8 +790,7 @@ Importantly, as for TF-peaks, we also employ a shuffling-based approach
 to calculate background peak-gene links, as described in detail
 [here](#methods_background).
 
-## Building eGRNs: Linking TF-peak and peak-gene links and filtering  {#methods_TF_peak_gene_links}
-
+## Building eGRNs: Linking TF-peak and peak-gene links and filtering {#methods_TF_peak_gene_links}
 
 As `GRaNIE` models TF-peak and peak-gene links independently from one
 another, the package function `filterGRNAndConnectGenes()` can be used
@@ -776,11 +807,18 @@ data-driven weights to each hypothesis. For more details, see, for
 example,
 [here](https://bioconductor.org/packages/release/bioc/html/IHW.html).
 
-When SNPs have been integrated (see [here](#input_SNP)), the user can choose whether to
-1. additionally add a SNP filter to keep or discard TF-peak-gene connections (e.g. by requiring a minimum number of SNPs that have to overlap a peak)
-2. keep peaks (either as part of TF-peak or peak-gene connections) if they overlap with a user-defined minimum number of SNPs (e.g, at least 1).
+When SNPs have been integrated (see [here](#input_SNP)), the user can
+choose whether to 1. additionally add a SNP filter to keep or discard
+TF-peak-gene connections (e.g. by requiring a minimum number of SNPs
+that have to overlap a peak) 2. keep peaks (either as part of TF-peak or
+peak-gene connections) if they overlap with a user-defined minimum
+number of SNPs (e.g, at least 1).
 
-**Thus, integrating SNPs can either reduce the size of *eGRN* by adding another filtering step or increase it by extending the criteria for which we find a peak relevant enough: In addition to being connected to a TF, a peak may also be kept just because it overlaps with a SNP (independent of any TF connection).**
+**Thus, integrating SNPs can either reduce the size of *eGRN* by adding
+another filtering step or increase it by extending the criteria for
+which we find a peak relevant enough: In addition to being connected to
+a TF, a peak may also be kept just because it overlaps with a SNP
+(independent of any TF connection).**
 
 After successful execution, the filtered TF-peak-gene network is stored
 in `GRN@connections$all.filtered` (both real and background *eGRN*). It
@@ -924,19 +962,24 @@ that were used to run the enrichment are correspondingly stored in
 ## Network visualization and visualization filtering {#network-visualization}
 
 ### General comments
+
 We also provide the functions `visualizeGRN()` to visualize a filtered
-*eGRN* network as well as `filterConnectionsForPlotting()` to filter a *eGRN* just for visualization 
-purposes. They are both very easy to invoke, but provide many options to
-customize the output and the way the graph is drawn. We recommend to
-explore the options in the R help (`?visualizeGRN` and `filterConnectionsForPlotting()`). Note that we use
-the provided network visualization methods from the `igraph` package for `visualizeGRN()`.
+*eGRN* network as well as `filterConnectionsForPlotting()` to filter a
+*eGRN* just for visualization purposes. They are both very easy to
+invoke, but provide many options to customize the output and the way the
+graph is drawn. We recommend to explore the options in the R help
+(`?visualizeGRN` and `filterConnectionsForPlotting()`). Note that we use
+the provided network visualization methods from the `igraph` package for
+`visualizeGRN()`.
 
 ### Changing the visualization parameters and layout
 
-Visualizing the whole network usually works well for small to medium-sized networks that contain up to a few hundred edges, but may fail for larger *eGRNs*. Drawing thousands of
-nodes and edges at once without losing readability is almost impossible.
-However, here are a few tips on what you can do if your *eGRN* cannot be
-drawn or it looks not nice enough:
+Visualizing the whole network usually works well for small to
+medium-sized networks that contain up to a few hundred edges, but may
+fail for larger *eGRNs*. Drawing thousands of nodes and edges at once
+without losing readability is almost impossible. However, here are a few
+tips on what you can do if your *eGRN* cannot be drawn or it looks not
+nice enough:
 
 -   increase the value of the parameter `maxEdgesToPlot` to say 1000 or
     even more, and check whether the *eGRN* can be drawn. It may also
@@ -945,17 +988,25 @@ drawn or it looks not nice enough:
 -   change the visualization layout by changing the `layout` parameter.
     Try all of the supported layouts (see `?visualizeGRN` for a list),
     maybe one looks good enough.
-    
+
 ### Filtering the network for visualization purposes
 
-If none of the plotting-related parameters improve the visualization or if you want
- to visually explore the network for particular features of the network (such as specific TFs, peaks, or genes), 
-you can use `filterConnectionsForPlotting()` to filter a *eGRN* just for visualization 
-purposes. This reduces the number of nodes and edges to plot and gives the user ultimate flexibility of what to visualize. For example, you can filter the network to just visualize the part of the network that is connected to a specific set of TFs (i.e, their regulons).
+If none of the plotting-related parameters improve the visualization or
+if you want to visually explore the network for particular features of
+the network (such as specific TFs, peaks, or genes), you can use
+`filterConnectionsForPlotting()` to filter a *eGRN* just for
+visualization purposes. This reduces the number of nodes and edges to
+plot and gives the user ultimate flexibility of what to visualize. For
+example, you can filter the network to just visualize the part of the
+network that is connected to a specific set of TFs (i.e, their
+regulons).
 
-
-Alternatively, you can also re-filter the network again more stringently using `filterGRNAndConnectGenes()`, but then all subsequent analyses have to be rerun as well (e.g., `build_eGRN_graph()` and all enrichment functions). This may reduce the multiple testing burden for peak-gene p-values and recover connections that may not have passed the filter beforehand.
-
+Alternatively, you can also re-filter the network again more stringently
+using `filterGRNAndConnectGenes()`, but then all subsequent analyses
+have to be rerun as well (e.g., `build_eGRN_graph()` and all enrichment
+functions). This may reduce the multiple testing burden for peak-gene
+p-values and recover connections that may not have passed the filter
+beforehand.
 
 ## Feature variation quantification
 
@@ -1462,9 +1513,8 @@ This list is structured as follows:
 -   inside both real and background links (i.e., within
     `GRN@connections$peak_genes[["0"]]` and
     `GRN@connections$peak_genes[["1"]]`), a data frame with the
-    peak-gene connections along with additional metadata (`peak.ID`,
-    `gene.ENSEMBL`, `peak_gene.distance`) and statistical properties are
-    stored (`peak_gene.r`, `peak_gene.p_raw`)
+    peak-gene connections along with additional metadata (e.g., `peak.ID`,
+    `gene.ENSEMBL`, `peak_gene.distance`), their connection origin (e.g `TADs`, `knownLinks` or `neighborhood`), and statistical properties are stored (`peak_gene.r`, `peak_gene.p_raw`).
 
 ### Plots
 
@@ -1863,16 +1913,19 @@ tuned, coming soon!
 
 ### Object data
 
-SNP data is added via the function `addSNPData()`. 
-When `add_SNPs_LD = TRUE`, additional information for SNPs in LD with any of the user-provided input SNPs are stored within `GRN@annotation$SNPs` and `GRN@annotation$SNPs_filtered` for the unfiltered and filtered SNP table, respectively, and the list of peak-associated SNPs is extended to SNPs in LD with overlapping SNPs from the user input.
+SNP data is added via the function `addSNPData()`. When
+`add_SNPs_LD = TRUE`, additional information for SNPs in LD with any of
+the user-provided input SNPs are stored within `GRN@annotation$SNPs` and
+`GRN@annotation$SNPs_filtered` for the unfiltered and filtered SNP
+table, respectively, and the list of peak-associated SNPs is extended to
+SNPs in LD with overlapping SNPs from the user input.
 
-Final peak-SNP overlaps are stored in `GRN@data$peaks$counts_metadata`. For more details, see `?addSNPData`.
-
+Final peak-SNP overlaps are stored in `GRN@data$peaks$counts_metadata`.
+For more details, see `?addSNPData`.
 
 ### Plots
 
 No plots are specifically available for the SNp data at the moment.
-
 
 # Guidelines, Recommendations, Limitations, Scope {#guidelines}
 
@@ -1950,7 +2003,6 @@ TFBS in general also increases the number of 1s and therefore the
 foreground also more noisy if the TFBS list contains too many false
 positives. As always in biology, this is a trade-off.
 
-
 ## Choice of correlation methods for TF-peak, peak-gene, TF-gene connections and outlier robustness
 
 This section is partially based on and inspired by [this nice summary
@@ -1980,9 +2032,16 @@ negative values indicate an inverse relationship.
     evaluating similarity in gene expression networks and is often used
     for weighted correlation network analysis.
 
-The choice depends on the user, and is dependent on whether or not the data contain outlier points that may heavily affect the correlation measures. While we generally advise to remove obvious outlier samples, as identified in a PCA, for example, from the analysis altogether in case they come from a single sample, in other cases this may not be the best approach and a more robust correlation measure such as Spearman or bicor seems more appropriate. We are currently also testing and evaluating which of them are best under different criteria and data typoes. For single-cell derived data, this choice seems to be particularly relevant.
-
-
+The choice depends on the user, and is dependent on whether or not the
+data contain outlier points that may heavily affect the correlation
+measures. While we generally advise to remove obvious outlier samples,
+as identified in a PCA, for example, from the analysis altogether in
+case they come from a single sample, in other cases this may not be the
+best approach and a more robust correlation measure such as Spearman or
+bicor seems more appropriate. We are currently also testing and
+evaluating which of them are best under different criteria and data
+typoes. For single-cell derived data, this choice seems to be
+particularly relevant.
 
 ## Peak-gene p-values accuracy and violations {#guidelines_peakGene}
 
@@ -2092,6 +2151,8 @@ reduced.
 
 # References {#refs}
 
-    1.  [GRaNIE and GRaNPA: inference and evaluation of enhancer-mediated gene regulatory networks](https://www.embopress.org/doi/full/10.15252/msb.202311627)
+```         
+1.  [GRaNIE and GRaNPA: inference and evaluation of enhancer-mediated gene regulatory networks](https://www.embopress.org/doi/full/10.15252/msb.202311627)
 
-    2. [Comparison of co-expression measures: mutual information, correlation, and model based indices](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3586947/)
+2. [Comparison of co-expression measures: mutual information, correlation, and model based indices](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3586947/)
+```
