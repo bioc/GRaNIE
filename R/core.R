@@ -3513,7 +3513,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
   }
   
   # OVERLAP OF PEAKS AND EXTENDED GENES
-  if (!is.null(knownLinks) & nrow(knownLinks.filt.df) > 0 & knownLinks_useExclusively) {
+  if (!is.null(knownLinks) && nrow(knownLinks.filt.df) > 0 && knownLinks_useExclusively) {
       
       overlaps.sub.filt.df = tibble::tribble(~peak.ID, ~ext_peak.chr , ~ext_peak.start, ~ext_peak.end , ~orig_peak.start , ~orig_peak.end, 
                             ~gene.ENSEMBL, ~gene.type, ~gene.name, ~gene.chr, ~gene.start, ~gene.end, ~peak_gene.distance, ~source)
@@ -3531,14 +3531,14 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
           tibble::as_tibble() 
   }
   
+  overlaps.sub.filt.df$bait_OE.ID = NA
 
   # Add manually defined links
   if (!is.null(knownLinks)) {
 
       # orig: coordinates from original peak from object 
       # ext_: new peak coordinates (OE)
-      overlaps.sub.filt.df$bait_OE.ID = NA
-      
+
       # Calculate all other attributes and source column
       knownLinks.filt.df = knownLinks.filt.df %>%
           dplyr::mutate(source = "knownLinks") %>% # Now correct the wrong gene end and put the original gene end
