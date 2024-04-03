@@ -11,9 +11,9 @@ For the *GRaNPA* package, see [here](https://grp-zaugg.embl-community.io/GRaNPA)
 
 ### Installation
 
-*GRaNIE* is now included on *Bioconductor*. The package and installation instructions can be found here and is suitable for the most users, which installs the package from the release branch of Bioconductor: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE). **Make sure to use only the latest Bioconductor version (currently, 3.16).**
+*GRaNIE* is now included on *Bioconductor*. The package and installation instructions can be found here and is suitable for the most users, which installs the package from the release branch of Bioconductor: [https://bioconductor.org/packages/GRaNIE](https://bioconductor.org/packages/GRaNIE). **Make sure to use one of the latest Bioconductor versions (3.17 or newer).**
 
-**As the package is still under very active development, we however recommend to either use the development version of Bioconductor for being able to install the latest versions OR to install the newest version of the package outside of the official Bioconductor release cycle** (i.e., a devel version that however does not necessarily require even the latest Bioconductor version to be installed).
+**For the newest features and versions, consider using the development version of Bioconductor for being able to install the latest versions OR to install the newest version of the package outside of the official Bioconductor release cycle as outlined below** (i.e., a devel version that however does not necessarily require even the latest Bioconductor version to be installed).
 
 For the latter option, you may use the following line that will install the package directly from the Gitlab instance that also hosts the package website. Due to potential package conflicts with existing (Bioconductor) packages, we cannot guarantee this always works, though:
 `devtools::install_gitlab("grp-zaugg/GRaNIE", host = "git.embl.de", subdir = "src/GRaNIE", force = TRUE)`. You only need the ``devtools`` package for this. If you run into any problems, let us know!

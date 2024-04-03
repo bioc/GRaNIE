@@ -30,332 +30,332 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
                         data = c("rna", "peaks"), topn = c(500,1000,5000), type = "normalized", removeFiltered = TRUE,
                         plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                         forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assertSubset(data , c("rna", "peaks", "all"), empty.ok = FALSE)
-  checkmate::assertChoice(type , c("normalized"))
-  #checkmate::assertSubset(type , c("raw", "normalized", "all"), empty.ok = FALSE)
-  checkmate::assertFlag(removeFiltered)
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  if (is.null(GRN@stats$PCA)) {
-      GRN@stats$PCA = list()
-  }
-  
-  if (is.null(GRN@data$metadata)) {
-    message = "Slot GRN@data$metadata is NULL"
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-
-  # Initialize the page counter
-  pageCounter = 1 
-  
-  # For normalized data, we do not do any other transformation currently and plot the normalized data "as is"
-  # Changed on 08.02.22: We now never do a(nother) log transform, as the input for the density plot is already transformed counts. 
-  transformationCur = "none"
-  logTransformDensity = FALSE
-  
-  if ("rna" %in% data | "all" %in% data) {
     
-    matrixCur = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = !removeFiltered)
-
-    fileCur = paste0(outputFolder, 
-                     ifelse(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput),
-                     "_RNA.", type, ".pdf")
-    if (!file.exists(fileCur) | forceRerun) {
-        
-        futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
-                                        " RNA data for all shared samples. This may take a few minutes"))
-        
-        GRN = .plot_PCA_wrapper(GRN, slot = "rna", counts = matrixCur, topn = topn, 
-                          transformation = transformationCur, 
-                          logTransformDensity = logTransformDensity, 
-                          file = fileCur, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
-        
-    } else {
-        futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
-        
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertSubset(data , c("rna", "peaks", "all"), empty.ok = FALSE)
+    checkmate::assertChoice(type , c("normalized"))
+    #checkmate::assertSubset(type , c("raw", "normalized", "all"), empty.ok = FALSE)
+    checkmate::assertFlag(removeFiltered)
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    if (is.null(GRN@stats$PCA)) {
+        GRN@stats$PCA = list()
+    }
+    
+    if (is.null(GRN@data$metadata)) {
+        message = "Slot GRN@data$metadata is NULL"
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
     
-  } # end if plot RNA PCA
-  
-  if ("peaks" %in% data | "all" %in% data) {
+    # Initialize the page counter
+    pageCounter = 1 
     
-    matrixCur = getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE, includeFiltered = !removeFiltered)
+    # For normalized data, we do not do any other transformation currently and plot the normalized data "as is"
+    # Changed on 08.02.22: We now never do a(nother) log transform, as the input for the density plot is already transformed counts. 
+    transformationCur = "none"
+    logTransformDensity = FALSE
     
-    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), 
-                                                  .getOutputFileName("plot_pca"), basenameOutput), "_peaks.", type, ".pdf")
+    if ("rna" %in% data | "all" %in% data) {
+        
+        matrixCur = getCounts(GRN, type = "rna", permuted = FALSE, asMatrix = TRUE, includeFiltered = !removeFiltered)
+        
+        fileCur = paste0(outputFolder, 
+                         ifelse(is.null(basenameOutput), .getOutputFileName("plot_pca"), basenameOutput),
+                         "_RNA.", type, ".pdf")
+        if (!file.exists(fileCur) | forceRerun) {
+            
+            futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
+                                            " RNA data for all shared samples. This may take a few minutes"))
+            
+            GRN = .plot_PCA_wrapper(GRN, slot = "rna", counts = matrixCur, topn = topn, 
+                                    transformation = transformationCur, 
+                                    logTransformDensity = logTransformDensity, 
+                                    file = fileCur, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
+            
+        } else {
+            futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+            
+        }
+        
+        
+    } # end if plot RNA PCA
     
-    if (!file.exists(fileCur) | forceRerun) {
+    if ("peaks" %in% data | "all" %in% data) {
         
-        futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
-                                        " peaks data for all shared samples. This may take a few minutes"))
+        matrixCur = getCounts(GRN, type = "peaks", permuted = FALSE, asMatrix = TRUE, includeFiltered = !removeFiltered)
         
-        GRN = .plot_PCA_wrapper(GRN, slot = "peaks", matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
+        fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), 
+                                              .getOutputFileName("plot_pca"), basenameOutput), "_peaks.", type, ".pdf")
         
-    } else {
-        futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+        if (!file.exists(fileCur) | forceRerun) {
+            
+            futile.logger::flog.info(paste0("Plotting PCA and metadata correlation of ", type, 
+                                            " peaks data for all shared samples. This may take a few minutes"))
+            
+            GRN = .plot_PCA_wrapper(GRN, slot = "peaks", matrixCur, transformation = transformationCur, logTransformDensity = logTransformDensity, file = fileCur, topn = topn, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, plotAsPDF = plotAsPDF)
+            
+        } else {
+            futile.logger::flog.info(paste0("File ", fileCur, " already exists, not overwriting due to forceRerun = FALSE"))
+            
+        }
         
     }
     
-  }
-  
-  .printExecutionTime(start, prefix = "") 
-  GRN
-  
-  
+    .printExecutionTime(start, prefix = "") 
+    GRN
+    
+    
 }
 
 
 .plot_PCA_wrapper <- function(GRN, slot, counts, transformation = "vst", scale = TRUE, logTransformDensity, file, topn, pdf_width, pdf_height, pages = NULL, plotAsPDF) {
-  
-  # Reset PCA results slot
+    
+    # Reset PCA results slot
     if (is.null(GRN@stats$PCA[[slot]])) {
         GRN@stats$PCA[[slot]] = list()
     }
-
-    
-  checkmate::assertChoice(transformation, c("vst", "log2", "none"))
-  checkmate::assertIntegerish(topn, lower = 50, any.missing = FALSE,min.len = 1)
-  
-  if (transformation == "vst") {
-    checkmate::assertClass(counts, "DESeqDataSet")
-    # Use ALL genes for variance stabilization, and not only the top X
-    dd.vst = DESeq2::varianceStabilizingTransformation(counts)
-    counts.transf = SummarizedExperiment::assay(dd.vst)
-    metadata = SummarizedExperiment::colData(dd.vst) %>% as.data.frame()
     
     
+    checkmate::assertChoice(transformation, c("vst", "log2", "none"))
+    checkmate::assertIntegerish(topn, lower = 50, any.missing = FALSE,min.len = 1)
     
-  } else if (transformation == "log2") {
-    checkmate::assertMatrix(counts)
-    counts.transf = log2(counts + 1)
-    metadata = GRN@data$metadata %>% dplyr::filter(.data$sampleID %in% colnames(counts.transf)) %>% tibble::column_to_rownames("sampleID") %>% as.data.frame()
+    if (transformation == "vst") {
+        checkmate::assertClass(counts, "DESeqDataSet")
+        # Use ALL genes for variance stabilization, and not only the top X
+        dd.vst = DESeq2::varianceStabilizingTransformation(counts)
+        counts.transf = SummarizedExperiment::assay(dd.vst)
+        metadata = SummarizedExperiment::colData(dd.vst) %>% as.data.frame()
+        
+        
+        
+    } else if (transformation == "log2") {
+        checkmate::assertMatrix(counts)
+        counts.transf = log2(counts + 1)
+        metadata = GRN@data$metadata %>% dplyr::filter(.data$sampleID %in% colnames(counts.transf)) %>% tibble::column_to_rownames("sampleID") %>% as.data.frame()
+        
+    } else {
+        checkmate::assertMatrix(counts)
+        counts.transf = counts
+        metadata = GRN@data$metadata %>% dplyr::filter(.data$sampleID %in% colnames(counts.transf)) %>% tibble::column_to_rownames("sampleID") %>% as.data.frame()
+    }
     
-  } else {
-    checkmate::assertMatrix(counts)
-    counts.transf = counts
-    metadata = GRN@data$metadata %>% dplyr::filter(.data$sampleID %in% colnames(counts.transf)) %>% tibble::column_to_rownames("sampleID") %>% as.data.frame()
-  }
-  
-  # Override scaling when already vst-transformed
-  # See https://support.bioconductor.org/p/60531/
-  if (transformation != "none") {
-    scale = FALSE
-    futile.logger::flog.info(paste0("Set scale = FALSE as data has already been transformed"))
-  }
-  
-  # Add sampleID as explicit column so it is alwys included in the PCA plot to identify outliers
-  metadata$sampleID = rownames(metadata)
-  
-  futile.logger::flog.info(paste0("Prepare PCA. Count transformation: ", transformation))
-  
-  pageCounter = 1 
-  if (plotAsPDF) {
-    .checkOutputFile(file)
-    grDevices::pdf(file, width = pdf_width, height = pdf_height)
-    futile.logger::flog.info(paste0("Plotting to file ", file))
-  } else {
-    futile.logger::flog.info(paste0("Plotting directly"))
-  }
-  
-  # calculate the variance for each gene
-  rv <- matrixStats::rowVars(counts.transf)
-  
-  # Remove rows with 0 variance, these cause errors later on
-  zeroVar = which(rv == 0)
-  if (length(zeroVar) > 0) {
-      message = paste0("Removing ", length(zeroVar), " rows from count data because they have 0 variance")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      rv = rv[-zeroVar]
-      counts.transf = counts.transf[-zeroVar,]
-  }
-
-  
-  # 0. Density plot for ALL features
-  if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-    .plotDensity(counts.transf, logTransform = logTransformDensity, legend = dplyr::if_else(ncol(counts.transf) > 20, FALSE, TRUE))
+    # Override scaling when already vst-transformed
+    # See https://support.bioconductor.org/p/60531/
+    if (transformation != "none") {
+        scale = FALSE
+        futile.logger::flog.info(paste0("Set scale = FALSE as data has already been transformed"))
+    }
     
-  }
-  pageCounter = pageCounter + 1
-  
-  for (topnCur in topn) {
-      
-      listnameCur = paste0("topn", topnCur)
-      
-      if (is.null(GRN@stats$PCA[[slot]][[listnameCur]])) {
-          GRN@stats$PCA[[slot]][[listnameCur]] = list()
-      }
+    # Add sampleID as explicit column so it is alwys included in the PCA plot to identify outliers
+    metadata$sampleID = rownames(metadata)
     
-    # select the ntop genes by variance
-    select <- order(rv, decreasing = TRUE)[seq_len(min(topnCur, length(rv)))]
+    futile.logger::flog.info(paste0("Prepare PCA. Count transformation: ", transformation))
     
-    # perform a PCA on the data in assay(x) for the selected genes
-    # For already normalized data, scale is not necessary
-    pca <- stats::prcomp(t(counts.transf[select,]), scale = scale)
+    pageCounter = 1 
+    if (plotAsPDF) {
+        .checkOutputFile(file)
+        grDevices::pdf(file, width = pdf_width, height = pdf_height)
+        futile.logger::flog.info(paste0("Plotting to file ", file))
+    } else {
+        futile.logger::flog.info(paste0("Plotting directly"))
+    }
     
-    nPCS = min(10, ncol(pca))
+    # calculate the variance for each gene
+    rv <- matrixStats::rowVars(counts.transf)
     
-    # the contribution to the total variance for each component
-    percentVar <- pca$sdev^2 / sum( pca$sdev^2 )
+    # Remove rows with 0 variance, these cause errors later on
+    zeroVar = which(rv == 0)
+    if (length(zeroVar) > 0) {
+        message = paste0("Removing ", length(zeroVar), " rows from count data because they have 0 variance")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+        rv = rv[-zeroVar]
+        counts.transf = counts.transf[-zeroVar,]
+    }
     
-    screeplot.df = tibble::tibble(PCs = factor(paste0("PC ", seq_len(nPCS)), levels = paste0("PC ", seq_len(nPCS))), variation = percentVar[seq_len(nPCS)] * 100) %>%
-      dplyr::mutate(variation_sum = cumsum(.data$variation),
-                    pos = seq_len(nPCS))
     
-    GRN@stats$PCA[[slot]][[listnameCur]][["data_screeplot"]] = screeplot.df
-
-    # 1. Scree plot
+    # 0. Density plot for ALL features
     if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-      
-      g = ggplot2::ggplot(screeplot.df, ggplot2::aes(.data$PCs, .data$variation)) + ggplot2::geom_bar(stat = "identity") + 
-        ggplot2::xlab("Principal component (PC)") + ggplot2::ylab("Explained variation / Cumultative sum (in %)") + 
-        ggplot2::geom_point(data = screeplot.df, ggplot2::aes(.data$pos, .data$variation_sum), color = "red") + 
-        ggplot2::geom_line(data = screeplot.df, ggplot2::aes(.data$pos, .data$variation_sum), color = "red") +
-        ggplot2::ggtitle(paste0("Screeplot for top ", topnCur, " variable features")) + 
-        ggplot2::theme_bw()
-      
-      plot(g)
+        .plotDensity(counts.transf, logTransform = logTransformDensity, legend = dplyr::if_else(ncol(counts.transf) > 20, FALSE, TRUE))
+        
     }
     pageCounter = pageCounter + 1
     
-    # 2. Metadata correlation with PCs
-    if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-      metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = TRUE, verbose = FALSE)
-      .plotPCA_QC(pcaResult = pca, dataCols = colnames(counts.transf), metadataTable = metadata, metadataColumns = metadata_columns, 
-                  varn = topnCur, metadataColumns_fill = metadata_columns, 
-                  file = NULL, logTransform = FALSE)
-    }
-    pageCounter = pageCounter + 1
-    
-    
-    # 3. Correlation plots colored by metadata
-    if (is.null(GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]])) {
-        GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]] = list()
-    }
-    metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = FALSE, verbose = FALSE)
-    for (varCur in metadata_columns) {
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+    for (topnCur in topn) {
         
-        plotTitle = paste0("Top ", topnCur, " variable features, colored by \n", varCur)
+        listnameCur = paste0("topn", topnCur)
         
-        skipLegend = FALSE
-        vecCur = metadata[, varCur] %>% unlist()
-        if (is.character(vecCur) & dplyr::n_distinct(vecCur) > 30) {
-          skipLegend = TRUE
-          plotTitle = paste0(plotTitle, " (legend skipped)")
+        if (is.null(GRN@stats$PCA[[slot]][[listnameCur]])) {
+            GRN@stats$PCA[[slot]][[listnameCur]] = list()
         }
         
-        result = tryCatch({
-          
-          # The following code is taken from plotPCA from DESeq2 and adapted here to be more flexible
-          intgroup.df <- as.data.frame(metadata[, varCur, drop = FALSE])
-          
-          # add the varCur factors together to create a new grouping factor
-          group = metadata[[varCur]]
-          
-          # assembly the data for the plot
-          d <- data.frame(group = group, intgroup.df, name = colnames(counts.transf))
-          
-          for (pcCur in 1:min(10, ncol(pca$x))) {
-              d[colnames(pca$x)[pcCur]] = pca$x[,pcCur]
-          }
-          
-          d = d %>%
-            dplyr::mutate_if(is.character, as.factor) %>%
-            dplyr::mutate_if(is.logical, as.factor)
-          
-          # Save the PCA data somewhere
-          GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]] [[varCur]] = d
-          
-          g = g = ggplot2::ggplot(data = d, ggplot2::aes(x = .data$PC1, y = .data$PC2, color = group)) + 
-            ggplot2::geom_point(size = 3) + 
-            ggplot2::xlab(paste0("PC1: ",round(percentVar[1] * 100, 1),"% variance")) +
-            ggplot2::ylab(paste0("PC2: ",round(percentVar[2] * 100, 1),"% variance")) +
-            ggplot2::ggtitle(plotTitle) + ggplot2::coord_fixed()
-          
-          
-          
-          if (is.factor(d$group)) {
-            g = g + ggplot2::scale_color_viridis_d()
+        # select the ntop genes by variance
+        select <- order(rv, decreasing = TRUE)[seq_len(min(topnCur, length(rv)))]
+        
+        # perform a PCA on the data in assay(x) for the selected genes
+        # For already normalized data, scale is not necessary
+        pca <- stats::prcomp(t(counts.transf[select,]), scale = scale)
+        
+        nPCS = min(10, ncol(pca))
+        
+        # the contribution to the total variance for each component
+        percentVar <- pca$sdev^2 / sum( pca$sdev^2 )
+        
+        screeplot.df = tibble::tibble(PCs = factor(paste0("PC ", seq_len(nPCS)), levels = paste0("PC ", seq_len(nPCS))), variation = percentVar[seq_len(nPCS)] * 100) %>%
+            dplyr::mutate(variation_sum = cumsum(.data$variation),
+                          pos = seq_len(nPCS))
+        
+        GRN@stats$PCA[[slot]][[listnameCur]][["data_screeplot"]] = screeplot.df
+        
+        # 1. Scree plot
+        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
             
-          } else {
+            g = ggplot2::ggplot(screeplot.df, ggplot2::aes(.data$PCs, .data$variation)) + ggplot2::geom_bar(stat = "identity") + 
+                ggplot2::xlab("Principal component (PC)") + ggplot2::ylab("Explained variation / Cumultative sum (in %)") + 
+                ggplot2::geom_point(data = screeplot.df, ggplot2::aes(.data$pos, .data$variation_sum), color = "red") + 
+                ggplot2::geom_line(data = screeplot.df, ggplot2::aes(.data$pos, .data$variation_sum), color = "red") +
+                ggplot2::ggtitle(paste0("Screeplot for top ", topnCur, " variable features")) + 
+                ggplot2::theme_bw()
             
-            is.date <- function(x) inherits(x, 'Date')
+            plot(g)
+        }
+        pageCounter = pageCounter + 1
+        
+        # 2. Metadata correlation with PCs
+        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+            metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = TRUE, verbose = FALSE)
+            .plotPCA_QC(pcaResult = pca, dataCols = colnames(counts.transf), metadataTable = metadata, metadataColumns = metadata_columns, 
+                        varn = topnCur, metadataColumns_fill = metadata_columns, 
+                        file = NULL, logTransform = FALSE)
+        }
+        pageCounter = pageCounter + 1
+        
+        
+        # 3. Correlation plots colored by metadata
+        if (is.null(GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]])) {
+            GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]] = list()
+        }
+        metadata_columns = .findSuitableColumnsToPlot(metadata, remove1LevelFactors = FALSE, verbose = FALSE)
+        for (varCur in metadata_columns) {
             
-            if (!is.date(d$group)) {
-              g = g + ggplot2::scale_color_viridis_c()
-            } else {
-              g = g + ggplot2::scale_color_viridis_c(trans = "date")
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                plotTitle = paste0("Top ", topnCur, " variable features, colored by \n", varCur)
+                
+                skipLegend = FALSE
+                vecCur = metadata[, varCur] %>% unlist()
+                if (is.character(vecCur) & dplyr::n_distinct(vecCur) > 30) {
+                    skipLegend = TRUE
+                    plotTitle = paste0(plotTitle, " (legend skipped)")
+                }
+                
+                result = tryCatch({
+                    
+                    # The following code is taken from plotPCA from DESeq2 and adapted here to be more flexible
+                    intgroup.df <- as.data.frame(metadata[, varCur, drop = FALSE])
+                    
+                    # add the varCur factors together to create a new grouping factor
+                    group = metadata[[varCur]]
+                    
+                    # assembly the data for the plot
+                    d <- data.frame(group = group, intgroup.df, name = colnames(counts.transf))
+                    
+                    for (pcCur in 1:min(10, ncol(pca$x))) {
+                        d[colnames(pca$x)[pcCur]] = pca$x[,pcCur]
+                    }
+                    
+                    d = d %>%
+                        dplyr::mutate_if(is.character, as.factor) %>%
+                        dplyr::mutate_if(is.logical, as.factor)
+                    
+                    # Save the PCA data somewhere
+                    GRN@stats$PCA[[slot]][[listnameCur]][["data_PCA"]] [[varCur]] = d
+                    
+                    g = g = ggplot2::ggplot(data = d, ggplot2::aes(x = .data$PC1, y = .data$PC2, color = group)) + 
+                        ggplot2::geom_point(size = 3) + 
+                        ggplot2::xlab(paste0("PC1: ",round(percentVar[1] * 100, 1),"% variance")) +
+                        ggplot2::ylab(paste0("PC2: ",round(percentVar[2] * 100, 1),"% variance")) +
+                        ggplot2::ggtitle(plotTitle) + ggplot2::coord_fixed()
+                    
+                    
+                    
+                    if (is.factor(d$group)) {
+                        g = g + ggplot2::scale_color_viridis_d()
+                        
+                    } else {
+                        
+                        is.date <- function(x) inherits(x, 'Date')
+                        
+                        if (!is.date(d$group)) {
+                            g = g + ggplot2::scale_color_viridis_c()
+                        } else {
+                            g = g + ggplot2::scale_color_viridis_c(trans = "date")
+                        }
+                        
+                        
+                    }
+                    
+                    
+                    if (skipLegend) {
+                        g = g + ggplot2::theme(legend.position = "none")
+                    } 
+                    
+                    plot(g)
+                    
+                }, error = function(e) {
+                    message = paste0(" Could not plot PCA with variable ", varCur)
+                    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)   
+                    
+                    plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
+                    message = paste0(" Could not plot PCA with variable ", varCur)
+                    text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+                })
             }
+            pageCounter = pageCounter + 1
             
             
-          }
-          
-          
-          if (skipLegend) {
-            g = g + ggplot2::theme(legend.position = "none")
-          } 
-          
-          plot(g)
-          
-        }, error = function(e) {
-          message = paste0(" Could not plot PCA with variable ", varCur)
-          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)   
-            
-          plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
-          message = paste0(" Could not plot PCA with variable ", varCur)
-          text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
-        })
-      }
-      pageCounter = pageCounter + 1
-      
-      
-    } # end for each variable
+        } # end for each variable
+        
+    }
     
-  }
-  
-  .checkPageNumberValidity(pages, pageCounter)
-  if (plotAsPDF) grDevices::dev.off()
-  
-  GRN
-  
+    .checkPageNumberValidity(pages, pageCounter)
+    if (plotAsPDF) grDevices::dev.off()
+    
+    GRN
+    
 }
 
 
 .plotDensity <- function(data, logTransform = TRUE, legend = FALSE) {
-  
-  if (logTransform) {
-    data = log2(data + 1)
-  } 
-  
-  data.df = reshape2::melt(tibble::as_tibble(data), measure.vars = colnames(data)) %>% dplyr::rename(sample = "variable")
-  g = ggplot2::ggplot(data.df, ggplot2::aes(.data$value, color = .data$sample)) + ggplot2::geom_density() + ggplot2::theme_bw()
-  
-  title = paste0("Density of values per sample for all features")
-  if (!legend) {
-    g = g + ggplot2::theme(legend.position = "none")
-    title = paste0(title, " (Legend omitted, too many samples)")
-  }
-  g = g + ggplot2::ggtitle(title)
-  
-  plot(g)
-  
+    
+    if (logTransform) {
+        data = log2(data + 1)
+    } 
+    
+    data.df = reshape2::melt(tibble::as_tibble(data), measure.vars = colnames(data)) %>% dplyr::rename(sample = "variable")
+    g = ggplot2::ggplot(data.df, ggplot2::aes(.data$value, color = .data$sample)) + ggplot2::geom_density() + ggplot2::theme_bw()
+    
+    title = paste0("Density of values per sample for all features")
+    if (!legend) {
+        g = g + ggplot2::theme(legend.position = "none")
+        title = paste0(title, " (Legend omitted, too many samples)")
+    }
+    g = g + ggplot2::ggtitle(title)
+    
+    plot(g)
+    
 }
 
 # data: Matrix of your data, with column names. May or may not be vsd transformed, log2 transformed etc
@@ -390,84 +390,84 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
 #            scale = TRUE, pcCount = pcCount, file = "test.pdf")
 
 .plotPCA_QC <- function(pcaResult, dataCols, metadataTable, metadataColumns, varn = 500, metadataColumns_fill, pcCount = 10, file = NULL, logTransform = FALSE,  pdf_width = 7, pdf_height = 7) {
-  
-  
-  checkmate::assertDataFrame(metadataTable)
-  metadataTable = as.data.frame(metadataTable)
-  checkmate::assertIntegerish(varn, lower = 100)
-  checkmate::assertFlag(logTransform)
-  
-  checkmate::assertSubset(metadataColumns, colnames(metadataTable), empty.ok = FALSE)
-  checkmate::assertSubset(metadataColumns_fill, metadataColumns, empty.ok = FALSE)
-  
-  # Enforce checking that they are identical
-  checkmate::assertSetEqual(rownames(metadataTable), dataCols)
-  
-  futile.logger::flog.info(paste0("  Performing and summarizing PCs across metadata for top ", varn, " features", ifelse(is.null(file), "", paste0(" to file ", file))))
-  
-  # Helper functions
-  r2_fun <- function(x, y) {
-    summary(stats::lm(y ~ x))$r.squared
-  } #function to get adj. R2 values
-  
-  
-  if (!is.null(file)) {
-    .checkOutputFile(file)
-    grDevices::pdf(file, width = pdf_width, height = pdf_height)
-  }
-  
-  pc = pcaResult
-  
-  # The number of PCs may be smaller than the asked number, depending on the tol parameter. Check here
-  if (pcCount > ncol(pc$x)) {
-    message = paste0("Only ", ncol(pc$x), " PCs can be used instead of ",pcCount )
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-    pcCount = ncol(pc$x)
-  }
-  
-  pcs_cv <- pc$x[,seq_len(pcCount)]   #Top PCs from top 1000 variable genes
-  
-  eig.val <- 100*summary(pc)$importance[2,seq_len(pcCount)]
-  
-  metadataTable = dplyr::mutate_if(metadataTable, is.character, as.factor)
-  
-  covariates <- data.frame(metadataTable[,metadataColumns], row.names = dataCols)
-  
-  r2_cv <- matrix(NA, nrow = ncol(covariates), ncol = ncol(pcs_cv), dimnames = list(colnames(covariates), colnames(pcs_cv)))
-  
-  for (cov in colnames(covariates)) {
-    for (pc in colnames(pcs_cv)) {
-      r2_cv[cov, pc] <- r2_fun(covariates[,cov], pcs_cv[,pc])
+    
+    
+    checkmate::assertDataFrame(metadataTable)
+    metadataTable = as.data.frame(metadataTable)
+    checkmate::assertIntegerish(varn, lower = 100)
+    checkmate::assertFlag(logTransform)
+    
+    checkmate::assertSubset(metadataColumns, colnames(metadataTable), empty.ok = FALSE)
+    checkmate::assertSubset(metadataColumns_fill, metadataColumns, empty.ok = FALSE)
+    
+    # Enforce checking that they are identical
+    checkmate::assertSetEqual(rownames(metadataTable), dataCols)
+    
+    futile.logger::flog.info(paste0("  Performing and summarizing PCs across metadata for top ", varn, " features", ifelse(is.null(file), "", paste0(" to file ", file))))
+    
+    # Helper functions
+    r2_fun <- function(x, y) {
+        summary(stats::lm(y ~ x))$r.squared
+    } #function to get adj. R2 values
+    
+    
+    if (!is.null(file)) {
+        .checkOutputFile(file)
+        grDevices::pdf(file, width = pdf_width, height = pdf_height)
     }
-  }  #get adj. R2 value for covariates ~ PC 1-6
-  
-  colnames(r2_cv) = paste0(colnames(pcs_cv), " (", round(eig.val, 1),  " %)")
-  
-  breaks = seq(0,1,0.02)
-  colors = grDevices::colorRampPalette(c("white", "red"))(length(breaks))
-  #colors = colorRampPalette((brewer.pal(n = 7, name = "Reds")))(length(breaks))
-  
-  
-  ComplexHeatmap::Heatmap(
-    r2_cv,
-    name = "Correlation",
-    col = colors,
-    cluster_columns = FALSE, cluster_rows = TRUE,
-    row_names_side = "right", row_names_gp = grid::gpar(fontsize = 10), 
-    column_title = paste0("Metadata correlation with PCs for top ", varn, " features"),
-    column_names_gp = grid::gpar(fontsize = 10),
-    heatmap_legend_param = list(title = "Correlation\nwith PC",  legend_direction = "vertical"),
-    row_title = "Metadata",
-    cell_fun = function(j, i, x, y, width, height, fill) {
-      grid::grid.text(sprintf("%.2f", r2_cv[i, j]), x, y, gp = grid::gpar(fontsize = 10))
+    
+    pc = pcaResult
+    
+    # The number of PCs may be smaller than the asked number, depending on the tol parameter. Check here
+    if (pcCount > ncol(pc$x)) {
+        message = paste0("Only ", ncol(pc$x), " PCs can be used instead of ",pcCount )
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+        pcCount = ncol(pc$x)
     }
-  ) %>% plot()
-  
-  
-  
-  if (!is.null(file)) {
-    grDevices::dev.off()
-  }
+    
+    pcs_cv <- pc$x[,seq_len(pcCount)]   #Top PCs from top 1000 variable genes
+    
+    eig.val <- 100*summary(pc)$importance[2,seq_len(pcCount)]
+    
+    metadataTable = dplyr::mutate_if(metadataTable, is.character, as.factor)
+    
+    covariates <- data.frame(metadataTable[,metadataColumns], row.names = dataCols)
+    
+    r2_cv <- matrix(NA, nrow = ncol(covariates), ncol = ncol(pcs_cv), dimnames = list(colnames(covariates), colnames(pcs_cv)))
+    
+    for (cov in colnames(covariates)) {
+        for (pc in colnames(pcs_cv)) {
+            r2_cv[cov, pc] <- r2_fun(covariates[,cov], pcs_cv[,pc])
+        }
+    }  #get adj. R2 value for covariates ~ PC 1-6
+    
+    colnames(r2_cv) = paste0(colnames(pcs_cv), " (", round(eig.val, 1),  " %)")
+    
+    breaks = seq(0,1,0.02)
+    colors = grDevices::colorRampPalette(c("white", "red"))(length(breaks))
+    #colors = colorRampPalette((brewer.pal(n = 7, name = "Reds")))(length(breaks))
+    
+    
+    ComplexHeatmap::Heatmap(
+        r2_cv,
+        name = "Correlation",
+        col = colors,
+        cluster_columns = FALSE, cluster_rows = TRUE,
+        row_names_side = "right", row_names_gp = grid::gpar(fontsize = 10), 
+        column_title = paste0("Metadata correlation with PCs for top ", varn, " features"),
+        column_names_gp = grid::gpar(fontsize = 10),
+        heatmap_legend_param = list(title = "Correlation\nwith PC",  legend_direction = "vertical"),
+        row_title = "Metadata",
+        cell_fun = function(j, i, x, y, width, height, fill) {
+            grid::grid.text(sprintf("%.2f", r2_cv[i, j]), x, y, gp = grid::gpar(fontsize = 10))
+        }
+    ) %>% plot()
+    
+    
+    
+    if (!is.null(file)) {
+        grDevices::dev.off()
+    }
 }
 
 
@@ -505,68 +505,68 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
                                         plotAsPDF = TRUE, pdf_width = 12, pdf_height_base = 8, pages = NULL,
                                         forceRerun = FALSE) {
     
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  checkmate::assertFlag(plotDetails)
-  checkmate::assertSubset(dataType, c("real", "background"), empty.ok = FALSE)
-  checkmate::assert(checkmate::checkNull(nTFMax), checkmate::checkIntegerish(nTFMax, lower = 1))
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height_base, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  
-  useGCCorrection = GRN@config$parameters$useGCCorrection
-  checkmate::assertFlag(useGCCorrection, na.ok = FALSE)
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  dataType2 = c()
-  if ("real" %in% dataType) dataType2 = c(0)
-  if ("background" %in% dataType) dataType2 = c(dataType2, 1)
-  
-  for (permutationCur in 0:.getMaxPermutation(GRN)) {
-    
-    if (!permutationCur %in% dataType2) {
-      next
-    }
-    
-    futile.logger::flog.info(paste0("\n Plotting for ", .getPermStr(permutationCur)))
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
     
     
-    suffixFile = .getPermutationSuffixStr(permutationCur)
+    GRN = .makeObjectCompatible(GRN)
     
-    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_TFPeak_fdr"), basenameOutput), 
-                     suffixFile, ".pdf")
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    checkmate::assertFlag(plotDetails)
+    checkmate::assertSubset(dataType, c("real", "background"), empty.ok = FALSE)
+    checkmate::assert(checkmate::checkNull(nTFMax), checkmate::checkIntegerish(nTFMax, lower = 1))
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height_base, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
     
+    useGCCorrection = GRN@config$parameters$useGCCorrection
+    checkmate::assertFlag(useGCCorrection, na.ok = FALSE)
     
-    if (!file.exists(fileCur) | !plotAsPDF | forceRerun) {
-      
-      GRN = .addFunctionLogToObject(GRN)
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    dataType2 = c()
+    if ("real" %in% dataType) dataType2 = c(0)
+    if ("background" %in% dataType) dataType2 = c(dataType2, 1)
+    
+    for (permutationCur in 0:.getMaxPermutation(GRN)) {
         
-      if (!plotAsPDF) fileCur = NULL
-      
-      # Total number of pages is nTFMax plus 1 page per connection type
-      nPagesMax = nTFMax + length(GRN@config$TF_peak_connectionTypes)
-      
-      heightCur = pdf_height_base * length(GRN@config$TF_peak_connectionTypes)
-      .plot_TF_peak_fdr(GRN, perm = permutationCur, useGCCorrection = useGCCorrection, 
-                        plotDetails = plotDetails, fileCur, width = pdf_width, height = heightCur,
-                        nPagesMax = nPagesMax, pages = pages) 
+        if (!permutationCur %in% dataType2) {
+            next
+        }
+        
+        futile.logger::flog.info(paste0("\n Plotting for ", .getPermStr(permutationCur)))
+        
+        
+        suffixFile = .getPermutationSuffixStr(permutationCur)
+        
+        fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_TFPeak_fdr"), basenameOutput), 
+                         suffixFile, ".pdf")
+        
+        
+        if (!file.exists(fileCur) | !plotAsPDF | forceRerun) {
+            
+            GRN = .addFunctionLogToObject(GRN)
+            
+            if (!plotAsPDF) fileCur = NULL
+            
+            # Total number of pages is nTFMax plus 1 page per connection type
+            nPagesMax = nTFMax + length(GRN@config$TF_peak_connectionTypes)
+            
+            heightCur = pdf_height_base * length(GRN@config$TF_peak_connectionTypes)
+            .plot_TF_peak_fdr(GRN, perm = permutationCur, useGCCorrection = useGCCorrection, 
+                              plotDetails = plotDetails, fileCur, width = pdf_width, height = heightCur,
+                              nPagesMax = nPagesMax, pages = pages) 
+        }
+        
     }
-  
-  }
-  
-  .printExecutionTime(start, prefix = "")
-  GRN
-  
-  
+    
+    .printExecutionTime(start, prefix = "")
+    GRN
+    
+    
 }
 
 
@@ -574,216 +574,216 @@ plotDiagnosticPlots_TFPeaks <- function(GRN,
 .plot_TF_peak_fdr <- function(GRN, perm, useGCCorrection, 
                               plotDetails = FALSE, file = NULL, width = 7, height = 7, 
                               nPagesMax = NULL, pages = NULL) {
-  
-  start = Sys.time()
- 
-  pageCounter = 1  
-  
-  if (!is.null(file)) {
-    .checkOutputFile(file)
-    grDevices::pdf(file, width = width, height = height)
-  } 
-  
-  futile.logger::flog.info(paste0("Plotting FDR summary and curves for each TF", ifelse(is.null(file), "", paste0(" to file ", file))))
-  
-
-  # TODO: handle multiple activities and actually write this function
-  # fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_TFActivity_QC"), suffixFile)
-  # if ("TFActivity" %in% GRN@config$TF_peak_connectionTypes & (!file.exists(fileCur) | forceRerun)) {
-  #   .plotTF_peak_TFActivity_QC(GRN, perm = permutationCur, fileCur, width = 7, height = 8) 
-  # }
-  
-
-  # Plot the connection summary first
-  fdrToInclude = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3)
-  
-  for (TF_peak_connectionType_cur in GRN@config$TF_peak_connectionTypes) {
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          .plot_TF_peak_connectionSummary(GRN, fdr = fdrToInclude, TF_peak_connectionType = TF_peak_connectionType_cur)
-      }
-      pageCounter = pageCounter + 1
-      
-  }
-  
-  #We can skip altogether if all pages have already been produced
-  if (is.null(pages) | (!is.null(pages) && any(pages >= pageCounter))) {
-
-      # Dont take all TF, some might be missing.
-      connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
-      allTF = unique(connections_TF_peak$TF.ID) %>% as.character()
-      nTF = ifelse(is.null(nPagesMax), length(allTF), min(length(allTF), nPagesMax - length(GRN@config$TF_peak_connectionTypes)))
-      futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
-      
-      # TODO: Check difference between TFActivity TFs and expression TFs
-      
-      pb <- progress::progress_bar$new(total = nTF)
-      
-      steps = GRN@config$parameters$internal$stepsFDR
-      
-      levels_pos <- unique(as.character(cut(steps, breaks = steps, right = FALSE, include.lowest = TRUE )))
-      levels_neg <- unique(as.character(cut(steps, breaks = rev(steps), right = TRUE, include.lowest = TRUE )))
-      
- 
-      TF_iteration = 0
-      for (i in seq_len(nTF)) {
-        
-        TF_iteration = TF_iteration + 1
-        pb$tick()
-
-        if (!.print_TF(pages, TF_iteration, plotDetails)) {
-            pageCounter = pageCounter + ifelse(plotDetails, 2, 1)
-            next
-        }
-        
-        TFCur = allTF[i]
-
-        connections_TF_peakCur = dplyr::filter(connections_TF_peak, .data$TF.ID == TFCur)
-        
-        # Produce two FDR plots, coming from both directions
-        plotsCur.l = list()
-        for (typeCur in c("pos","neg")) {
-          
-          if (typeCur == "pos") {
-              levelsCur = levels_pos
-          } else {
-              levelsCur = levels_neg
-          }
-          
-          
-          connections_TF_peak.filt = dplyr::filter(connections_TF_peakCur, .data$TF_peak.fdr_direction == typeCur ) %>%
-              dplyr::select(-"TF.ID", -"TF_peak.fdr_direction") %>%
-              dplyr::mutate(TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = levelsCur))  %>%
-              reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
-          
-          plotTitle = paste0(.printTF(GRN, TFCur, printEnsemblID = TRUE), ": Direction ", typeCur, ifelse(perm == 0, "", "(background)"))
-          
-          if (!useGCCorrection) {
-              
-              g = suppressWarnings(connections_TF_peak.filt %>% 
-                                       dplyr::filter(.data$variable %in% c("TF_peak.fdr")) %>%
-                                       ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable)) +
-                                       ggplot2::geom_point(na.rm = TRUE) +
-                                       ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                                       ggplot2::labs(x = "Correlation bin", y = "FDR TF-peak", title = plotTitle) +
-                                       ggplot2::theme_bw() +
-                                       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
-                                       ggplot2::scale_x_discrete(drop = FALSE) + 
-                                       ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
-                                       ggplot2::scale_shape_manual("Background", 
-                                                                   label = c("TF_peak.fdr" = "original"),
-                                                                   values = c("TF_peak.fdr" = 1)) +
-                                       ggplot2::scale_color_viridis_c("No. of connections") 
-              )
-              plotsCur.l[[typeCur]] = g
-              
-              
-              if (plotDetails) {
-                  
-                  
-                  g2 = connections_TF_peak.filt %>%
-                      dplyr::filter(.data$variable %in% c("n_tp", "n_fp", "n_fp_norm")) %>%
-                      ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value + 1), color = .data$variable, group = .data$variable)) + 
-                      ggplot2::geom_line() +
-                      ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                      ggplot2::labs(x = "Correlation bin", y = "log10(Observed frequencies +1)", title = plotTitle) +
-                      ggplot2::theme_bw() +
-                      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
-                      ggplot2::scale_x_discrete(drop = FALSE) + 
-                      ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
-                      ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
-                                                  values = c("n_tp" = "black", 
-                                                             "n_fp" = "gray", 
-                                                             "n_fp_norm" = "darkred"),
-                                                  labels = c("n_tp" = "True positives\n(foreground, scaling ref.)\n", 
-                                                             "n_fp" = "False positives\n(background, unscaled)\n", 
-                                                             "n_fp_norm" = "False positives\n(background, scaled to ref.)"))
-                  
-                  
-                  plotsCur.l[[paste0(typeCur, "_details")]] = g2
-              }
-              
-              
-              
-          } else {
-              
-              g = suppressWarnings(connections_TF_peak.filt %>% 
-                                       dplyr::filter(stringr::str_starts(.data$variable, "TF_peak.fdr")) %>% 
-                                       ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable, alpha = .data$variable)) + 
-                                       ggplot2::geom_point(na.rm = TRUE) +
-                                       ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                                       ggplot2::labs(x = "Correlation bin", y = "FDR TF-peak", title = plotTitle) +
-                                       ggplot2::theme_bw() +
-                                       ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
-                                       ggplot2::scale_x_discrete(drop = FALSE) + 
-                                       ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
-                                       ggplot2::scale_shape_manual("Background", 
-                                                                   label = c("TF_peak.fdr" = "GC-adjusted","TF_peak.fdr_orig" = "original"),
-                                                                   values = c("TF_peak.fdr" = 3,"TF_peak.fdr_orig" = 1)) +
-                                       ggplot2::scale_color_viridis_c("No. of connections") + 
-                                       ggplot2::scale_alpha_discrete(range = c("TF_peak.fdr" = 0.5,"TF_peak.fdr_orig" = 1))  +
-                                       ggplot2::guides(alpha = FALSE)
-              )
-              plotsCur.l[[typeCur]] = g
-              
-              if (plotDetails) {
-                  g2 = connections_TF_peak.filt %>%
-                      dplyr::filter(.data$variable %in% c("n_tp", "n_fp", "n_fp_norm")) %>%
-                      ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value + 1), color = .data$variable)) + 
-                      ggplot2::geom_point(size = 1) +
-                      ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
-                      ggplot2::labs(x = "Correlation bin", y = "log10(Observed frequencies +1)", title = plotTitle) +
-                      ggplot2::theme_bw() +
-                      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
-                      ggplot2::scale_x_discrete(drop = FALSE) + 
-                      ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
-                      ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
-                                                  values = c("n_tp" = "black", 
-                                                             "fpvalue_orig" = "lightgray",  
-                                                             "fpvalue_norm_orig" = "darkgray",
-                                                             "n_fp" = "brown1", 
-                                                             "fpvalue_norm" = "darkred"),
-                                                  labels = c("n_tp" = "True positives\n(foreground, scaling ref.)\n", 
-                                                             "fpvalue_orig" = "False positives before GC\n(background, unscaled)\n",  
-                                                             "fpvalue_norm_orig" = "False positives without GC\n(background, scaled to ref.)\n",
-                                                             "n_fp" = "False positives with GC\n(background, unscaled)\n", 
-                                                             "fpvalue_norm" = "False positives with GC\n(background, scaled to ref.)"))
-                  
-                  plotsCur.l[[paste0(typeCur, "_details")]] = g2
-              }
-              
-          }
-          
-        } # end for both directions 
-        
-        
-        # PRINT PLOT
+    
+    start = Sys.time()
+    
+    pageCounter = 1  
+    
+    if (!is.null(file)) {
+        .checkOutputFile(file)
+        grDevices::pdf(file, width = width, height = height)
+    } 
+    
+    futile.logger::flog.info(paste0("Plotting FDR summary and curves for each TF", ifelse(is.null(file), "", paste0(" to file ", file))))
+    
+    
+    # TODO: handle multiple activities and actually write this function
+    # fileCur = paste0(outputFolder, .getOutputFileName("plot_TFPeak_TFActivity_QC"), suffixFile)
+    # if ("TFActivity" %in% GRN@config$TF_peak_connectionTypes & (!file.exists(fileCur) | forceRerun)) {
+    #   .plotTF_peak_TFActivity_QC(GRN, perm = permutationCur, fileCur, width = 7, height = 8) 
+    # }
+    
+    
+    # Plot the connection summary first
+    fdrToInclude = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3)
+    
+    for (TF_peak_connectionType_cur in GRN@config$TF_peak_connectionTypes) {
         if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-            plots_all = plotsCur.l$pos / plotsCur.l$neg
-            plot(plots_all)
-            pageCounter = pageCounter + 1 
+            .plot_TF_peak_connectionSummary(GRN, fdr = fdrToInclude, TF_peak_connectionType = TF_peak_connectionType_cur)
         }
-      
-
-        if (plotDetails) {
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-              plots_all = plotsCur.l$pos_details / plotsCur.l$neg_details
-              plot(plots_all)
-              pageCounter = pageCounter + 1 
-          }
-          
-        }
-
-      } # end allTF
-  
-  } else {
-      futile.logger::flog.info(paste0( "Skip TF-specific plots due to user-selected pages"))
-  }
-  
-  .checkPageNumberValidity(pages, pageCounter)
-  
-  if (!is.null(file)) dev.off()
-  
-  .printExecutionTime(start)
+        pageCounter = pageCounter + 1
+        
+    }
+    
+    #We can skip altogether if all pages have already been produced
+    if (is.null(pages) | (!is.null(pages) && any(pages >= pageCounter))) {
+        
+        # Dont take all TF, some might be missing.
+        connections_TF_peak = GRN@connections$TF_peaks[[as.character(perm)]]$connectionStats
+        allTF = unique(connections_TF_peak$TF.ID) %>% as.character()
+        nTF = ifelse(is.null(nPagesMax), length(allTF), min(length(allTF), nPagesMax - length(GRN@config$TF_peak_connectionTypes)))
+        futile.logger::flog.info(paste0(" Including a total of ", nTF,  " TF. Preparing plots..."))
+        
+        # TODO: Check difference between TFActivity TFs and expression TFs
+        
+        pb <- progress::progress_bar$new(total = nTF)
+        
+        steps = GRN@config$parameters$internal$stepsFDR
+        
+        levels_pos <- unique(as.character(cut(steps, breaks = steps, right = FALSE, include.lowest = TRUE )))
+        levels_neg <- unique(as.character(cut(steps, breaks = rev(steps), right = TRUE, include.lowest = TRUE )))
+        
+        
+        TF_iteration = 0
+        for (i in seq_len(nTF)) {
+            
+            TF_iteration = TF_iteration + 1
+            pb$tick()
+            
+            if (!.print_TF(pages, TF_iteration, plotDetails)) {
+                pageCounter = pageCounter + ifelse(plotDetails, 2, 1)
+                next
+            }
+            
+            TFCur = allTF[i]
+            
+            connections_TF_peakCur = dplyr::filter(connections_TF_peak, .data$TF.ID == TFCur)
+            
+            # Produce two FDR plots, coming from both directions
+            plotsCur.l = list()
+            for (typeCur in c("pos","neg")) {
+                
+                if (typeCur == "pos") {
+                    levelsCur = levels_pos
+                } else {
+                    levelsCur = levels_neg
+                }
+                
+                
+                connections_TF_peak.filt = dplyr::filter(connections_TF_peakCur, .data$TF_peak.fdr_direction == typeCur ) %>%
+                    dplyr::select(-"TF.ID", -"TF_peak.fdr_direction") %>%
+                    dplyr::mutate(TF_peak.r_bin = factor(.data$TF_peak.r_bin, levels = levelsCur))  %>%
+                    reshape2::melt(id = c("TF_peak.r_bin", "TF_peak.connectionType", "n")) 
+                
+                plotTitle = paste0(.printTF(GRN, TFCur, printEnsemblID = TRUE), ": Direction ", typeCur, ifelse(perm == 0, "", "(background)"))
+                
+                if (!useGCCorrection) {
+                    
+                    g = suppressWarnings(connections_TF_peak.filt %>% 
+                                             dplyr::filter(.data$variable %in% c("TF_peak.fdr")) %>%
+                                             ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable)) +
+                                             ggplot2::geom_point(na.rm = TRUE) +
+                                             ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                                             ggplot2::labs(x = "Correlation bin", y = "FDR TF-peak", title = plotTitle) +
+                                             ggplot2::theme_bw() +
+                                             ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
+                                             ggplot2::scale_x_discrete(drop = FALSE) + 
+                                             ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
+                                             ggplot2::scale_shape_manual("Background", 
+                                                                         label = c("TF_peak.fdr" = "original"),
+                                                                         values = c("TF_peak.fdr" = 1)) +
+                                             ggplot2::scale_color_viridis_c("No. of connections") 
+                    )
+                    plotsCur.l[[typeCur]] = g
+                    
+                    
+                    if (plotDetails) {
+                        
+                        
+                        g2 = connections_TF_peak.filt %>%
+                            dplyr::filter(.data$variable %in% c("n_tp", "n_fp", "n_fp_norm")) %>%
+                            ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value + 1), color = .data$variable, group = .data$variable)) + 
+                            ggplot2::geom_line() +
+                            ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                            ggplot2::labs(x = "Correlation bin", y = "log10(Observed frequencies +1)", title = plotTitle) +
+                            ggplot2::theme_bw() +
+                            ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
+                            ggplot2::scale_x_discrete(drop = FALSE) + 
+                            ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
+                            ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
+                                                        values = c("n_tp" = "black", 
+                                                                   "n_fp" = "gray", 
+                                                                   "n_fp_norm" = "darkred"),
+                                                        labels = c("n_tp" = "True positives\n(foreground, scaling ref.)\n", 
+                                                                   "n_fp" = "False positives\n(background, unscaled)\n", 
+                                                                   "n_fp_norm" = "False positives\n(background, scaled to ref.)"))
+                        
+                        
+                        plotsCur.l[[paste0(typeCur, "_details")]] = g2
+                    }
+                    
+                    
+                    
+                } else {
+                    
+                    g = suppressWarnings(connections_TF_peak.filt %>% 
+                                             dplyr::filter(stringr::str_starts(.data$variable, "TF_peak.fdr")) %>% 
+                                             ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, .data$value, color = .data$n, shape = .data$variable, alpha = .data$variable)) + 
+                                             ggplot2::geom_point(na.rm = TRUE) +
+                                             ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                                             ggplot2::labs(x = "Correlation bin", y = "FDR TF-peak", title = plotTitle) +
+                                             ggplot2::theme_bw() +
+                                             ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
+                                             ggplot2::scale_x_discrete(drop = FALSE) + 
+                                             ggplot2::scale_y_continuous(limits = c(0,1),minor_breaks = seq(0 , 1, 0.1), breaks = seq(0, 1, 0.1)) +
+                                             ggplot2::scale_shape_manual("Background", 
+                                                                         label = c("TF_peak.fdr" = "GC-adjusted","TF_peak.fdr_orig" = "original"),
+                                                                         values = c("TF_peak.fdr" = 3,"TF_peak.fdr_orig" = 1)) +
+                                             ggplot2::scale_color_viridis_c("No. of connections") + 
+                                             ggplot2::scale_alpha_discrete(range = c("TF_peak.fdr" = 0.5,"TF_peak.fdr_orig" = 1))  +
+                                             ggplot2::guides(alpha = FALSE)
+                    )
+                    plotsCur.l[[typeCur]] = g
+                    
+                    if (plotDetails) {
+                        g2 = connections_TF_peak.filt %>%
+                            dplyr::filter(.data$variable %in% c("n_tp", "n_fp", "n_fp_norm")) %>%
+                            ggplot2::ggplot(ggplot2::aes(.data$TF_peak.r_bin, log10(.data$value + 1), color = .data$variable)) + 
+                            ggplot2::geom_point(size = 1) +
+                            ggplot2::facet_wrap(~TF_peak.connectionType, ncol = 1) + 
+                            ggplot2::labs(x = "Correlation bin", y = "log10(Observed frequencies +1)", title = plotTitle) +
+                            ggplot2::theme_bw() +
+                            ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1, size = 8)) +
+                            ggplot2::scale_x_discrete(drop = FALSE) + 
+                            ggplot2::geom_hline(yintercept = log10(1), linetype = "dotted", color = "gray") +
+                            ggplot2::scale_color_manual("Observed data for\nFDR calculation", 
+                                                        values = c("n_tp" = "black", 
+                                                                   "fpvalue_orig" = "lightgray",  
+                                                                   "fpvalue_norm_orig" = "darkgray",
+                                                                   "n_fp" = "brown1", 
+                                                                   "fpvalue_norm" = "darkred"),
+                                                        labels = c("n_tp" = "True positives\n(foreground, scaling ref.)\n", 
+                                                                   "fpvalue_orig" = "False positives before GC\n(background, unscaled)\n",  
+                                                                   "fpvalue_norm_orig" = "False positives without GC\n(background, scaled to ref.)\n",
+                                                                   "n_fp" = "False positives with GC\n(background, unscaled)\n", 
+                                                                   "fpvalue_norm" = "False positives with GC\n(background, scaled to ref.)"))
+                        
+                        plotsCur.l[[paste0(typeCur, "_details")]] = g2
+                    }
+                    
+                }
+                
+            } # end for both directions 
+            
+            
+            # PRINT PLOT
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                plots_all = plotsCur.l$pos / plotsCur.l$neg
+                plot(plots_all)
+                pageCounter = pageCounter + 1 
+            }
+            
+            
+            if (plotDetails) {
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    plots_all = plotsCur.l$pos_details / plotsCur.l$neg_details
+                    plot(plots_all)
+                    pageCounter = pageCounter + 1 
+                }
+                
+            }
+            
+        } # end allTF
+        
+    } else {
+        futile.logger::flog.info(paste0( "Skip TF-specific plots due to user-selected pages"))
+    }
+    
+    .checkPageNumberValidity(pages, pageCounter)
+    
+    if (!is.null(file)) dev.off()
+    
+    .printExecutionTime(start)
 }
 
 
@@ -1194,7 +1194,7 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
             printTF = TRUE
         } 
     }
-
+    
     
     printTF
 }  
@@ -1255,8 +1255,8 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
 }
 
 .plotTF_peak_TFActivity_QC <- function(GRN, perm = 0, fileCur, width = 7, height = 8) {
-  
-  # TODO
+    
+    # TODO
 }
 
 
@@ -1289,7 +1289,7 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
             dplyr::filter(.data$TF_peak.fdr < fdrCur, .data$TF_peak.connectionType == TF_peak_connectionType) %>%
             dplyr::group_by(.data$TF_peak.r_bin, .data$perm, .drop = FALSE) %>%
             dplyr::summarise(n = sum(.data$n), nTFDistinct = dplyr::n_distinct(.data$TF.ID), 
-                      TFDistinct = paste0(unique(.data$TF.ID), collapse = ","), .groups = "keep") %>%
+                             TFDistinct = paste0(unique(.data$TF.ID), collapse = ","), .groups = "keep") %>%
             dplyr::ungroup() %>%
             dplyr::mutate(perm = factor(.data$perm, levels = c("0", "1")),
                           fdr = fdrCur) %>%
@@ -1297,7 +1297,7 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
             tidyr::complete(.data$TF_peak.r_bin, .data$perm,
                             fill = list(n = 0, nTFDistinct = 0, TFDistinct  = "", fdr = fdrCur),
                             explicit = FALSE)
-
+        
         
         n_pos = data.summary.l[[as.character(fdrCur)]] %>%
             dplyr::filter(!stringr::str_starts(.data$TF_peak.r_bin, "\\[-"), ) %>%
@@ -1333,9 +1333,9 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
     }
     
     data.df = data.table::rbindlist(data.summary.l)
-        
+    
     ## PLOT ##
-
+    
     xAxiPos = c(1,seq(6,36,5),40)
     xAxisLabels = levels(data.df$TF_peak.r_bin)[xAxiPos]
     g = ggplot(data.df, aes(.data$TF_peak.r_bin, .data$n, fill = .data$perm, group = .data$perm)) +
@@ -1352,7 +1352,7 @@ plotDiagnosticPlots_TFPeaks_GC <- function(GRN,
         #       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
         theme(axis.line = element_line(colour = "black"))
     plot(g)
-
+    
 }
 
 
@@ -1389,63 +1389,63 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                                          plotPerTF = FALSE,
                                          plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                          forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  checkmate::assertList(gene.types, any.missing = FALSE, min.len = 1, types = "character")
-  for (geneTypesCur in gene.types) {
-      checkmate::assertSubset(geneTypesCur, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
-  }  
-
-  checkmate::assertFlag(useFiltered)
-  checkmate::assertFlag(plotDetails)
-  checkmate::assertFlag(plotPerTF)
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  
-  
-  # For compatibility reasons, re-create the genes and peaks annotation if not present in the object
-  if (!"peak.annotation" %in% colnames(GRN@annotation$peaks)) {
-    GRN = .populatePeakAnnotation(GRN)
-  }
-  if (!"gene.CV" %in% colnames(GRN@annotation$genes)) {
-    GRN = .populateGeneAnnotation(GRN)
-  }
-  
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  if (is.null(GRN@connections$peak_genes[["0"]])) {
-    message = paste0("Could not find peak-gene connections in GRN object. Run the function addConnections_peak_gene first")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  if (!plotAsPDF) {
-    filenameCurBase = NULL
-  } else {
-    filenameCurBase = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_peakGene_diag"), basenameOutput), "_")
-  }
-  
-  GRN = .plotDiagnosticPlots_peakGene_all(GRN, gene.types = gene.types, fileBase = filenameCurBase, 
-                                    useFiltered = useFiltered, 
-                                    plotPerTF = plotPerTF,
-                                    pdf_width = pdf_width, pdf_height = pdf_height,
-                                    plotDetails = plotDetails,
-                                    pages = pages,
-                                    forceRerun = forceRerun)
-  
-  .printExecutionTime(start, prefix = "")
-  GRN
-  
+    
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    checkmate::assertList(gene.types, any.missing = FALSE, min.len = 1, types = "character")
+    for (geneTypesCur in gene.types) {
+        checkmate::assertSubset(geneTypesCur, c("all", unique(as.character(GRN@annotation$genes$gene.type))) %>% stats::na.omit(), empty.ok = FALSE)
+    }  
+    
+    checkmate::assertFlag(useFiltered)
+    checkmate::assertFlag(plotDetails)
+    checkmate::assertFlag(plotPerTF)
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    
+    
+    # For compatibility reasons, re-create the genes and peaks annotation if not present in the object
+    if (!"peak.annotation" %in% colnames(GRN@annotation$peaks)) {
+        GRN = .populatePeakAnnotation(GRN)
+    }
+    if (!"gene.CV" %in% colnames(GRN@annotation$genes)) {
+        GRN = .populateGeneAnnotation(GRN)
+    }
+    
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    if (is.null(GRN@connections$peak_genes[["0"]])) {
+        message = paste0("Could not find peak-gene connections in GRN object. Run the function addConnections_peak_gene first")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    if (!plotAsPDF) {
+        filenameCurBase = NULL
+    } else {
+        filenameCurBase = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_peakGene_diag"), basenameOutput), "_")
+    }
+    
+    GRN = .plotDiagnosticPlots_peakGene_all(GRN, gene.types = gene.types, fileBase = filenameCurBase, 
+                                            useFiltered = useFiltered, 
+                                            plotPerTF = plotPerTF,
+                                            pdf_width = pdf_width, pdf_height = pdf_height,
+                                            plotDetails = plotDetails,
+                                            pages = pages,
+                                            forceRerun = forceRerun)
+    
+    .printExecutionTime(start, prefix = "")
+    GRN
+    
 }
 #' @import patchwork
 #' @importFrom rlang .data
@@ -1458,627 +1458,629 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                                               pdf_height = 12,
                                               pages = NULL,
                                               forceRerun = FALSE) {
-  
-  start = Sys.time()
-  
-  # get list of all filenames that are going to be created
-  filenames.all = c()
-  filteredStr = dplyr::if_else(useFiltered, "_filtered", "")
-  for (geneTypesSelected in gene.types) {
-    filenameCur = paste0(fileBase, paste0(geneTypesSelected, collapse = "+"), filteredStr, ".pdf")
-    filenames.all = c(filenames.all, filenameCur)
-  }
-  
-  if (!all(file.exists(filenames.all)) | forceRerun) {
     
-    futile.logger::flog.info(paste0("Plotting diagnostic plots for peak-gene correlations", ifelse(is.null(fileBase), "", paste0(" to file(s) with basename ", fileBase))))
+    start = Sys.time()
     
-    cols_keep = c("peak.ID", "gene.ENSEMBL", "peak_gene.r", "peak_gene.p_raw", "peak_gene.distance")
-    
-    # Change from 10 to 5 
-    nCategoriesBinning = 5
-    probs = seq(0,1,1/nCategoriesBinning)
-    
-    
-    range = GRN@config$parameters$promoterRange
-    class_levels = c(paste0("real_",range), paste0("random_",range))
-    networkType_details = c(paste0("real_",range), paste0("random_",range))
-    
-    colors_vec = c("black", "darkgray")
-    networkType_vec = c("real", "background")
-    names(colors_vec) = names(networkType_vec) = networkType_details
-    
-    options(dplyr.summarise.inform = FALSE) 
-    
-    #Either take all or the filtered set of connections
-    if (useFiltered) {
-      
-      peakGeneCorrelations.all = 
-        rbind(dplyr::select(GRN@connections$all.filtered[["0"]], dplyr::everything()) %>%
-                dplyr::mutate(class = paste0("real_",range))) %>%
-        rbind(dplyr::select(GRN@connections$all.filtered[["1"]],  dplyr::everything()) %>% 
-                dplyr::mutate(class = paste0("random_",range)))
-      
-    } else {
-      
-      if (!"peak.GC.perc" %in% colnames(GRN@annotation$peaks)) {
-          GRN@annotation$peaks$peak.GC.perc = NA
-      }
-      
-      peakGeneCorrelations.all = 
-        rbind(
-          dplyr::select(GRN@connections$peak_genes[["0"]], tidyselect::all_of(cols_keep)) %>%
-            dplyr::mutate(class = factor(paste0("real_",range), levels = class_levels)),
-          dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
-            dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
-        dplyr::left_join(dplyr::select(GRN@annotation$genes, "gene.ENSEMBL", "gene.type", 
-                                       "gene.mean", "gene.median", "gene.CV"), by = "gene.ENSEMBL", multiple = "all") %>%
-        dplyr::left_join(GRN@annotation$peaks %>% 
-                           dplyr::select(-dplyr::starts_with("peak.gene."), -"peak.GC.perc"), by = "peak.ID") %>%
-        dplyr::select(-"gene.ENSEMBL")
-      
-    }
-    
-    if (!plotPerTF) {
-      peakGeneCorrelations.all = dplyr::select(peakGeneCorrelations.all, -"peak.ID")
-    }
-    
-    nClasses_distance  = 10
-    
-    peakGeneCorrelations.all = peakGeneCorrelations.all %>%
-      dplyr::mutate(r_positive = .data$peak_gene.r > 0,
-                    peak_gene.distance_class = 
-                      forcats::fct_explicit_na(addNA(cut(.data$peak_gene.distance, breaks = nClasses_distance, include.lowest = TRUE)), "random"),
-                    peak_gene.distance_class_abs = forcats::fct_explicit_na(addNA(cut(abs(.data$peak_gene.distance), 
-                                                                                      breaks = nClasses_distance, include.lowest = TRUE, ordered_result = TRUE)), "random"),
-                    peak_gene.p.raw.class = cut(.data$peak_gene.p_raw, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE),
-                    peak_gene.r.class = cut(.data$peak_gene.r, breaks = seq(-1,1,0.05), include.lowest = TRUE, ordered_result = TRUE)) %>%
-      dplyr::filter(!is.na(.data$peak_gene.r)) # Eliminate rows with NA for peak_gene.r. This can happen if the normalized gene counts are identical across ALL samples, and due to the lack of any variation, the correlation cannot be computed
-    
-    
-    # Oddity of cut: When breaks is specified as a single number, the range of the data is divided into breaks pieces of equal length, and then the outer limits are moved away by 0.1% of the range to ensure that the extreme values both fall within the break intervals. 
-    levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1] = 
-      gsub("(-\\d+)", "0", levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1], perl = TRUE)
-
-    # Prepare plots #
-    
-    colors_class = c("black", "black")
-    names(colors_class) = unique(peakGeneCorrelations.all$class)
-    colors_class[which(grepl("random", names(colors_class)))] = "darkgray"
-    
-    r_pos_class = c("black", "darkgray")
-    names(r_pos_class) = c("TRUE", "FALSE")
-    
-    dist_class = c("dark red", "#fc9c9c")
-    names(dist_class) = class_levels
-    
-    freqs = table(peakGeneCorrelations.all$class)
-    freq_class = paste0(gsub(names(freqs), pattern = "(.+)(_.*)", replacement = "\\1"), " (n=", .prettyNum(freqs) , ")")
-    # Change upstream and go with "background" everywhere
-    freq_class = gsub(freq_class, pattern = "random", replacement = "background")
-    names(freq_class) <- names(freqs)
-    
-    
-    xlabels_peakGene_r.class = levels(peakGeneCorrelations.all$peak_gene.r.class)
-    nCur = length(xlabels_peakGene_r.class)
-    xlabels_peakGene_r.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
-    
-    # For the last plot, which is wider, we label a few more
-    xlabels_peakGene_r.class2 = levels(peakGeneCorrelations.all$peak_gene.r.class)
-    nCur = length(xlabels_peakGene_r.class2)
-    xlabels_peakGene_r.class2[setdiff(seq_len(nCur), c(1, floor(nCur/4), floor(nCur/2), floor(nCur/4*3), nCur))] <- ""
-    
-    xlabels_peakGene_praw.class = levels(peakGeneCorrelations.all$peak_gene.p.raw.class)
-    nCur = length(xlabels_peakGene_praw.class)
-    xlabels_peakGene_praw.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
-    
-    #
-    # ITERATE THROUGH ALL GENE TYPES, WITH ONE PER PLOT
-    #
+    # get list of all filenames that are going to be created
+    filenames.all = c()
+    filteredStr = dplyr::if_else(useFiltered, "_filtered", "")
     for (geneTypesSelected in gene.types) {
-      
-      # Reset page counter for each PDF anew
-      pageCounter = 1
-      
-      futile.logger::flog.info(paste0(" Gene type ", paste0(geneTypesSelected, collapse = "+")))
-      
-      if ("all" %in% geneTypesSelected) {
-        indexCur = seq_len(nrow(peakGeneCorrelations.all))
-      } else {
-        indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
-      }
-      
-      
-      # START PLOTTING #
-      
-      if (!is.null(fileBase)) {
         filenameCur = paste0(fileBase, paste0(geneTypesSelected, collapse = "+"), filteredStr, ".pdf")
-        .checkOutputFile(filenameCur)
-        grDevices::pdf(file = filenameCur, width = pdf_width, height = pdf_height)
-        
-        futile.logger::flog.info(paste0(" Plotting to file ", filenameCur))
-        
-      }
-      
-      if (plotPerTF) {
-        
-        TF.nRows = rep(-1, length(GRN@config$allTF))
-        #TF.nRows = rep(-1, 10)
-        TF.peaks = list()
-        names(TF.nRows) = GRN@config$allTF
-        for (TFCur in GRN@config$allTF) {
-          TF.peaks[[TFCur]] = names(which(GRN@data$TFs$TF_peak_overlap[,TFCur] == 1))
-          TF.nRows[TFCur] = peakGeneCorrelations.all[indexCur,] %>% dplyr::filter(.data$peak.ID %in% TF.peaks[[TFCur]]) %>% nrow()
-        }
-        
-        TFs_sorted = names(sort(TF.nRows, decreasing = TRUE))
-        
-        allTF = c("all", TFs_sorted)
-        
-      } else {
-        allTF = "all"
-      }
-      
-      counter = 0
-      for (TFCur in allTF) {
-        
-        counter = counter + 1
-        
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          if (length(allTF) > 1) {
-            futile.logger::flog.info(paste0(" QC plots for TF ", TFCur, " (", counter, " of ", length(allTF), ")"))
-          }
-          
-          
-          if ("all" %in% geneTypesSelected) {
-            indexCur = seq_len(nrow(peakGeneCorrelations.all))
-          } else {
-            indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
-          }
-          
-          
-          if (TFCur != "all") {
-            indexCur = intersect(indexCur, which(peakGeneCorrelations.all$peak.ID %in% TF.peaks[[TFCur]]))
-          }
-            
-          if (length(indexCur) == 0) {
-              message = " No connections left after filtering and intersection, skip plots"
-              .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-              next
-          }
-          
-          # Get subset also for just the real data
-          indexCurReal = intersect(indexCur, which(peakGeneCorrelations.all$class == names(dist_class)[1]))
-          
-          
-          xlabel = paste0("Correlation raw p-value")
-          
-          # DENSITY PLOTS P VALUE
-          
-          # TODO: Densities as ratio
-          # https://stackoverflow.com/questions/58629959/how-can-i-extract-data-from-a-kernel-density-function-in-r-for-many-samples-at-o#:~:text=To%20compute%20the%20density%20you,can%20use%20the%20package%20spatstat%20.
-          
-          # Produce the labels for the class-specific subtitles
-          customLabel_class = .customLabeler(table(peakGeneCorrelations.all[indexCur,]$class))
-          
-          r_pos_freq = table(peakGeneCorrelations.all[indexCur,]$r_positive)
-          labeler_r_pos = ggplot2::labeller(r_positive = c("TRUE"  = paste0("r positive (", r_pos_freq["TRUE"], ")"), 
-                                                  "FALSE" = paste0("r negative (", r_pos_freq["FALSE"], ")")) )
-          theme_main = ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 0, hjust = 0.5, size = ggplot2::rel(0.8)),
-                             axis.text.y = ggplot2::element_text(size = ggplot2::rel(0.8)),
-                             panel.grid.major = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank())
-          
-          
-          
-          ## p-val density curves stratified by real vs background ##
-          
-          gA2 = ggplot2::ggplot(peakGeneCorrelations.all[indexCur,], ggplot2::aes(.data$peak_gene.p_raw, color = .data$r_positive)) + ggplot2::geom_density()  +
-            ggplot2::facet_wrap(~ .data$class, labeller = ggplot2::labeller(class = freq_class) ) +
-            ggplot2::xlab(xlabel) + ggplot2::ylab("Density") +  ggplot2::theme_bw() +
-            ggplot2::scale_color_manual(labels = names(r_pos_class), values = r_pos_class) +
-            ggplot2::theme(legend.position = "none", axis.text = ggplot2::element_text(size = ggplot2::rel(0.6)), strip.text.x = ggplot2::element_text(size = ggplot2::rel(0.8)))
-          
-          # Helper function to retrieve all tables and data aggregation steps for subsequent visualization
-          tbl.l = .createTables_peakGeneQC(peakGeneCorrelations.all[indexCur,], networkType_details, colors_vec, range)
-          
-          # Store in the GRN object for independent analysis
-          GRN@stats$peak_genes[[paste0(geneTypesSelected, collapse = "+")]] = tbl.l
-          
-          xlabel = paste0("Correlation raw\np-value (binned)")
-          
-          
-          xlabels = levels(tbl.l$d_merged$peak_gene.p.raw.class)
-          xlabels[setdiff(seq_len(length(xlabels)), c(1, floor(length(xlabels)/2), length(xlabels)))] <- ""
-          
-          gB3 = ggplot2::ggplot(tbl.l$d_merged, ggplot2::aes(.data$peak_gene.p.raw.class, .data$ratio, fill = .data$classAll)) + 
-            ggplot2::geom_bar(stat = "identity", position = "dodge", na.rm = TRUE, width = 0.5) + 
-            ggplot2::geom_hline(yintercept = 1, linetype = "dotted") + 
-            ggplot2::xlab(xlabel) + ggplot2::ylab("Ratio") +
-            ggplot2::scale_fill_manual("Class", values = c(dist_class, r_pos_class), 
-                              labels = c("real", "background", "r+ (r>0)", "r- (r<=0)"), 
-            ) + # labels vector can be kind of manually specified here because the levels were previosly defined in a certain order
-            ggplot2::scale_x_discrete(labels = xlabels_peakGene_praw.class) +
-            ggplot2::theme_bw() +  
-            #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8), strip.background = ggplot2::element_blank(), strip.placement = "outside", axis.title.y = ggplot2::element_blank()) +
-            # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = ggplot2::element_blank()) +
-            theme_main +
-            ggplot2::facet_wrap(~ factor(set), nrow = 2, scales = "free_y", strip.position = "left") 
-          
-          #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of background / background + real)
-          # that could give an indication of whether an FDR based on the background or based on the negative correlations would be more stringent
-          
-          # R PEAK GENE #
-          
-          xlabel = paste0("Correlation coefficient r")
-          
-          sum_real = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[1]]
-          sum_rnd  = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[2]]
-          binData.r = peakGeneCorrelations.all[indexCur,] %>%
-            dplyr::group_by(class) %>%
-            dplyr::count(.data$peak_gene.r.class) %>%
-            dplyr::mutate(nnorm = dplyr::case_when(class == !! (names(dist_class)[1]) ~ .data$n / (sum_real / sum_rnd), 
-                                                   TRUE ~ as.double(.data$n)))
-          
-          xlabel = paste0("Correlation coefficient r (binned)")
-          
-          gD = ggplot2::ggplot(binData.r, ggplot2::aes(.data$peak_gene.r.class, .data$nnorm, group = .data$class, fill = .data$class)) + 
-            ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(preserve = "single"), na.rm = FALSE, width = 0.5) +
-            ggplot2::geom_line(ggplot2::aes(.data$peak_gene.r.class, .data$nnorm, group = .data$class, color = .data$class), stat = "identity") +
-            ggplot2::scale_fill_manual("Group", labels = names(dist_class), values = dist_class) +
-            ggplot2::scale_color_manual("Group", labels = names(dist_class), values = dist_class) +
-            ggplot2::scale_x_discrete(labels = xlabels_peakGene_r.class2, drop = FALSE) +
-            ggplot2::theme_bw() + ggplot2::theme(legend.position = "none") +
-            ggplot2::xlab(xlabel) + ggplot2::ylab("Abundance") +
-            theme_main  +
-            ggplot2::scale_y_continuous(labels = scales::scientific)
-          
-          
-          mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ",\n", .prettyNum(range), " bp promoter range)")
-          
-          plots_all = ( ((gA2 | gB3 ) + 
-                           patchwork::plot_layout(widths = c(2.5,1.5))) / ((gD) + 
-                                                                             patchwork::plot_layout(widths = c(4))) ) + 
-            patchwork::plot_layout(heights = c(2,1), guides = 'collect') +
-            patchwork::plot_annotation(title = mainTitle, theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
-          
-          plot(plots_all)
-        }
-        pageCounter = pageCounter + 1
-        
-        
-      } # end for each TF
-      
-      
-      
-      if (!is.null(GRN@annotation$peaks_obj) & is.installed("ChIPseeker")) {
-        #plot(ChIPseeker::plotAnnoBar(GRN@annotation$peaks_obj))
-        
-        # no plot, as this is somehow just a list and no ggplot object
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          ChIPseeker::plotAnnoPie(GRN@annotation$peaks_obj, 
-                                  main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$peaks), ")"))
-        }
-        pageCounter = pageCounter + 1
-        
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          plot(ChIPseeker::plotDistToTSS(GRN@annotation$peaks_obj))
-        }
-        
-        pageCounter = pageCounter + 1
-      }
-      
-      # PEAK AND GENE PROPERTIES #
-      
-      xlabel = paste0("Correlation raw\np-value (binned)")
-      mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ", .prettyNum(range), " bp promoter range)")
-      
-      allVars = c("peak.annotation", "peak.GC.class", "peak.width", "peak.mean","peak.median",
-                  "peak.CV", "gene.median",  "gene.mean", "gene.CV", "peak.gene.combined.CV")
-      
-      # Only use those actually available, as some packages may not be available
-      allVars = intersect(allVars, colnames(peakGeneCorrelations.all))
-
-      
-      
-      for (varCur in allVars) {
-        #next
-        # Save memory and prune the table and add only the variable we need here
-        if (varCur != "peak.gene.combined.CV") {
-          dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-            dplyr::select("peak_gene.p_raw", tidyselect::all_of(varCur), "class", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance") 
-        } else {
-          dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
-            dplyr::select("peak_gene.p_raw", "class", "gene.CV", "peak.CV", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance")
-        }
-        
-        
-        # Choose colors depending on type of variable: gradient or not?
-        
-        if (varCur %in% c("peak.annotation","peak.GC.class")) {
-          
-          newColName = varCur
-          
-        } else {
-          
-          newColName = paste0(varCur, ".class")
-          
-          if (varCur == "peak.gene.combined.CV") {
-            
-            dataCur = dataCur %>%
-              dplyr::mutate(!!(newColName) := dplyr::case_when(
-                gene.CV < 0.5                & peak.CV < 0.5                ~ "gene.CV+peak.CV<0.5", ##
-                # gene.CV >= 0.5 & gene.CV < 1 & peak.CV < 0.5                ~ "gene.CV<1_peak.CV<0.5",
-                # gene.CV >= 1                 & peak.CV < 0.5                ~ "gene.CV>1_peak.CV<0.5",
-                # 
-                # gene.CV < 0.5                & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<0.5_peak.CV<1",
-                # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<1_peak.CV<1",
-                # gene.CV >= 1                 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV>1_peak.CV<1",
-                # 
-                # gene.CV < 0.5                & peak.CV >= 1                 ~ "gene.CV<0.5_peak.CV>1",
-                # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 1                 ~ "gene.CV<1_peak.CV>1",
-                gene.CV >= 1                 & peak.CV >= 1                 ~ "gene.CV+peak.CV>1", ##
-                TRUE ~ "other"
-              )) %>%
-              dplyr::select(-"gene.CV", -"peak.CV")
-            
-          } else {
-              
-            if (dplyr::n_distinct(dataCur %>% dplyr::pull(.data[[varCur]])) > 1) {
-                dataCur = dataCur %>%
-                    dplyr::mutate(!!(newColName) := cut(.data[[varCur]], breaks = unique(quantile(.data[[varCur]], probs = probs, na.rm = TRUE)), 
-                                                        include.lowest = TRUE, ordered_result = TRUE))
-                    
-            } else {
-                dataCur = dplyr::mutate(dataCur, !!(newColName) := as.factor(.data[[varCur]]))
-            }
-              
-            dataCur = dplyr::select(dataCur, -tidyselect::all_of(varCur))
-            
-           
-          }
-          
-          
-        }
-        
-        # Filter groups with fewer than 100 observations
-        nGroupsMin = 100
-        dataCur = dataCur %>%
-          dplyr::group_by(.data[[newColName]]) %>%  
-          dplyr::filter(dplyr::n() >= nGroupsMin) %>%
-          dplyr::ungroup()
-        
-        if (nrow(dataCur) == 0) {
-            message = paste0("For variable ", varCur, ", not enough data left after filtering to plot, skipping")
-            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-            next
-        }
-        
-        var.label = .prettyNum(table(dataCur[, newColName]))
-        var.label = paste0(names(var.label), "\n(n=", var.label , ")\n")
-        
-        # Set colors
-        if (varCur != "peak.annotation") {
-          mycolors <- viridis::viridis(length(var.label))
-        } else {
-          # Only here, we want to have colors that are not a gradient
-          mycolors = var.label
-          downstream  = which(grepl("downstream", var.label, ignore.case = TRUE))
-          promoter    = which(grepl("promoter", var.label, ignore.case = TRUE))
-          
-          # Remove the first, white-like color from the 2 palettes
-          # Also make sure to always select at least 3 colors to avoid a warning
-          mycolors[downstream] = RColorBrewer::brewer.pal(max(2, length(downstream)) + 1, "Greens")[-1][seq_len(length(downstream))]
-          mycolors[promoter]   = RColorBrewer::brewer.pal(max(2, length(promoter)) + 1, "Purples")[-1][seq_len(length(promoter))]
-          mycolors[which(grepl("3' UTR", mycolors))] = "yellow"
-          mycolors[which(grepl("5' UTR", mycolors))] = "orange"
-          mycolors[which(grepl("Distal Intergenic", mycolors))] = "red"
-          mycolors[which(grepl("Exon", mycolors))] = "maroon"
-          mycolors[which(grepl("Intron", mycolors))] = "lightblue"
-          
-        }
-        
-        r_pos_tbl = dataCur %>% dplyr::group_by(.data$r_positive) %>% dplyr::pull(.data$r_positive) %>% table()
-        
-        # In case the table contains only either TRUE or FALSE, we have to
-        r_positive_label = c("TRUE"   = paste0("r+(r>0, n=", .prettyNum(ifelse(is.na(r_pos_tbl["TRUE"]), 0, r_pos_tbl[["TRUE"]])), ")"), 
-                             "FALSE" = paste0("r-(r<=0, n=" ,.prettyNum(ifelse(is.na(r_pos_tbl["FALSE"]), 0, r_pos_tbl[["FALSE"]])), ")"))
-        
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          
-          # Class in the ggplot2::facet_wrap has been removed, as this is only for real data here
-          gA3 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, color = .data[[newColName]])) + ggplot2::geom_density(size = 0.2)  +
-            ggplot2::facet_wrap(~.data$r_positive, labeller = ggplot2::labeller(r_positive = r_positive_label), nrow = 2) +
-            ggplot2::geom_density(ggplot2::aes(color = .data$classNew), color = "black",  linetype = "dotted", alpha = 1) + 
-            ggplot2::xlab(xlabel) + ggplot2::ylab("Density (for real data only)") +  ggplot2::theme_bw() +
-            ggplot2::scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
-            ggplot2::theme(axis.text = ggplot2::element_text(size = ggplot2::rel(0.6)), strip.text.x = ggplot2::element_text(size = ggplot2::rel(0.8)), 
-                  legend.text = ggplot2::element_text(size = ggplot2::rel(0.6)), legend.position = "none")
-          
-          # Ratios for r+ / r-
-          freq =  dataCur %>%
-            dplyr::group_by(class, .data[[newColName]], .data$peak_gene.p.raw.class, .data$r_positive) %>%
-            dplyr::summarise(n = dplyr::n()) %>%
-            dplyr::ungroup() %>%
-            tidyr::complete(class, .data[[newColName]], .data$peak_gene.p.raw.class, .data$r_positive, fill = list(n = 0)) %>% # SOme cases might be missing
-            dplyr::group_by(class, .data[[newColName]], .data$peak_gene.p.raw.class) %>% # dont group by r_positive because we want to calculate the ratio within each group
-            dplyr::filter(.data$r_positive, class == names(dist_class)[1]) %>% # Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
-            dplyr::mutate(n = .data$n + 1) # to allow ratios to be computed even for 0 counts
-          
-           if (length(which(freq$r_positive)) > 0 && length(which(!freq$r_positive)) > 0) {
-               freq = freq %>%
-                   dplyr::mutate(ratio_pos_raw = .data$n[.data$r_positive] / .data$n[!.data$r_positive])
-           } else {
-               freq = freq %>%
-                   dplyr::mutate(ratio_pos_raw = NA)
-           }
-         
-            
-          
-          # Cap ratios > 10 at 10 to avoid visual artefacts
-          freq$ratio_pos_raw[which(freq$ratio_pos_raw > 10)] = 10
-          
-          # Without proper colors for now, this will be added after the next plot
-          gB3 = ggplot2::ggplot(freq, ggplot2::aes(.data$peak_gene.p.raw.class, .data$ratio_pos_raw, fill = .data[[newColName]])) + 
-            ggplot2::geom_bar(stat = "identity", position = "dodge", na.rm = TRUE, width = 0.8) + 
-            ggplot2::geom_hline(yintercept = 1, linetype = "dotted") + 
-            ggplot2::xlab(xlabel) + ggplot2::ylab("Ratio r+ / r- (capped at 10)") +
-            ggplot2::scale_x_discrete(labels = xlabels_peakGene_praw.class) +
-            ggplot2::scale_fill_manual(varCur, values = mycolors, labels = var.label, drop = FALSE )  +
-            ggplot2::theme_bw() +  
-            #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8), strip.background = ggplot2::element_blank(), strip.placement = "outside", axis.title.y = ggplot2::element_blank()) +
-            # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = ggplot2::element_blank()) +
-            theme_main +
-            ggplot2::facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", labeller = ggplot2::labeller(class = freq_class)) 
-          
-          
-          plots_all = ( ((gA3 | gB3 ) + 
-                           patchwork::plot_layout(widths = c(2.5,1.5))) ) + 
-            patchwork::plot_layout(guides = 'collect') +
-            patchwork::plot_annotation(title = mainTitle, theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
-          
-          plot(plots_all)
-        }
-        pageCounter = pageCounter + 1
-        
-        
-        # VERSION JUDITH: simplified peak.gene distance + another variable as histogram, no background data
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          datasetName = ""
-          if (!is.null(GRN@config$metadata$name)) {
-            datasetName = GRN@config$metadata$name
-          }
-          
-          mainTitle2 = paste0(datasetName, "\nSummary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ",
-                              .prettyNum(range), " bp promoter range, stratified by distance + ", varCur, ")")
-          
-          # r+ and r-
-          binwidth = 0.1
-          mycolors <- viridis::viridis(2)
-          xlabel = paste0("Correlation raw p-value (", binwidth, " bins)")
-          
-          dataCur = dataCur %>%
-            dplyr::mutate(peak_gene.distance.class250k = factor(dplyr::if_else(.data$peak_gene.distance <= 250000, "<=250k", ">250k"))) %>%
-            dplyr::select(-"peak_gene.distance")
-          
-          # closed = "left", boundary = 0, ensure correct numbers. See https://github.com/tidyverse/ggplot2/issues/1739
-          # Without boundary = 0, counts are actually wrong
-          
-          
-          nrows_plot = 2
-          if (dplyr::n_distinct(dataCur[[newColName]]) > 9) {
-            nrows_plot = 3
-          }
-          
-          gA5 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, fill = .data$r_positive)) + 
-            ggplot2::geom_histogram(binwidth = binwidth, position = "dodge", closed = "left", boundary = 0)  +
-            ggplot2::facet_wrap(~ peak_gene.distance.class250k  + .data[[newColName]], nrow = nrows_plot, scales = "free_y") +
-            ggplot2::xlab(xlabel) + ggplot2::ylab(paste0("Abundance for classes with n>=", nGroupsMin)) +  ggplot2::theme_bw() +
-            ggplot2::ggtitle(mainTitle2) + 
-            ggplot2::scale_fill_manual("Class for r", values = mycolors, labels = r_positive_label, drop = FALSE ) +
-            ggplot2::theme(axis.text = ggplot2::element_text(size = ggplot2::rel(0.6)), strip.text.x = ggplot2::element_text(size = ggplot2::rel(0.6)), 
-                  legend.text = ggplot2::element_text(size = ggplot2::rel(0.7)))
-          
-          
-          plot(gA5)
-        }
-        pageCounter = pageCounter + 1
-        
-        
-        
-      } #end for each variable
-      
-      
-      # DISTANCE FOCUSED #
-      
-      
-      # Here, we focus on distance and exclude distance classes with too few points and create a new subset of the data
-      
-      # Filter distance classes with too few points
-      distance_class_abund = table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs)
-      indexFilt = which(peakGeneCorrelations.all$peak_gene.distance_class_abs %in% 
-                          names(distance_class_abund)[which(distance_class_abund > 50)])
-      indexFilt = intersect(indexFilt, indexCur)
-      
-      if (length(indexFilt) > 0) {
-        
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          g = ggplot2::ggplot(peakGeneCorrelations.all[indexFilt,], ggplot2::aes(.data$peak_gene.p_raw, color = .data$peak_gene.distance_class_abs)) + ggplot2::geom_density() + 
-            ggplot2::ggtitle(paste0("Density of the raw p-value distributions")) + 
-            ggplot2::facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
-            ggplot2::scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
-            ggplot2::theme_bw()
-          plot(g)
-        }
-        pageCounter = pageCounter + 1
-
-        
-      } # end if (length(indexFilt) > 0)
-      
-      
-      
-      
-      if (length(indexFilt) > 0) {
-        
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          g = ggplot2::ggplot(peakGeneCorrelations.all[indexFilt,], ggplot2::aes(.data$peak_gene.p_raw, color = .data$r_positive)) + 
-            ggplot2::geom_density() + 
-            ggplot2::ggtitle(paste0("Density of the raw p-value distributions")) + 
-            ggplot2::facet_wrap(~ peak_gene.distance_class_abs,  ncol = 2, labeller = .customLabeler(table(peakGeneCorrelations.all$peak_gene.distance_class_abs))) +
-            ggplot2::scale_color_manual(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$r_positive)), values = r_pos_class) +
-            ggplot2::theme_bw()
-          plot(g)
-        }
-        pageCounter = pageCounter + 1
-        
-        
-      }
-      
-      
-      #
-      # Focus on peak_gene.r
-      #
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        g = ggplot2::ggplot(peakGeneCorrelations.all[indexCur,], ggplot2::aes(.data$peak_gene.r, color = .data$peak_gene.distance_class_abs)) + ggplot2::geom_density() + 
-          ggplot2::geom_density(data = peakGeneCorrelations.all[indexCur,], ggplot2::aes(.data$peak_gene.r), color = "black") + 
-          ggplot2::ggtitle(paste0("Density of the correlation coefficients")) + 
-          ggplot2::scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs))) +
-          ggplot2::theme_bw()
-        plot(g)
-      }
-      pageCounter = pageCounter + 1
-      
-      .checkPageNumberValidity(pages, pageCounter)
-      if (!is.null(fileBase)) {
-        grDevices::dev.off()
-      }
-      
-      
+        filenames.all = c(filenames.all, filenameCur)
     }
     
-  } else {
-    futile.logger::flog.info(paste0("All output files already exist. Set forceRerun = TRUE to regenerate and overwrite."))
+    if (!all(file.exists(filenames.all)) | forceRerun) {
+        
+        futile.logger::flog.info(paste0("Plotting diagnostic plots for peak-gene correlations", ifelse(is.null(fileBase), "", paste0(" to file(s) with basename ", fileBase))))
+        
+        cols_keep = c("peak.ID", "gene.ENSEMBL", "peak_gene.r", "peak_gene.p_raw", "peak_gene.distance")
+        
+        # Change from 10 to 5 
+        nCategoriesBinning = 5
+        probs = seq(0,1,1/nCategoriesBinning)
+        
+        
+        range = GRN@config$parameters$promoterRange
+        class_levels = c(paste0("real_",range), paste0("random_",range))
+        networkType_details = c(paste0("real_",range), paste0("random_",range))
+        
+        colors_vec = c("black", "darkgray")
+        networkType_vec = c("real", "background")
+        names(colors_vec) = names(networkType_vec) = networkType_details
+        
+        options(dplyr.summarise.inform = FALSE) 
+        
+        #Either take all or the filtered set of connections
+        if (useFiltered) {
+            
+            peakGeneCorrelations.all = 
+                rbind(dplyr::select(GRN@connections$all.filtered[["0"]], dplyr::everything()) %>%
+                          dplyr::mutate(class = paste0("real_",range))) %>%
+                rbind(dplyr::select(GRN@connections$all.filtered[["1"]],  dplyr::everything()) %>% 
+                          dplyr::mutate(class = paste0("random_",range)))
+            
+        } else {
+            
+            if (!"peak.GC.perc" %in% colnames(GRN@annotation$peaks)) {
+                GRN@annotation$peaks$peak.GC.perc = NA
+            }
+            
+            peakGeneCorrelations.all = 
+                rbind(
+                    dplyr::select(GRN@connections$peak_genes[["0"]], tidyselect::all_of(cols_keep)) %>%
+                        dplyr::mutate(class = factor(paste0("real_",range), levels = class_levels)),
+                    dplyr::select(GRN@connections$peak_genes[["1"]],  tidyselect::all_of(cols_keep)) %>% 
+                        dplyr::mutate(class = factor(paste0("random_",range), levels = class_levels))) %>%
+                dplyr::left_join(dplyr::select(GRN@annotation$genes, "gene.ENSEMBL", "gene.type", 
+                                               "gene.mean", "gene.median", "gene.CV"), by = "gene.ENSEMBL", multiple = "all") %>%
+                dplyr::left_join(GRN@annotation$peaks %>% 
+                                     dplyr::select(-dplyr::starts_with("peak.gene."), -"peak.GC.perc"), by = "peak.ID") %>%
+                dplyr::select(-"gene.ENSEMBL")
+            
+        }
+        
+        if (!plotPerTF) {
+            peakGeneCorrelations.all = dplyr::select(peakGeneCorrelations.all, -"peak.ID")
+        }
+        
+        nClasses_distance  = 10
+        
+        peakGeneCorrelations.all = peakGeneCorrelations.all %>%
+            dplyr::mutate(r_positive = .data$peak_gene.r > 0,
+                          peak_gene.distance_class = 
+                              forcats::fct_explicit_na(addNA(cut(.data$peak_gene.distance, breaks = nClasses_distance, include.lowest = TRUE)), "random"),
+                          peak_gene.distance_class_abs = forcats::fct_explicit_na(addNA(cut(abs(.data$peak_gene.distance), 
+                                                                                            breaks = nClasses_distance, include.lowest = TRUE, ordered_result = TRUE)), "random"),
+                          peak_gene.p.raw.class = cut(.data$peak_gene.p_raw, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE),
+                          peak_gene.r.class = cut(.data$peak_gene.r, breaks = seq(-1,1,0.05), include.lowest = TRUE, ordered_result = TRUE)) %>%
+            dplyr::filter(!is.na(.data$peak_gene.r)) # Eliminate rows with NA for peak_gene.r. This can happen if the normalized gene counts are identical across ALL samples, and due to the lack of any variation, the correlation cannot be computed
+        
+        
+        # Oddity of cut: When breaks is specified as a single number, the range of the data is divided into breaks pieces of equal length, and then the outer limits are moved away by 0.1% of the range to ensure that the extreme values both fall within the break intervals. 
+        levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1] = 
+            gsub("(-\\d+)", "0", levels(peakGeneCorrelations.all$peak_gene.distance_class_abs)[1], perl = TRUE)
+        
+        # Prepare plots #
+        
+        colors_class = c("black", "black")
+        names(colors_class) = unique(peakGeneCorrelations.all$class)
+        colors_class[which(grepl("random", names(colors_class)))] = "darkgray"
+        
+        r_pos_class = c("black", "darkgray")
+        names(r_pos_class) = c("TRUE", "FALSE")
+        
+        dist_class = c("dark red", "#fc9c9c")
+        names(dist_class) = class_levels
+        
+        freqs = table(peakGeneCorrelations.all$class)
+        freq_class = paste0(gsub(names(freqs), pattern = "(.+)(_.*)", replacement = "\\1"), " (n=", .prettyNum(freqs) , ")")
+        # Change upstream and go with "background" everywhere
+        freq_class = gsub(freq_class, pattern = "random", replacement = "background")
+        names(freq_class) <- names(freqs)
+        
+        
+        xlabels_peakGene_r.class = levels(peakGeneCorrelations.all$peak_gene.r.class)
+        nCur = length(xlabels_peakGene_r.class)
+        xlabels_peakGene_r.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
+        
+        # For the last plot, which is wider, we label a few more
+        xlabels_peakGene_r.class2 = levels(peakGeneCorrelations.all$peak_gene.r.class)
+        nCur = length(xlabels_peakGene_r.class2)
+        xlabels_peakGene_r.class2[setdiff(seq_len(nCur), c(1, floor(nCur/4), floor(nCur/2), floor(nCur/4*3), nCur))] <- ""
+        
+        xlabels_peakGene_praw.class = levels(peakGeneCorrelations.all$peak_gene.p.raw.class)
+        nCur = length(xlabels_peakGene_praw.class)
+        xlabels_peakGene_praw.class[setdiff(seq_len(nCur), c(1, floor(nCur/2), nCur))] <- ""
+        
+        #
+        # ITERATE THROUGH ALL GENE TYPES, WITH ONE PER PLOT
+        #
+        for (geneTypesSelected in gene.types) {
+            
+            # Reset page counter for each PDF anew
+            pageCounter = 1
+            
+            futile.logger::flog.info(paste0(" Gene type ", paste0(geneTypesSelected, collapse = "+")))
+            
+            if ("all" %in% geneTypesSelected) {
+                indexCur = seq_len(nrow(peakGeneCorrelations.all))
+            } else {
+                indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
+            }
+            
+            
+            # START PLOTTING #
+            
+            if (!is.null(fileBase)) {
+                filenameCur = paste0(fileBase, paste0(geneTypesSelected, collapse = "+"), filteredStr, ".pdf")
+                .checkOutputFile(filenameCur)
+                grDevices::pdf(file = filenameCur, width = pdf_width, height = pdf_height)
+                
+                futile.logger::flog.info(paste0(" Plotting to file ", filenameCur))
+                
+            }
+            
+            if (plotPerTF) {
+                
+                TF.nRows = rep(-1, length(GRN@config$allTF))
+                #TF.nRows = rep(-1, 10)
+                TF.peaks = list()
+                names(TF.nRows) = GRN@config$allTF
+                for (TFCur in GRN@config$allTF) {
+                    TF.peaks[[TFCur]] = names(which(GRN@data$TFs$TF_peak_overlap[,TFCur] == 1))
+                    TF.nRows[TFCur] = peakGeneCorrelations.all[indexCur,] %>% dplyr::filter(.data$peak.ID %in% TF.peaks[[TFCur]]) %>% nrow()
+                }
+                
+                TFs_sorted = names(sort(TF.nRows, decreasing = TRUE))
+                
+                allTF = c("all", TFs_sorted)
+                
+            } else {
+                allTF = "all"
+            }
+            
+            counter = 0
+            for (TFCur in allTF) {
+                
+                counter = counter + 1
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    if (length(allTF) > 1) {
+                        futile.logger::flog.info(paste0(" QC plots for TF ", TFCur, " (", counter, " of ", length(allTF), ")"))
+                    }
+                    
+                    
+                    if ("all" %in% geneTypesSelected) {
+                        indexCur = seq_len(nrow(peakGeneCorrelations.all))
+                    } else {
+                        indexCur = which(peakGeneCorrelations.all$gene.type %in% geneTypesSelected)
+                    }
+                    
+                    
+                    if (TFCur != "all") {
+                        indexCur = intersect(indexCur, which(peakGeneCorrelations.all$peak.ID %in% TF.peaks[[TFCur]]))
+                    }
+                    
+                    if (length(indexCur) == 0) {
+                        message = " No connections left after filtering and intersection, skip plots"
+                        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                        next
+                    }
+                    
+                    # Get subset also for just the real data
+                    indexCurReal = intersect(indexCur, which(peakGeneCorrelations.all$class == names(dist_class)[1]))
+                    
+                    
+                    xlabel = paste0("Correlation raw p-value")
+                    
+                    # DENSITY PLOTS P VALUE
+                    
+                    # TODO: Densities as ratio
+                    # https://stackoverflow.com/questions/58629959/how-can-i-extract-data-from-a-kernel-density-function-in-r-for-many-samples-at-o#:~:text=To%20compute%20the%20density%20you,can%20use%20the%20package%20spatstat%20.
+                    
+                    # Produce the labels for the class-specific subtitles
+                    customLabel_class = .customLabeler(table(peakGeneCorrelations.all[indexCur,]$class))
+                    
+                    r_pos_freq = table(peakGeneCorrelations.all[indexCur,]$r_positive)
+                    labeler_r_pos = ggplot2::labeller(r_positive = c("TRUE"  = paste0("r positive (", r_pos_freq["TRUE"], ")"), 
+                                                                     "FALSE" = paste0("r negative (", r_pos_freq["FALSE"], ")")) )
+                    theme_main = ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 0, hjust = 0.5, size = ggplot2::rel(0.8)),
+                                                axis.text.y = ggplot2::element_text(size = ggplot2::rel(0.8)),
+                                                panel.grid.major = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank())
+                    
+                    
+                    
+                    ## p-val density curves stratified by real vs background ##
+                    
+                    gA2 = ggplot2::ggplot(peakGeneCorrelations.all[indexCur,], ggplot2::aes(.data$peak_gene.p_raw, color = .data$r_positive)) + ggplot2::geom_density()  +
+                        ggplot2::facet_wrap(~ .data$class, labeller = ggplot2::labeller(class = freq_class) ) +
+                        ggplot2::xlab(xlabel) + ggplot2::ylab("Density") +  ggplot2::theme_bw() +
+                        ggplot2::scale_color_manual(labels = names(r_pos_class), values = r_pos_class) +
+                        ggplot2::theme(legend.position = "none", axis.text = ggplot2::element_text(size = ggplot2::rel(0.6)), strip.text.x = ggplot2::element_text(size = ggplot2::rel(0.8)))
+                    
+                    # Helper function to retrieve all tables and data aggregation steps for subsequent visualization
+                    tbl.l = .createTables_peakGeneQC(peakGeneCorrelations.all[indexCur,], networkType_details, colors_vec, range)
+                    
+                    # Store in the GRN object for independent analysis
+                    GRN@stats$peak_genes[[paste0(geneTypesSelected, collapse = "+")]] = tbl.l
+                    
+                    xlabel = paste0("Correlation raw\np-value (binned)")
+                    
+                    
+                    xlabels = levels(tbl.l$d_merged$peak_gene.p.raw.class)
+                    xlabels[setdiff(seq_len(length(xlabels)), c(1, floor(length(xlabels)/2), length(xlabels)))] <- ""
+                    
+                    gB3 = ggplot2::ggplot(tbl.l$d_merged, ggplot2::aes(.data$peak_gene.p.raw.class, .data$ratio, fill = .data$classAll)) + 
+                        ggplot2::geom_bar(stat = "identity", position = "dodge", na.rm = TRUE, width = 0.5) + 
+                        ggplot2::geom_hline(yintercept = 1, linetype = "dotted") + 
+                        ggplot2::xlab(xlabel) + ggplot2::ylab("Ratio") +
+                        ggplot2::scale_fill_manual("Class", values = c(dist_class, r_pos_class), 
+                                                   labels = c("real", "background", "r+ (r>0)", "r- (r<=0)"), 
+                        ) + # labels vector can be kind of manually specified here because the levels were previosly defined in a certain order
+                        ggplot2::scale_x_discrete(labels = xlabels_peakGene_praw.class) +
+                        ggplot2::theme_bw() +  
+                        #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8), strip.background = ggplot2::element_blank(), strip.placement = "outside", axis.title.y = ggplot2::element_blank()) +
+                        # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = ggplot2::element_blank()) +
+                        theme_main +
+                        ggplot2::facet_wrap(~ factor(set), nrow = 2, scales = "free_y", strip.position = "left") 
+                    
+                    #  plot two FDR plots as well: (fraction of negative / negative+positive) and (fraction of background / background + real)
+                    # that could give an indication of whether an FDR based on the background or based on the negative correlations would be more stringent
+                    
+                    # R PEAK GENE #
+                    
+                    xlabel = paste0("Correlation coefficient r")
+                    
+                    sum_real = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[1]]
+                    sum_rnd  = table(peakGeneCorrelations.all[indexCur,]$class)[names(dist_class)[2]]
+                    binData.r = peakGeneCorrelations.all[indexCur,] %>%
+                        dplyr::group_by(class) %>%
+                        dplyr::count(.data$peak_gene.r.class) %>%
+                        dplyr::mutate(nnorm = dplyr::case_when(class == !! (names(dist_class)[1]) ~ .data$n / (sum_real / sum_rnd), 
+                                                               TRUE ~ as.double(.data$n)))
+                    
+                    xlabel = paste0("Correlation coefficient r (binned)")
+                    
+                    gD = ggplot2::ggplot(binData.r, ggplot2::aes(.data$peak_gene.r.class, .data$nnorm, group = .data$class, fill = .data$class)) + 
+                        ggplot2::geom_bar(stat = "identity", position = ggplot2::position_dodge(preserve = "single"), na.rm = FALSE, width = 0.5) +
+                        ggplot2::geom_line(ggplot2::aes(.data$peak_gene.r.class, .data$nnorm, group = .data$class, color = .data$class), stat = "identity") +
+                        ggplot2::scale_fill_manual("Group", labels = names(dist_class), values = dist_class) +
+                        ggplot2::scale_color_manual("Group", labels = names(dist_class), values = dist_class) +
+                        ggplot2::scale_x_discrete(labels = xlabels_peakGene_r.class2, drop = FALSE) +
+                        ggplot2::theme_bw() + ggplot2::theme(legend.position = "none") +
+                        ggplot2::xlab(xlabel) + ggplot2::ylab("Abundance") +
+                        theme_main  +
+                        ggplot2::scale_y_continuous(labels = scales::scientific)
+                    
+                    
+                    mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ",\n", .prettyNum(range), " bp promoter range)")
+                    
+                    plots_all = ( ((gA2 | gB3 ) + 
+                                       patchwork::plot_layout(widths = c(2.5,1.5))) / ((gD) + 
+                                                                                           patchwork::plot_layout(widths = c(4))) ) + 
+                        patchwork::plot_layout(heights = c(2,1), guides = 'collect') +
+                        patchwork::plot_annotation(title = mainTitle, theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+                    
+                    plot(plots_all)
+                }
+                pageCounter = pageCounter + 1
+                
+                
+            } # end for each TF
+            
+            
+            
+            if (!is.null(GRN@annotation$peaks_obj) & is.installed("ChIPseeker")) {
+                #plot(ChIPseeker::plotAnnoBar(GRN@annotation$peaks_obj))
+                
+                # no plot, as this is somehow just a list and no ggplot object
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    ChIPseeker::plotAnnoPie(GRN@annotation$peaks_obj, 
+                                            main = paste0("\nPeak annotation BEFORE filtering (n = ", nrow(GRN@annotation$peaks), ")"))
+                }
+                pageCounter = pageCounter + 1
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    plot(ChIPseeker::plotDistToTSS(GRN@annotation$peaks_obj))
+                }
+                
+                pageCounter = pageCounter + 1
+            }
+            
+            # PEAK AND GENE PROPERTIES #
+            
+            xlabel = paste0("Correlation raw\np-value (binned)")
+            mainTitle = paste0("Summary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ", .prettyNum(range), " bp promoter range)")
+            
+            allVars = c("peak.annotation", "peak.GC.class", "peak.width", "peak.mean","peak.median",
+                        "peak.CV", "gene.median",  "gene.mean", "gene.CV", "peak.gene.combined.CV")
+            
+            # Only use those actually available, as some packages may not be available
+            allVars = intersect(allVars, colnames(peakGeneCorrelations.all))
+            
+            
+            
+            for (varCur in allVars) {
+                #next
+                # Save memory and prune the table and add only the variable we need here
+                if (varCur != "peak.gene.combined.CV") {
+                    dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
+                        dplyr::select("peak_gene.p_raw", tidyselect::all_of(varCur), "class", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance") 
+                } else {
+                    dataCur = peakGeneCorrelations.all[indexCurReal,] %>%
+                        dplyr::select("peak_gene.p_raw", "class", "gene.CV", "peak.CV", "r_positive", "peak_gene.p.raw.class", "peak_gene.distance")
+                }
+                
+                
+                # Choose colors depending on type of variable: gradient or not?
+                
+                if (varCur %in% c("peak.annotation","peak.GC.class")) {
+                    
+                    newColName = varCur
+                    
+                } else {
+                    
+                    newColName = paste0(varCur, ".class")
+                    
+                    if (varCur == "peak.gene.combined.CV") {
+                        
+                        dataCur = dataCur %>%
+                            dplyr::mutate(!!(newColName) := dplyr::case_when(
+                                gene.CV < 0.5                & peak.CV < 0.5                ~ "gene.CV+peak.CV<0.5", ##
+                                # gene.CV >= 0.5 & gene.CV < 1 & peak.CV < 0.5                ~ "gene.CV<1_peak.CV<0.5",
+                                # gene.CV >= 1                 & peak.CV < 0.5                ~ "gene.CV>1_peak.CV<0.5",
+                                # 
+                                # gene.CV < 0.5                & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<0.5_peak.CV<1",
+                                # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV<1_peak.CV<1",
+                                # gene.CV >= 1                 & peak.CV >= 0.5 & peak.CV < 1 ~ "gene.CV>1_peak.CV<1",
+                                # 
+                                # gene.CV < 0.5                & peak.CV >= 1                 ~ "gene.CV<0.5_peak.CV>1",
+                                # gene.CV >= 0.5 & gene.CV < 1 & peak.CV >= 1                 ~ "gene.CV<1_peak.CV>1",
+                                gene.CV >= 1                 & peak.CV >= 1                 ~ "gene.CV+peak.CV>1", ##
+                                TRUE ~ "other"
+                            )) %>%
+                            dplyr::select(-"gene.CV", -"peak.CV")
+                        
+                    } else {
+                        
+                        if (dplyr::n_distinct(dataCur %>% dplyr::pull(.data[[varCur]])) > 1) {
+                            dataCur = dataCur %>%
+                                dplyr::mutate(!!(newColName) := cut(.data[[varCur]], breaks = unique(quantile(.data[[varCur]], probs = probs, na.rm = TRUE)), 
+                                                                    include.lowest = TRUE, ordered_result = TRUE))
+                            
+                        } else {
+                            dataCur = dplyr::mutate(dataCur, !!(newColName) := as.factor(.data[[varCur]]))
+                        }
+                        
+                        dataCur = dplyr::select(dataCur, -tidyselect::all_of(varCur))
+                        
+                        
+                    }
+                    
+                    
+                }
+                
+                # Filter groups with fewer than 100 observations
+                nGroupsMin = 100
+                dataCur = dataCur %>%
+                    dplyr::group_by(.data[[newColName]]) %>%  
+                    dplyr::filter(dplyr::n() >= nGroupsMin) %>%
+                    dplyr::ungroup()
+                
+                if (nrow(dataCur) == 0) {
+                    message = paste0("For variable ", varCur, ", not enough data left after filtering to plot, skipping")
+                    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                    next
+                }
+                
+                var.label = .prettyNum(table(dataCur[, newColName]))
+                var.label = paste0(names(var.label), "\n(n=", var.label , ")\n")
+                
+                # Set colors
+                if (varCur != "peak.annotation") {
+                    mycolors <- viridis::viridis(length(var.label))
+                } else {
+                    # Only here, we want to have colors that are not a gradient
+                    mycolors = var.label
+                    downstream  = which(grepl("downstream", var.label, ignore.case = TRUE))
+                    promoter    = which(grepl("promoter", var.label, ignore.case = TRUE))
+                    
+                    # Remove the first, white-like color from the 2 palettes
+                    # Also make sure to always select at least 3 colors to avoid a warning
+                    mycolors[downstream] = RColorBrewer::brewer.pal(max(2, length(downstream)) + 1, "Greens")[-1][seq_len(length(downstream))]
+                    mycolors[promoter]   = RColorBrewer::brewer.pal(max(2, length(promoter)) + 1, "Purples")[-1][seq_len(length(promoter))]
+                    mycolors[which(grepl("3' UTR", mycolors))] = "yellow"
+                    mycolors[which(grepl("5' UTR", mycolors))] = "orange"
+                    mycolors[which(grepl("Distal Intergenic", mycolors))] = "red"
+                    mycolors[which(grepl("Exon", mycolors))] = "maroon"
+                    mycolors[which(grepl("Intron", mycolors))] = "lightblue"
+                    
+                }
+                
+                r_pos_tbl = dataCur %>% dplyr::group_by(.data$r_positive) %>% dplyr::pull(.data$r_positive) %>% table()
+                
+                # In case the table contains only either TRUE or FALSE, we have to
+                r_positive_label = c("TRUE"   = paste0("r+(r>0, n=", .prettyNum(ifelse(is.na(r_pos_tbl["TRUE"]), 0, r_pos_tbl[["TRUE"]])), ")"), 
+                                     "FALSE" = paste0("r-(r<=0, n=" ,.prettyNum(ifelse(is.na(r_pos_tbl["FALSE"]), 0, r_pos_tbl[["FALSE"]])), ")"))
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    
+                    # Class in the ggplot2::facet_wrap has been removed, as this is only for real data here
+                    gA3 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, color = .data[[newColName]])) + ggplot2::geom_density(linewidth = 0.2)  +
+                        ggplot2::facet_wrap(~.data$r_positive, labeller = ggplot2::labeller(r_positive = r_positive_label), nrow = 2) +
+                        ggplot2::geom_density(ggplot2::aes(color = .data$classNew), color = "black",  linetype = "dotted", alpha = 1) + 
+                        ggplot2::xlab(xlabel) + ggplot2::ylab("Density (for real data only)") +  ggplot2::theme_bw() +
+                        ggplot2::scale_color_manual(newColName, values = mycolors, labels = var.label, drop = FALSE ) +
+                        ggplot2::theme(axis.text = ggplot2::element_text(size = ggplot2::rel(0.6)), strip.text.x = ggplot2::element_text(size = ggplot2::rel(0.8)), 
+                                       legend.text = ggplot2::element_text(size = ggplot2::rel(0.6)), legend.position = "none")
+                    
+                    # Ratios for r+ / r-
+                    freq =  dataCur %>%
+                        dplyr::group_by(class, .data[[newColName]], .data$peak_gene.p.raw.class, .data$r_positive) %>%
+                        dplyr::summarise(n = dplyr::n()) %>%
+                        dplyr::ungroup() %>%
+                        tidyr::complete(class, .data[[newColName]], .data$peak_gene.p.raw.class, .data$r_positive, fill = list(n = 0)) %>% # SOme cases might be missing
+                        dplyr::group_by(class, .data[[newColName]], .data$peak_gene.p.raw.class) %>% # dont group by r_positive because we want to calculate the ratio within each group
+                        dplyr::filter(class == names(dist_class)[1]) %>% # Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
+                        dplyr::mutate(n = .data$n + 1) # to allow ratios to be computed even for 0 counts
+                    
+                    if (length(which(freq$r_positive)) > 0 && length(which(!freq$r_positive)) > 0) {
+                        freq = freq %>%
+                            dplyr::mutate(ratio_pos_raw = .data$n[.data$r_positive] / .data$n[!.data$r_positive])
+                    } else {
+                        freq = freq %>%
+                            dplyr::mutate(ratio_pos_raw = NA)
+                    }
+                    
+                    # Keep only one r_positive row per grouping as we operate via the ratio and this data is duplicated otherwise. Remove random data also because these have been filtered out before are only back due to the complete invokation.
+                    freq = freq %>% dplyr::filter(.data$r_positive, class == names(dist_class)[1]) 
+                    
+                    
+                    # Cap ratios > 10 at 10 to avoid visual artefacts
+                    freq$ratio_pos_raw[which(freq$ratio_pos_raw > 10)] = 10
+                    
+                    # Without proper colors for now, this will be added after the next plot
+                    gB3 = ggplot2::ggplot(freq, ggplot2::aes(.data$peak_gene.p.raw.class, .data$ratio_pos_raw, fill = .data[[newColName]])) + 
+                        ggplot2::geom_bar(stat = "identity", position = "dodge", na.rm = TRUE, width = 0.8) + 
+                        ggplot2::geom_hline(yintercept = 1, linetype = "dotted") + 
+                        ggplot2::xlab(xlabel) + ggplot2::ylab("Ratio r+ / r- (capped at 10)") +
+                        ggplot2::scale_x_discrete(labels = xlabels_peakGene_praw.class) +
+                        ggplot2::scale_fill_manual(varCur, values = mycolors, labels = var.label, drop = FALSE )  +
+                        ggplot2::theme_bw() +  
+                        #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8), strip.background = ggplot2::element_blank(), strip.placement = "outside", axis.title.y = ggplot2::element_blank()) +
+                        # ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8) , axis.title.y = ggplot2::element_blank()) +
+                        theme_main +
+                        ggplot2::facet_wrap(~ factor(class), nrow = 2, scales = "free_y", strip.position = "left", labeller = ggplot2::labeller(class = freq_class)) 
+                    
+                    
+                    plots_all = ( ((gA3 | gB3 ) + 
+                                       patchwork::plot_layout(widths = c(2.5,1.5))) ) + 
+                        patchwork::plot_layout(guides = 'collect') +
+                        patchwork::plot_annotation(title = mainTitle, theme = ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+                    
+                    plot(plots_all)
+                }
+                pageCounter = pageCounter + 1
+                
+                
+                # VERSION JUDITH: simplified peak.gene distance + another variable as histogram, no background data
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    datasetName = ""
+                    if (!is.null(GRN@config$metadata$name)) {
+                        datasetName = GRN@config$metadata$name
+                    }
+                    
+                    mainTitle2 = paste0(datasetName, "\nSummary QC (TF: ", TFCur, ", gene type: ", paste0(geneTypesSelected, collapse = "+"), ", ",
+                                        .prettyNum(range), " bp promoter range, stratified by distance + ", varCur, ")")
+                    
+                    # r+ and r-
+                    binwidth = 0.1
+                    mycolors <- viridis::viridis(2)
+                    xlabel = paste0("Correlation raw p-value (", binwidth, " bins)")
+                    
+                    dataCur = dataCur %>%
+                        dplyr::mutate(peak_gene.distance.class250k = factor(dplyr::if_else(.data$peak_gene.distance <= 250000, "<=250k", ">250k"))) %>%
+                        dplyr::select(-"peak_gene.distance")
+                    
+                    # closed = "left", boundary = 0, ensure correct numbers. See https://github.com/tidyverse/ggplot2/issues/1739
+                    # Without boundary = 0, counts are actually wrong
+                    
+                    
+                    nrows_plot = 2
+                    if (dplyr::n_distinct(dataCur[[newColName]]) > 9) {
+                        nrows_plot = 3
+                    }
+                    
+                    gA5 = ggplot2::ggplot(dataCur, ggplot2::aes(.data$peak_gene.p_raw, fill = .data$r_positive)) + 
+                        ggplot2::geom_histogram(binwidth = binwidth, position = "dodge", closed = "left", boundary = 0)  +
+                        ggplot2::facet_wrap(~ peak_gene.distance.class250k  + .data[[newColName]], nrow = nrows_plot, scales = "free_y") +
+                        ggplot2::xlab(xlabel) + ggplot2::ylab(paste0("Abundance for classes with n>=", nGroupsMin)) +  ggplot2::theme_bw() +
+                        ggplot2::ggtitle(mainTitle2) + 
+                        ggplot2::scale_fill_manual("Class for r", values = mycolors, labels = r_positive_label, drop = FALSE ) +
+                        ggplot2::theme(axis.text = ggplot2::element_text(size = ggplot2::rel(0.6)), strip.text.x = ggplot2::element_text(size = ggplot2::rel(0.6)), 
+                                       legend.text = ggplot2::element_text(size = ggplot2::rel(0.7)))
+                    
+                    
+                    plot(gA5)
+                }
+                pageCounter = pageCounter + 1
+                
+                
+                
+            } #end for each variable
+            
+            
+            # DISTANCE FOCUSED #
+            
+            
+            # Here, we focus on distance and exclude distance classes with too few points and create a new subset of the data
+            
+            # Filter distance classes with too few points
+            distance_class_abund = table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs)
+            indexFilt = which(peakGeneCorrelations.all$peak_gene.distance_class_abs %in% 
+                                  names(distance_class_abund)[which(distance_class_abund > 50)])
+            indexFilt = intersect(indexFilt, indexCur)
+            
+            if (length(indexFilt) > 0) {
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    g = ggplot2::ggplot(peakGeneCorrelations.all[indexFilt,], ggplot2::aes(.data$peak_gene.p_raw, color = .data$peak_gene.distance_class_abs)) + ggplot2::geom_density() + 
+                        ggplot2::ggtitle(paste0("Density of the raw p-value distributions")) + 
+                        ggplot2::facet_wrap(~ r_positive, ncol = 2, labeller = labeler_r_pos) + 
+                        ggplot2::scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$peak_gene.distance_class_abs))) +
+                        ggplot2::theme_bw()
+                    plot(g)
+                }
+                pageCounter = pageCounter + 1
+                
+                
+            } # end if (length(indexFilt) > 0)
+            
+            
+            
+            
+            if (length(indexFilt) > 0) {
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    g = ggplot2::ggplot(peakGeneCorrelations.all[indexFilt,], ggplot2::aes(.data$peak_gene.p_raw, color = .data$r_positive)) + 
+                        ggplot2::geom_density() + 
+                        ggplot2::ggtitle(paste0("Density of the raw p-value distributions")) + 
+                        ggplot2::facet_wrap(~ peak_gene.distance_class_abs,  ncol = 2, labeller = .customLabeler(table(peakGeneCorrelations.all$peak_gene.distance_class_abs))) +
+                        ggplot2::scale_color_manual(labels = .classFreq_label(table(peakGeneCorrelations.all[indexFilt,]$r_positive)), values = r_pos_class) +
+                        ggplot2::theme_bw()
+                    plot(g)
+                }
+                pageCounter = pageCounter + 1
+                
+                
+            }
+            
+            
+            #
+            # Focus on peak_gene.r
+            #
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                g = ggplot2::ggplot(peakGeneCorrelations.all[indexCur,], ggplot2::aes(.data$peak_gene.r, color = .data$peak_gene.distance_class_abs)) + ggplot2::geom_density() + 
+                    ggplot2::geom_density(data = peakGeneCorrelations.all[indexCur,], ggplot2::aes(.data$peak_gene.r), color = "black") + 
+                    ggplot2::ggtitle(paste0("Density of the correlation coefficients")) + 
+                    ggplot2::scale_color_viridis_d(labels = .classFreq_label(table(peakGeneCorrelations.all[indexCur,]$peak_gene.distance_class_abs))) +
+                    ggplot2::theme_bw()
+                plot(g)
+            }
+            pageCounter = pageCounter + 1
+            
+            .checkPageNumberValidity(pages, pageCounter)
+            if (!is.null(fileBase)) {
+                grDevices::dev.off()
+            }
+            
+            
+        }
+        
+    } else {
+        futile.logger::flog.info(paste0("All output files already exist. Set forceRerun = TRUE to regenerate and overwrite."))
+        
+    }
     
-  }
-  
-  
-  
-  .printExecutionTime(start)
-  
-  GRN
-  
+    
+    
+    .printExecutionTime(start)
+    
+    GRN
+    
 }
 
 
 
 .customLabeler <- function(tbl_freq) {
-  tbl_freq_label = paste0(names(tbl_freq), " (", tbl_freq, ")")
-  names(tbl_freq_label) = names(tbl_freq)
-  ggplot2::as_labeller(tbl_freq_label)
+    tbl_freq_label = paste0(names(tbl_freq), " (", tbl_freq, ")")
+    names(tbl_freq_label) = names(tbl_freq)
+    ggplot2::as_labeller(tbl_freq_label)
 }
 
 
@@ -2108,321 +2110,321 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
                                          outputFolder = NULL, basenameOutput = NULL, 
                                          plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                          forceRerun = FALSE) {
-
-  start = Sys.time()     
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  
-  checkmate::assertChoice(type, c("heatmap", "boxplot", "density"))
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  if (type ==  "heatmap") {
-    if (plotAsPDF) {
-      file = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_heatmap"), basenameOutput), ".pdf")
-    } else {
-      file = NULL
+    
+    start = Sys.time()     
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    
+    checkmate::assertChoice(type, c("heatmap", "boxplot", "density"))
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    if (type ==  "heatmap") {
+        if (plotAsPDF) {
+            file = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_heatmap"), basenameOutput), ".pdf")
+        } else {
+            file = NULL
+        }
+        
+        .plot_stats_connectionSummaryHeatmap(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
+        
+    } else if (type ==  "boxplot") {
+        
+        if (plotAsPDF) {
+            file = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_boxplot"), basenameOutput), ".pdf")
+        } else {
+            file = NULL
+        }
+        
+        .plot_stats_connectionSummaryBoxplot(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
+        
+    } else if (type ==  "density") {
+        
+        stop("Not yet implemented")
+        if (plotAsPDF) {
+            file = "TODO"
+        } else {
+            file = NULL
+        }
+        .plot_stats_connectionSummaryDensity(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
     }
     
-    .plot_stats_connectionSummaryHeatmap(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
+    .printExecutionTime(start, prefix = "")
+    GRN
     
-  } else if (type ==  "boxplot") {
-    
-    if (plotAsPDF) {
-      file = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_connectionSummary_boxplot"), basenameOutput), ".pdf")
-    } else {
-      file = NULL
-    }
-    
-    .plot_stats_connectionSummaryBoxplot(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
-    
-  } else if (type ==  "density") {
-    
-    stop("Not yet implemented")
-    if (plotAsPDF) {
-      file = "TODO"
-    } else {
-      file = NULL
-    }
-    .plot_stats_connectionSummaryDensity(GRN, file = file, pdf_width = pdf_width, pdf_height = pdf_height, pages = pages, forceRerun = forceRerun) 
-  }
-  
-  .printExecutionTime(start, prefix = "")
-  GRN
-  
 }
 
 
 .plot_stats_connectionSummaryHeatmap <- function(GRN, file = NULL, pdf_width = 12, pdf_height = 12, pages = NULL, forceRerun = FALSE) {
-  
-  start = Sys.time()
-  
-  futile.logger::flog.info(paste0("Plotting connection summary", ifelse(is.null(file), "", paste0(" to file ", file))))
-  
-  if ((!is.null(file) && !file.exists(file)) | is.null(file) | forceRerun) {
     
-    if (nrow(GRN@stats$connections) == 0) {
-      message = paste0("Statistics summary missing from object, please run the function generateStatsSummary first")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
+    start = Sys.time()
     
-    index = 0
+    futile.logger::flog.info(paste0("Plotting connection summary", ifelse(is.null(file), "", paste0(" to file ", file))))
     
-    
-    if (!is.null(file)) {
-      .checkOutputFile(file)
-      grDevices::pdf(file = file, width = pdf_width, height = pdf_height)
-    }
-    
-    pageCounter = 1 
-    for (allowMissingTFsCur in unique(GRN@stats$connections$allowMissingTFs)) {
-      
-      for (allowMissingGenesCur in unique(GRN@stats$connections$allowMissingGenes)) {
+    if ((!is.null(file) && !file.exists(file)) | is.null(file) | forceRerun) {
         
-        for (TF_peak.connectionTypeCur in GRN@config$TF_peak_connectionTypes) {
-          
-          # Plot a summary page with the parameters used for the next page
-          # 
-          #index = index + 1
-          
-          for (elemCur in c("nTFs", "nPeaks", "nGenes")) {
+        if (nrow(GRN@stats$connections) == 0) {
+            message = paste0("Statistics summary missing from object, please run the function generateStatsSummary first")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+        index = 0
+        
+        
+        if (!is.null(file)) {
+            .checkOutputFile(file)
+            grDevices::pdf(file = file, width = pdf_width, height = pdf_height)
+        }
+        
+        pageCounter = 1 
+        for (allowMissingTFsCur in unique(GRN@stats$connections$allowMissingTFs)) {
             
-            plotData.l = list()
-            for (permCur in 0:.getMaxPermutation(GRN)) {
-              
-              permIndex = as.character(permCur)
-              
-              stats_filtered.df = GRN@stats$connections %>%
-                dplyr::filter(.data$allowMissingGenes == allowMissingGenesCur, 
-                              .data$allowMissingTFs == allowMissingTFsCur,
-                              .data$TF_peak.connectionType == TF_peak.connectionTypeCur, 
-                              is.na(.data$peak_gene.p_raw), 
-                              .data$perm == permCur) %>%
-                dplyr::select("TF_peak.fdr", "peak_gene.fdr", "nGenes", "nTFs", "nPeaks")
-              
-              # Stratify by TF, peak or gene and produce a simple matrix
-              if (nrow(stats_filtered.df) > 0) {
-                plotData.l[[permIndex]] = as.matrix(reshape2::dcast(stats_filtered.df, TF_peak.fdr ~ peak_gene.fdr, value.var = elemCur)[,-1])
+            for (allowMissingGenesCur in unique(GRN@stats$connections$allowMissingGenes)) {
                 
-                colnames(plotData.l[[permIndex]]) = paste0("peak_gene\n.fdr_", colnames(plotData.l[[permIndex]]))
-                rownames(plotData.l[[permIndex]]) = paste0("TF_peak\n.fdr_", sort(unique(stats_filtered.df$TF_peak.fdr)))
-              }
-              
-              
+                for (TF_peak.connectionTypeCur in GRN@config$TF_peak_connectionTypes) {
+                    
+                    # Plot a summary page with the parameters used for the next page
+                    # 
+                    #index = index + 1
+                    
+                    for (elemCur in c("nTFs", "nPeaks", "nGenes")) {
+                        
+                        plotData.l = list()
+                        for (permCur in 0:.getMaxPermutation(GRN)) {
+                            
+                            permIndex = as.character(permCur)
+                            
+                            stats_filtered.df = GRN@stats$connections %>%
+                                dplyr::filter(.data$allowMissingGenes == allowMissingGenesCur, 
+                                              .data$allowMissingTFs == allowMissingTFsCur,
+                                              .data$TF_peak.connectionType == TF_peak.connectionTypeCur, 
+                                              is.na(.data$peak_gene.p_raw), 
+                                              .data$perm == permCur) %>%
+                                dplyr::select("TF_peak.fdr", "peak_gene.fdr", "nGenes", "nTFs", "nPeaks")
+                            
+                            # Stratify by TF, peak or gene and produce a simple matrix
+                            if (nrow(stats_filtered.df) > 0) {
+                                plotData.l[[permIndex]] = as.matrix(reshape2::dcast(stats_filtered.df, TF_peak.fdr ~ peak_gene.fdr, value.var = elemCur)[,-1])
+                                
+                                colnames(plotData.l[[permIndex]]) = paste0("peak_gene\n.fdr_", colnames(plotData.l[[permIndex]]))
+                                rownames(plotData.l[[permIndex]]) = paste0("TF_peak\n.fdr_", sort(unique(stats_filtered.df$TF_peak.fdr)))
+                            }
+                            
+                            
+                        }
+                        
+                        # Now we have the data for both permutations, let's plot
+                        
+                        maxDataRange = max(unlist(lapply(plotData.l,FUN = max))) * 1.1
+                        
+                        for (permCur in 0:.getMaxPermutation(GRN)) {
+                            
+                            index = index + 1
+                            permIndex = as.character(permCur)
+                            permSuffix = paste0(dplyr::if_else(permCur == 0, " (real)", " (background)"))
+                            
+                            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                                
+                                titlePlot =  paste0("Number of unique ", gsub("^n", "", elemCur), permSuffix,
+                                                    "\nallowMissingTFs: ", allowMissingTFsCur, 
+                                                    ", allowMissingGenes: ", allowMissingGenesCur, 
+                                                    ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
+                                
+                                # TOOO PACKAGES: Replace by something else?
+                                colors = circlize::colorRamp2(c(0, maxDataRange), c("white", "red"))
+                                
+                                ComplexHeatmap::Heatmap(
+                                    plotData.l[[permIndex]],
+                                    name = "Number of\nconnections",
+                                    col = colors,
+                                    cluster_columns = FALSE, cluster_rows = FALSE,
+                                    row_names_side = "right", row_names_gp = grid::gpar(fontsize = 10), 
+                                    column_title = titlePlot,
+                                    column_names_gp = grid::gpar(fontsize = 10),
+                                    row_title = "TF-peak FDR",
+                                    cell_fun = function(j, i, x, y, width, height, fill) {
+                                        grid::grid.text(sprintf("%.0f", plotData.l[[permIndex]][i, j]), x, y, gp = grid::gpar(fontsize = 20))
+                                    }
+                                ) %>% plot()
+                                
+                            }
+                            pageCounter = pageCounter + 1
+                            
+                        }
+                        
+                        
+                    } # end for (elemCur in c("nTFs", "nPeaks", "nGenes"))
+                    
+                } # end for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAll)
             }
-            
-            # Now we have the data for both permutations, let's plot
-            
-            maxDataRange = max(unlist(lapply(plotData.l,FUN = max))) * 1.1
-            
-            for (permCur in 0:.getMaxPermutation(GRN)) {
-              
-              index = index + 1
-              permIndex = as.character(permCur)
-              permSuffix = paste0(dplyr::if_else(permCur == 0, " (real)", " (background)"))
-              
-              if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-                
-                titlePlot =  paste0("Number of unique ", gsub("^n", "", elemCur), permSuffix,
-                                    "\nallowMissingTFs: ", allowMissingTFsCur, 
-                                    ", allowMissingGenes: ", allowMissingGenesCur, 
-                                    ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
-                
-                # TOOO PACKAGES: Replace by something else?
-                colors = circlize::colorRamp2(c(0, maxDataRange), c("white", "red"))
-                
-                ComplexHeatmap::Heatmap(
-                  plotData.l[[permIndex]],
-                  name = "Number of\nconnections",
-                  col = colors,
-                  cluster_columns = FALSE, cluster_rows = FALSE,
-                  row_names_side = "right", row_names_gp = grid::gpar(fontsize = 10), 
-                  column_title = titlePlot,
-                  column_names_gp = grid::gpar(fontsize = 10),
-                  row_title = "TF-peak FDR",
-                  cell_fun = function(j, i, x, y, width, height, fill) {
-                    grid::grid.text(sprintf("%.0f", plotData.l[[permIndex]][i, j]), x, y, gp = grid::gpar(fontsize = 20))
-                  }
-                ) %>% plot()
-                
-              }
-              pageCounter = pageCounter + 1
-              
-            }
-            
-            
-          } # end for (elemCur in c("nTFs", "nPeaks", "nGenes"))
-          
-        } # end for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAll)
-      }
+        }
+        
+        .checkPageNumberValidity(pages, pageCounter)
+        if (!is.null(file)) {
+            grDevices::dev.off()
+        }
+        
+        
     }
     
-    .checkPageNumberValidity(pages, pageCounter)
-    if (!is.null(file)) {
-      grDevices::dev.off()
-    }
+    .printExecutionTime(start)
     
-    
-  }
-  
-  .printExecutionTime(start)
-  
 }
 
 .plot_stats_connectionSummaryDensity <- function(GRN, file = file, TF_peak.connectionType, allowMissingTFs = FALSE, allowMissingGenes = FALSE, pdf_width = 12, pdf_height = 12, pages = NULL, forceRerun = FALSE) {
-  
-  # TODO
-  # Same for both permutations, in one plot
-  main.df = GRN@connections$TF_peaks[["0"]]$main
-  main.filt.df = dplyr::filter(main.df, .data$TF_peak.fdr < 0.3)
-  ggplot2::ggplot(main.df, ggplot2::aes(.data$TF_peak.fdr)) + ggplot2::geom_density() + ggplot2::theme_bw()
-  ggplot2::ggplot(main.df, ggplot2::aes(.data$TF_peak.fdr)) + ggplot2::geom_histogram(binwidth = 0.01) +  
-    ggplot2::geom_vline(xintercept = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3), linetype = "dotted", color = "darkgray") + ggplot2::theme_bw()
-  ggplot2::ggplot(main.filt.df, ggplot2::aes(.data$TF_peak.fdr)) + ggplot2::geom_histogram(binwidth = 0.01) +
-    ggplot2::geom_vline(xintercept = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3), linetype = "dotted", color = "darkgray") + ggplot2::theme_bw()
-  
-  
-  # Connectivity of TF-peaks in dependency of TF_peak.fdr
-  
-  
+    
+    # TODO
+    # Same for both permutations, in one plot
+    main.df = GRN@connections$TF_peaks[["0"]]$main
+    main.filt.df = dplyr::filter(main.df, .data$TF_peak.fdr < 0.3)
+    ggplot2::ggplot(main.df, ggplot2::aes(.data$TF_peak.fdr)) + ggplot2::geom_density() + ggplot2::theme_bw()
+    ggplot2::ggplot(main.df, ggplot2::aes(.data$TF_peak.fdr)) + ggplot2::geom_histogram(binwidth = 0.01) +  
+        ggplot2::geom_vline(xintercept = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3), linetype = "dotted", color = "darkgray") + ggplot2::theme_bw()
+    ggplot2::ggplot(main.filt.df, ggplot2::aes(.data$TF_peak.fdr)) + ggplot2::geom_histogram(binwidth = 0.01) +
+        ggplot2::geom_vline(xintercept = c(0.001, 0.01, 0.05, 0.1, 0.2, 0.3), linetype = "dotted", color = "darkgray") + ggplot2::theme_bw()
+    
+    
+    # Connectivity of TF-peaks in dependency of TF_peak.fdr
+    
+    
 }
 
 
 # Compare real and background one, replicate Darias plots
 .plot_stats_connectionSummaryBoxplot <- function(GRN, file = NULL, pdf_width = 12, pdf_height = 12, pages = NULL, forceRerun = FALSE) {
-  
-  start = Sys.time()
-  
-  if ((!is.null(file) && !file.exists(file)) | is.null(file) | forceRerun) {
     
+    start = Sys.time()
     
-    futile.logger::flog.info(paste0("Plotting diagnostic plots for network connections", ifelse(is.null(file), "", paste0(" to file ", file))))
-    
-    
-    if (!is.null(file)) {
-      .checkOutputFile(file)
-      grDevices::pdf(file = file, width = pdf_width, height = pdf_height)
+    if ((!is.null(file) && !file.exists(file)) | is.null(file) | forceRerun) {
+        
+        
+        futile.logger::flog.info(paste0("Plotting diagnostic plots for network connections", ifelse(is.null(file), "", paste0(" to file ", file))))
+        
+        
+        if (!is.null(file)) {
+            .checkOutputFile(file)
+            grDevices::pdf(file = file, width = pdf_width, height = pdf_height)
+        }
+        
+        stats_details.l = GRN@stats$connectionDetails.l
+        
+        TF_peak.fdrs      = names(GRN@stats$connectionDetails.l[["0"]])
+        peak_gene.fdrs    = names(GRN@stats$connectionDetails.l[["0"]][[TF_peak.fdrs[1]]])
+        allowMissingTFs   = names(GRN@stats$connectionDetails.l[["0"]][[TF_peak.fdrs[1]]][[peak_gene.fdrs[1]]])
+        allowMissingGenes = names(GRN@stats$connectionDetails.l[["0"]][[TF_peak.fdrs[1]]][[peak_gene.fdrs[1]]][[allowMissingTFs[1]]])
+        
+        
+        nElemsTotal = length(TF_peak.fdrs) * length(peak_gene.fdrs) * length(allowMissingTFs) * length(allowMissingGenes) * length(GRN@config$TF_peak_connectionTypes)
+        
+        pb <- progress::progress_bar$new(total = nElemsTotal)
+        
+        
+        pageCounter = 1 
+        for (TF_peak.fdr_cur in rev(TF_peak.fdrs)) {
+            
+            for (peak_gene.fdr_cur in peak_gene.fdrs) {
+                
+                for (allowMissingTFsCur in allowMissingTFs) {
+                    
+                    for (allowMissingGenesCur in allowMissingGenes) {
+                        
+                        for (TF_peak.connectionTypeCur in GRN@config$TF_peak_connectionTypes) {
+                            
+                            pb$tick()
+                            
+                            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                                
+                                elemCur = "TF"
+                                dataCur0.df = as.data.frame(stats_details.l[["0"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
+                                dataCur1.df = as.data.frame(stats_details.l[["1"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
+                                
+                                if (nrow(dataCur0.df) == 0) {
+                                    dataCur0.df = data.frame(. = "MISSING", Freq = 0)
+                                }
+                                if (nrow(dataCur1.df) == 0) {
+                                    dataCur1.df = data.frame(. = "MISSING", Freq = 0)
+                                }
+                                
+                                dataCur.df = rbind(dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
+                                                   dplyr::mutate(dataCur1.df, networkType = "background", connectionType = elemCur)) %>% 
+                                    tibble::as_tibble()
+                                
+                                for (elemCur in c("gene","peak.gene","peak.TF")) {
+                                    
+                                    dataCur0.df = as.data.frame(stats_details.l[["0"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
+                                    dataCur1.df = as.data.frame(stats_details.l[["1"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
+                                    
+                                    if (nrow(dataCur0.df) == 0) {
+                                        dataCur0.df = data.frame(. = "MISSING", Freq = 0)
+                                    }
+                                    if (nrow(dataCur1.df) == 0) {
+                                        dataCur1.df = data.frame(. = "MISSING", Freq = 0)
+                                    }
+                                    
+                                    dataCur.df = rbind(dataCur.df,
+                                                       dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
+                                                       dplyr::mutate(dataCur1.df, networkType = "background", connectionType = elemCur))
+                                    
+                                }
+                                
+                                dataCur.df$networkType = as.factor(dataCur.df$networkType)
+                                
+                                titlePlot =  paste0("TF_peak.fdr: ", TF_peak.fdr_cur, 
+                                                    ", peak_gene.fdr: ", peak_gene.fdr_cur, 
+                                                    "\nallowMissingTFs: ", allowMissingTFsCur, 
+                                                    ", allowMissingGenes: ", allowMissingGenesCur, 
+                                                    ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
+                                
+                                if (max(dataCur.df$Freq) > 0) {
+                                    
+                                    g = ggplot2::ggplot(dataCur.df, ggplot2::aes(.data$networkType, log10(.data$Freq), fill = .data$networkType)) + ggplot2::geom_boxplot() + ggplot2::theme_bw() + 
+                                        ggplot2::xlab("Network type")  + ggplot2::ylab(paste0("log10(Number of connections per category",  ", empty = 0)")) +
+                                        ggplot2::ggtitle(titlePlot) + 
+                                        ggplot2::facet_wrap(~connectionType, scales = "free") + 
+                                        ggplot2::scale_fill_manual("Network type", values = c("real" =  "red", "background" = "gray"), 
+                                                                   labels = c("real" =  "real", "background" = "background"), drop = FALSE)
+                                    
+                                    suppressWarnings(plot(g))
+                                    
+                                } else {
+                                    
+                                    plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', axes = FALSE, main = titlePlot)
+                                    message = paste0(titlePlot, "\nNo data to show")
+                                    text(x = 0.5, y = 0.5, message, cex = 1.2, col = "red")
+                                }
+                            }
+                            pageCounter = pageCounter + 1  
+                            
+                            
+                        } #end  for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAll)
+                        
+                    } # end  for (allowMissingGenesCur in c(FALSE, TRUE))
+                    
+                } # end for (allowMissingTFsCur in c(FALSE, TRUE))
+                
+            } # end for each peak_gene.fdr_cur
+            
+        } # end for TF_peak.fdr_cur
+        
+        .checkPageNumberValidity(pages, pageCounter)
+        if (!is.null(file)) {
+            grDevices::dev.off()
+        }
     }
     
-    stats_details.l = GRN@stats$connectionDetails.l
     
-    TF_peak.fdrs      = names(GRN@stats$connectionDetails.l[["0"]])
-    peak_gene.fdrs    = names(GRN@stats$connectionDetails.l[["0"]][[TF_peak.fdrs[1]]])
-    allowMissingTFs   = names(GRN@stats$connectionDetails.l[["0"]][[TF_peak.fdrs[1]]][[peak_gene.fdrs[1]]])
-    allowMissingGenes = names(GRN@stats$connectionDetails.l[["0"]][[TF_peak.fdrs[1]]][[peak_gene.fdrs[1]]][[allowMissingTFs[1]]])
+    .printExecutionTime(start)
     
-    
-    nElemsTotal = length(TF_peak.fdrs) * length(peak_gene.fdrs) * length(allowMissingTFs) * length(allowMissingGenes) * length(GRN@config$TF_peak_connectionTypes)
-    
-    pb <- progress::progress_bar$new(total = nElemsTotal)
-    
-    
-    pageCounter = 1 
-    for (TF_peak.fdr_cur in rev(TF_peak.fdrs)) {
-      
-      for (peak_gene.fdr_cur in peak_gene.fdrs) {
-        
-        for (allowMissingTFsCur in allowMissingTFs) {
-          
-          for (allowMissingGenesCur in allowMissingGenes) {
-            
-            for (TF_peak.connectionTypeCur in GRN@config$TF_peak_connectionTypes) {
-              
-              pb$tick()
-              
-              if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-                
-                elemCur = "TF"
-                dataCur0.df = as.data.frame(stats_details.l[["0"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
-                dataCur1.df = as.data.frame(stats_details.l[["1"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
-                
-                if (nrow(dataCur0.df) == 0) {
-                  dataCur0.df = data.frame(. = "MISSING", Freq = 0)
-                }
-                if (nrow(dataCur1.df) == 0) {
-                  dataCur1.df = data.frame(. = "MISSING", Freq = 0)
-                }
-                
-                dataCur.df = rbind(dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
-                                   dplyr::mutate(dataCur1.df, networkType = "background", connectionType = elemCur)) %>% 
-                  tibble::as_tibble()
-                
-                for (elemCur in c("gene","peak.gene","peak.TF")) {
-                  
-                  dataCur0.df = as.data.frame(stats_details.l[["0"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
-                  dataCur1.df = as.data.frame(stats_details.l[["1"]][[TF_peak.fdr_cur]][[peak_gene.fdr_cur]] [[allowMissingTFsCur]] [[allowMissingGenesCur]] [[TF_peak.connectionTypeCur]] [[elemCur]])
-                  
-                  if (nrow(dataCur0.df) == 0) {
-                    dataCur0.df = data.frame(. = "MISSING", Freq = 0)
-                  }
-                  if (nrow(dataCur1.df) == 0) {
-                    dataCur1.df = data.frame(. = "MISSING", Freq = 0)
-                  }
-                  
-                  dataCur.df = rbind(dataCur.df,
-                                     dplyr::mutate(dataCur0.df, networkType = "real", connectionType = elemCur), 
-                                     dplyr::mutate(dataCur1.df, networkType = "background", connectionType = elemCur))
-                  
-                }
-                
-                dataCur.df$networkType = as.factor(dataCur.df$networkType)
-                
-                titlePlot =  paste0("TF_peak.fdr: ", TF_peak.fdr_cur, 
-                                    ", peak_gene.fdr: ", peak_gene.fdr_cur, 
-                                    "\nallowMissingTFs: ", allowMissingTFsCur, 
-                                    ", allowMissingGenes: ", allowMissingGenesCur, 
-                                    ",\n TF_peak.connectionType: ", TF_peak.connectionTypeCur)
-                
-                if (max(dataCur.df$Freq) > 0) {
-                  
-                  g = ggplot2::ggplot(dataCur.df, ggplot2::aes(.data$networkType, log10(.data$Freq), fill = .data$networkType)) + ggplot2::geom_boxplot() + ggplot2::theme_bw() + 
-                    ggplot2::xlab("Network type")  + ggplot2::ylab(paste0("log10(Number of connections per category",  ", empty = 0)")) +
-                    ggplot2::ggtitle(titlePlot) + 
-                    ggplot2::facet_wrap(~connectionType, scales = "free") + 
-                    ggplot2::scale_fill_manual("Network type", values = c("real" =  "red", "background" = "gray"), 
-                                      labels = c("real" =  "real", "background" = "background"), drop = FALSE)
-                  
-                  suppressWarnings(plot(g))
-                  
-                } else {
-                  
-                  plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', axes = FALSE, main = titlePlot)
-                  message = paste0(titlePlot, "\nNo data to show")
-                  text(x = 0.5, y = 0.5, message, cex = 1.2, col = "red")
-                }
-              }
-              pageCounter = pageCounter + 1  
-              
-              
-            } #end  for (TF_peak.connectionTypeCur in TF_peak.connectionTypesAll)
-            
-          } # end  for (allowMissingGenesCur in c(FALSE, TRUE))
-          
-        } # end for (allowMissingTFsCur in c(FALSE, TRUE))
-        
-      } # end for each peak_gene.fdr_cur
-      
-    } # end for TF_peak.fdr_cur
-    
-    .checkPageNumberValidity(pages, pageCounter)
-    if (!is.null(file)) {
-      grDevices::dev.off()
-    }
-  }
-  
-  
-  .printExecutionTime(start)
-  
 }
 
 ############ Plot correlations for any connection type ###############
@@ -2567,7 +2569,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             futile.logger::flog.info(paste0(" Plotting", ifelse(!is.null(file), paste0(" to file ", file), " directly"), ". This may take a while."))
             .printMultipleGraphsPerPage(plots.l, nCol = plotsPerPage[2], nRow = plotsPerPage[1], pdfFile = file, height = pdf_height, width = pdf_width)
         }
- 
+        
         
     } else {
         futile.logger::flog.info(paste0("All output files already exist. Set forceRerun = TRUE to regenerate and overwrite."))
@@ -2593,7 +2595,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
         if (!is.null(peak.IDs)) filters = c(filters, paste0("peak IDs only: ", paste0(unique(peak.IDs), collapse = ", ")))
         
     }
-
+    
     
     futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
     
@@ -2624,7 +2626,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
                 message = paste0("If both TF and peak IDs are given, both must have the same length.")
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
             }
-
+            
             IDs_keep = paste0(TF.IDs, "_", peak.IDs)
             data.df = data.df %>% 
                 dplyr::mutate(IDs_combined = paste0(.data$TF.ID, "_", .data$peak.ID)) %>% 
@@ -2645,7 +2647,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             }
         }
         
-       
+        
         
         
         data.df = data.df %>%
@@ -2757,7 +2759,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
         
     }
     
-
+    
     
     
     futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
@@ -2799,7 +2801,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             
             
         } else {
-
+            
             if (!is.null(peak.IDs)) {
                 data.df = dplyr::filter(data.df, .data$peak.ID %in% peak.IDs)
             }
@@ -2809,7 +2811,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             }
         }
         
-       
+        
         
         
         data.df = data.df %>%
@@ -2817,7 +2819,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
                           abs(.data$peak_gene.r) >= min_abs_r)
         
         data.df = .maxFilter(data.df, nMax, nSelectionType)
-
+        
         
         if (.checkForZeroPlots(data.df) ) {
             return(list())
@@ -2914,7 +2916,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
         
     }
     
-
+    
     
     
     futile.logger::flog.info(paste0("User-defined filters:\n ", paste0(filters, collapse = "\n ")))
@@ -2965,7 +2967,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
                 data.df = dplyr::filter(data.df, .data$gene.ENSEMBL %in% gene.IDs)
             }
         }
-
+        
         
         data.df = data.df %>%
             dplyr::filter(.data$TF_gene.p_raw <= p_raw,
@@ -2976,7 +2978,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
         if (.checkForZeroPlots(data.df) ) {
             return(list())
         }
-
+        
         TF.IDs2   = dplyr::pull(data.df, "TF.ID") %>% as.character()
         gene.IDs2 = dplyr::pull(data.df, "gene.ENSEMBL") %>% as.character()
         
@@ -3004,7 +3006,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
             # 
             
             cor_cur = .correlateData(dplyr::pull(values.df, "x"), dplyr::pull(values.df, "y"), corMethod)
-
+            
             
             # Check whether we have this pair in the TF-gene filtered connections
             con.subset.df = GRN@connections$TF_genes.filtered[[permIndexCur]] %>%
@@ -3132,196 +3134,196 @@ plotCorrelations <- function(GRN, type = "all.filtered",
 plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL, 
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                   forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-  GRN = .addFunctionLogToObject(GRN)
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_generalNetworkStats"), basenameOutput), ".pdf")
-  if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
     
-    if (plotAsPDF) {
-      .checkOutputFile(fileCur)
-      grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
-      futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
+    GRN = .addFunctionLogToObject(GRN)
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_generalNetworkStats"), basenameOutput), ".pdf")
+    if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
+        
+        if (plotAsPDF) {
+            .checkOutputFile(fileCur)
+            grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
+            futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+        } else {
+            futile.logger::flog.info(paste0("Plotting directly"))   
+        }
+        
+        .checkGraphExistance(GRN)
+        
+        TF_peak_gene.df = GRN@graph$TF_peak_gene$table
+        TF_gene.df = GRN@graph$TF_gene$table
+        
+        # pie charts
+        totalVerteces = data.frame(Class = c("TF", "Peak", "Gene"),
+                                   Count = c(dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$TF.ID)),
+                                             dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$peak.ID)),
+                                             dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$gene.ENSEMBL)) 
+                                   )
+        )
+        
+        theme_plots = ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), 
+                                     legend.title = ggplot2::element_blank(), panel.background = ggplot2::element_rect(fill = "white"),
+                                     plot.title = ggplot2::element_text(hjust = 0.5))
+        
+        
+        pageCounter = 1
+        
+        # Page 1: Pie charts of the connections
+        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+            
+            gVertexDist = ggplot2::ggplot(totalVerteces, ggplot2::aes(x = "", y = .data$Count, fill = .data$Class)) + ggplot2::geom_bar(stat = "identity") +
+                ggplot2::coord_polar("y", start = 0) +
+                ggplot2::scale_fill_manual(values = c("#3B9AB2", "#F21A00", "#E1AF00")) +
+                ggplot2::geom_text(ggplot2::aes(label = paste0(round(.data$Count/sum(.data$Count) * 100, digits = 1), "%")),
+                                   position = ggplot2::position_stack(vjust = 0.5)) +
+                theme_plots +
+                ggplot2::ggtitle(paste0("Vertices (n=", sum(totalVerteces$Count), ")"))
+            
+            geneDist = as.data.frame(table(droplevels(GRN@connections$all.filtered$`0`$gene.type)))
+            if (nrow(geneDist) == 0) {
+                gGeneDist = 
+                    ggplot2::ggplot() + 
+                    ggplot2::annotate("text", x = 4, y = 25, size = 5, color = "red", label = "Nothing to plot:\nNo genes found") + 
+                    ggplot2::theme_void()
+                
+                
+                message = "No genes found in the GRN object. Make sure the filtered connections contain also genes."
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                
+            } else {
+                gGeneDist = ggplot2::ggplot(geneDist, ggplot2::aes(x =  "", y = .data$Freq, fill = .data$Var1)) + ggplot2::geom_bar(stat = "identity") +
+                    ggplot2::coord_polar("y") +
+                    ggplot2::geom_text(ggplot2::aes(label = paste0(round(.data$Freq/sum(.data$Freq) * 100, digits = 1 ), "%")),
+                                       position = ggplot2::position_stack(vjust = 0.5)) +
+                    theme_plots +
+                    ggplot2::ggtitle(paste0("Genes (n=", sum(geneDist$Freq), ")"))
+            }
+            
+            
+            totalEdges = as.data.frame(table(TF_peak_gene.df$connectionType))
+            if (nrow(totalEdges) == 0) {
+                gEdgeDist = ggplot2::ggplot() + 
+                    ggplot2::annotate("text", x = 4, y = 25, size = 5, color = "red", label = "Nothing to plot:\nNo genes found") + 
+                    ggplot2::theme_void()
+            } else {
+                gEdgeDist = ggplot2::ggplot(totalEdges, ggplot2::aes(x = "", y = .data$Freq, fill = .data$Var1)) + ggplot2::geom_bar(stat = "identity") +
+                    ggplot2::coord_polar("y", start = 0) +
+                    ggplot2::scale_fill_manual(values = c("#BDC367", "#6BB1C1")) +
+                    ggplot2::geom_text(ggplot2::aes(label = paste0(round(.data$Freq/sum(.data$Freq) * 100, digits = 1 ), "%")),
+                                       position = ggplot2::position_stack(vjust = 0.5)) +
+                    theme_plots +
+                    ggplot2::ggtitle(paste0("Edges (n=", sum(totalEdges$Freq), ")"))
+            }
+            
+            print((gVertexDist + gEdgeDist)/gGeneDist + patchwork::plot_layout(widths = c(2,1), guides = "collect"))
+        }
+        
+        pageCounter = pageCounter + 1
+        
+        # First, we focus on the TF-peak-gene graph
+        # Get degree stats and central vertexes in the TF-peak-gene graph
+        TF_peak_gene.degree.stats = .getDegreeStats(GRN, TF_peak_gene.df)
+        suffix = paste0(" in the filtered TF-peak-gene eGRN")
+        if (nrow(TF_peak_gene.df) > 0) {
+            #degreeDist.tbl = TF_peak_gene.degree.stats$tbl$degrees
+            
+            
+            
+            # Pages 2 to 4: TF-peak-gene network: Degree distribution, and top genes for 2 different measures
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                gDegrees  = TF_peak_gene.degree.stats$figures$degreeDist + ggplot2::ggtitle(paste0("Distribution of vertex degrees", suffix))
+                print(gDegrees)
+            } 
+            pageCounter = pageCounter + 1
+            
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                gTopGenes = TF_peak_gene.degree.stats$figures$topGenes   + ggplot2::ggtitle(paste0("Top degree-central genes", suffix))
+                gTopTFs   = TF_peak_gene.degree.stats$figures$topTFs     + ggplot2::ggtitle(paste0("Top degree-central TFs", suffix))
+                print(gTopGenes/gTopTFs)
+            } 
+            pageCounter = pageCounter + 1
+            
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                eigen_stats = .getEigenCentralVertices(GRN, "TF_peak_gene")
+                gTopEigenGenes = eigen_stats$topGenes + ggplot2::ggtitle(paste0("Top eigenvector-central genes", suffix))
+                gTopEigenTFs   = eigen_stats$topTFs   + ggplot2::ggtitle(paste0("Top eigenvector-central TFs", suffix))
+                print(gTopEigenGenes/gTopEigenTFs)
+            } 
+            pageCounter = pageCounter + 1
+            
+            ##
+            # Now we focus on the TF-gene graph only, not the TF-peak-gene one
+            ###
+            suffix = paste0(" in the filtered TF-gene eGRN")
+            # Get degree stats and central vertexes in the filtered GRN
+            TF_gene.degree.stats = .getDegreeStats(GRN, TF_gene.df)
+            
+            
+            # Pages 5 to 7: TF-gene network: Degree distribution, and top genes for 2 different measures
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                degreeDist.tbl = TF_gene.degree.stats$tbl$degrees
+                gDegrees = TF_gene.degree.stats$figures$degreeDist + ggplot2::ggtitle(paste0("Distribution of vertex degrees", suffix))
+                print(gDegrees)
+            } 
+            pageCounter = pageCounter + 1
+            
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                gTopGenes = TF_gene.degree.stats$figures$topGenes + ggplot2::ggtitle(paste0("Top degree-central genes", suffix))
+                gTopTFs = TF_gene.degree.stats$figures$topTFs + ggplot2::ggtitle(paste0("Top degree-central TFs", suffix))
+                print(gTopGenes/gTopTFs)
+            } 
+            pageCounter = pageCounter + 1
+            
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                # get top eigenvalue central TFs and genes
+                eigen_stats = .getEigenCentralVertices(GRN, "TF_gene")
+                gTopEigenGenes = eigen_stats$topGenes + ggplot2::ggtitle(paste0("Top eigenvector-central genes", suffix))
+                gTopEigenTFs = eigen_stats$topTFs + ggplot2::ggtitle(paste0("Top eigenvector-central TFs", suffix))
+                print(gTopEigenGenes/gTopEigenTFs)
+                
+            } 
+            
+        }
+        
+        .checkPageNumberValidity(pages, pageCounter)
+        
+        if (plotAsPDF) {grDevices::dev.off()}
+        
     } else {
-      futile.logger::flog.info(paste0("Plotting directly"))   
+        .printDataAlreadyExistsMessage()
     }
     
-    .checkGraphExistance(GRN)
+    .printExecutionTime(start)
     
-    TF_peak_gene.df = GRN@graph$TF_peak_gene$table
-    TF_gene.df = GRN@graph$TF_gene$table
+    GRN
     
-    # pie charts
-    totalVerteces = data.frame(Class = c("TF", "Peak", "Gene"),
-                               Count = c(dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$TF.ID)),
-                                         dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$peak.ID)),
-                                         dplyr::n_distinct(stats::na.omit(GRN@connections$all.filtered$`0`$gene.ENSEMBL)) 
-                                        )
-                               )
-    
-    theme_plots = ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), 
-                        legend.title = ggplot2::element_blank(), panel.background = ggplot2::element_rect(fill = "white"),
-                        plot.title = ggplot2::element_text(hjust = 0.5))
-    
-    
-    pageCounter = 1
-    
-    # Page 1: Pie charts of the connections
-    if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-      
-      gVertexDist = ggplot2::ggplot(totalVerteces, ggplot2::aes(x = "", y = .data$Count, fill = .data$Class)) + ggplot2::geom_bar(stat = "identity") +
-        ggplot2::coord_polar("y", start = 0) +
-        ggplot2::scale_fill_manual(values = c("#3B9AB2", "#F21A00", "#E1AF00")) +
-        ggplot2::geom_text(ggplot2::aes(label = paste0(round(.data$Count/sum(.data$Count) * 100, digits = 1), "%")),
-                  position = ggplot2::position_stack(vjust = 0.5)) +
-        theme_plots +
-        ggplot2::ggtitle(paste0("Vertices (n=", sum(totalVerteces$Count), ")"))
-      
-      geneDist = as.data.frame(table(droplevels(GRN@connections$all.filtered$`0`$gene.type)))
-      if (nrow(geneDist) == 0) {
-        gGeneDist = 
-          ggplot2::ggplot() + 
-          ggplot2::annotate("text", x = 4, y = 25, size = 5, color = "red", label = "Nothing to plot:\nNo genes found") + 
-          ggplot2::theme_void()
-        
-        
-        message = "No genes found in the GRN object. Make sure the filtered connections contain also genes."
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-        
-      } else {
-        gGeneDist = ggplot2::ggplot(geneDist, ggplot2::aes(x =  "", y = .data$Freq, fill = .data$Var1)) + ggplot2::geom_bar(stat = "identity") +
-          ggplot2::coord_polar("y") +
-          ggplot2::geom_text(ggplot2::aes(label = paste0(round(.data$Freq/sum(.data$Freq) * 100, digits = 1 ), "%")),
-                    position = ggplot2::position_stack(vjust = 0.5)) +
-          theme_plots +
-          ggplot2::ggtitle(paste0("Genes (n=", sum(geneDist$Freq), ")"))
-      }
-      
-      
-      totalEdges = as.data.frame(table(TF_peak_gene.df$connectionType))
-      if (nrow(totalEdges) == 0) {
-        gEdgeDist = ggplot2::ggplot() + 
-          ggplot2::annotate("text", x = 4, y = 25, size = 5, color = "red", label = "Nothing to plot:\nNo genes found") + 
-          ggplot2::theme_void()
-      } else {
-        gEdgeDist = ggplot2::ggplot(totalEdges, ggplot2::aes(x = "", y = .data$Freq, fill = .data$Var1)) + ggplot2::geom_bar(stat = "identity") +
-          ggplot2::coord_polar("y", start = 0) +
-          ggplot2::scale_fill_manual(values = c("#BDC367", "#6BB1C1")) +
-          ggplot2::geom_text(ggplot2::aes(label = paste0(round(.data$Freq/sum(.data$Freq) * 100, digits = 1 ), "%")),
-                    position = ggplot2::position_stack(vjust = 0.5)) +
-          theme_plots +
-          ggplot2::ggtitle(paste0("Edges (n=", sum(totalEdges$Freq), ")"))
-      }
-      
-      print((gVertexDist + gEdgeDist)/gGeneDist + patchwork::plot_layout(widths = c(2,1), guides = "collect"))
-    }
-    
-    pageCounter = pageCounter + 1
-    
-    # First, we focus on the TF-peak-gene graph
-    # Get degree stats and central vertexes in the TF-peak-gene graph
-    TF_peak_gene.degree.stats = .getDegreeStats(GRN, TF_peak_gene.df)
-    suffix = paste0(" in the filtered TF-peak-gene eGRN")
-    if (nrow(TF_peak_gene.df) > 0) {
-      #degreeDist.tbl = TF_peak_gene.degree.stats$tbl$degrees
-      
-      
-      
-      # Pages 2 to 4: TF-peak-gene network: Degree distribution, and top genes for 2 different measures
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        gDegrees  = TF_peak_gene.degree.stats$figures$degreeDist + ggplot2::ggtitle(paste0("Distribution of vertex degrees", suffix))
-        print(gDegrees)
-      } 
-      pageCounter = pageCounter + 1
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        gTopGenes = TF_peak_gene.degree.stats$figures$topGenes   + ggplot2::ggtitle(paste0("Top degree-central genes", suffix))
-        gTopTFs   = TF_peak_gene.degree.stats$figures$topTFs     + ggplot2::ggtitle(paste0("Top degree-central TFs", suffix))
-        print(gTopGenes/gTopTFs)
-      } 
-      pageCounter = pageCounter + 1
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        eigen_stats = .getEigenCentralVertices(GRN, "TF_peak_gene")
-        gTopEigenGenes = eigen_stats$topGenes + ggplot2::ggtitle(paste0("Top eigenvector-central genes", suffix))
-        gTopEigenTFs   = eigen_stats$topTFs   + ggplot2::ggtitle(paste0("Top eigenvector-central TFs", suffix))
-        print(gTopEigenGenes/gTopEigenTFs)
-      } 
-      pageCounter = pageCounter + 1
-      
-      ##
-      # Now we focus on the TF-gene graph only, not the TF-peak-gene one
-      ###
-      suffix = paste0(" in the filtered TF-gene eGRN")
-      # Get degree stats and central vertexes in the filtered GRN
-      TF_gene.degree.stats = .getDegreeStats(GRN, TF_gene.df)
-      
-      
-      # Pages 5 to 7: TF-gene network: Degree distribution, and top genes for 2 different measures
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        degreeDist.tbl = TF_gene.degree.stats$tbl$degrees
-        gDegrees = TF_gene.degree.stats$figures$degreeDist + ggplot2::ggtitle(paste0("Distribution of vertex degrees", suffix))
-        print(gDegrees)
-      } 
-      pageCounter = pageCounter + 1
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        gTopGenes = TF_gene.degree.stats$figures$topGenes + ggplot2::ggtitle(paste0("Top degree-central genes", suffix))
-        gTopTFs = TF_gene.degree.stats$figures$topTFs + ggplot2::ggtitle(paste0("Top degree-central TFs", suffix))
-        print(gTopGenes/gTopTFs)
-      } 
-      pageCounter = pageCounter + 1
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        
-        # get top eigenvalue central TFs and genes
-        eigen_stats = .getEigenCentralVertices(GRN, "TF_gene")
-        gTopEigenGenes = eigen_stats$topGenes + ggplot2::ggtitle(paste0("Top eigenvector-central genes", suffix))
-        gTopEigenTFs = eigen_stats$topTFs + ggplot2::ggtitle(paste0("Top eigenvector-central TFs", suffix))
-        print(gTopEigenGenes/gTopEigenTFs)
-        
-      } 
-      
-    }
-    
-    .checkPageNumberValidity(pages, pageCounter)
-    
-    if (plotAsPDF) {grDevices::dev.off()}
-    
-  } else {
-      .printDataAlreadyExistsMessage()
-  }
-  
-  .printExecutionTime(start)
-  
-  GRN
-  
 }
 
 .checkPageNumberValidity <- function(pages, pageCounter) {
-  
-  if (any(pages > pageCounter)) {
-    message = paste0("At least one page could not be plotted because the total number of plots is only ", pageCounter, " while a larger page number has been requested. To fix this, re-adjust the page number(s) and execute the function again.")
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
+    
+    if (any(pages > pageCounter)) {
+        message = paste0("At least one page could not be plotted because the total number of plots is only ", pageCounter, " while a larger page number has been requested. To fix this, re-adjust the page number(s) and execute the function again.")
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
 }
 
 
@@ -3357,157 +3359,157 @@ plotGeneralEnrichment <- function(GRN, outputFolder = NULL, basenameOutput = NUL
                                   maxWidth_nchar_plot = 50,
                                   plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                   forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-  
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  
-  ontologiesFound = names(GRN@stats$Enrichment$general)
-  
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  
-  checkmate::assert(checkmate::checkNull(ontology), checkmate::checkSubset(ontology, ontologiesFound))
-  checkmate::assertNumeric(p, lower = 0, upper = 1)
-  checkmate::assertIntegerish(topn_pvalue, lower = 1)
-  checkmate::assertFlag(display_pAdj)
-  checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  
-  .checkGraphExistance(GRN)
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  
-  if (length(ontologiesFound) == 0) {
-    message = "No ontologies found in GRN object for general enrichment. Run the function calculateGeneralEnrichment first"
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_generalEnrichment"), basenameOutput), ".pdf")
-  if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
     
-    GRN = .addFunctionLogToObject(GRN)
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
     
-    if (plotAsPDF) {
-      .checkOutputFile(fileCur)
-      grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
-      futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+    
+    GRN = .makeObjectCompatible(GRN)
+    
+    
+    ontologiesFound = names(GRN@stats$Enrichment$general)
+    
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    
+    checkmate::assert(checkmate::checkNull(ontology), checkmate::checkSubset(ontology, ontologiesFound))
+    checkmate::assertNumeric(p, lower = 0, upper = 1)
+    checkmate::assertIntegerish(topn_pvalue, lower = 1)
+    checkmate::assertFlag(display_pAdj)
+    checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    
+    .checkGraphExistance(GRN)
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    if (length(ontologiesFound) == 0) {
+        message = "No ontologies found in GRN object for general enrichment. Run the function calculateGeneralEnrichment first"
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
+    
+    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_generalEnrichment"), basenameOutput), ".pdf")
+    if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
+        
+        GRN = .addFunctionLogToObject(GRN)
+        
+        if (plotAsPDF) {
+            .checkOutputFile(fileCur)
+            grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
+            futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+        } else {
+            futile.logger::flog.info(paste0("Plotting directly"))
+        }
+        
+        ontologies =  ontologiesFound
+        if (!is.null(ontology)) {
+            ontologies = ontology
+        } 
+        
+        futile.logger::flog.info(paste0("Found the following ontology results for plotting: ", paste0(ontologiesFound, collapse = ",")))
+        futile.logger::flog.info(paste0("Plotting for the following user-selected ontologies: ", paste0(ontologies, collapse = ",")))
+        
+        pageCounter = 0
+        
+        for (ontologyCur in ontologies) {
+            
+            pageCounter = pageCounter + 1
+            
+            futile.logger::flog.info(paste0(" Ontology ", ontologyCur))   
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                .plotEnrichmentGeneral(data = GRN@stats$Enrichment$general[[ontologyCur]], 
+                                       type = ontologyCur, 
+                                       prefixTitle = "General Enrichment Analysis",
+                                       topn_pvalue, p = p, maxWidth_nchar_plot = maxWidth_nchar_plot, display_pAdj = display_pAdj)
+            }
+            
+        }
+        
+        .checkPageNumberValidity(pages, pageCounter)
+        if (plotAsPDF) grDevices::dev.off()
+        
     } else {
-      futile.logger::flog.info(paste0("Plotting directly"))
+        .printDataAlreadyExistsMessage()
     }
     
-    ontologies =  ontologiesFound
-    if (!is.null(ontology)) {
-      ontologies = ontology
-    } 
+    .printExecutionTime(start)
     
-    futile.logger::flog.info(paste0("Found the following ontology results for plotting: ", paste0(ontologiesFound, collapse = ",")))
-    futile.logger::flog.info(paste0("Plotting for the following user-selected ontologies: ", paste0(ontologies, collapse = ",")))
-    
-    pageCounter = 0
-    
-    for (ontologyCur in ontologies) {
-      
-      pageCounter = pageCounter + 1
-      
-      futile.logger::flog.info(paste0(" Ontology ", ontologyCur))   
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        .plotEnrichmentGeneral(data = GRN@stats$Enrichment$general[[ontologyCur]], 
-                               type = ontologyCur, 
-                               prefixTitle = "General Enrichment Analysis",
-                               topn_pvalue, p = p, maxWidth_nchar_plot = maxWidth_nchar_plot, display_pAdj = display_pAdj)
-      }
-      
-    }
-    
-    .checkPageNumberValidity(pages, pageCounter)
-    if (plotAsPDF) grDevices::dev.off()
-    
-  } else {
-      .printDataAlreadyExistsMessage()
-  }
-  
-  .printExecutionTime(start)
-  
-  GRN
+    GRN
 }
 
 
 .plotEnrichmentGeneral <- function(data, type, prefixTitle, topn_pvalue = 30, maxWidth_nchar_plot = 50, p = 0.05, display_pAdj = FALSE) {
-  
-  dataCur   = data[["results"]]
-  paramsCur = data[["parameters"]]
-  
-  parameterStr = paste(names(paramsCur), paramsCur, sep = ":", collapse = ", ")
-  # Add extra line space
-  parameterStr = gsub(", nBackground:", ",\nnBackground:", parameterStr, fixed = TRUE)
-  titleCur = paste0(prefixTitle, " for ontology ", type, "\n(", parameterStr, ")") 
-  
-  pValuePrefix = "Raw "
-  if (display_pAdj & !stringr::str_starts(type, "GO_")) {
+    
+    dataCur   = data[["results"]]
+    paramsCur = data[["parameters"]]
+    
+    parameterStr = paste(names(paramsCur), paramsCur, sep = ":", collapse = ", ")
+    # Add extra line space
+    parameterStr = gsub(", nBackground:", ",\nnBackground:", parameterStr, fixed = TRUE)
+    titleCur = paste0(prefixTitle, " for ontology ", type, "\n(", parameterStr, ")") 
+    
+    pValuePrefix = "Raw "
+    if (display_pAdj & !stringr::str_starts(type, "GO_")) {
+        dataCur = dataCur %>%
+            dplyr::mutate(pval = .data$p.adjust)
+        
+        pValuePrefix = "Adj."
+    }
+    
+    
     dataCur = dataCur %>%
-      dplyr::mutate(pval = .data$p.adjust)
+        dplyr::mutate(dataCur, Term.mod = stringr::str_trunc(as.character(.data$Term), width = maxWidth_nchar_plot, side = "right")) %>%
+        dplyr::mutate(pval = as.numeric(gsub(">|<", "", .data$pval))) %>%
+        dplyr::arrange(.data$pval) %>%
+        dplyr::filter(.data$pval <= p) # filter out non significant results and of the remaining take the top n
     
-    pValuePrefix = "Adj."
-  }
-  
-  
-  dataCur = dataCur %>%
-    dplyr::mutate(dataCur, Term.mod = stringr::str_trunc(as.character(.data$Term), width = maxWidth_nchar_plot, side = "right")) %>%
-    dplyr::mutate(pval = as.numeric(gsub(">|<", "", .data$pval))) %>%
-    dplyr::arrange(.data$pval) %>%
-    dplyr::filter(.data$pval <= p) # filter out non significant results and of the remaining take the top n
-  
-  legendsTitle = paste0(pValuePrefix, " p-value")
-  labelAxis = paste0("(Truncated) ", type, " Term")
-  if (nrow(dataCur) > topn_pvalue) {
-    labelAxis = paste0(labelAxis, " (top ", topn_pvalue, " terms only)")
-  }  
-  
-  dataCur = dataCur %>%
-    dplyr::slice(seq_len(topn_pvalue)) %>%
-    dplyr::arrange(.data$GeneRatio)
-  #dplyr::top_n(n = topn_pvalue, wt = -pval)
-  
-  
-  
-  if (nrow(dataCur) > 0) {
-    averagePvalue = mean(dataCur$pval, na.rm = TRUE)
-    
-    g = ggplot2::ggplot(dataCur , ggplot2::aes(x = stats::reorder(.data$Term, .data$GeneRatio), y = .data$GeneRatio, colour = .data$pval, size = .data$Found) ) +
-      ggplot2::geom_point(na.rm = TRUE) +
-      ggplot2::scale_x_discrete(labelAxis, labels = dataCur$Term.mod) +
-      ggplot2::scale_color_gradient2(legendsTitle, midpoint = averagePvalue, low = "#F21A00" , mid = "#EBCC2A", high = "#3B9AB2") +
-      ggplot2::scale_size_continuous("Number of\ngenes found (n)") + 
-      ggplot2::ggtitle(titleCur) +
-      ggplot2::ylab(paste0("Gene ratio [n / total foreground (", paramsCur$nForeground, ")]")) +
-      ggplot2::coord_flip() +
-      ggplot2::theme_bw() +
-      ggplot2::theme(plot.title = ggplot2::element_text(size = ggplot2::rel(0.9)))
-    
-    plot(g)
-  } else {
-    
-    plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
-    
-    message = paste0(titleCur, "\n\nNo enrichment found.")  
-    if (pValuePrefix == "Adj.") {
-      message = paste0(message, "\n\nYou may run again based on\nraw p-value and not adjusted one.")
+    legendsTitle = paste0(pValuePrefix, " p-value")
+    labelAxis = paste0("(Truncated) ", type, " Term")
+    if (nrow(dataCur) > topn_pvalue) {
+        labelAxis = paste0(labelAxis, " (top ", topn_pvalue, " terms only)")
     }  
     
-    text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+    dataCur = dataCur %>%
+        dplyr::slice(seq_len(topn_pvalue)) %>%
+        dplyr::arrange(.data$GeneRatio)
+    #dplyr::top_n(n = topn_pvalue, wt = -pval)
     
-  }
-  
-  
-  
+    
+    
+    if (nrow(dataCur) > 0) {
+        averagePvalue = mean(dataCur$pval, na.rm = TRUE)
+        
+        g = ggplot2::ggplot(dataCur , ggplot2::aes(x = stats::reorder(.data$Term, .data$GeneRatio), y = .data$GeneRatio, colour = .data$pval, size = .data$Found) ) +
+            ggplot2::geom_point(na.rm = TRUE) +
+            ggplot2::scale_x_discrete(labelAxis, labels = dataCur$Term.mod) +
+            ggplot2::scale_color_gradient2(legendsTitle, midpoint = averagePvalue, low = "#F21A00" , mid = "#EBCC2A", high = "#3B9AB2") +
+            ggplot2::scale_size_continuous("Number of\ngenes found (n)") + 
+            ggplot2::ggtitle(titleCur) +
+            ggplot2::ylab(paste0("Gene ratio [n / total foreground (", paramsCur$nForeground, ")]")) +
+            ggplot2::coord_flip() +
+            ggplot2::theme_bw() +
+            ggplot2::theme(plot.title = ggplot2::element_text(size = ggplot2::rel(0.9)))
+        
+        plot(g)
+    } else {
+        
+        plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)
+        
+        message = paste0(titleCur, "\n\nNo enrichment found.")  
+        if (pValuePrefix == "Adj.") {
+            message = paste0(message, "\n\nYou may run again based on\nraw p-value and not adjusted one.")
+        }  
+        
+        text(x = 0.5, y = 0.5, message, cex = 1.6, col = "red")
+        
+    }
+    
+    
+    
 }
 
 
@@ -3541,169 +3543,169 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
                                  topnGenes = 20, topnTFs = 20, 
                                  plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                  forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-  
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  
-  checkmate::assertIntegerish(topnGenes, lower = 1)
-  checkmate::assertIntegerish(topnTFs, lower = 1)
-  checkmate::assertChoice(selection , c("byRank", "byLabel"))
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  
-  .checkGraphExistance(GRN)
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_communityStats"), basenameOutput), ".pdf")
-  
-  if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
-      
-    GRN = .addFunctionLogToObject(GRN)
     
-    if (plotAsPDF) {
-      .checkOutputFile(fileCur)
-      grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
-      futile.logger::flog.info(paste0("Plotting to file ", fileCur))
-    } else {
-      futile.logger::flog.info(paste0("Plotting directly"))
-    }
-    
-    pageCounter = 1  
-    
-    vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
     
     
-    if (is.null(vertexMetadata$community)) {
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-        g = ggplot2::ggplot() + ggplot2::annotate("text", x = 4, y = 25, size = 5, color = "red", 
-                                label = "Nothing to plot:\nNo communities found") + ggplot2::theme_void()
-        plot(g)
-      } 
-      
-      pageCounter = pageCounter + 1 
-      
-      message = "No communities found in GRN object. Make sure the filtered connections contain also genes."
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      
-    } else {
-      
-      communitiesDisplay = .selectCommunities(GRN, selection, communities, refAll = "graph", graph = "TF_gene") 
-      
-
-      communityVertices = vertexMetadata %>%
-        dplyr::filter(.data$community %in% communitiesDisplay) %>%
-        dplyr::mutate(Class = dplyr::if_else(.data$isTF, "TF", "gene"))
-      
-      
-      
-      if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+    GRN = .makeObjectCompatible(GRN)
+    
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    
+    checkmate::assertIntegerish(topnGenes, lower = 1)
+    checkmate::assertIntegerish(topnTFs, lower = 1)
+    checkmate::assertChoice(selection , c("byRank", "byLabel"))
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    
+    .checkGraphExistance(GRN)
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_communityStats"), basenameOutput), ".pdf")
+    
+    if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
         
-        # Class: TF or gene
-        gCommunityVertices = ggplot2::ggplot(communityVertices, ggplot2::aes(x = .data$community, fill = .data$Class)) +
-          ggplot2::geom_bar(position = "stack") +
-          ggplot2::ggtitle("Vertices per community") +
-          ggplot2::xlab("Community") +
-          ggplot2::ylab("Vertex count") +
-          ggplot2::scale_fill_manual(values = c("#3B9AB2", "#E1AF00")) + 
-          ggplot2::theme_bw()
-        plot(gCommunityVertices)
-      } 
-      pageCounter = pageCounter + 1 
-      
-      
-      for (communityCur in as.character(communitiesDisplay)) { # change this to select communities
+        GRN = .addFunctionLogToObject(GRN)
         
-        communityVerticesCur = communityVertices %>%
-          dplyr::filter(.data$community == communityCur) %>%
-          dplyr::pull(.data$name)
-        
-        community_subgraph.df = 
-          igraph::induced_subgraph(graph = GRN@graph$TF_gene$graph, 
-                                   vids = communityVerticesCur) %>%
-          igraph::as_long_data_frame() %>% 
-          dplyr::select("from_name", "to_name", "connectionType", "from_names_TF_all", "to_names_gene") %>%
-          dplyr::rename(V1 = "from_name", V2 = "to_name", V1_name = "from_names_TF_all", V2_name = "to_names_gene") %>%
-          dplyr::mutate(community = communityCur, isTFTFinteraction = FALSE)
-        
-        # Handle cases where TF-TF interactions occur and the V2_name is NA because the gene name is NA
-        allTFs = GRN@graph$TF_gene$table$V1
-        index_V2_isTF = which(community_subgraph.df$V2 %in% allTFs)
-        community_subgraph.df$isTFTFinteraction[index_V2_isTF] = TRUE
-        match_TF_name = match(community_subgraph.df$V2[index_V2_isTF], vertexMetadata$name)
-        # Change only those V2_names for which V2 is a TF, put the TF name in this case
-        community_subgraph.df$V2_name[index_V2_isTF] = vertexMetadata$names_TF_all[match_TF_name]
-        
-        
-        community.degreeStats = .getDegreeStats(GRN, community_subgraph.df, 
-                                                nCentralGenes = topnGenes,
-                                                nCentralTFs = topnTFs)
-        
-        
-        # Only needed here temporarily
-        # futile.logger::flog.info(paste0("Generating community graph..."))
-        
-        GRN@graph$communitySubgraph = list() 
-        GRN@graph$communitySubgraph$table = community_subgraph.df
-        GRN@graph$communitySubgraph$graph = .buildGraph(GRN@graph$communitySubgraph$table, 
-                                                        directed = GRN@graph$parameters$directed, 
-                                                        allowLoops = GRN@graph$parameters$allowLoops, 
-                                                        removeMultiple = GRN@graph$parameters$removeMultiple,
-                                                        silent = TRUE)
-        
-        community.eigenStats = .getEigenCentralVertices(GRN, graphType = "communitySubgraph", 
-                                                        nCentralGenes = topnGenes,
-                                                        nCentralTFs = topnTFs
-        )
-        GRN@graph$communitySubgraph = NULL
-        
-        
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          gDegreeDist = community.degreeStats$figures$degreeDist + ggplot2::ggtitle("Degree Distribution")
-          
-          
-          plot(gDegreeDist  + 
-                 patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
+        if (plotAsPDF) {
+            .checkOutputFile(fileCur)
+            grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
+            futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+        } else {
+            futile.logger::flog.info(paste0("Plotting directly"))
         }
-        pageCounter = pageCounter + 1 
+        
+        pageCounter = 1  
+        
+        vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
         
         
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          gTopGenes   = community.degreeStats$figures$topGenes   + ggplot2::ggtitle(paste0("Top ", topnGenes," degree-central genes"))
-          gTopTFs     = community.degreeStats$figures$topTFs     + ggplot2::ggtitle(paste0("Top ", topnTFs  ," degree-central TFs"))
-          
-          gTopEigenGenes = community.eigenStats$topGenes + ggplot2::ggtitle(paste0("Top ", topnGenes," eigenvector-central genes"))
-          gTopEigenTFs   = community.eigenStats$topTFs   + ggplot2::ggtitle(paste0("Top ", topnTFs,  " eigenvector-central TFs"))   
-          
-          plot((gTopGenes | gTopTFs) / (gTopEigenGenes | gTopEigenTFs) + 
-                 patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
-        } 
-        pageCounter = pageCounter + 1 
+        if (is.null(vertexMetadata$community)) {
+            
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                g = ggplot2::ggplot() + ggplot2::annotate("text", x = 4, y = 25, size = 5, color = "red", 
+                                                          label = "Nothing to plot:\nNo communities found") + ggplot2::theme_void()
+                plot(g)
+            } 
+            
+            pageCounter = pageCounter + 1 
+            
+            message = "No communities found in GRN object. Make sure the filtered connections contain also genes."
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            
+        } else {
+            
+            communitiesDisplay = .selectCommunities(GRN, selection, communities, refAll = "graph", graph = "TF_gene") 
+            
+            
+            communityVertices = vertexMetadata %>%
+                dplyr::filter(.data$community %in% communitiesDisplay) %>%
+                dplyr::mutate(Class = dplyr::if_else(.data$isTF, "TF", "gene"))
+            
+            
+            
+            if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                
+                # Class: TF or gene
+                gCommunityVertices = ggplot2::ggplot(communityVertices, ggplot2::aes(x = .data$community, fill = .data$Class)) +
+                    ggplot2::geom_bar(position = "stack") +
+                    ggplot2::ggtitle("Vertices per community") +
+                    ggplot2::xlab("Community") +
+                    ggplot2::ylab("Vertex count") +
+                    ggplot2::scale_fill_manual(values = c("#3B9AB2", "#E1AF00")) + 
+                    ggplot2::theme_bw()
+                plot(gCommunityVertices)
+            } 
+            pageCounter = pageCounter + 1 
+            
+            
+            for (communityCur in as.character(communitiesDisplay)) { # change this to select communities
+                
+                communityVerticesCur = communityVertices %>%
+                    dplyr::filter(.data$community == communityCur) %>%
+                    dplyr::pull(.data$name)
+                
+                community_subgraph.df = 
+                    igraph::induced_subgraph(graph = GRN@graph$TF_gene$graph, 
+                                             vids = communityVerticesCur) %>%
+                    igraph::as_long_data_frame() %>% 
+                    dplyr::select("from_name", "to_name", "connectionType", "from_names_TF_all", "to_names_gene") %>%
+                    dplyr::rename(V1 = "from_name", V2 = "to_name", V1_name = "from_names_TF_all", V2_name = "to_names_gene") %>%
+                    dplyr::mutate(community = communityCur, isTFTFinteraction = FALSE)
+                
+                # Handle cases where TF-TF interactions occur and the V2_name is NA because the gene name is NA
+                allTFs = GRN@graph$TF_gene$table$V1
+                index_V2_isTF = which(community_subgraph.df$V2 %in% allTFs)
+                community_subgraph.df$isTFTFinteraction[index_V2_isTF] = TRUE
+                match_TF_name = match(community_subgraph.df$V2[index_V2_isTF], vertexMetadata$name)
+                # Change only those V2_names for which V2 is a TF, put the TF name in this case
+                community_subgraph.df$V2_name[index_V2_isTF] = vertexMetadata$names_TF_all[match_TF_name]
+                
+                
+                community.degreeStats = .getDegreeStats(GRN, community_subgraph.df, 
+                                                        nCentralGenes = topnGenes,
+                                                        nCentralTFs = topnTFs)
+                
+                
+                # Only needed here temporarily
+                # futile.logger::flog.info(paste0("Generating community graph..."))
+                
+                GRN@graph$communitySubgraph = list() 
+                GRN@graph$communitySubgraph$table = community_subgraph.df
+                GRN@graph$communitySubgraph$graph = .buildGraph(GRN@graph$communitySubgraph$table, 
+                                                                directed = GRN@graph$parameters$directed, 
+                                                                allowLoops = GRN@graph$parameters$allowLoops, 
+                                                                removeMultiple = GRN@graph$parameters$removeMultiple,
+                                                                silent = TRUE)
+                
+                community.eigenStats = .getEigenCentralVertices(GRN, graphType = "communitySubgraph", 
+                                                                nCentralGenes = topnGenes,
+                                                                nCentralTFs = topnTFs
+                )
+                GRN@graph$communitySubgraph = NULL
+                
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    gDegreeDist = community.degreeStats$figures$degreeDist + ggplot2::ggtitle("Degree Distribution")
+                    
+                    
+                    plot(gDegreeDist  + 
+                             patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
+                }
+                pageCounter = pageCounter + 1 
+                
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    gTopGenes   = community.degreeStats$figures$topGenes   + ggplot2::ggtitle(paste0("Top ", topnGenes," degree-central genes"))
+                    gTopTFs     = community.degreeStats$figures$topTFs     + ggplot2::ggtitle(paste0("Top ", topnTFs  ," degree-central TFs"))
+                    
+                    gTopEigenGenes = community.eigenStats$topGenes + ggplot2::ggtitle(paste0("Top ", topnGenes," eigenvector-central genes"))
+                    gTopEigenTFs   = community.eigenStats$topTFs   + ggplot2::ggtitle(paste0("Top ", topnTFs,  " eigenvector-central TFs"))   
+                    
+                    plot((gTopGenes | gTopTFs) / (gTopEigenGenes | gTopEigenTFs) + 
+                             patchwork::plot_annotation(title = paste0("Community ", communityCur)) )
+                } 
+                pageCounter = pageCounter + 1 
+                
+            } # end for each community
+            
+        }
         
-      } # end for each community
-      
+        .checkPageNumberValidity(pages, pageCounter)
+        if (plotAsPDF) grDevices::dev.off()
+        
+    }  else {
+        .printDataAlreadyExistsMessage()
     }
     
-    .checkPageNumberValidity(pages, pageCounter)
-    if (plotAsPDF) grDevices::dev.off()
+    .printExecutionTime(start)
     
-  }  else {
-      .printDataAlreadyExistsMessage()
-  }
-  
-  .printExecutionTime(start)
-  
-  GRN
+    GRN
 }
 
 #' Plot community-based enrichment results for a filtered \code{\linkS4class{GRN}} object
@@ -3739,305 +3741,305 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
                                       display_pAdj = FALSE,
                                       plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                                       forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-
-  
-  GRN = .makeObjectCompatible(GRN)
-  
-  checkmate::assertChoice(selection , c("byRank", "byLabel"))
-  checkmate::assertNumeric(p, lower = 0, upper = 1)
-  checkmate::assertIntegerish(topn_pvalue, lower = 1)
-  checkmate::assertNumeric(nSignificant, lower = 1)
-  checkmate::assertNumeric(nID, lower = 1)
-  checkmate::assertFlag(display_pAdj)
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(forceRerun)
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  
-  .checkGraphExistance(GRN)
-  
-  if (is.null(GRN@stats$Enrichment$byCommunity)) {
-    message = "No communities found, cannot calculate enrichment. Please run the functioncalculateCommunitiesStats first. If you did already, it looks like no communities could be identified before"
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-  fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_communityEnrichment"), basenameOutput), ".pdf")
- 
-  if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
-      
-    futile.logger::flog.info(paste0("Including terms only if overlap is at least ", nSignificant, " genes.")) 
-    GRN = .addFunctionLogToObject(GRN)
-
-    if (is.null(GRN@stats$Enrichment$general)) {
-      message = paste0("Could not find general enrichment analysis. Please run the function calculateGeneralEnrichment first.")
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    } 
     
-    GRN@stats$Enrichment$byCommunity$combined = NULL
-
-    communitiesDisplay = .selectCommunities(GRN, selection, communities, refAll = "enrichment", graph = "TF_gene") 
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
     
     
-    futile.logger::flog.info(paste0(" Plotting the enrichment for the following communities: ", paste0(communitiesDisplay, collapse = ",")))
+    GRN = .makeObjectCompatible(GRN)
     
-    # Preparing the heatmap, has to be calculated only once
-    vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
-    # Get the number of vertexes per community as additional annotation column for the heatmap
-    geneCounts = vertexMetadata %>%
-      dplyr::select("name", "community") %>%
-      dplyr::distinct() %>%
-      dplyr::count(.data$community)
+    checkmate::assertChoice(selection , c("byRank", "byLabel"))
+    checkmate::assertNumeric(p, lower = 0, upper = 1)
+    checkmate::assertIntegerish(topn_pvalue, lower = 1)
+    checkmate::assertNumeric(nSignificant, lower = 1)
+    checkmate::assertNumeric(nID, lower = 1)
+    checkmate::assertFlag(display_pAdj)
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(forceRerun)
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
     
+    .checkGraphExistance(GRN)
     
-    allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "community")
-    
-    # Reset, as this is created anew and otherwise raises a warning due to the missing "result" slot
-    GRN@stats$Enrichment$byCommunity[["combined"]] = list()
-    
-    
-    if (plotAsPDF) {
-        .checkOutputFile(fileCur)
-        grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
-        futile.logger::flog.info(paste0("Plotting to file ", fileCur))
-    } else {
-        futile.logger::flog.info(paste0("Plotting directly"))
+    if (is.null(GRN@stats$Enrichment$byCommunity)) {
+        message = "No communities found, cannot calculate enrichment. Please run the functioncalculateCommunitiesStats first. If you did already, it looks like no communities could be identified before"
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     }
     
-    pageCounter = 1
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    fileCur = paste0(outputFolder, ifelse(is.null(basenameOutput), .getOutputFileName("plot_communityEnrichment"), basenameOutput), ".pdf")
     
-    for (ontologyCur in allOntologies.l$community) {
-      
-      futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
-      
-      pValPrefix = .getPValPrefix(display_pAdj, ontologyCur)
-      
-      for (communityCur in as.character(communitiesDisplay)) {
+    if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
         
-        if (is.null(GRN@stats$Enrichment$byCommunity[[communityCur]][[ontologyCur]])) {
-          # GRN = calculateCommunitiesEnrichment(GRN = GRN, selection = "byLabel", communities = communityCur)
-          message = paste0("Could not find community enrichment results for ", ontologyCur, " for community ", communityCur, ". Please run calculateCommunitiesEnrichment first or change the communities to plot")
-          .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        futile.logger::flog.info(paste0("Including terms only if overlap is at least ", nSignificant, " genes.")) 
+        GRN = .addFunctionLogToObject(GRN)
+        
+        if (is.null(GRN@stats$Enrichment$general)) {
+            message = paste0("Could not find general enrichment analysis. Please run the function calculateGeneralEnrichment first.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        } 
+        
+        GRN@stats$Enrichment$byCommunity$combined = NULL
+        
+        communitiesDisplay = .selectCommunities(GRN, selection, communities, refAll = "enrichment", graph = "TF_gene") 
+        
+        
+        futile.logger::flog.info(paste0(" Plotting the enrichment for the following communities: ", paste0(communitiesDisplay, collapse = ",")))
+        
+        # Preparing the heatmap, has to be calculated only once
+        vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
+        # Get the number of vertexes per community as additional annotation column for the heatmap
+        geneCounts = vertexMetadata %>%
+            dplyr::select("name", "community") %>%
+            dplyr::distinct() %>%
+            dplyr::count(.data$community)
+        
+        
+        allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "community")
+        
+        # Reset, as this is created anew and otherwise raises a warning due to the missing "result" slot
+        GRN@stats$Enrichment$byCommunity[["combined"]] = list()
+        
+        
+        if (plotAsPDF) {
+            .checkOutputFile(fileCur)
+            grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
+            futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+        } else {
+            futile.logger::flog.info(paste0("Plotting directly"))
         }
         
+        pageCounter = 1
         
-        # dataCur this contains all ontologies, and within each ontology, 2 slots: results, parameters
-        dataCur = GRN@stats$Enrichment$byCommunity[[communityCur]] [[ontologyCur]]
-        titleCur = paste0("Enrichment Analysis - Community ", communityCur)
+        for (ontologyCur in allOntologies.l$community) {
+            
+            futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
+            
+            pValPrefix = .getPValPrefix(display_pAdj, ontologyCur)
+            
+            for (communityCur in as.character(communitiesDisplay)) {
+                
+                if (is.null(GRN@stats$Enrichment$byCommunity[[communityCur]][[ontologyCur]])) {
+                    # GRN = calculateCommunitiesEnrichment(GRN = GRN, selection = "byLabel", communities = communityCur)
+                    message = paste0("Could not find community enrichment results for ", ontologyCur, " for community ", communityCur, ". Please run calculateCommunitiesEnrichment first or change the communities to plot")
+                    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+                }
+                
+                
+                # dataCur this contains all ontologies, and within each ontology, 2 slots: results, parameters
+                dataCur = GRN@stats$Enrichment$byCommunity[[communityCur]] [[ontologyCur]]
+                titleCur = paste0("Enrichment Analysis - Community ", communityCur)
+                
+                if (is.null(dataCur)) {
+                    message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and community ", communityCur, ". Please rerun the function calculateCommunitiesEnrichment.")
+                    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+                }
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, 
+                                           topn_pvalue = topn_pvalue, p = p, display_pAdj = display_pAdj)
+                }
+                
+                pageCounter = pageCounter + 1
+                
+            } # end for all communities 
+            
+            # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
+            # Currently assumes that the general enrichment has been run
+            if (ontologyCur %in% allOntologies.l$all) {
+                
+                # Take one community as example for which ontologies have been produced
+                GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] = 
+                    .combineEnrichmentResults(GRN, type = "byCommunity", ontologyCur, 
+                                              p = p, nSignificant = nSignificant, display_pAdj) %>%
+                    dplyr::filter(.data$community %in% c("all", as.character(communitiesDisplay)))
+                
+                # It can happen that some TFs are filtered out here because all terms are not significant. Thus, even though
+                # 5 TFs have been requested only 4 actually show any enriched terms
+                
+                if (nrow(GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]) == 0) {
+                    message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
+                    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                    next
+                }
+                
+                
+                
+                # Convert to wide format and filter those terms that are significant at least once
+                all.df.wide = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
+                    dplyr::select("community", "ID", "pval") %>%
+                    tidyr::pivot_wider(names_from = "community", values_from = "pval") %>%
+                    dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
+                    dplyr::rowwise() %>%
+                    dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>% # In how many columns significant?
+                    dplyr::ungroup() %>%
+                    dplyr::filter(.data$nSig > 0)
+                
+                # In extreme cases, it could happen that the "all" community is missing because there are no enrichments whatsoever.
+                # In this case, we need to add it back here 
+                if (!"all" %in% colnames(all.df.wide)) {
+                    all.df.wide = dplyr::mutate(all.df.wide, all = NA)
+                }
+                
+                # sort by community size
+                communities.order = c("all", intersect(.selectCommunitesByRank(GRN , communities = NULL), colnames(all.df.wide)))
+                
+                
+                matrix.m = all.df.wide %>%
+                    dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
+                    dplyr::filter(!is.na(.data$Term)) %>%
+                    dplyr::select("Term", dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
+                    dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x) {return(-log10(x))}) %>%
+                    tibble::column_to_rownames("Term") %>%
+                    as.matrix()
+                
+                
+                geneCounts_communities = geneCounts %>%
+                    dplyr::filter(.data$community %in% as.character(colnames(matrix.m)),
+                                  .data$community %in% geneCounts$community) %>%
+                    dplyr::arrange(dplyr::desc(.data$n))
+                
+                # Sanity check: Except for the first item "all", they should all be identical
+                stopifnot(identical(as.character(geneCounts_communities$community), colnames(matrix.m)[-1]))
+                
+                # Common heatmap parameters for both p1 and p2
+                top_annotation = ComplexHeatmap::HeatmapAnnotation(
+                    nGenes = ComplexHeatmap::anno_barplot(
+                        x = c(sum(geneCounts$n), geneCounts_communities$n), 
+                        border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
+                    annotation_name_gp = grid::gpar(fontsize = 9), annotation_name_side = "left", annotation_name_rot = 90)
+                
+                axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
+                colors_pvalue = viridis::viridis(n = 30, direction = -1)
+                
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full summary heatmap and " , ncol(matrix.m), " columns"))
+                    
+                    p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
+                                              name = axixStr, 
+                                              maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                              colors_pvalue = colors_pvalue, 
+                                              column_title = paste0("Summary of all significantly enriched terms\nacross all communities and overall (Ontology: ", ontologyCur,")"),
+                                              top_annotation = top_annotation)
+                    
+                    print(p1)
+                    
+                }
+                pageCounter = pageCounter + 1
+                
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    # Now focus on the top X only per community
+                    ID_subset =  GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
+                        dplyr::group_by(.data$community) %>% 
+                        dplyr::arrange(.data$pval) %>% 
+                        dplyr::slice(seq_len(nID)) %>%
+                        dplyr::pull(.data$ID) %>% as.character()
+                    
+                    
+                    matrix.m = all.df.wide %>%
+                        dplyr::filter(.data$ID %in% ID_subset) %>%
+                        dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
+                        dplyr::filter(!is.na(.data$Term)) %>%
+                        dplyr::select(-"nSig", -"ID") %>%
+                        tibble::column_to_rownames("Term") %>%
+                        dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x) {return(-log10(x))}) %>%
+                        dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
+                        as.matrix()
+                    
+                    futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
+                    
+                    
+                    p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
+                                              name = axixStr, 
+                                              maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                              colors_pvalue = colors_pvalue, 
+                                              column_title = paste0("Summary of top ", nID, " enriched terms\nper community and overall (Ontology: ", ontologyCur,")"),
+                                              top_annotation = top_annotation)
+                    print(p2)
+                } 
+                pageCounter = pageCounter + 1
+                
+            } else {
+                message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            } 
+            
+            
+        } # end for all ontologies
         
-        if (is.null(dataCur)) {
-          message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and community ", communityCur, ". Please rerun the function calculateCommunitiesEnrichment.")
-          .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-        }
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          .plotEnrichmentGeneral(dataCur, ontologyCur, titleCur, 
-                                 topn_pvalue = topn_pvalue, p = p, display_pAdj = display_pAdj)
-        }
         
-        pageCounter = pageCounter + 1
+        .checkPageNumberValidity(pages, pageCounter)
+        if (plotAsPDF) grDevices::dev.off()
         
-      } # end for all communities 
-      
-      # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
-      # Currently assumes that the general enrichment has been run
-      if (ontologyCur %in% allOntologies.l$all) {
-
-          # Take one community as example for which ontologies have been produced
-          GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] = 
-              .combineEnrichmentResults(GRN, type = "byCommunity", ontologyCur, 
-                                        p = p, nSignificant = nSignificant, display_pAdj) %>%
-              dplyr::filter(.data$community %in% c("all", as.character(communitiesDisplay)))
-          
-          # It can happen that some TFs are filtered out here because all terms are not significant. Thus, even though
-          # 5 TFs have been requested only 4 actually show any enriched terms
-          
-          if (nrow(GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]) == 0) {
-              message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
-              .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-              next
-          }
-          
-          
-          
-          # Convert to wide format and filter those terms that are significant at least once
-          all.df.wide = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
-              dplyr::select("community", "ID", "pval") %>%
-              tidyr::pivot_wider(names_from = "community", values_from = "pval") %>%
-              dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
-              dplyr::rowwise() %>%
-              dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>% # In how many columns significant?
-              dplyr::ungroup() %>%
-              dplyr::filter(.data$nSig > 0)
-          
-          # In extreme cases, it could happen that the "all" community is missing because there are no enrichments whatsoever.
-          # In this case, we need to add it back here 
-          if (!"all" %in% colnames(all.df.wide)) {
-              all.df.wide = dplyr::mutate(all.df.wide, all = NA)
-          }
-
-          # sort by community size
-          communities.order = c("all", intersect(.selectCommunitesByRank(GRN , communities = NULL), colnames(all.df.wide)))
-          
-          
-          matrix.m = all.df.wide %>%
-              dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
-              dplyr::filter(!is.na(.data$Term)) %>%
-              dplyr::select("Term", dplyr::any_of(communities.order)) %>% # reorder the table based on the previously generated custom order
-              dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x) {return(-log10(x))}) %>%
-              tibble::column_to_rownames("Term") %>%
-              as.matrix()
-          
-          
-          geneCounts_communities = geneCounts %>%
-              dplyr::filter(.data$community %in% as.character(colnames(matrix.m)),
-                            .data$community %in% geneCounts$community) %>%
-              dplyr::arrange(dplyr::desc(.data$n))
-          
-          # Sanity check: Except for the first item "all", they should all be identical
-          stopifnot(identical(as.character(geneCounts_communities$community), colnames(matrix.m)[-1]))
-          
-          # Common heatmap parameters for both p1 and p2
-          top_annotation = ComplexHeatmap::HeatmapAnnotation(
-              nGenes = ComplexHeatmap::anno_barplot(
-                  x = c(sum(geneCounts$n), geneCounts_communities$n), 
-                  border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
-              annotation_name_gp = grid::gpar(fontsize = 9), annotation_name_side = "left", annotation_name_rot = 90)
-          
-          axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
-          colors_pvalue = viridis::viridis(n = 30, direction = -1)
-          
-          
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-              
-              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full summary heatmap and " , ncol(matrix.m), " columns"))
-              
-              p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
-                                        name = axixStr, 
-                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                        colors_pvalue = colors_pvalue, 
-                                        column_title = paste0("Summary of all significantly enriched terms\nacross all communities and overall (Ontology: ", ontologyCur,")"),
-                                        top_annotation = top_annotation)
-              
-              print(p1)
-              
-          }
-          pageCounter = pageCounter + 1
-          
-          
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-              
-              # Now focus on the top X only per community
-              ID_subset =  GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]] %>% 
-                  dplyr::group_by(.data$community) %>% 
-                  dplyr::arrange(.data$pval) %>% 
-                  dplyr::slice(seq_len(nID)) %>%
-                  dplyr::pull(.data$ID) %>% as.character()
-              
-              
-              matrix.m = all.df.wide %>%
-                  dplyr::filter(.data$ID %in% ID_subset) %>%
-                  dplyr::mutate(Term = GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]$ID)]) %>%
-                  dplyr::filter(!is.na(.data$Term)) %>%
-                  dplyr::select(-"nSig", -"ID") %>%
-                  tibble::column_to_rownames("Term") %>%
-                  dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x) {return(-log10(x))}) %>%
-                  dplyr::select(dplyr::any_of(communities.order)) %>% # reorder based on the previously generated custom order
-                  as.matrix()
-              
-              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
-              
-              
-              p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
-                                        name = axixStr, 
-                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                        colors_pvalue = colors_pvalue, 
-                                        column_title = paste0("Summary of top ", nID, " enriched terms\nper community and overall (Ontology: ", ontologyCur,")"),
-                                        top_annotation = top_annotation)
-              print(p2)
-          } 
-          pageCounter = pageCounter + 1
-          
-      } else {
-          message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
-          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      } 
-      
-      
-    } # end for all ontologies
+    }  else {
+        .printDataAlreadyExistsMessage()
+    }
     
+    .printExecutionTime(start)
     
-    .checkPageNumberValidity(pages, pageCounter)
-    if (plotAsPDF) grDevices::dev.off()
+    GRN
     
-  }  else {
-      .printDataAlreadyExistsMessage()
-  }
-  
-  .printExecutionTime(start)
-  
-  GRN
-  
 }
 
 
 .drawCombinedHeatmap <- function(matrix, pdf_width, pdf_height, name, maxWidth_nchar_plot, colors_pvalue, column_title, top_annotation) {
-  
-  nTerms = nrow(matrix)
     
-  # TODO: very crude so far, and not dependent on the pdf_height
-  fontsize_row_names_gp = dplyr::case_when(
-    nTerms < 20  ~ 12,
-    nTerms < 40  ~ 10,
-    nTerms < 50  ~ 8,
-    nTerms < 80  ~ 6,
-    nTerms < 110  ~ 5,
-    nTerms < 140  ~ 4,
-    nTerms < 200  ~ 2,
-    TRUE ~ 1
-  )
-  
-  # TODO:
-  fontsize_column_names_gp = dplyr::case_when(
-    TRUE ~ 8
-  )
-  
-  # Prevent :Error: You should have at least two distinct break values.
-  if (unique(matrix) %>% as.vector() %>% length() == 1) {
-    colors_pvalue = colors_pvalue[1]
-  }
-  
-  # Make the row names shorter and unique
-  rownames(matrix) = make.unique(stringr::str_trunc(rownames(matrix), width = maxWidth_nchar_plot, side = "right")) 
-  
-  
-  ComplexHeatmap::Heatmap(
-    matrix,
-    # Do NOT set the width here, this messes it up somehow, seems to be much better when omitting it
-    #  heatmap_width  = unit(pdf_width, "cm"),
-    #  heatmap_height = unit(pdf_height, "cm"),
-    name = name,
-    col = colors_pvalue,
-    cluster_columns = FALSE, cluster_rows = FALSE,
-    row_names_side = "left", row_names_gp = grid::gpar(fontsize = fontsize_row_names_gp), 
-    column_title = column_title,
-    column_names_gp = grid::gpar(fontsize = fontsize_column_names_gp),
-    # heatmap annotation: bar plot displaying the number of genes in each subgroup
-    top_annotation = top_annotation,
-    row_names_max_width = ComplexHeatmap::max_text_width(
-      rownames(matrix), 
-      gp = grid::gpar(fontsize = fontsize_row_names_gp)
+    nTerms = nrow(matrix)
+    
+    # TODO: very crude so far, and not dependent on the pdf_height
+    fontsize_row_names_gp = dplyr::case_when(
+        nTerms < 20  ~ 12,
+        nTerms < 40  ~ 10,
+        nTerms < 50  ~ 8,
+        nTerms < 80  ~ 6,
+        nTerms < 110  ~ 5,
+        nTerms < 140  ~ 4,
+        nTerms < 200  ~ 2,
+        TRUE ~ 1
     )
-  )
-  
-  
-  
+    
+    # TODO:
+    fontsize_column_names_gp = dplyr::case_when(
+        TRUE ~ 8
+    )
+    
+    # Prevent :Error: You should have at least two distinct break values.
+    if (unique(matrix) %>% as.vector() %>% length() == 1) {
+        colors_pvalue = colors_pvalue[1]
+    }
+    
+    # Make the row names shorter and unique
+    rownames(matrix) = make.unique(stringr::str_trunc(rownames(matrix), width = maxWidth_nchar_plot, side = "right")) 
+    
+    
+    ComplexHeatmap::Heatmap(
+        matrix,
+        # Do NOT set the width here, this messes it up somehow, seems to be much better when omitting it
+        #  heatmap_width  = unit(pdf_width, "cm"),
+        #  heatmap_height = unit(pdf_height, "cm"),
+        name = name,
+        col = colors_pvalue,
+        cluster_columns = FALSE, cluster_rows = FALSE,
+        row_names_side = "left", row_names_gp = grid::gpar(fontsize = fontsize_row_names_gp), 
+        column_title = column_title,
+        column_names_gp = grid::gpar(fontsize = fontsize_column_names_gp),
+        # heatmap annotation: bar plot displaying the number of genes in each subgroup
+        top_annotation = top_annotation,
+        row_names_max_width = ComplexHeatmap::max_text_width(
+            rownames(matrix), 
+            gp = grid::gpar(fontsize = fontsize_row_names_gp)
+        )
+    )
+    
+    
+    
 }
 
 
@@ -4074,444 +4076,444 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
                              basenameOutput = NULL, 
                              plotAsPDF = TRUE, pdf_width = 12, pdf_height = 12, pages = NULL,
                              forceRerun = FALSE) {
-  
-  start = Sys.time()
-  checkmate::assertClass(GRN, "GRN")
-
-  
-  GRN = .makeObjectCompatible(GRN)
-
-  checkmate::assertChoice(rankType, c("degree", "EV", "custom"))
-  checkmate::assert(checkmate::checkNull(n), checkmate::checkNumeric(n))
-  checkmate::assertNumeric(p, lower = 0, upper = 1)
-  checkmate::assertNumeric(topn_pvalue, lower = 1)
-  checkmate::assertNumeric(nSignificant, lower = 1)
-  checkmate::assertNumeric(nID, lower = 1)
-  checkmate::assertFlag(plotAsPDF)
-  checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
-  checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
-  checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
-  checkmate::assertFlag(display_pAdj)
-  checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
-  checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
-  checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
-  checkmate::assertFlag(forceRerun)
-  
-  .checkGraphExistance(GRN)
-  
-  outputFolder = .checkOutputFolder(GRN, outputFolder)
-
-  if (rankType == "custom") {
-    if (is.null(TF.IDs)) {
-      message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF IDs in the 'TF.IDs' parameter."
-      .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.ID))
-    if (length(wrongTFs) > 0) {
-       message = paste0("The following user-provided TF(s) \"",  paste0(wrongTFs, collapse = " + "), "\" are not in the filtered GRN. They will be ommited from the results.")
-       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-
-    }
-    TFset = setdiff(TF.IDs, wrongTFs) 
     
-    if (length(TFset) == 0) {
-        message = paste0("There are no TFs left to show. Adjust the custom TF list.")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-        
-    }
-    
-  } else{ #rankType = "degree"
-    
-    if (is.null(n)) {
-      TFset = setdiff(names(GRN@stats$Enrichment$byTF), "combined")
-    } else {
-      TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n = n) %>% dplyr::pull(.data$TF.ID)
-    }
-    
-  }
-  
-  fileCur = paste0(outputFolder, 
-                   ifelse(is.null(basenameOutput), .getOutputFileName("plot_TFEnrichment"), basenameOutput), 
-                   ".pdf")
-  
-  if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
-  
-    GRN = .addFunctionLogToObject(GRN)
-    
-    allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "TF")
-    
-    if (is.null(allOntologies.l$TF)) {
-        message = paste0("No enrichment results found for TFs. Run the function calculateTFEnrichment first")
-        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-    }
-    
-    # Get the number of vertexes per TF as additional annotation column for the heatmap
-    vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
-    nodeDegree = igraph::degree(GRN@graph$TF_gene$graph)
-
-    nodeDegree_TFset = dplyr::left_join(GRN@annotation$TFs, 
-                                        as.data.frame(nodeDegree) %>% tibble::rownames_to_column("TF.ENSEMBL"), by = "TF.ENSEMBL") %>%
-                       dplyr::filter(.data$TF.ID %in% as.character(TFset))
-    
-    pageCounter = 1  
+    start = Sys.time()
+    checkmate::assertClass(GRN, "GRN")
     
     
-    if (plotAsPDF) {
-        .checkOutputFile(fileCur)
-        grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
-        futile.logger::flog.info(paste0("Plotting to file ", fileCur))
-    } else {
-        futile.logger::flog.info(paste0("Plotting directly"))
-    }
+    GRN = .makeObjectCompatible(GRN)
     
-    for (ontologyCur in allOntologies.l$TF) {
-      
-      futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
-      
-      pValPrefix = .getPValPrefix(display_pAdj, ontologyCur)
-      
-      if (display_pAdj && stringr::str_starts(ontologyCur, "GO_")) {
-          message = paste0("For ontology ", ontologyCur, ", only raw p-values can be displayed. Adjusted p-values are only available for the following ontologies: KEGG, Disease Ontology, Reactome")
-          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      }
-
-      
-      for (TFCur in as.character(TFset)) {
-        
-        if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-          
-          TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID == TFCur) %>% dplyr::pull(TF.ENSEMBL)
-          
-          TF.ID.full = .printTF(GRN, TFCur, printEnsemblID = TRUE)
-          
-          futile.logger::flog.info(paste0("  TF ", TF.ID.full))
-          
-          # if the enrichment slot for the TFs is empty, calculate the enrichment
-          if (is.null(GRN@stats$Enrichment[["byTF"]][[TFCur]])) { 
-            message = paste0("Could not find TF enrichment results for TF ", TFCur, ". Run the function calculateTFEnrichment first or make sure the parameter n that was used for calculateTFEnrichmentn was larger or equal with the current value for n for this function.")
+    checkmate::assertChoice(rankType, c("degree", "EV", "custom"))
+    checkmate::assert(checkmate::checkNull(n), checkmate::checkNumeric(n))
+    checkmate::assertNumeric(p, lower = 0, upper = 1)
+    checkmate::assertNumeric(topn_pvalue, lower = 1)
+    checkmate::assertNumeric(nSignificant, lower = 1)
+    checkmate::assertNumeric(nID, lower = 1)
+    checkmate::assertFlag(plotAsPDF)
+    checkmate::assertNumeric(pdf_width, lower = 5, upper = 99)
+    checkmate::assertNumeric(pdf_height, lower = 5, upper = 99)
+    checkmate::assert(checkmate::checkNull(pages), checkmate::checkIntegerish(pages, lower = 1))
+    checkmate::assertFlag(display_pAdj)
+    checkmate::assertIntegerish(maxWidth_nchar_plot, lower = 10)
+    checkmate::assert(checkmate::checkNull(outputFolder), checkmate::checkCharacter(outputFolder, min.chars = 1))
+    checkmate::assert(checkmate::checkNull(basenameOutput), checkmate::checkCharacter(basenameOutput, len = 1, min.chars = 1, any.missing = FALSE))
+    checkmate::assertFlag(forceRerun)
+    
+    .checkGraphExistance(GRN)
+    
+    outputFolder = .checkOutputFolder(GRN, outputFolder)
+    
+    if (rankType == "custom") {
+        if (is.null(TF.IDs)) {
+            message = "To plot the GO enrichment for a custom set of TFs, you must provide the TF IDs in the 'TF.IDs' parameter."
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-          }
-          
-          dataCur = GRN@stats$Enrichment[["byTF"]][[TFCur]][[ontologyCur]]
-          if (is.null(dataCur)) {
-            message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and TF ", TFCur, ". Rerun the function calculateTFEnrichment.")
-            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-          }
-          titleCur = paste0("Enrichment Analysis - TF: ", TF.ID.full)
-          .plotEnrichmentGeneral(data = dataCur, type = ontologyCur, prefixTitle = titleCur,
-                                 topn_pvalue = topn_pvalue, p = p, display_pAdj = display_pAdj)
-          
-          
         }
-        pageCounter = pageCounter + 1
+        wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.ID))
+        if (length(wrongTFs) > 0) {
+            message = paste0("The following user-provided TF(s) \"",  paste0(wrongTFs, collapse = " + "), "\" are not in the filtered GRN. They will be ommited from the results.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            
+        }
+        TFset = setdiff(TF.IDs, wrongTFs) 
         
-      }
-      
-      if (ontologyCur %in% allOntologies.l$all) {
-          
-          
-          # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
-          # Currently assumes that the general enrichment has been run
-          
-          # Take one community as example for which ontologies have been produced
-          GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] = 
-              .combineEnrichmentResults(GRN, type = "byTF", ontology = ontologyCur, 
-                                        p = p, nSignificant = nSignificant, display_pAdj) %>%
-              dplyr::filter(.data$TF.ID %in% c("all", as.character(TFset)))
-          
-          if (nrow(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]) == 0) {
-              message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
-              .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-              next
-          }
-          
-          
-          # Convert to wide format and filter those terms that are significant at least once
-          all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-              dplyr::select("TF.ID", "ID", "pval") %>%
-              tidyr::pivot_wider(names_from = "TF.ID", values_from = "pval") %>%
-              dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
-              dplyr::rowwise() %>%
-              dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>%
-              dplyr::ungroup() %>%
-              dplyr::filter(.data$nSig > 0)
-          
-          # In extreme cases, it could happen that the "all" community is missing because there are no enrichments whatsoever.
-          # In this case, we need to add it back here 
-          if (!"all" %in% colnames(all.df.wide)) {
-              all.df.wide = dplyr::mutate(all.df.wide, all = NA)
-          }
-          
-          
-          TF.order = c("all", setdiff(unique(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$TF.ID), "all"))
-          
-          
-          matrix.m = all.df.wide %>%
-              dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
-              dplyr::filter(!is.na(.data$Term)) %>%
-              dplyr::select("Term", dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
-              dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x) {return(-log10(x))}) %>%
-              # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
-              tibble::column_to_rownames("Term") %>%
-              as.matrix()
-          
-          
-          # Make sure the top annotation has the same dimensionality as the resulting matrix
-          nodeDegree_TFset_numbers =  nodeDegree_TFset %>%
-              dplyr::filter(.data$TF.ID %in% colnames(matrix.m)) %>%
-              dplyr::arrange(dplyr::desc(nodeDegree)) %>%
-              dplyr::pull(nodeDegree)
-          
-          top_annotation = ComplexHeatmap::HeatmapAnnotation(
-              nodeDegree = ComplexHeatmap::anno_barplot(
-                  x = c("all" = nrow(vertexMetadata),  nodeDegree_TFset_numbers ), 
-                  border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
-              annotation_name_gp = grid::gpar(fontsize = 5), annotation_name_side = "left", annotation_name_rot = 90)
-          
-          axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
-          
-          colors_pvalue = viridis::viridis(n = 30, direction = -1)
-          # Why colors here like this
-          #colors_pvalue = c("#3B9AB2", "#9EBE91", "#E4B80E", "#F21A00")
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-              
-              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full heatmap and " , ncol(matrix.m), " columns"))
-              
-              p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
-                                        name = axixStr, 
-                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                        colors_pvalue = colors_pvalue, 
-                                        column_title = paste0("Summary of all significantly enriched terms\nacross all TFs and overall (Ontology: ", ontologyCur,")"),
-                                        top_annotation = top_annotation)
-              
-              print(p1)
-          }
-          pageCounter = pageCounter + 1
-          
-          if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
-              
-              # Now focus on the top X only per community
-              ID_subset =  GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
-                  dplyr::group_by(.data$TF.ID) %>% 
-                  dplyr::arrange(.data$pval) %>% 
-                  dplyr::slice(seq_len(nID)) %>%
-                  dplyr::pull(.data$ID) %>% as.character()
-              
-              
-              matrix.m = all.df.wide %>%
-                  dplyr::filter(.data$ID %in% ID_subset) %>%
-                  dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
-                  dplyr::filter(!is.na(.data$Term)) %>%
-                  dplyr::select(-"nSig", -"ID") %>%
-                  tibble::column_to_rownames("Term") %>%
-                  dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x) {return(-log10(x))}) %>%
-                  dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
-                  as.matrix()
-              
-              futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
-              
-              p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
-                                        name = axixStr, 
-                                        maxWidth_nchar_plot = maxWidth_nchar_plot,
-                                        colors_pvalue = colors_pvalue, 
-                                        column_title = paste0("Summary of top ", nID, " enriched terms\n per TF and overall (Ontology: ", ontologyCur,")"),
-                                        top_annotation = top_annotation)
-              
-              print(p2)
-          }
-          pageCounter = pageCounter + 1
-          
-      } else {
-          message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
-          .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
-      } 
-      
-    } # end for all ontologies
+        if (length(TFset) == 0) {
+            message = paste0("There are no TFs left to show. Adjust the custom TF list.")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+            
+        }
+        
+    } else{ #rankType = "degree"
+        
+        if (is.null(n)) {
+            TFset = setdiff(names(GRN@stats$Enrichment$byTF), "combined")
+        } else {
+            TFset = getTopNodes(GRN, nodeType = "TF", rankType = rankType, n = n) %>% dplyr::pull(.data$TF.ID)
+        }
+        
+    }
     
-    .checkPageNumberValidity(pages, pageCounter)
-    if (plotAsPDF) grDevices::dev.off()
+    fileCur = paste0(outputFolder, 
+                     ifelse(is.null(basenameOutput), .getOutputFileName("plot_TFEnrichment"), basenameOutput), 
+                     ".pdf")
     
-  }  else {
-      .printDataAlreadyExistsMessage()
-  }
-  
-  .printExecutionTime(start)
-  
-  GRN
-  
+    if (!file.exists(fileCur) | forceRerun | !plotAsPDF) {
+        
+        GRN = .addFunctionLogToObject(GRN)
+        
+        allOntologies.l = .checkEnrichmentCongruence_general(GRN, type = "TF")
+        
+        if (is.null(allOntologies.l$TF)) {
+            message = paste0("No enrichment results found for TFs. Run the function calculateTFEnrichment first")
+            .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+        }
+        
+        # Get the number of vertexes per TF as additional annotation column for the heatmap
+        vertexMetadata = as.data.frame(igraph::vertex.attributes(GRN@graph$TF_gene$graph))
+        nodeDegree = igraph::degree(GRN@graph$TF_gene$graph)
+        
+        nodeDegree_TFset = dplyr::left_join(GRN@annotation$TFs, 
+                                            as.data.frame(nodeDegree) %>% tibble::rownames_to_column("TF.ENSEMBL"), by = "TF.ENSEMBL") %>%
+            dplyr::filter(.data$TF.ID %in% as.character(TFset))
+        
+        pageCounter = 1  
+        
+        
+        if (plotAsPDF) {
+            .checkOutputFile(fileCur)
+            grDevices::pdf(fileCur, width = pdf_width, height = pdf_height)
+            futile.logger::flog.info(paste0("Plotting to file ", fileCur))
+        } else {
+            futile.logger::flog.info(paste0("Plotting directly"))
+        }
+        
+        for (ontologyCur in allOntologies.l$TF) {
+            
+            futile.logger::flog.info(paste0(" Plotting results for ontology ", ontologyCur))
+            
+            pValPrefix = .getPValPrefix(display_pAdj, ontologyCur)
+            
+            if (display_pAdj && stringr::str_starts(ontologyCur, "GO_")) {
+                message = paste0("For ontology ", ontologyCur, ", only raw p-values can be displayed. Adjusted p-values are only available for the following ontologies: KEGG, Disease Ontology, Reactome")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            }
+            
+            
+            for (TFCur in as.character(TFset)) {
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    TF.ENSEMBL = GRN@annotation$TFs %>% dplyr::filter(.data$TF.ID == TFCur) %>% dplyr::pull(TF.ENSEMBL)
+                    
+                    TF.ID.full = .printTF(GRN, TFCur, printEnsemblID = TRUE)
+                    
+                    futile.logger::flog.info(paste0("  TF ", TF.ID.full))
+                    
+                    # if the enrichment slot for the TFs is empty, calculate the enrichment
+                    if (is.null(GRN@stats$Enrichment[["byTF"]][[TFCur]])) { 
+                        message = paste0("Could not find TF enrichment results for TF ", TFCur, ". Run the function calculateTFEnrichment first or make sure the parameter n that was used for calculateTFEnrichmentn was larger or equal with the current value for n for this function.")
+                        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+                    }
+                    
+                    dataCur = GRN@stats$Enrichment[["byTF"]][[TFCur]][[ontologyCur]]
+                    if (is.null(dataCur)) {
+                        message = paste0("Could not find enrichment results for ontology ", ontologyCur, " and TF ", TFCur, ". Rerun the function calculateTFEnrichment.")
+                        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+                    }
+                    titleCur = paste0("Enrichment Analysis - TF: ", TF.ID.full)
+                    .plotEnrichmentGeneral(data = dataCur, type = ontologyCur, prefixTitle = titleCur,
+                                           topn_pvalue = topn_pvalue, p = p, display_pAdj = display_pAdj)
+                    
+                    
+                }
+                pageCounter = pageCounter + 1
+                
+            }
+            
+            if (ontologyCur %in% allOntologies.l$all) {
+                
+                
+                # Summary heatmap to compare terms enriched in the general network to their enrichment in the communities:
+                # Currently assumes that the general enrichment has been run
+                
+                # Take one community as example for which ontologies have been produced
+                GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] = 
+                    .combineEnrichmentResults(GRN, type = "byTF", ontology = ontologyCur, 
+                                              p = p, nSignificant = nSignificant, display_pAdj) %>%
+                    dplyr::filter(.data$TF.ID %in% c("all", as.character(TFset)))
+                
+                if (nrow(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]) == 0) {
+                    message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
+                    .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+                    next
+                }
+                
+                
+                # Convert to wide format and filter those terms that are significant at least once
+                all.df.wide = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
+                    dplyr::select("TF.ID", "ID", "pval") %>%
+                    tidyr::pivot_wider(names_from = "TF.ID", values_from = "pval") %>%
+                    dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), as.numeric) %>%
+                    dplyr::rowwise() %>%
+                    dplyr::mutate(nSig = sum(dplyr::c_across(where(is.numeric)) <= p, na.rm = TRUE)) %>%
+                    dplyr::ungroup() %>%
+                    dplyr::filter(.data$nSig > 0)
+                
+                # In extreme cases, it could happen that the "all" community is missing because there are no enrichments whatsoever.
+                # In this case, we need to add it back here 
+                if (!"all" %in% colnames(all.df.wide)) {
+                    all.df.wide = dplyr::mutate(all.df.wide, all = NA)
+                }
+                
+                
+                TF.order = c("all", setdiff(unique(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$TF.ID), "all"))
+                
+                
+                matrix.m = all.df.wide %>%
+                    dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
+                    dplyr::filter(!is.na(.data$Term)) %>%
+                    dplyr::select("Term", dplyr::all_of(TF.order)) %>% # reorder the table based on the previously generated custom order
+                    dplyr::mutate_at(dplyr::vars(!dplyr::contains("Term")), function(x) {return(-log10(x))}) %>%
+                    # dplyr::mutate(Term = stringr::str_trunc(as.character(Term), width = maxWidth_nchar_plot, side = "right")) %>%
+                    tibble::column_to_rownames("Term") %>%
+                    as.matrix()
+                
+                
+                # Make sure the top annotation has the same dimensionality as the resulting matrix
+                nodeDegree_TFset_numbers =  nodeDegree_TFset %>%
+                    dplyr::filter(.data$TF.ID %in% colnames(matrix.m)) %>%
+                    dplyr::arrange(dplyr::desc(nodeDegree)) %>%
+                    dplyr::pull(nodeDegree)
+                
+                top_annotation = ComplexHeatmap::HeatmapAnnotation(
+                    nodeDegree = ComplexHeatmap::anno_barplot(
+                        x = c("all" = nrow(vertexMetadata),  nodeDegree_TFset_numbers ), 
+                        border = FALSE,  bar_width = 0.8,  gp = grid::gpar(fill = "#046C9A")),
+                    annotation_name_gp = grid::gpar(fontsize = 5), annotation_name_side = "left", annotation_name_rot = 90)
+                
+                axixStr = paste0("-log10\n(", pValPrefix, "p-value)")
+                
+                colors_pvalue = viridis::viridis(n = 30, direction = -1)
+                # Why colors here like this
+                #colors_pvalue = c("#3B9AB2", "#9EBE91", "#E4B80E", "#F21A00")
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the full heatmap and " , ncol(matrix.m), " columns"))
+                    
+                    p1 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height,
+                                              name = axixStr, 
+                                              maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                              colors_pvalue = colors_pvalue, 
+                                              column_title = paste0("Summary of all significantly enriched terms\nacross all TFs and overall (Ontology: ", ontologyCur,")"),
+                                              top_annotation = top_annotation)
+                    
+                    print(p1)
+                }
+                pageCounter = pageCounter + 1
+                
+                if (is.null(pages) | (!is.null(pages) && pageCounter %in% pages)) {
+                    
+                    # Now focus on the top X only per community
+                    ID_subset =  GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]] %>% 
+                        dplyr::group_by(.data$TF.ID) %>% 
+                        dplyr::arrange(.data$pval) %>% 
+                        dplyr::slice(seq_len(nID)) %>%
+                        dplyr::pull(.data$ID) %>% as.character()
+                    
+                    
+                    matrix.m = all.df.wide %>%
+                        dplyr::filter(.data$ID %in% ID_subset) %>%
+                        dplyr::mutate(Term = GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$Term[match(.data$ID, GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]$ID)]) %>%
+                        dplyr::filter(!is.na(.data$Term)) %>%
+                        dplyr::select(-"nSig", -"ID") %>%
+                        tibble::column_to_rownames("Term") %>%
+                        dplyr::mutate_at(dplyr::vars(!dplyr::contains("ID")), function(x) {return(-log10(x))}) %>%
+                        dplyr::select(dplyr::all_of(TF.order)) %>% # reorder based on the previously generated custom order
+                        as.matrix()
+                    
+                    futile.logger::flog.info(paste0("  Including ", nrow(matrix.m), " terms in the reduced summary heatmap and " , ncol(matrix.m), " columns"))
+                    
+                    p2 = .drawCombinedHeatmap(matrix = matrix.m, pdf_width = pdf_width, pdf_height = pdf_height, 
+                                              name = axixStr, 
+                                              maxWidth_nchar_plot = maxWidth_nchar_plot,
+                                              colors_pvalue = colors_pvalue, 
+                                              column_title = paste0("Summary of top ", nID, " enriched terms\n per TF and overall (Ontology: ", ontologyCur,")"),
+                                              top_annotation = top_annotation)
+                    
+                    print(p2)
+                }
+                pageCounter = pageCounter + 1
+                
+            } else {
+                message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
+                .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
+            } 
+            
+        } # end for all ontologies
+        
+        .checkPageNumberValidity(pages, pageCounter)
+        if (plotAsPDF) grDevices::dev.off()
+        
+    }  else {
+        .printDataAlreadyExistsMessage()
+    }
+    
+    .printExecutionTime(start)
+    
+    GRN
+    
 }
 
 .getDegreeStats <- function(GRN, df, nCentralGenes = 20, nCentralTFs = 20) {
-  
-  # This function takes as input the GRN and the graph in dataframe format 
-  # returns histogram of degree distribution and plots of top degree-central TFs and genes
-  
-  TF.degrees = df %>%
-    dplyr::filter(stringr::str_detect(.data$connectionType, "^tf")) %>% 
-    dplyr::mutate(name_plot = paste0(.data$V1_name, "\n(", .data$V1, ")")) %>%
-    dplyr::count(.data$name_plot, .data$V1) %>% 
-    dplyr::rename(ID = "V1", ID_all = "name_plot", Degree = "n") 
-  
-  # TODO modify
-  peak_TFend.degrees = df %>%
-    dplyr::filter(stringr::str_detect(.data$connectionType, "peak$")) %>%
-    dplyr::count(.data$V2) %>% dplyr::rename(ID = "V2", Degree = "n")
-  
-  peak_geneend.degrees = df %>%
-    dplyr::filter(stringr::str_detect(.data$connectionType, "^peak")) %>%
-    dplyr::count(.data$V1) %>% dplyr::rename(ID = "V1", Degree = "n")
-  
-  gene.degrees = df %>%
-    dplyr::filter(stringr::str_detect(.data$connectionType, "gene$")) %>%
-    dplyr::mutate(name_plot = paste0(.data$V2_name, "\n(", .data$V2, ")")) %>%  
-    dplyr::count(.data$name_plot, .data$V2) %>% 
-    dplyr::rename(ID = "V2", ID_all = "name_plot", Degree = "n")
-  
-  degrees.table = dplyr::bind_rows( TF = TF.degrees, 
-                                    `peak (TF end)` = peak_TFend.degrees, 
-                                    `peak (gene end)` = peak_geneend.degrees, 
-                                    gene = gene.degrees,
-                                    .id = "class") %>%
-    dplyr::mutate(class = droplevels(factor(class, levels = c("TF", "peak (TF end)", "peak (gene end)", "gene")))) %>% # in case it was the TF-gene df that was passed, the peak levels will be dropped
-    dplyr::arrange(class, dplyr::desc(.data$Degree))
-  
-  colours = c("TF" = "#E1AF00", "peak (TF end)" = "#F21A00", "peak (gene end)" = "#F21A00", "gene" = "#3B9AB2")
-  
-  ## General Degree Distribution ##
-  gDegrees = ggplot2::ggplot(degrees.table, ggplot2::aes(x = .data$Degree, fill = class)) +
-    ggplot2::geom_histogram(bins = 50) +
-    ggplot2::scale_fill_manual(values = colours) +
-    ggplot2::theme(legend.position = "none",  axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), 
-          strip.text = ggplot2::element_text(size = 8)) +
-    ggplot2::ylab("Abundance") +
-    ggplot2::facet_wrap(~class, labeller = ggplot2::labeller(class = .facetLabel(degrees.table)), scales = "free", ncol = 2) +
-    ggplot2::theme_bw()
-  
-  ## Top degree-central TFs and Genes ##
-  top.n.gene = degrees.table %>% 
-    dplyr::filter(class == "gene") %>%
-    dplyr::arrange(dplyr::desc(.data$Degree)) %>% 
-    dplyr::slice(seq_len(nCentralGenes)) 
-  
-  top.n.tf = degrees.table %>% 
-    dplyr::filter(class == "TF") %>%
-    dplyr::rename(TF.ID = "ID") %>%
-    dplyr::arrange(dplyr::desc(.data$Degree)) %>% 
-    dplyr::slice(seq_len(nCentralTFs))
-  
-  theme_all = ggplot2::theme_bw() + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1, size = 8))
-  
-  gTopGenes = ggplot2::ggplot(data = top.n.gene, ggplot2::aes(x = stats::reorder(.data$ID_all, -.data$Degree), y = .data$Degree)) +
-    ggplot2::geom_bar(stat = "identity", fill = "#3B9AB2") +
-    ggplot2::geom_text(ggplot2::aes(label = .data$Degree), size = 3) + 
-    ggplot2::xlab("Gene ID") +
-    theme_all
-  
-  gTopTFs = ggplot2::ggplot(data = top.n.tf, ggplot2::aes(x = stats::reorder(.data$ID_all, -.data$Degree), y = .data$Degree)) +
-    ggplot2::geom_bar(stat = "identity", fill = "#E1AF00") +
-    ggplot2::geom_text(ggplot2::aes(label = .data$Degree), size = 3) + 
-    ggplot2::xlab("TF ID") +
-    theme_all
-  
-  results = list()
-  results[["tbl"]][["degrees"]]        = degrees.table
-  results[["figures"]][["degreeDist"]] = gDegrees
-  results[["figures"]][["topGenes"]]   = gTopGenes
-  results[["figures"]][["topTFs"]]     = gTopTFs
-  
-  return(results)
+    
+    # This function takes as input the GRN and the graph in dataframe format 
+    # returns histogram of degree distribution and plots of top degree-central TFs and genes
+    
+    TF.degrees = df %>%
+        dplyr::filter(stringr::str_detect(.data$connectionType, "^tf")) %>% 
+        dplyr::mutate(name_plot = paste0(.data$V1_name, "\n(", .data$V1, ")")) %>%
+        dplyr::count(.data$name_plot, .data$V1) %>% 
+        dplyr::rename(ID = "V1", ID_all = "name_plot", Degree = "n") 
+    
+    # TODO modify
+    peak_TFend.degrees = df %>%
+        dplyr::filter(stringr::str_detect(.data$connectionType, "peak$")) %>%
+        dplyr::count(.data$V2) %>% dplyr::rename(ID = "V2", Degree = "n")
+    
+    peak_geneend.degrees = df %>%
+        dplyr::filter(stringr::str_detect(.data$connectionType, "^peak")) %>%
+        dplyr::count(.data$V1) %>% dplyr::rename(ID = "V1", Degree = "n")
+    
+    gene.degrees = df %>%
+        dplyr::filter(stringr::str_detect(.data$connectionType, "gene$")) %>%
+        dplyr::mutate(name_plot = paste0(.data$V2_name, "\n(", .data$V2, ")")) %>%  
+        dplyr::count(.data$name_plot, .data$V2) %>% 
+        dplyr::rename(ID = "V2", ID_all = "name_plot", Degree = "n")
+    
+    degrees.table = dplyr::bind_rows( TF = TF.degrees, 
+                                      `peak (TF end)` = peak_TFend.degrees, 
+                                      `peak (gene end)` = peak_geneend.degrees, 
+                                      gene = gene.degrees,
+                                      .id = "class") %>%
+        dplyr::mutate(class = droplevels(factor(class, levels = c("TF", "peak (TF end)", "peak (gene end)", "gene")))) %>% # in case it was the TF-gene df that was passed, the peak levels will be dropped
+        dplyr::arrange(class, dplyr::desc(.data$Degree))
+    
+    colours = c("TF" = "#E1AF00", "peak (TF end)" = "#F21A00", "peak (gene end)" = "#F21A00", "gene" = "#3B9AB2")
+    
+    ## General Degree Distribution ##
+    gDegrees = ggplot2::ggplot(degrees.table, ggplot2::aes(x = .data$Degree, fill = class)) +
+        ggplot2::geom_histogram(bins = 50) +
+        ggplot2::scale_fill_manual(values = colours) +
+        ggplot2::theme(legend.position = "none",  axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1), 
+                       strip.text = ggplot2::element_text(size = 8)) +
+        ggplot2::ylab("Abundance") +
+        ggplot2::facet_wrap(~class, labeller = ggplot2::labeller(class = .facetLabel(degrees.table)), scales = "free", ncol = 2) +
+        ggplot2::theme_bw()
+    
+    ## Top degree-central TFs and Genes ##
+    top.n.gene = degrees.table %>% 
+        dplyr::filter(class == "gene") %>%
+        dplyr::arrange(dplyr::desc(.data$Degree)) %>% 
+        dplyr::slice(seq_len(nCentralGenes)) 
+    
+    top.n.tf = degrees.table %>% 
+        dplyr::filter(class == "TF") %>%
+        dplyr::rename(TF.ID = "ID") %>%
+        dplyr::arrange(dplyr::desc(.data$Degree)) %>% 
+        dplyr::slice(seq_len(nCentralTFs))
+    
+    theme_all = ggplot2::theme_bw() + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1, size = 8))
+    
+    gTopGenes = ggplot2::ggplot(data = top.n.gene, ggplot2::aes(x = stats::reorder(.data$ID_all, -.data$Degree), y = .data$Degree)) +
+        ggplot2::geom_bar(stat = "identity", fill = "#3B9AB2") +
+        ggplot2::geom_text(ggplot2::aes(label = .data$Degree), size = 3) + 
+        ggplot2::xlab("Gene ID") +
+        theme_all
+    
+    gTopTFs = ggplot2::ggplot(data = top.n.tf, ggplot2::aes(x = stats::reorder(.data$ID_all, -.data$Degree), y = .data$Degree)) +
+        ggplot2::geom_bar(stat = "identity", fill = "#E1AF00") +
+        ggplot2::geom_text(ggplot2::aes(label = .data$Degree), size = 3) + 
+        ggplot2::xlab("TF ID") +
+        theme_all
+    
+    results = list()
+    results[["tbl"]][["degrees"]]        = degrees.table
+    results[["figures"]][["degreeDist"]] = gDegrees
+    results[["figures"]][["topGenes"]]   = gTopGenes
+    results[["figures"]][["topTFs"]]     = gTopTFs
+    
+    return(results)
 }
 
 .getEigenCentralVertices <- function(GRN, graphType, nCentralGenes = 20, nCentralTFs = 20) {
-  
-  # returns a list of figures for the top eigenvector central Genes and TFs
-  if (graphType == "TF_peak_gene") {
-    geneSet = GRN@graph$TF_peak_gene$table %>%
-      dplyr::filter(.data$connectionType == "peak-gene") %>%
-      dplyr::pull(.data$V2) %>%
-      unique()
-    TFSet   = GRN@graph$TF_peak_gene$table %>%
-      dplyr::filter(.data$connectionType == "tf-peak") %>%
-      dplyr::pull(.data$V1) %>%
-      unique()
     
-  } else if (graphType == "TF_gene") {
+    # returns a list of figures for the top eigenvector central Genes and TFs
+    if (graphType == "TF_peak_gene") {
+        geneSet = GRN@graph$TF_peak_gene$table %>%
+            dplyr::filter(.data$connectionType == "peak-gene") %>%
+            dplyr::pull(.data$V2) %>%
+            unique()
+        TFSet   = GRN@graph$TF_peak_gene$table %>%
+            dplyr::filter(.data$connectionType == "tf-peak") %>%
+            dplyr::pull(.data$V1) %>%
+            unique()
+        
+    } else if (graphType == "TF_gene") {
+        
+        geneSet = unique(GRN@graph$TF_peak_gene$table$V2)
+        TFSet   = unique(GRN@graph$TF_peak_gene$table$V1)
+        
+    } else if (graphType == "communitySubgraph") {
+        # Also a TF-gene graph
+        geneSet = unique(GRN@graph$communitySubgraph$table$V2)
+        TFSet   = unique(GRN@graph$communitySubgraph$table$V1)
+        
+    } else {
+        message = "Unknown graphType in.getEigenCentralVertices()"
+        .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
+    }
     
-    geneSet = unique(GRN@graph$TF_peak_gene$table$V2)
-    TFSet   = unique(GRN@graph$TF_peak_gene$table$V1)
+    # get the centrality score of each vertex and extract top n genes and TFs
+    eigen_ctr = igraph::eigen_centrality(GRN@graph[[graphType]]$graph)$vector
     
-  } else if (graphType == "communitySubgraph") {
-    # Also a TF-gene graph
-    geneSet = unique(GRN@graph$communitySubgraph$table$V2)
-    TFSet   = unique(GRN@graph$communitySubgraph$table$V1)
     
-  } else {
-    message = "Unknown graphType in.getEigenCentralVertices()"
-    .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
-  }
-  
-  # get the centrality score of each vertex and extract top n genes and TFs
-  eigen_ctr = igraph::eigen_centrality(GRN@graph[[graphType]]$graph)$vector
-  
-  
-  nCentralGenes = seq_len(min(nCentralGenes, length(eigen_ctr[geneSet])))
-  nCentralTFs   = seq_len(min(nCentralTFs  , length(eigen_ctr[TFSet])))
-  
-  top.n.genes = tibble::tibble(
-    gene.ENSEMBL = names(sort(eigen_ctr[geneSet], decreasing = TRUE)[nCentralGenes]),
-    Score = sort(eigen_ctr[geneSet], decreasing = TRUE)[nCentralGenes]) %>% 
-    stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
-    dplyr::distinct() %>% 
-    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V2", "V2_name") %>% dplyr::distinct(), 
-                     by = c("gene.ENSEMBL" = "V2") ) %>%
-    #dplyr::mutate(gene.name = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
-    dplyr::rename(gene.name = "V2_name") %>%
-    dplyr::mutate(name_plot = paste0(.data$gene.name, "\n(", .data$gene.ENSEMBL, ")")) %>%
-    dplyr::filter(.data$Score > 0) # Require the score to be > 0 because we dont want top nodes to have a score of 0
-  
-  top.n.tf =  tibble::tibble(TF.ENSEMBL = names(sort(eigen_ctr[TFSet], decreasing = TRUE)[nCentralTFs]),
-                             Score   =    sort(eigen_ctr[TFSet], decreasing = TRUE)[nCentralTFs]) %>% 
-    stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
-    dplyr::distinct() %>%
-    dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), 
-                     by = c("TF.ENSEMBL" = "V1") ) %>%
-    dplyr::rename(TF.ID = "V1_name") %>%
-    dplyr::mutate(name_plot = paste0(.data$TF.ID, "\n(", .data$TF.ENSEMBL, ")")) %>%
-    dplyr::filter(.data$Score > 0) # Require the score to be > 0 because we dont want top nodes to have a score of 0
-  
-  # dplyr::mutate(TF.ID = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
-  
-  theme_all = ggplot2::theme_bw() + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1, size = 8))
-  
-  
-  gTopEigenGenes = ggplot2::ggplot(data = top.n.genes, ggplot2::aes(x = stats::reorder(.data$name_plot, -.data$Score), y = .data$Score)) +
-    ggplot2::geom_bar(stat = "identity", fill = "#3B9AB2") +
-    ggplot2::xlab("Gene name") +
-    theme_all
-  
-  gTopEigenTFs = ggplot2::ggplot(data = top.n.tf, ggplot2::aes(x = stats::reorder(.data$name_plot, -.data$Score), y = .data$Score)) +
-    ggplot2::geom_bar(stat = "identity", fill = "#E1AF00") +
-    ggplot2::xlab("TF ID") +
-    theme_all
-  
-  return(list(topGenes = gTopEigenGenes, topTFs = gTopEigenTFs))
-  
+    nCentralGenes = seq_len(min(nCentralGenes, length(eigen_ctr[geneSet])))
+    nCentralTFs   = seq_len(min(nCentralTFs  , length(eigen_ctr[TFSet])))
+    
+    top.n.genes = tibble::tibble(
+        gene.ENSEMBL = names(sort(eigen_ctr[geneSet], decreasing = TRUE)[nCentralGenes]),
+        Score = sort(eigen_ctr[geneSet], decreasing = TRUE)[nCentralGenes]) %>% 
+        stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
+        dplyr::distinct() %>% 
+        dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V2", "V2_name") %>% dplyr::distinct(), 
+                         by = c("gene.ENSEMBL" = "V2") ) %>%
+        #dplyr::mutate(gene.name = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
+        dplyr::rename(gene.name = "V2_name") %>%
+        dplyr::mutate(name_plot = paste0(.data$gene.name, "\n(", .data$gene.ENSEMBL, ")")) %>%
+        dplyr::filter(.data$Score > 0) # Require the score to be > 0 because we dont want top nodes to have a score of 0
+    
+    top.n.tf =  tibble::tibble(TF.ENSEMBL = names(sort(eigen_ctr[TFSet], decreasing = TRUE)[nCentralTFs]),
+                               Score   =    sort(eigen_ctr[TFSet], decreasing = TRUE)[nCentralTFs]) %>% 
+        stats::na.omit() %>% # Remove NA rows in case there are not enough rows without NA
+        dplyr::distinct() %>%
+        dplyr::left_join(GRN@graph[[graphType]]$table %>% dplyr::select("V1", "V1_name") %>% dplyr::distinct(), 
+                         by = c("TF.ENSEMBL" = "V1") ) %>%
+        dplyr::rename(TF.ID = "V1_name") %>%
+        dplyr::mutate(name_plot = paste0(.data$TF.ID, "\n(", .data$TF.ENSEMBL, ")")) %>%
+        dplyr::filter(.data$Score > 0) # Require the score to be > 0 because we dont want top nodes to have a score of 0
+    
+    # dplyr::mutate(TF.ID = GRN@connections$all.filtered$`0`$gene.name[match(gene.ENSEMBL, GRN@connections$all.filtered$`0`$gene.ENSEMBL)])
+    
+    theme_all = ggplot2::theme_bw() + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1, size = 8))
+    
+    
+    gTopEigenGenes = ggplot2::ggplot(data = top.n.genes, ggplot2::aes(x = stats::reorder(.data$name_plot, -.data$Score), y = .data$Score)) +
+        ggplot2::geom_bar(stat = "identity", fill = "#3B9AB2") +
+        ggplot2::xlab("Gene name") +
+        theme_all
+    
+    gTopEigenTFs = ggplot2::ggplot(data = top.n.tf, ggplot2::aes(x = stats::reorder(.data$name_plot, -.data$Score), y = .data$Score)) +
+        ggplot2::geom_bar(stat = "identity", fill = "#E1AF00") +
+        ggplot2::xlab("TF ID") +
+        theme_all
+    
+    return(list(topGenes = gTopEigenGenes, topTFs = gTopEigenTFs))
+    
 }
 
 .facetLabel = function(degrees.table) {
-  
-  summary = degrees.table %>%
-    dplyr::group_by(class) %>%
-    dplyr::summarise(mean = mean(.data$Degree), median = median(.data$Degree), max = max(.data$Degree), sd = sd(.data$Degree)) %>%
-    dplyr::mutate(label = paste0(class, "\n(mean: ", round(mean, 1),
-                                 ", median: ", round(median, 1), 
-                                 ", max: ", round(max, 1),
-                                 ", sd:", round(sd, 1), ")"))
-  
-  labels <- summary$label
-  names(labels) <- summary$class
-  
-  return(labels)
+    
+    summary = degrees.table %>%
+        dplyr::group_by(class) %>%
+        dplyr::summarise(mean = mean(.data$Degree), median = median(.data$Degree), max = max(.data$Degree), sd = sd(.data$Degree)) %>%
+        dplyr::mutate(label = paste0(class, "\n(mean: ", round(mean, 1),
+                                     ", median: ", round(median, 1), 
+                                     ", max: ", round(max, 1),
+                                     ", sd:", round(sd, 1), ")"))
+    
+    labels <- summary$label
+    names(labels) <- summary$class
+    
+    return(labels)
 }
 
 .getPValPrefix <- function(display_pAdj, ontology) {
@@ -5209,10 +5211,10 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
 
 
 .verifyArgument_verticeType <- function(vertice_color_list) {
-  
-  checkmate::assertList(vertice_color_list, len = 6)
-  checkmate::assertDataFrame(vertice_color_list[[1]])
-  checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]), empty.ok = FALSE)
+    
+    checkmate::assertList(vertice_color_list, len = 6)
+    checkmate::assertDataFrame(vertice_color_list[[1]])
+    checkmate::assertSubset(c(vertice_color_list[[2]], vertice_color_list[[3]]), colnames(vertice_color_list[[1]]), empty.ok = FALSE)
 }
 
 
