@@ -115,11 +115,13 @@ In a nutshell, these are the functions we may run here:
 2. `AggregateExpression` to aggregate counts within each cluster to cluster pseudocounts based on their (cluster) identities. Each cluster forms a sample as used in the `GRaNIE` analysis.  Importantly, we found that **mean** count aggregation works better than **sum** count aggregation: For the former, the resulting eGRNs from `GraNIE` are more stable and similar to each other as compared to the eGRNs that come from the sum count aggregation.
 
 
-## Choosing the right number of clusters
+## Choosing the right number of clusters and working strategies for running GRaNIE
 
 **We strongly suggest choosing a resolution that gives at least 20-30 clusters, as fewer clusters (or samples consequently in the `GRaNIE` analysis) can cause statistical issues and artifacts as observed in the enhancer-gene diagnostic plots for some datasets**. If the desired number of clusters is small, pay close(r) attention to the enhancer-gene QC plots, in particular whether the signal from the randomized connections looks flat (enough). For more details, see the [Package Details](GRaNIE_packageDetails.html#output_peak_gene).
 
 **On the other extreme, too many clusters will result in data that becomes too scares - especially the ATAC-seq data suffers from scarcity**. Throughout our experiments, we have seen that when having too many clusters (close to or more than 100, for example), the scarcity of ATAC becomes so big that either man peaks are filtered out in the `filterData()` function or that the abundance of zeros results in very few connections in the *eGRN*. Thus, we advise on an intermediate level of cluster that is also plausible biologically, but testing different cluster resolutions is generally also a good idea for initial exploration.
+
+**Typically, resolutions of 10 to 20 work best for GRaNIE** and produce a reasonably high number of clusters (a few dozens to around 100) that can be used for pseudobulking as input for GRaNIE with a compromise between the number of samples on the one hand and the number of cells per cluster on the other hand. However, this amy also depend on the sequencing depth and the initial number of cells for the dataset in question. We therefore typically produce the GRaNIE files for different resolutions, then run GRaNIE for each of them and then compare the results to finally select one resolution that gives reasonably big, high-quality eGRNs that pass the GRaNIE QCs.
 
 # Preparing the input data for `GRaNIE`
 
@@ -138,32 +140,37 @@ For RNA, one extra step is needed: We need to translate the gene names as provid
 
 ## Metadata
 
-Creating a metadata file is optional but recommended. We usually create a simple data frame with two columns:
+Creating a metadata file is completely optional but recommended. If present, this can help to identify patterns of variation in the GRaNIE PCA QC plots, as metadata are automatically incorporated there. We usually create a simple data frame with two columns:
 
 1. Cluster number as given by `Seurat`
 2. Number of cells for each cluster.
 
-However, you may add additional metadata such as cluster annotation or other information to it.
+However, you may add additional metadata such as cluster annotation or other information to it. For example, we usually also add some additional cluster-specific metrics, such as min, mean, median, and max values.
 
+For an example how this file may look like and how it can be automatically produced, we will provide a link here soon.
+
+## TF database
+
+Especially for single-cell data, the choice of the TF database is important. We recommend using HOCOMOCO v12 (https://hocomoco12.autosome.org/, https://academic.oup.com/nar/article/52/D1/D154/7424436). Using this database however requires one extra step of downloading the database and preparing it for the use with GRaNIE. For both the mouse (mm10) and human genome (hg38), we will soon provide a download that makes this trivial: Simply download the file, extract and then reference the folder within the `motifFolder` argument in the `addTFBS()` function - see also the Workflow Vignette for examples.
+
+Alternatively, using JASPAR (e.g., JASPAR 2022 or 2024) should also work well, although we did not fully test that yet. Using the JASPAR database is easier, as it is directly integrated into GRaNIE via the designated Bioconductor package and therefore it doesnt require any custom database download beforehand as with HOCOMOCO. However, we found that HOCOMOCO v12 works really well and produces large and high-quality eGRNs. If you want to use JASPAR 2024, make sure to use a recent GRaNIE version (at least 1.7.4), as the programmatic access changed with the 2024 edition and this has been addressed in the GRaNIE package only recently. If you still receive errors, please let us know.
 
 # Running GRaNIE
 
-We are now all set to run `GRaNIE`, using the cluster-specific count matrices for both ATAC and RNA and, optionally, the metadata file. 
-We usually use `GRaNIE` in the default mode, as the pseudobulk data mimics bulk data close enough from our experience.
+We are now all set to run `GRaNIE`, using the cluster-specific pseudobulk count matrices for both ATAC and RNA and, optionally, the metadata file. 
+We usually use `GRaNIE` in the default mode except a few noteworthy exceptions, see below. The reason is that the pseudobulk data mimics bulk data close enough from our experience.
 
-We want to emphasize in particular to use `filterData()` to filter both RNA and particularly ATAC to exclude peaks that have very low count values. We usually use `minNormalizedMean_peaks_bulk = 5` and `minNormalizedMean_RNA_bulk = 1` although other values may be reasonable too. Let us know what your experiences are, we are happy for any feedback. Especially for analyses with many clusters, many peaks have very low means from our experience with consequently low variation - so excluding them may be a better idea than keeping them to remove noise.
+Importantly, as we usually use the **mean count per cluster**, we **turn off any other data normalization in `GRaNIE` by setting `normalization_peaks` and `normalization_rna` both to `none` in the `addData()` function** and therefore basically treat the data as pre-normalized. 
 
-Depending on the number of clusters, `GRaNIE` may run a little longer than the typical bulk analysis but from our experience not much longer.
+Depending on the number of clusters, `GRaNIE` may run a little longer than the typical bulk analysis but from our experience not much longer - a typical analysis, even for 100 clusters / samples, is done in 1-2 hours.
 
 # Scripts and example data
 
-If you are interested, we can provide a set of scripts that can help setting up a `GRaNIE` analysis for 10x multiome data. They are still in development, and will be made available here once they are mature enough.
+We will soon provide a set of scripts that can help setting up a `GRaNIE` analysis for 10x multiome data. They are still in development, and will be made available here once they are mature enough.
 
 ## Data processing and `GRaNIE` preparation
-We provide a script to takes  a `Seurat` object with `ATAC` and `RNA` assays as input and processes the data according to what we described here in this vignette, performs 10 and more clustering runs for resolutions between 0.5 and 20 (user-adjustable) and produces the properly processed count and metadata files that can be directly used as input for `GRaNIE`. 
+We provide a script to takes  a `Seurat` object with `ATAC` and `RNA` assays as input and processes the data according to what we described here in this vignette, performs multiple clustering runs for resolutions between 0.5 and 20 (user-adjustable) and produces the properly processed count and metadata files that can be directly used as input for `GRaNIE`. 
 
-## Running `GRaNIE`  in batch mode
-We also provide a script that runs `GRaNIE` in batch mode, once per *cluster resolution* as produced in the step before. The input is essentially a folder, along with `GraNIE` parameters for a standard analysis, and the function then iterates over all input files and performs one `GraNIE` analysis at a time for a user-provided list of cluster resolutions.
 
 # Further notes and FAQs
 

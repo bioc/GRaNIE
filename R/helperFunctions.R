@@ -61,6 +61,7 @@
     futile.logger::flog.info(paste0(" Finished writing plots"))
 }
 
+#' @import AnnotationHub
 .getAnnotationHub <- function(curAttempt = 1, maxAttempts = 10) {
     
     if (curAttempt < maxAttempts) {
