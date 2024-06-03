@@ -3297,7 +3297,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
 
 }
 
-
+#' @import tidyr
 .calculatePeakGeneCorrelations <- function(GRN,
                                            TADs = NULL, 
                                            mergeOverlappingTADs = FALSE, 

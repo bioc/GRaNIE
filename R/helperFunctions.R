@@ -61,7 +61,6 @@
     futile.logger::flog.info(paste0(" Finished writing plots"))
 }
 
-#' @import AnnotationHub
 .getAnnotationHub <- function(curAttempt = 1, maxAttempts = 10) {
     
     if (curAttempt < maxAttempts) {
@@ -80,7 +79,7 @@
             cache_dir = tools::R_user_dir("AnnotationHub", which = "cache") 
             unlink(cache_dir, recursive = TRUE)
             
-            AnnotationHub::getAnnotationHub(curAttempt = curAttempt + 1, maxAttempts = maxAttempts)
+            .getAnnotationHub(curAttempt = curAttempt + 1, maxAttempts = maxAttempts)
             # bfc <- BiocFileCache::BiocFileCache(cache_dir)
             # res <- BiocFileCache::bfcquery(bfc, "annotationhub.index.rds", field = "rname", exact = TRUE)
             # BiocFileCache::bfcremove(bfc, rids = res$rid)

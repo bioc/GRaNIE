@@ -33,8 +33,7 @@ Must be one of \code{limma_cyclicloess}, \code{limma_quantile}, \code{limma_scal
 \code{EDASeq_GC_peaks}, \code{gcqn_peaks}, \code{DESeq2_sizeFactors}, \code{none}.}
 
 \item{idColumn_peaks}{Character. Default \code{peakID}. Name of the column in the counts_peaks data frame that contains peak IDs. 
-The required format must be {chr}:{start}-{end}", with {chr} denoting the abbreviated chromosome name, and {start} and {end} the begin and end 
-of the peak coordinates, respectively. End must be bigger than start. Examples for valid peak IDs are \code{chr1:400-800} or \code{chrX:20-25}.}
+The required format must be \code{chr}:\code{start}-\code{end}, with \code{chr} denoting the abbreviated chromosome name, and \code{start} and \code{end} the begin and end of the peak coordinates, respectively. End must be bigger than start. Examples for valid peak IDs are \code{chr1:400-800} or \code{chrX:20-25}.}
 
 \item{counts_rna}{Data frame. No default. Counts for the RNA-seq data, with raw or normalized counts for each gene (rows) across all samples (columns). 
 In addition to the count data, it must also contain one ID column with a particular format, see the argument \code{idColumn_rna} below. 
