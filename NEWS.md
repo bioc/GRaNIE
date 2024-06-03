@@ -1,3 +1,14 @@
+# GRaNIE 1.9.0-1.9.1 (2024-06-03)
+
+- version jump due to new Bioconductor development cycle
+
+## Improvements
+- update for the single-cell vignette
+- we now provide a [public download](https://oc.embl.de/index.php/s/V1L9uQVBMuSMPNh) for the HOCOMOCO v12 TF database for both human (hg38) and mouse (mm10) that can be used as input for GRaNIE in the `addTFBS()` function. We tested this database extensively and use it as default TF database for our GRaNIE networks.
+
+## Bug fixes
+- explicitly requiring `tidyr` 1.3.0 or above due to the usage of `separate_wider_delim` in the code in a recent upgrade
+- fixed an accidental reference to `AnnotationHub::getAnnotationHub`
 
 # GRaNIE 1.7.3-1.7.4 (2024-04-03)
 
