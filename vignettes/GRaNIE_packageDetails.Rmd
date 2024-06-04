@@ -312,6 +312,8 @@ data, see [here](#guidelines_singleCell).**
 TF and TFBS data is mandatory as input. As of March 2023, we offer two
 different ways of how to import TF and TFBS data into `GRaNIE`.
 
+Our recommended and default TF database is HOCOMOCO v12, see below for details.
+
 ### Importing custom TF and TFBS data
 
 First, we support the import of any TF and TFBS data irrespective of how
@@ -328,12 +330,12 @@ orientation, we provide TFBS predictions for HOCOMOCO-based TF motifs
 that were used with `PWMScan` for `hg19`, `hg38` and `mm10`. Check the
 [workflow vignette for an example](GRaNIE_workflow.html).
 
-**We recommend to download the full HOCOMOCO TFBS data from
-[here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs).
-In short, we provide example files for selected supported genome
-assemblies (*hg19*, *hg38* and *mm10*) that are fully compatible with
-`GRaNIE` as separate downloads. While we also provide TFBS data for
-FIMO, we recommend using HOCOMOCO.**
+As of 2024, we recommend using HOCOMOCO v12 ([Website](https://hocomoco12.autosome.org), [Paper](https://academic.oup.com/nar/article/52/D1/D154/7424436)). Using this database however requires one extra step of downloading the database and preparing it for the use with GRaNIE. **For both the mouse (mm10) and human genome (hg38), we provide a [download](https://oc.embl.de/index.php/s/V1L9uQVBMuSMPNh)** that makes this trivial: Simply download the file, extract and then reference the folder within the `motifFolder` argument in the `addTFBS()` function - see also the [Workflow Vignette](GRaNIE_workflow.html#add-tfs-and-tfbs-and-overlap-with-peak) for examples.
+
+For older versions of HOCOMOCO or older genome versions (hg19), users can also 
+download the full HOCOMOCO TFBS data from
+[here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs). While we also provide TFBS data for
+FIMO, we recommend using HOCOMOCO.
 
 However, you may also use your own TFBS data, and we provide full
 flexibility in doing so. Only some manual preparation is necessary.
