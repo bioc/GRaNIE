@@ -108,9 +108,8 @@ For the 10x multiome, we so far used the WNN graph for UMAP visualization and su
 
 In a nutshell, these are the functions we may run here:
 
-1.  `FindClusters` with a specific `resolution` value that we usually vary between 0.1 and 20. Reasonable cluster resolutions are data and question dependent. For recommendations, see the notes below. We use the default of `FindClusters` for the specific clustering algorithm, while this is a parameter that the user can adjust in the script that we provide. 
+1.  `FindClusters` with a specific `resolution` value that we usually vary between 0.1 and 20. Reasonable cluster resolutions are data and question dependent. For recommendations, see the notes below. We use the default of `FindClusters` for the specific clustering algorithm, while this is a parameter that the user can adjust in the script that we provide.
 2.  `AggregateExpression` to aggregate counts within each cluster to cluster pseudocounts based on their (cluster) identities. Each cluster forms a sample as used in the `GRaNIE` analysis. Importantly, we found that **mean** count aggregation works better than **sum** count aggregation: For the former, the resulting eGRNs from `GraNIE` are more stable and similar to each other as compared to the eGRNs that come from the sum count aggregation.
-
 
 ### Choosing the right number of clusters and working strategies for running GRaNIE
 
@@ -152,10 +151,7 @@ For an example how this file may look like and how it can be automatically produ
 
 ## TF database
 
-Especially for single-cell data, the choice of the TF database is important. We recommend using HOCOMOCO v12 ([Website](https://hocomoco12.autosome.org), [Paper](https://academic.oup.com/nar/article/52/D1/D154/7424436)). Using this database however requires one extra step of downloading the database and preparing it for the use with GRaNIE. 
-
-**For both the mouse (mm10) and human genome (hg38), we provide a [download](https://oc.embl.de/index.php/s/V1L9uQVBMuSMPNh)** that makes this trivial: Simply download the file, extract and then reference the folder within the `motifFolder` argument in the `addTFBS()` function - see also the [Workflow Vignette](GRaNIE_workflow.html#add-tfs-and-tfbs-and-overlap-with-peak) for examples.
-
+Especially for single-cell data, the choice of the TF database is important. We recommend using HOCOMOCO v12 ([Website](https://hocomoco12.autosome.org), [Paper](https://academic.oup.com/nar/article/52/D1/D154/7424436)). Using this database however requires one extra step of downloading the database and preparing it for the use with GRaNIE. For details and a download link, see the [Package Details Vignette](GRaNIE_packageDetails.html#input_TF).
 
 Alternatively, using JASPAR (e.g., JASPAR 2022 or 2024) should also work well, although we did not fully test that yet. Using the JASPAR database is easier, as it is directly integrated into GRaNIE via the designated Bioconductor package and therefore it doesnt require any custom database download beforehand as with HOCOMOCO. However, we found that HOCOMOCO v12 works really well and produces large and high-quality eGRNs. If you want to use JASPAR 2024, make sure to use a recent GRaNIE version (at least 1.9.1), as the programmatic access changed with the 2024 edition and this has been addressed in the GRaNIE package only recently. If you still receive errors, please let us know.
 
@@ -192,8 +188,7 @@ Currently, in the preprocessing script that we provide, `SCTransform` is current
 
 We here provide some example data that can be used to run GRaNIE for a pre-processed single-cell dataset so that users can check the format of the files and other requirements. While they mimic the format of bulk datasets, we nevertheless provide them here. These files are also the output of the aforementioned script.
 
-[You can download them here](https://git.embl.de/grp-zaugg/GRaNIE/-/tree/master/misc/singleCell/exampleInput).
-You can use and reference these three files as input for GRaNIE.
+[You can download them here](https://git.embl.de/grp-zaugg/GRaNIE/-/tree/master/misc/singleCell/exampleInput). You can use and reference these three files as input for GRaNIE.
 
 # Further notes and FAQs
 

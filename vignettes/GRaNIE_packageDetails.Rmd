@@ -312,10 +312,6 @@ data, see [here](#guidelines_singleCell).**
 TF and TFBS data is mandatory as input. As of March 2023, we offer two
 different ways of how to import TF and TFBS data into `GRaNIE`.
 
-Our recommended and default TF database is HOCOMOCO v12, see below for details.
-
-### Importing custom TF and TFBS data
-
 First, we support the import of any TF and TFBS data irrespective of how
 it was generated or what it represents, thereby offering full
 flexibility for how our framework is used. The only drawback is that
@@ -325,17 +321,54 @@ follows, we explain more details.
 
 Specifically, the package requires a `bed` file per TF with TF binding
 sites (TFBS). TFBS can either be in-silico predicted, or experimentally
-verified, as long as genome-wide TFBS can be used. For convenience and
-orientation, we provide TFBS predictions for HOCOMOCO-based TF motifs
-that were used with `PWMScan` for `hg19`, `hg38` and `mm10`. Check the
-[workflow vignette for an example](GRaNIE_workflow.html).
+verified, as long as genome-wide TFBS can be used.
 
-As of 2024, we recommend using HOCOMOCO v12 ([Website](https://hocomoco12.autosome.org), [Paper](https://academic.oup.com/nar/article/52/D1/D154/7424436)). Using this database however requires one extra step of downloading the database and preparing it for the use with GRaNIE. **For both the mouse (mm10) and human genome (hg38), we provide a [download](https://oc.embl.de/index.php/s/V1L9uQVBMuSMPNh)** that makes this trivial: Simply download the file, extract and then reference the folder within the `motifFolder` argument in the `addTFBS()` function - see also the [Workflow Vignette](GRaNIE_workflow.html#add-tfs-and-tfbs-and-overlap-with-peak) for examples.
+**Our recommended and default TF database is HOCOMOCO v12, see below for
+details.**
 
-For older versions of HOCOMOCO or older genome versions (hg19), users can also 
-download the full HOCOMOCO TFBS data from
-[here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs). While we also provide TFBS data for
-FIMO, we recommend using HOCOMOCO.
+### HOCOMOCO-derived TFBS and download links
+
+As a default, we use HOCOMOCO-derived TFBS predictions that were
+predicted with `PWMScan`. For further method details, see the [diffTF
+paper from our
+lab](https://difftf.readthedocs.io/en/latest/projectInfo.html#citation).
+
+We provide TFBS predictions for HOCOMOCO-based TF motifs that were used
+with `PWMScan` for `hg19`, `hg38` and `mm10`. As of 2024, we recommend
+using HOCOMOCO v12 ([Website](https://hocomoco12.autosome.org),
+[Paper](https://academic.oup.com/nar/article/52/D1/D154/7424436)). Using
+this database requires only one extra step of downloading the database
+and preparing it for the use with GRaNIE.
+
+We provide the following downloads that can be directly used with GRaNIE:
+
+**hg38:**
+
+-   **`PWMScan` + HOCOMOCO v12 INVIVO collection** ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/hg38/PWMScan_HOCOMOCOv12_H12INVIVO.tar.gz))
+-   `PWMScan` + HOCOMOCO v11 ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/hg38/PWMScan_HOCOMOCOv11.tar.gz))
+-   `FIMO` + HOCOMOCO v11 ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/hg38/FIMO_HOCOMOCOv11.tar.gz))
+
+**hg19:**
+
+-   `PWMScan` + HOCOMOCO v10 ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/hg19/PWMScan_HOCOMOCOv10.tar.gz))
+
+**mm10:**
+
+-   **`PWMScan` + HOCOMOCO v12 INVIVO collection** ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm10/PWMScan_HOCOMOCOv12_H12INVIVO.tar.gz))
+-   `PWMScan` + HOCOMOCO v10 ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm10/PWMScan_HOCOMOCOv10.tar.gz))
+
+To use them, simply download the file, extract and then reference the
+folder within the `motifFolder` argument in the `addTFBS()` function -
+see also the [Workflow Vignette](GRaNIE_workflow.html#add-tfs-and-tfbs-and-overlap-with-peak)
+for examples.
+
+### Other TFBS sources
 
 However, you may also use your own TFBS data, and we provide full
 flexibility in doing so. Only some manual preparation is necessary.
@@ -370,29 +403,29 @@ files, their exact format etc we refer to `diffTF` paper and
 
 As of March 2023, we additionally a more user-friendly way of importing
 TF and TFBS data from the various JASPAR databases that are available in
-R/Bioconductor: `JASPAR` 2022 and 2024. While we so
-far tested only with the `JASPAR2022` database / R package, the
-other ones should also work - if not, please let us know. Using
-`JASPAR2024` as TF database is much easier and also quicker from a user
-perspective, and none of the additional complexities that were mentioned
-above for the custom import apply here. However, we do note that HOCOMOCO v12 
-produces larger GRNs from our (limited) test experience.
-For details, see the `addTFBS()`
-and `overlapPeaksAndTFBS()` functions.
+R/Bioconductor: `JASPAR` 2022 and 2024. While we so far tested only with
+the `JASPAR2022` database / R package, the other ones should also work -
+if not, please let us know. Using `JASPAR2024` as TF database is much
+easier and also quicker from a user perspective, and none of the
+additional complexities that were mentioned above for the custom import
+apply here. However, we do note that HOCOMOCO v12 produces larger GRNs
+from our (limited) test experience. For details, see the `addTFBS()` and
+`overlapPeaksAndTFBS()` functions.
 
 Note that we also implemented an option to customize which TFBS
-collection to use from the `JASPAR` database via the function
-argument `JASPAR_useSpecificTaxGroup` from `addTFBS()`. For example,
-this feature can be used to specify the whole \code{vertebrates} TF
-collection irrespective of the genome assembly the data is in - which is
-useful for genomes such as rat or mouse, for which JASPAR only finds a
-few dozen TF at most if the specific genome was specified otherwise.
+collection to use from the `JASPAR` database via the function argument
+`JASPAR_useSpecificTaxGroup` from `addTFBS()`. For example, this feature
+can be used to specify the whole \code{vertebrates} TF collection
+irrespective of the genome assembly the data is in - which is useful for
+genomes such as rat or mouse, for which JASPAR only finds a few dozen TF
+at most if the specific genome was specified otherwise.
 
 Be aware, though, that you may want to compare your *eGRN* across
 different TF and TFBS data - we are currently investigating the effect
-of using `JASPAR` motives and cannot currently comment much on it except what we sumamrized above:
-HOCOMOCO v12 produces larger GRNs from our (limited) test experience. We will,
-however, update the vignette here once we have more results to share.
+of using `JASPAR` motives and cannot currently comment much on it except
+what we sumamrized above: HOCOMOCO v12 produces larger GRNs from our
+(limited) test experience. We will, however, update the vignette here
+once we have more results to share.
 
 ## Sample metadata (optional but highly recommended) {#input_metadata}
 
@@ -777,9 +810,12 @@ options to decide which peak-gene pairs to test for correlation:
     either in addition to the links as identified above or as a
     replacement thereof, depending on the parameter
     `knownLinks_useExclusively` that was provided as part of the
-    function call. If multiple promoter-enhancer peaks overlap with the provided user-defined links, all unique
-    combinations are taken and added to the list of peak-gene pairs to test. By default, only the TSS of genes is checked for overlap, 
-    while this can be changed with the parameter `overlapTypeGene` in analogy to how it works everywhere else.
+    function call. If multiple promoter-enhancer peaks overlap with the
+    provided user-defined links, all unique combinations are taken and
+    added to the list of peak-gene pairs to test. By default, only the
+    TSS of genes is checked for overlap, while this can be changed with
+    the parameter `overlapTypeGene` in analogy to how it works
+    everywhere else.
 
 For all approaches, the user can select between two options of how to
 exactly calculate the distance between a peak and a gene. That is, which
@@ -1515,8 +1551,10 @@ This list is structured as follows:
 -   inside both real and background links (i.e., within
     `GRN@connections$peak_genes[["0"]]` and
     `GRN@connections$peak_genes[["1"]]`), a data frame with the
-    peak-gene connections along with additional metadata (e.g., `peak.ID`,
-    `gene.ENSEMBL`, `peak_gene.distance`), their connection origin (e.g `TADs`, `knownLinks` or `neighborhood`), and statistical properties are stored (`peak_gene.r`, `peak_gene.p_raw`).
+    peak-gene connections along with additional metadata (e.g.,
+    `peak.ID`, `gene.ENSEMBL`, `peak_gene.distance`), their connection
+    origin (e.g `TADs`, `knownLinks` or `neighborhood`), and statistical
+    properties are stored (`peak_gene.r`, `peak_gene.p_raw`).
 
 ### Plots
 
