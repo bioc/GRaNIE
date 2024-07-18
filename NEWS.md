@@ -1,3 +1,8 @@
+# GRaNIE 1.9.3 (2024-07-16)
+
+## Bug fixes
+- fixed a bug that caused the peak-gene diagnostic plots to incorrectly show background signal in `plotDiagnosticPlots_peakGene()` (upper right plot on page 1). This was caused by not correctly shuffling the RNA cunts data due to a code change that occurred in version 1.7.4. We apologize for the confusion this may have caused.
+
 # GRaNIE 1.9.0-1.9.1 (2024-06-03)
 
 - version jump due to new Bioconductor development cycle
