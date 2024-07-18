@@ -1601,6 +1601,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
         } else if (source == "JASPAR2024") {
             sq24 <- RSQLite::dbConnect(RSQLite::SQLite(), JASPAR2024::db(JASPAR2024::JASPAR2024()))
             PFMatrixList <- TFBSTools::getMatrixSet(sq24, opts = options_JASPAR) 
+            RSQLite::dbDisconnect(sq24)
         }
         
         
@@ -3599,14 +3600,14 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
       }
       
       # Should RNA data be shuffled?
-      shuffleRNA = dplyr::if_else(shuffleRNA, permCur, FALSE)
+      shuffleRNA_cur = dplyr::if_else(shuffleRNA, permCur, FALSE)
 
       countsPeaks.clean = getCounts(GRN, type = "peaks",  permuted = FALSE, includeIDColumn = FALSE)
-      countsRNA.clean   = getCounts(GRN, type = "rna", permuted = shuffleRNA, includeIDColumn = FALSE)
+      countsRNA.clean   = getCounts(GRN, type = "rna", permuted = shuffleRNA_cur, includeIDColumn = FALSE)
       
       # Cleverly construct the count matrices so we do the correlations in one go
       map_peaks = match(overlaps.sub.filt.df$peak.ID,  getCounts(GRN, type = "peaks", permuted = FALSE)$peakID)
-      map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = shuffleRNA)$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
+      map_rna  = match(overlaps.sub.filt.df$gene.ENSEMBL, getCounts(GRN, type = "rna", permuted = shuffleRNA_cur)$ENSEMBL) # may contain NA values because the gene is not actually in the RNA-seq counts
       
       # There should not be any NA because it is about the peaks
       stopifnot(all(!is.na(map_peaks)))
