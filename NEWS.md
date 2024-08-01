@@ -1,3 +1,7 @@
+# GRaNIE 1.9.4 (2024-08-01)
+
+- changed default values for `gene.types` in `filterGRNAndConnectGenes()` to `all` and adjusted documentation across functions that have also this argument  - by default, there is now no standard filter for the gene type (genes were filtered to only protein-coding genes before using `protein_coding`). This results in bigger eGRNs and seems more sensible than to automatically filter genes for most use cases.
+
 # GRaNIE 1.9.3 (2024-07-16)
 
 ## Bug fixes
