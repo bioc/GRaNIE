@@ -15,7 +15,7 @@ filterGRNAndConnectGenes(
   peak_gene.IHW.covariate = NULL,
   peak_gene.IHW.nbins = "auto",
   outputFolder = NULL,
-  gene.types = c("protein_coding"),
+  gene.types = c("all"),
   allowMissingTFs = FALSE,
   allowMissingGenes = TRUE,
   peak_gene.r_range = c(0, 1),
@@ -61,8 +61,9 @@ and independent hypothesis weighting will be performed, and a suitable covariate
 object in \code{\link{initializeGRN}} will be used. Otherwise, all output from this function will be put into the specified folder. 
 If a folder is provided, while we recommend specifying an absolute path, a relative one also works.}
 
-\item{gene.types}{Character vector of supported gene types. Default \code{c("protein_coding", "lincRNA")}. 
+\item{gene.types}{Character vector of supported gene types. Default \code{"all"}. 
 Filter for gene types to retain, genes with gene types not listed here are filtered. The special keyword "all" indicates no filter and retains all gene types.
+To filter for only protein-coding genes, use \code{"protein_coding"}.
 The specified names must match the names as stored in the \code{\linkS4class{GRN}} object (\code{see GRN@annotation$genes$gene.type}) and
 correspond 1:1 to the gene type names as provided by \code{biomaRt}, with the exception of \code{lncRNAs}, 
 which is internally renamed to \code{lincRNAs} when first fetching all gene types. This is done due to a recent change in \code{biomaRt} and aims at 

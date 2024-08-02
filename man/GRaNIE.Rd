@@ -2,6 +2,7 @@
 % Please edit documentation in R/GRN.R
 \docType{package}
 \name{GRaNIE}
+\alias{GRaNIE-package}
 \alias{GRaNIE}
 \title{\strong{GRaNIE} (\strong{G}ene \strong{R}egul\strong{a}tory \strong{N}etwork \strong{I}nference including \strong{E}nhancers): Reconstruction and evaluation of data-driven, cell type specific gene regulatory networks including enhancers using chromatin accessibility and RNAseq data (general package information)}
 \description{
@@ -22,5 +23,30 @@ The \code{GRaNIE} package works with \code{GRN} objects. See \code{\linkS4class{
 Please check out \url{https://grp-zaugg.embl-community.io/GRaNIE} for how to get in contact with us.
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://grp-zaugg.embl-community.io/GRaNIE}
+  \item Report bugs at \url{https://git.embl.de/grp-zaugg/GRaNIE/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Christian Arnold \email{chrarnold@web.de}
+
+Authors:
+\itemize{
+  \item Judith Zaugg \email{judith.zaugg@embl.de}
+  \item Rim Moussa \email{rim.moussa01@gmail.com}
+}
+
+Other contributors:
+\itemize{
+  \item Armando Reyes-Palomares \email{armandorp@gmail.com} [contributor]
+  \item Giovanni Palla \email{giov.pll@gmail.com} [contributor]
+  \item Maksim Kholmatov \email{maksim.kholmatov@embl.de} [contributor]
+}
+
+}
 \keyword{GRaNIE,}
 \keyword{GRaNIE-package}
