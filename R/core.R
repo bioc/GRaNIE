@@ -11,7 +11,7 @@
 #' Default output folder where all pipeline output will be put unless specified otherwise. We recommend specifying an absolute path. 
 #' Note that for Windows-based systems, the path must be correctly specified with "/" as path separator.
 #' @param genomeAssembly Character. No default. The genome assembly of all data that to be used within this object. 
-#' Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9}, \code{mm10}, \code{rn6}, \code{rn7}, \code{dm6}. If you need additional genomes, let us know. See function description for further information and notes.
+#' Currently, supported genomes are: \code{hg19}, \code{hg38}, \code{mm9}, \code{mm10}, \code{mm39}, \code{rn6}, \code{rn7}, \code{dm6}. If you need additional genomes, let us know. See function description for further information and notes.
 #' @return Empty \code{\linkS4class{GRN}} object
 #' @examples 
 #' meta.l = list(name = "exampleName", date = "01.03.22")
@@ -25,7 +25,7 @@ initializeGRN <- function(objectMetadata = list(),
   start = Sys.time()   
     
   checkmate::assert(checkmate::checkNull(objectMetadata), checkmate::checkList(objectMetadata))
-  checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn6", "rn7", "dm6","rheMac10"))
+  checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "mm39", "rn6", "rn7", "dm6","rheMac10"))
   
   # Check individual metadata components that they are only characters but not actual data objects
   for (i in seq_len(length(objectMetadata))) {
@@ -1470,7 +1470,8 @@ filterData <- function(GRN,
 
 #' Add TFBS to a \code{\linkS4class{GRN}} object. 
 #' 
-#' For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. We provide example files for selected supported genome assemblies (hg19, hg38 and mm10) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.
+#' For this, a folder that contains one TFBS file per TF in bed or bed.gz format must be given (see details). The folder must also contain a so-called translation table, see the argument \code{translationTable} for details. 
+#' We provide example files for selected supported genome assemblies (hg19, hg38 and mm10, mm39) that are fully compatible with GRaNIE as separate downloads. For more information, check \url{https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs}.
 #' 
 #' @template GRN 
 #' @param source Character. One of \code{custom}, \code{JASPAR2022} or \code{JASPAR2024}. Default \code{custom}. If a custom source is being used, further details about the motif folder and files will be provided (see the other function arguments). 

@@ -163,7 +163,7 @@ We here organize the recommended changes by function and workflow order, for con
 
 1.  `addData`
 
--   as we usually use the **mean count per cluster** in the preprocessing from above, set **`normalization_peaks` and `normalization_rna` both to `none`** and therefore basically treat the data as pre-normalized. This may not be the only reasonable choice related to data normalization, but is currently the recommended way.
+-   as we usually use the **mean count per cluster** in the preprocessing from above, set `normalization_peaks = "none"` and `normalization_rna = "none"` and therefore basically treat the data as pre-normalized. This may not be the only reasonable choice related to data normalization, but is currently the recommended way.
 
 2.  `addTFBS`
 

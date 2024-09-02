@@ -107,6 +107,8 @@ following options:
             `BiocManager::install(c("org.Hs.eg.db", "BSgenome.Hsapiens.UCSC.hg19", "TxDb.Hsapiens.UCSC.hg19.knownGene"))`
         -   `mm10`:
             `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm10", "TxDb.Mmusculus.UCSC.mm10.knownGene"))`
+        -   `mm39`:
+            `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm39", "TxDb.Mmusculus.UCSC.mm39.knownGene"))`
         -   `mm9`:
             `BiocManager::install(c("org.Mm.eg.db", "BSgenome.Mmusculus.UCSC.mm9", "TxDb.Mmusculus.UCSC.mm9.knownGene"))`
         -   `rn6`:
@@ -142,13 +144,15 @@ and may be needed context-specifically:
         (`EDASeq_GC_peaks`, `gcqn_peaks`)**
 
         -   `org.Hs.eg.db`: Needed only for `hg19` or `hg38`
-        -   `org.Mm.eg.db`: Needed only for `mm9` or `mm10`
+        -   `org.Mm.eg.db`: Needed only for `mm9` or `mm10` or `mm39`
         -   `org.Rn.eg.db`: Needed only for `rn6` or `rn7`
         -   `org.Dm.eg.db`: Needed only for `dm6`
         -   `BSgenome.Hsapiens.UCSC.hg19`,
             `TxDb.Hsapiens.UCSC.hg19.knownGene`: Needed only for `hg19`
         -   `BSgenome.Hsapiens.UCSC.hg38`,
             `TxDb.Hsapiens.UCSC.hg38.knownGene`: Needed only for `hg38`
+        -   `BSgenome.Mmusculus.UCSC.mm39`,
+            `TxDb.Mmusculus.UCSC.mm39.knownGene`: Needed only for `mm39`
         -   `BSgenome.Mmusculus.UCSC.mm10`,
             `TxDb.Mmusculus.UCSC.mm10.knownGene`: Needed only for `mm10`
         -   `BSgenome.Mmusculus.UCSC.mm9`,
@@ -334,7 +338,7 @@ paper from our
 lab](https://difftf.readthedocs.io/en/latest/projectInfo.html#citation).
 
 We provide TFBS predictions for HOCOMOCO-based TF motifs that were used
-with `PWMScan` for `hg19`, `hg38` and `mm10`. As of 2024, we recommend
+with `PWMScan` for `hg19`, `hg38`, `mm10` and soon `mm39`. As of 2024, we recommend
 using HOCOMOCO v12 ([Website](https://hocomoco12.autosome.org),
 [Paper](https://academic.oup.com/nar/article/52/D1/D154/7424436)). Using
 this database requires only one extra step of downloading the database
@@ -362,6 +366,13 @@ We provide the following downloads that can be directly used with GRaNIE:
     here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm10/PWMScan_HOCOMOCOv12_H12INVIVO.tar.gz))
 -   `PWMScan` + HOCOMOCO v10 ([Download
     here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm10/PWMScan_HOCOMOCOv10.tar.gz))
+    
+**mm39: (COMING SOON, links do not yet work)**
+
+-   **`PWMScan` + HOCOMOCO v12 INVIVO collection** ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm39/PWMScan_HOCOMOCOv12_H12INVIVO.tar.gz))
+-   `PWMScan` + HOCOMOCO v10 ([Download
+    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm39/PWMScan_HOCOMOCOv10.tar.gz))
 
 To use them, simply download the file, extract and then reference the
 folder within the `motifFolder` argument in the `addTFBS()` function -
@@ -391,9 +402,8 @@ the following:
     (e.g., `AHR.0.B` if the file for `AHR` is called
     `AHR.0.B_TFBS.bed.gz`).
 -   we provide example files for selected genome assemblies (*hg19*,
-    *hg38* and *mm10*) that are fully compatible with `GRaNIE` as
-    separate downloads. For more information, check
-    [here](https://difftf.readthedocs.io/en/latest/chapter2.html#dir-tfbs).
+    *hg38*,  *mm9*, *mm10*,  *mm39*) that are fully compatible with `GRaNIE` as
+    separate downloads. For more information, check the links above.
 
 For more methodological details, details on how to construct these
 files, their exact format etc we refer to `diffTF` paper and

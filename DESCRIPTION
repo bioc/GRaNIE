@@ -1,6 +1,6 @@
 Package: GRaNIE
 Title: GRaNIE: Reconstruction cell type specific gene regulatory networks including enhancers using single-cell or bulk chromatin accessibility and RNA-seq data
-Version: 1.9.5
+Version: 1.9.6
 Encoding: UTF-8
 Authors@R: c(person("Christian", "Arnold", email =
         "chrarnold@web.de", role = c("cre","aut")),
@@ -18,7 +18,7 @@ Description: Genetic variants associated with diseases often affect non-coding r
 Imports:
     futile.logger,
     checkmate,
-    patchwork,
+    patchwork (>= 1.2.0),
     reshape2,
     data.table,
     matrixStats,
@@ -66,6 +66,7 @@ Suggests:
     knitr,
     BSgenome.Hsapiens.UCSC.hg19,
     BSgenome.Hsapiens.UCSC.hg38,
+    BSgenome.Mmusculus.UCSC.mm39,
     BSgenome.Mmusculus.UCSC.mm10,
     BSgenome.Mmusculus.UCSC.mm9,
     BSgenome.Rnorvegicus.UCSC.rn6,
@@ -74,6 +75,7 @@ Suggests:
     BSgenome.Mmulatta.UCSC.rheMac10,
     TxDb.Hsapiens.UCSC.hg19.knownGene,
     TxDb.Hsapiens.UCSC.hg38.knownGene,
+    TxDb.Mmusculus.UCSC.mm39.knownGene,
     TxDb.Mmusculus.UCSC.mm10.knownGene,
     TxDb.Mmusculus.UCSC.mm9.knownGene,
     TxDb.Rnorvegicus.UCSC.rn6.refGene,

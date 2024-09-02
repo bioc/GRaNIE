@@ -183,7 +183,9 @@
         res = .checkPackageInstallation(c("org.Hs.eg.db", "TxDb.Hsapiens.UCSC.hg19.knownGene", "BSgenome.Hsapiens.UCSC.hg19"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "mm10") {
         res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm10.knownGene", "BSgenome.Mmusculus.UCSC.mm10"), baseMessage, returnLogical = returnLogical)
-    } else if (genomeAssembly == "mm9") {
+    } else if (genomeAssembly == "mm39") {
+        res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm39.knownGene", "BSgenome.Mmusculus.UCSC.mm39"), baseMessage, returnLogical = returnLogical)
+    }  else if (genomeAssembly == "mm9") {
         res = .checkPackageInstallation(c("org.Mm.eg.db", "TxDb.Mmusculus.UCSC.mm9.knownGene", "BSgenome.Mmusculus.UCSC.mm9"), baseMessage, returnLogical = returnLogical)
     } else if (genomeAssembly == "rn6") {
         res = .checkPackageInstallation(c("org.Rn.eg.db", "TxDb.Rnorvegicus.UCSC.rn6.refGene", "BSgenome.Rnorvegicus.UCSC.rn6"), baseMessage, returnLogical = returnLogical)
@@ -508,7 +510,7 @@
     checkmate::assertChoice(type, c("txbd", "BSgenome", "packageName", "txID")) #txID: NCBI taxonomy ID
     
     if (type != "txID") {
-        checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "rn6", "rn7", "dm6", "rheMac10"))
+        checkmate::assertChoice(genomeAssembly, c("hg19","hg38", "mm9", "mm10", "mm39", "rn6", "rn7", "dm6", "rheMac10"))
     } else {
         availableSpecies.df = rbioapi::rba_jaspar_species(release = jasparRelease)
     }
@@ -537,6 +539,18 @@
             obj = "org.Hs.eg.db"
         }
         
+        
+    } else if (genomeAssembly == "mm39") {
+        
+        if (type == "txbd") { 
+            obj <- TxDb.Mmusculus.UCSC.mm39.knownGene::TxDb.Mmusculus.UCSC.mm39.knownGene
+        } else if (type == "BSgenome") {
+            obj <- BSgenome.Mmusculus.UCSC.mm39::BSgenome.Mmusculus.UCSC.mm39
+        } else if (type == "txID") {
+            obj = availableSpecies.df$tax_id[which(availableSpecies.df$species == "Mus musculus")]
+        } else {
+            obj = "org.Mm.eg.db"
+        }
         
     } else if (genomeAssembly == "mm10") {
         

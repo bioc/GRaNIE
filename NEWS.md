@@ -1,4 +1,14 @@
+# GRaNIE 1.9.6 (2024-09-01)
+
+## New features 
+- we now support the mm39 mouse assembly. Please let us know if something does not work. We are currently also generating the TFBS resources for mm39, stay tuned. Once done, the links in the vignette will work.
+
+## Improvements
+- we now require `patchwork` version 1.2.0 and above, due to an incompatibility reported between ggplot2 3.5 and `patchwork` versions < 1.2.0. The error that may be thrown in `plotDiagnosticPlots_peakGene` is this: `Error in Ops.data.frame(guide_loc, panel_loc) : ‘==’ only defined for equally-sized data frames`
+
 # GRaNIE 1.9.5 (2024-09-01)
+
+## Improvements
 - single-cell vignette update, made it clearer which settings to change in the GRaNIE workflow for single-cell data
 - warning messages now also contain the name of the function they were originally called from
 - `forcats` warning for package versions of 1.0.0 and above fixed
