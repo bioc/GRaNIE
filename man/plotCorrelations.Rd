@@ -59,7 +59,9 @@ If set to \code{top}, only the top features will be plotted while \code{random} 
 
 \item{dataType}{Character vector. One of, or both of, \code{real} or \code{background}. Default \code{real}. For which type, real or background data, to produce the diagnostic plots?}
 
-\item{corMethod}{Character. One of \code{pearson}, \code{spearman} or \code{bicor}. Default \code{pearson}. Method for calculating the correlation coefficient. 
+\item{corMethod}{Character. Either \code{NULL} (the default) or one of \code{pearson}, \code{spearman} or \code{bicor}. 
+Method for calculating the correlation coefficient. If set to \code{NULL}, the correlation method that has been used in the GraNIE object is used.
+For testing nd visualizing data, this can be changed, though.
 For \code{pearson} and \code{spearman} , see \link{cor} for details. \code{bicor} denotes the *biweight midcorrelation*, a correlation measure based on medians as
 calculated by \code{WGCNA::bicorAndPvalue}. Both \code{spearman} and \code{bicor} are considered more robust measures that are less prone to be affected by outliers.}
 

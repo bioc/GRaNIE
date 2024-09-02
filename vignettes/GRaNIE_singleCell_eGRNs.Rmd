@@ -159,11 +159,23 @@ Alternatively, using JASPAR (e.g., JASPAR 2022 or 2024) should also work well, a
 
 We are now all set to run `GRaNIE`, using the cluster-specific pseudobulk count matrices for both ATAC and RNA and, optionally, the metadata file. We usually use `GRaNIE` in the default mode except a few noteworthy exceptions, see below. The reason is that the pseudobulk data mimics bulk data close enough from our experience.
 
-Importantly, as we usually use the **mean count per cluster**, we **turn off any other data normalization in `GRaNIE` by setting `normalization_peaks` and `normalization_rna` both to `none` in the `addData()` function** and therefore basically treat the data as pre-normalized.
+We here organize the recommended changes by function and workflow order, for convenience:
 
-We also use `spearman` correlation as default correlation method for single-cell data, and not Pearson. This reduces the effect of outlier samples/clusters that sometimes appear due to potentially a small number of cells per cluster or low clustering quality.
+1.  `addData`
 
-Lastly, we use HOCOMOCO v12 as default TF database, see above for details.
+-   as we usually use the **mean count per cluster** in the preprocessing from above, set **`normalization_peaks` and `normalization_rna` both to `none`** and therefore basically treat the data as pre-normalized. This may not be the only reasonable choice related to data normalization, but is currently the recommended way.
+
+2.  `addTFBS`
+
+-   we strongly recommend using the (new) HOCOMOCO v12 TF database, as it contains more and better quality motifs as compared to v11, therefore also increasing GRN network size usually. We did not yet systematically assess the differences and similarities to JASPAR, though, and currently cannot comment much on it. This is planned for the near future.
+
+3.  `filterData`
+
+-   for a first run, we recommend setting `minNormalizedMean_peaks = NULL` and `minNormalizedMeanRNA = NULL` to remove any filters for the ATAC and RNA modality. The default filters for bulk data are usually too stringent for single-cell data due to the sparsity. However, **it is worthwhile to play around with these thresholds and to filter out peaks and genes that have very low mean values (for example, try values of 0.5 or so first) if the peak-gene QC plots do not look satisfactory**. Pay close attention to the output of the function and the number of peaks or genes that are filtered out. If, for example, 50% of peaks or genes are filtered with a specific set of filters, decrease the values until a satisfactory set of peaks and genes remains. If, on the other hand, almost no genes and peaks are filtered out, increase the value. There is, unfortunately, no golden value here, as this depends on many factors such as sequencing depth, number of cells, number of clusters / samples etc.
+
+4.  `addConnections_TF_peak` and `addConnections_peak_gene`
+
+-   we recommend using `corMethod = "spearman"` instead of `corMethod = "pearson"` for single-cell data. This reduces the effect of outlier samples/clusters that sometimes appear due to potentially a small number of cells per cluster or low clustering quality.
 
 Depending on the number of clusters, `GRaNIE` may run a little longer than the typical bulk analysis but from our experience not much longer - a typical analysis, even for 100 clusters / samples, is done in 1-2 hours.
 

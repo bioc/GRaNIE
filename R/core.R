@@ -245,14 +245,14 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     # Check ID columns for missing values and remove
     rna_missing_ID =  which(is.na(counts_rna$ENSEMBL))
     if (length(rna_missing_ID) > 0) {
-      message = paste0(" Found ", length(rna_missing_ID), " missing IDs in the ID column of the RNA counts. These rows will be removed.")
+      message = paste0("addData: Found ", length(rna_missing_ID), " missing IDs in the ID column of the RNA counts. These rows will be removed.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       counts_rna = dplyr::slice(counts_rna, -rna_missing_ID)
     }
     
     peaks_missing_ID =  which(is.na(counts_peaks$peakID))
     if (length(peaks_missing_ID) > 0) {
-      message = paste0(" Found ", length(peaks_missing_ID), " missing IDs in the ID column of the peaks counts. These rows will be removed.")
+      message = paste0("addData: Found ", length(peaks_missing_ID), " missing IDs in the ID column of the peaks counts. These rows will be removed.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       counts_peaks = dplyr::slice(counts_peaks, -peaks_missing_ID)
     }
@@ -261,7 +261,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     # Remove potential scientific notation from peak IDs
     peaks_eNotation = which(grepl("e+", counts_peaks$peakID))
     if (length(peaks_eNotation) > 0) {
-      message = paste0("Found at least one peak (", paste0(counts_peaks$peakID[peaks_eNotation], collapse = ",") , ") for which the position contains the scientific notation, attempting to fix.")
+      message = paste0("addData: Found at least one peak (", paste0(counts_peaks$peakID[peaks_eNotation], collapse = ",") , ") for which the position contains the scientific notation, attempting to fix.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       counts_peaks$peakID[peaks_eNotation] = .removeScientificNotation_positions(counts_peaks$peakID[peaks_eNotation])
       
@@ -274,7 +274,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     # Check uniqueness of IDs
     nDuplicateRows = nrow(counts_rna) - dplyr::n_distinct(counts_rna$ENSEMBL)
     if (nDuplicateRows > 0) {
-      message = paste0(" Found ", nDuplicateRows, " duplicate rows in RNA-Seq data, consolidating them by summing them up.")
+      message = paste0("addData: Found ", nDuplicateRows, " duplicate rows in RNA-Seq data, consolidating them by summing them up.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         
       counts_rna = counts_rna %>%
@@ -337,7 +337,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
 
       # Force the first column to be the ID column
       if ("sampleID" %in% colnames(GRN@data$metadata)) {
-        message = paste0("Renaming the first column to sampleID. However, this column already exists, it will be renamed accordingly.")
+        message = paste0("addData: Renaming the first column to sampleID. However, this column already exists, it will be renamed accordingly.")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)  
           
         colnames(GRN@data$metadata)[which(colnames(GRN@data$metadata) == "sampleID")] = "sampleID_original"
@@ -457,7 +457,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
         ids = (consensus.gr[overlappingPeaks] %>% as.data.frame())$peakID
         
-        messageAll = paste0(" ", length(overlappingPeaks), 
+        messageAll = paste0("addData: ", length(overlappingPeaks), 
                             " overlapping peaks have been identified. The first ten are: ", paste0(ids[seq_len(min(10, length(ids)))], collapse = ","),
                             ". This may not be what you want, since overlapping peaks may have a heigher weight in the network. "
         )
@@ -642,13 +642,13 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
       !.checkAndLoadPackagesGenomeAssembly(GRN@config$parameters$genomeAssembly, returnLogical = TRUE) | 
       GRN@config$parameters$genomeAssembly %in% c("dm6")) {
       if (!is.installed("ChIPseeker")) {
-          packageMessage = paste0("The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
+          packageMessage = paste0("addData: The package ChIPseeker is currently not installed, which is needed for additional peak annotation that can be useful for further downstream analyses. ", 
                                   " You may want to install it and re-run this function. However, this is optional and except for some missing additional annotation columns, there is no limitation.")
           .checkPackageInstallation("ChIPseeker", packageMessage, isWarning = TRUE)
       } else {
           
           if (GRN@config$parameters$genomeAssembly %in% c("dm6")) {
-              packageMessage = paste0("For the genome dm6, ChiIPseeker cannot be used due to differences in the ID columns that are returned (Entrez ID and not Ensembl ID).")
+              packageMessage = paste0("addData: For the genome dm6, ChiIPseeker cannot be used due to differences in the ID columns that are returned (Entrez ID and not Ensembl ID).")
               .checkPackageInstallation("ChIPseeker", packageMessage, isWarning = TRUE)
           }
           
@@ -857,8 +857,8 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
     } else if (normalization == "csaw_cyclicLoess_orig" | normalization == "csaw_TMM")   {
         
-        futile.logger::flog.info(paste0(" Normalizing data using the package csaw with the following method: ", normalization))
-        packageMessage = paste0("The package csaw is currently not installed, but however needed for the normalization methods \"csaw_cyclicLoess_orig\" and \"csaw_TMM\"")
+        futile.logger::flog.info(paste0("addData: Normalizing data using the package csaw with the following method: ", normalization))
+        packageMessage = paste0("addData: The package csaw is currently not installed, but however needed for the normalization methods \"csaw_cyclicLoess_orig\" and \"csaw_TMM\"")
         .checkPackageInstallation("csaw", packageMessage, isWarning = TRUE)
         
         if (packageVersion("csaw") <= "1.14.1") {
@@ -915,7 +915,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
         
     } else if (normalization == "EDASeq_GC_peaks") {
         
-        packageMessage = paste0("The package EDASeq is currently not installed, but however needed for the normalization methods \"EDASeq_GC_peaks\"")
+        packageMessage = paste0("addData: The package EDASeq is currently not installed, but however needed for the normalization methods \"EDASeq_GC_peaks\"")
         .checkPackageInstallation("EDASeq", packageMessage, isWarning = TRUE)
         
         futile.logger::flog.info(paste0(" Normalizing data using the package EDASeq with the following method: ", normalization, " with the GC content as covariate."))
@@ -1022,7 +1022,7 @@ addData <- function(GRN, counts_peaks, normalization_peaks = "DESeq2_sizeFactors
     }
     
     if (nRows_nonZero < minRows) {
-        message = paste0(" Almost every feature (except ", nRows_nonZero, ") contain at least one zero. DESeq2 size factor normalization based on so few features may become unreliable. This happens when the input data contain too many zeroes and happens particularly often for single-cell derived data. Decrease the number of 0s by either decreasing the number of samples or by increasing the sequencing depth.")
+        message = paste0("addData: Almost every feature (except ", nRows_nonZero, ") contain at least one zero. DESeq2 size factor normalization based on so few features may become unreliable. This happens when the input data contain too many zeroes and happens particularly often for single-cell derived data. Decrease the number of 0s by either decreasing the number of samples or by increasing the sequencing depth.")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
@@ -1279,7 +1279,7 @@ filterData <- function(GRN,
   futile.logger::flog.info(paste0("Number of remaining peaks: ", length(peaks_toKeep)))
   
   if (length(peaks_toKeep) < 1000) {
-      message = paste0("Too few peaks (", length(peaks_toKeep), ") remain after filtering. At least 1000 peaks should remain. We strongly advise to adjust the filtering settings.")
+      message = paste0("filterData: Too few peaks (", length(peaks_toKeep), ") remain after filtering. At least 1000 peaks should remain. We strongly advise to adjust the filtering settings.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
      
   }
@@ -1524,7 +1524,7 @@ addTFBS <- function(GRN, source = "custom", motifFolder = NULL, TFs = "all",
     } else if (source == "JASPAR2022" | source == "JASPAR2024") {
         
         if (!is.null(motifFolder)) {
-            message = paste0("When using the JASPAR database, the motifFolder, along with other function parameters, is ignored")
+            message = paste0("addTFBS: When using the JASPAR database, the motifFolder, along with other function parameters, is ignored")
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         }
 
@@ -1795,7 +1795,7 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
             tbl_discarded = table(annotation_discared$chr)
             tbl_discarded = tbl_discarded[which(tbl_discarded > 0)]
             
-            message = paste0("Found ", sum(tbl_discarded), " regions from chromosomes without a reference length. ", 
+            message = paste0("overlapPeaksAndTFBS: Found ", sum(tbl_discarded), " regions from chromosomes without a reference length. ", 
                              "Typically, these are random fragments from known or unknown chromosomes. The following regions will be discarded: \n",
                              paste0(names(tbl_discarded), " (", tbl_discarded, ")", collapse = ","))
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)  
@@ -1821,7 +1821,7 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
         if (is.null(GRN@config$directories$motifFolder)) { # if source == "JASPAR"
             
             if (nCores > 1) {
-                message = paste0("For TFs from JASPAR, only 1 core can currently be utilized for this function instead of the user-provided value of ", nCores)
+                message = paste0("overlapPeaksAndTFBS: For TFs from JASPAR, only 1 core can currently be utilized for this function instead of the user-provided value of ", nCores)
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
             }
             
@@ -1897,7 +1897,7 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
   seqLengths = .getChrLengths(GRN@config$parameters$genomeAssembly)
   missingSeq = which(!TFBS.df$chr %in% names(seqLengths))
   if (length(missingSeq) > 0) {
-      message = paste0("A total of ", length(missingSeq), " out of ", nrow(TFBS.df), " entries in the file ", file_tfbs_in, " contain sequence names that cannot be found in the public databases to retrieve chromosome lengths. The following sequence names are unsupported and will be removed: ", paste0(unique(TFBS.df$chr[missingSeq]), collapse = ","))
+      message = paste0("overlapPeaksAndTFBS: A total of ", length(missingSeq), " out of ", nrow(TFBS.df), " entries in the file ", file_tfbs_in, " contain sequence names that cannot be found in the public databases to retrieve chromosome lengths. The following sequence names are unsupported and will be removed: ", paste0(unique(TFBS.df$chr[missingSeq]), collapse = ","))
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       TFBS.df = TFBS.df[-missingSeq,]
   }
@@ -1989,7 +1989,7 @@ overlapPeaksAndTFBS <- function(GRN,  nCores = 2, forceRerun = FALSE, ...) {
   } else if (ncol(TFBS.df) >= 6) {
     
     if (ncol(TFBS.df) > 6) {
-      message = paste0(" File ", file_tfbs_in, " had more than 6 columns, only the first 6 will be used.")
+      message = paste0("overlapPeaksAndTFBS: File ", file_tfbs_in, " had more than 6 columns, only the first 6 will be used.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)  
         
       TFBS.df = TFBS.df[,seq_len(6)]
@@ -2276,7 +2276,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
       message = "No rows overlapping with translation table, check ENSEMBL IDs."
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
     } else if (nRowAfter < nRowBefore) {
-      message = paste0("Retain ", nRowAfter, " from ", nRowBefore, " rows after filtering for overlapping ENSEMBL IDs from the translation table. This will raise a warning but this is usually expected that some rows are filtered")
+      message = paste0("importTFData: Retain ", nRowAfter, " from ", nRowBefore, " rows after filtering for overlapping ENSEMBL IDs from the translation table. This will raise a warning but this is usually expected that some rows are filtered")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
@@ -2291,7 +2291,7 @@ importTFData <- function(GRN, data, name, idColumn = "ENSEMBL", nameColumn = "TF
         message = "No samples overlapping."
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = FALSE)
       } else {
-        message = "Not all samples overlap"
+        message = "importTFData: Not all samples overlap"
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
       }
     }
@@ -3360,7 +3360,7 @@ addConnections_peak_gene <- function(GRN, overlapTypeGene = "TSS", corMethod = "
     # Check whether TAD boundaries overlap and print a warning if so
     nMultipleOverlaps = .checkSelfOverlap(subject)
     if (nMultipleOverlaps > 0) {
-        message = paste0(nMultipleOverlaps, " out of ", length(subject), " TADs overlap with at least one other TAD. Please verify whether this is intended or a mistake. Particularly 1bp overlaps may not resembl the truth.")
+        message = paste0("addConnections_peak_gene:", nMultipleOverlaps, " out of ", length(subject), " TADs overlap with at least one other TAD. Please verify whether this is intended or a mistake. Particularly 1bp overlaps may not resembl the truth.")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
@@ -4027,7 +4027,7 @@ filterGRNAndConnectGenes <- function(GRN,
   }
   
   if (!is.null(peak_gene.IHW.covariate) && peak_gene.fdr.method != "IHW") {
-      message = "peak_gene.fdr.threshold is not set to \"IHW\" while peak_gene.IHW.covariate has been specified. Therefore, peak_gene.IHW.covariate will be ignored. Set peak_gene.fdr.threshold to \"IHW\" to use IHW."
+      message = "filterGRNAndConnectGenes: peak_gene.fdr.threshold is not set to \"IHW\" while peak_gene.IHW.covariate has been specified. Therefore, peak_gene.IHW.covariate will be ignored. Set peak_gene.fdr.threshold to \"IHW\" to use IHW."
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
   }
   
@@ -4349,7 +4349,7 @@ filterGRNAndConnectGenes <- function(GRN,
                   
                   
                   if (peak_gene.fdr.method == "IHW" && length(indexes) < 1000) {
-                      message = paste0("IHW should only be performed with at least 1000 p-values, but only ", length(indexes), " are available. Switching to BH adjustment as fallback. This is to be expected for the background data but not for the real one.")
+                      message = paste0("filterGRNAndConnectGenes: IHW should only be performed with at least 1000 p-values, but only ", length(indexes), " are available. Switching to BH adjustment as fallback. This is to be expected for the background data but not for the real one.")
                       
                       if (permutationCur == 0) {
                           .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
@@ -4433,7 +4433,7 @@ filterGRNAndConnectGenes <- function(GRN,
           futile.logger::flog.info(paste0("Final number of rows left after all filtering steps: ", nrow(grn.filt)))
           
           if (nrow(grn.filt) == 0 & permutationCur == 0 & !silent) {
-              message = "No connections passed the filter steps. Rerun the function and be less stringent."
+              message = "filterGRNAndConnectGenes: No connections passed the filter steps. Rerun the function and be less stringent."
               .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
           }
 
@@ -4442,7 +4442,7 @@ filterGRNAndConnectGenes <- function(GRN,
       
       
       if (length(GRN@graph) > 0 & resetGraphAndStoreInternally) {
-          message = "To avoid object inconsistencies and unexpected/non-reproducible results, the graph slot in the object has been reset. For all network-related functions as well as eGRN visualization, rerun the method build_eGRN_graph and all other network-related ans enrichment functions to update to the new set of filtered connections"
+          message = "filterGRNAndConnectGenes: To avoid object inconsistencies and unexpected/non-reproducible results, the graph slot in the object has been reset. For all network-related functions as well as eGRN visualization, rerun the method build_eGRN_graph and all other network-related ans enrichment functions to update to the new set of filtered connections"
           .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
           GRN@graph = list()
       }
@@ -4510,7 +4510,7 @@ filterGRNAndConnectGenes <- function(GRN,
   res.l$ihwResults = ihw_res
   
   if (IHW::nbins(ihw_res) == 1) {
-    message = "Only 1 bin, IHW reduces to Benjamini Hochberg (uniform weights). Skipping diagnostic plots"
+    message = "filterGRNAndConnectGenes: Only 1 bin, IHW reduces to Benjamini Hochberg (uniform weights). Skipping diagnostic plots"
     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     return(res.l)
   } else {
@@ -4533,7 +4533,7 @@ filterGRNAndConnectGenes <- function(GRN,
                                     rejectionsBH, " [the latter should be lower])"))
     
     if (rejectionsIHW < rejectionsBH) {
-      message = paste0("For ", .getPermStr(permutation), ", the number of rejections for IHW (", rejectionsIHW, ") is smaller than for BH (", rejectionsBH, "), something might be wrong. The covariate chosen might not be appropriate (if this happens for real data) or it is simply a consequence of the data being permuted.")
+      message = paste0("filterGRNAndConnectGenes: For ", .getPermStr(permutation), ", the number of rejections for IHW (", rejectionsIHW, ") is smaller than for BH (", rejectionsBH, "), something might be wrong. The covariate chosen might not be appropriate (if this happens for real data) or it is simply a consequence of the data being permuted.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
     
@@ -5338,7 +5338,7 @@ loadExampleObject <- function(forceDownload = FALSE, fileURL = "https://git.embl
     
     if (!is.installed("BiocFileCache")) {
         
-        message = paste0("The package BiocFileCache is not installed, but recommended if you want to speed-up the retrieval of the GRN example object ",
+        message = paste0("loadExampleObject: The package BiocFileCache is not installed, but recommended if you want to speed-up the retrieval of the GRN example object ",
                          "via this function when using it multiple times. If not installed, the example object has to be downloaded anew every time you use this function.")
         .checkPackageInstallation("BiocFileCache", message, isWarning = TRUE)
         
@@ -6747,7 +6747,7 @@ add_featureVariation <- function(GRN,
                 # Numeric variables are modeled as fixed effect
                 formulaElems2 = paste0(numericVariablesNames)
                 
-                message = paste0("Make sure that all variables from the metadata that are numeric are indeed really numeric and not (hidden) factors. The following variables will be treated as numeric: ", paste0(numericVariablesNames, collapse = ","), ". If one of these is in fact a factor, change the type in GRN@data$metadata and re-run, or provide the design formula manually")
+                message = paste0("add_featureVariation: Make sure that all variables from the metadata that are numeric are indeed really numeric and not (hidden) factors. The following variables will be treated as numeric: ", paste0(numericVariablesNames, collapse = ","), ". If one of these is in fact a factor, change the type in GRN@data$metadata and re-run, or provide the design formula manually")
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                 
             } else {
@@ -6759,7 +6759,7 @@ add_featureVariation <- function(GRN,
             
         } else {
             
-            message = paste0("A custom formula has been provides. This is currently not being checked for correctness and therefore may reuslt in errors when running variancePartition. In that case, make sure the provided formula is correct.")
+            message = paste0("add_featureVariation: A custom formula has been provides. This is currently not being checked for correctness and therefore may reuslt in errors when running variancePartition. In that case, make sure the provided formula is correct.")
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
             designFormula = formula
         }

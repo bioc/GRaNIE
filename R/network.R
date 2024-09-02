@@ -283,7 +283,7 @@ filterConnectionsForPlotting <- function(GRN,
            futile.logger::flog.info(paste0(" Keep connections for a total of ", nrow(connectionsRetained), " connections"))
            
            if (nrow(connectionsRetained) == 0) {
-               message = paste0(" No connections are left for plotting. Make sure this was intended.")
+               message = paste0("filterConnectionsForPlotting: No connections are left for plotting. Make sure this was intended.")
                .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
            }
            
@@ -625,7 +625,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   }
   
   if (!identical(allOntologiesGeneral, allOntologiesGroup1)) {
-    message = paste0("General enrichment and ", type, " enrichment do not have the same ontologies precalculated (\"",
+    message = paste0(".checkEnrichmentCongruence_general: General enrichment and ", type, " enrichment do not have the same ontologies precalculated (\"",
                      paste0(allOntologiesGeneral, collapse = " & "), "\" vs. \"", 
                      paste0(allOntologiesGroup1, collapse = " & "), "\"). ",
                      "Rerun one of the enrichment functions (general, community, or TF) and add the missing ontology")
@@ -665,7 +665,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     
     if (statistic != "fisher") {
       statistic = "fisher"
-      message = paste0("For KEGG, DO and Reacome enrichment, the parameter \"statistic\" can only be \"fisher\". It has been changed accordingly.")
+      message = paste0(".runEnrichment: For KEGG, DO and Reacome enrichment, the parameter \"statistic\" can only be \"fisher\". It has been changed accordingly.")
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
     }
 
@@ -709,7 +709,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
     
     if (errorOcured) {
       
-      error_Biomart = "A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl. This is often caused by an unresponsive Ensembl site and may be caused by the ontology type (e.g, it may work for the GO ontologies but not for KEGG). Try again at a later time or change ontologies. For now, this ontology has been skipped. Note that this error is not caused by GRaNIE but external services."
+      error_Biomart = ".runEnrichment: A temporary error occured with biomaRt::getBM or biomaRt::useEnsembl. This is often caused by an unresponsive Ensembl site and may be caused by the ontology type (e.g, it may work for the GO ontologies but not for KEGG). Try again at a later time or change ontologies. For now, this ontology has been skipped. Note that this error is not caused by GRaNIE but external services."
       .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = TRUE)
       return(NULL)
       
@@ -724,7 +724,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   # Catch cases where none of the foreground genes are in the background
   if (nlevels(geneList) < 2) {
-      error_Biomart = "None of the foreground genes are part of the background. This may happen, for example, if the background is filtered by the gene type (background_geneTypes). Thus, no enrichment can be calculated."
+      error_Biomart = ".runEnrichment: None of the foreground genes are part of the background. This may happen, for example, if the background is filtered by the gene type (background_geneTypes). Thus, no enrichment can be calculated."
       .checkAndLogWarningsAndErrors(NULL, error_Biomart, isWarning = TRUE)
       
       result.list[["results"]] = tibble::tribble(~ID, ~Term, ~Annotated, ~Found, ~Expected, ~pval, ~GeneRatio, ~gene.ENSEMBL_foreground)
@@ -792,7 +792,7 @@ calculateGeneralEnrichment <- function(GRN, ontology = c("GO_BP", "GO_MF"),
   
   
   # Shared error message for different ontologies
-  enrichmentErrorMessage = "Could not calculate enrichment, the server returned an error. This may happen for multiple reasons, for example if no gene can be mapped. The results will be set to NA."
+  enrichmentErrorMessage = ".runEnrichment: Could not calculate enrichment, the server returned an error. This may happen for multiple reasons, for example if no gene can be mapped. The results will be set to NA."
   
   if (ontology == "KEGG") {
     
@@ -1220,7 +1220,7 @@ calculateCommunitiesEnrichment <- function(GRN,
             # issue a warning if the community label does not exist
             diff.communities = setdiff(communitiesDisplay, allCalculatedCommunities)
             if (length(diff.communities) > 0) {
-                message = paste("The following communities do not exist and will not be in the analysis: ", paste0(diff.communities, collapse = " + "))
+                message = paste("calculateCommunitiesEnrichment: The following communities do not exist and will not be in the analysis: ", paste0(diff.communities, collapse = " + "))
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                 communitiesDisplay = setdiff(communitiesDisplay, diff.communities)
             }
@@ -1260,7 +1260,7 @@ calculateCommunitiesEnrichment <- function(GRN,
   
   if (length(selCommunities) < length(communities)) {
       missingCommunities = setdiff(communities, selCommunities)
-      message = paste0("Some of the requested communities (", paste0(missingCommunities , collapse = ","), ") were not found and have been ignored. Only the following communities are available and have been taken: ", paste0(selCommunities, collapse = ","))
+      message = paste0("calculateCommunitiesEnrichment: Some of the requested communities (", paste0(missingCommunities , collapse = ","), ") were not found and have been ignored. Only the following communities are available and have been taken: ", paste0(selCommunities, collapse = ","))
       .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
   }
   

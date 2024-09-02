@@ -179,7 +179,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     # Remove rows with 0 variance, these cause errors later on
     zeroVar = which(rv == 0)
     if (length(zeroVar) > 0) {
-        message = paste0("Removing ", length(zeroVar), " rows from count data because they have 0 variance")
+        message = paste0("plotPCA: Removing ", length(zeroVar), " rows (out of ", nrow(rv), " in total) from count data because they have 0 variance")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         rv = rv[-zeroVar]
         counts.transf = counts.transf[-zeroVar,]
@@ -315,7 +315,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
                     plot(g)
                     
                 }, error = function(e) {
-                    message = paste0(" Could not plot PCA with variable ", varCur)
+                    message = paste0("plotPCA: Could not plot PCA with variable ", varCur)
                     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)   
                     
                     plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
@@ -420,7 +420,7 @@ plotPCA_all <- function(GRN, outputFolder = NULL, basenameOutput = NULL,
     
     # The number of PCs may be smaller than the asked number, depending on the tol parameter. Check here
     if (pcCount > ncol(pc$x)) {
-        message = paste0("Only ", ncol(pc$x), " PCs can be used instead of ",pcCount )
+        message = paste0("plotPCA: Only ", ncol(pc$x), " PCs can be used instead of ",pcCount )
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         pcCount = ncol(pc$x)
     }
@@ -1525,14 +1525,30 @@ plotDiagnosticPlots_peakGene <- function(GRN,
         
         nClasses_distance  = 10
         
+        if (packageVersion("forcats") < "1.0.0") {
+           
+            peakGeneCorrelations.all = peakGeneCorrelations.all %>%
+                dplyr::mutate(r_positive = .data$peak_gene.r > 0,
+                              peak_gene.distance_class     = forcats::fct_explicit_na(addNA(cut(.data$peak_gene.distance, breaks = nClasses_distance, include.lowest = TRUE)), "random"),
+                              peak_gene.distance_class_abs = forcats::fct_explicit_na(addNA(cut(abs(.data$peak_gene.distance), 
+                                                                                                breaks = nClasses_distance, include.lowest = TRUE, ordered_result = TRUE)), "random"),
+                )
+        } else {
+            
+            # Use new functions to avoid depreciation warning
+            peakGeneCorrelations.all = peakGeneCorrelations.all %>%
+                dplyr::mutate(r_positive = .data$peak_gene.r > 0,
+                              peak_gene.distance_class     = forcats::fct_na_value_to_level(addNA(cut(.data$peak_gene.distance, breaks = nClasses_distance, include.lowest = TRUE)), "random"),
+                              peak_gene.distance_class_abs = forcats::fct_na_value_to_level(addNA(cut(abs(.data$peak_gene.distance), 
+                                                                                                breaks = nClasses_distance, include.lowest = TRUE, ordered_result = TRUE)), "random"),
+                )
+        }
+        
+ 
+                          
         peakGeneCorrelations.all = peakGeneCorrelations.all %>%
-            dplyr::mutate(r_positive = .data$peak_gene.r > 0,
-                          peak_gene.distance_class = 
-                              forcats::fct_explicit_na(addNA(cut(.data$peak_gene.distance, breaks = nClasses_distance, include.lowest = TRUE)), "random"),
-                          peak_gene.distance_class_abs = forcats::fct_explicit_na(addNA(cut(abs(.data$peak_gene.distance), 
-                                                                                            breaks = nClasses_distance, include.lowest = TRUE, ordered_result = TRUE)), "random"),
-                          peak_gene.p.raw.class = cut(.data$peak_gene.p_raw, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE),
-                          peak_gene.r.class = cut(.data$peak_gene.r, breaks = seq(-1,1,0.05), include.lowest = TRUE, ordered_result = TRUE)) %>%
+              dplyr::mutate(peak_gene.p.raw.class = cut(.data$peak_gene.p_raw, breaks = seq(0,1,0.05), include.lowest = TRUE, ordered_result = TRUE),
+                            peak_gene.r.class = cut(.data$peak_gene.r, breaks = seq(-1,1,0.05), include.lowest = TRUE, ordered_result = TRUE)) %>%
             dplyr::filter(!is.na(.data$peak_gene.r)) # Eliminate rows with NA for peak_gene.r. This can happen if the normalized gene counts are identical across ALL samples, and due to the lack of any variation, the correlation cannot be computed
         
         
@@ -1643,7 +1659,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                     }
                     
                     if (length(indexCur) == 0) {
-                        message = " No connections left after filtering and intersection, skip plots"
+                        message = "plotDiagnosticPlots_peakGene: No connections left after filtering and intersection, skip plots"
                         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                         next
                     }
@@ -1850,7 +1866,7 @@ plotDiagnosticPlots_peakGene <- function(GRN,
                     dplyr::ungroup()
                 
                 if (nrow(dataCur) == 0) {
-                    message = paste0("For variable ", varCur, ", not enough data left after filtering to plot, skipping")
+                    message = paste0("plotDiagnosticPlots_peakGene: For variable ", varCur, ", not enough data left after filtering to plot, skipping")
                     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                     next
                 }
@@ -2455,7 +2471,12 @@ plot_stats_connectionSummary <- function(GRN, type = "heatmap",
 #' @template outputFolder
 #' @template basenameOutput
 #' @param dataType Character vector. One of, or both of, \code{real} or \code{background}. Default \code{real}. For which type, real or background data, to produce the diagnostic plots?
-#' @template corMethod
+#' @param corMethod Character. Either \code{NULL} (the default) or one of \code{pearson}, \code{spearman} or \code{bicor}. 
+#' Method for calculating the correlation coefficient. If set to \code{NULL}, the correlation method that has been used in the GraNIE object is used.
+#' For testing nd visualizing data, this can be changed, though.
+#' For \code{pearson} and \code{spearman} , see \link{cor} for details. \code{bicor} denotes the *biweight midcorrelation*, a correlation measure based on medians as
+#' calculated by \code{WGCNA::bicorAndPvalue}. Both \code{spearman} and \code{bicor} are considered more robust measures that are less prone to be affected by outliers.
+
 #' @template plotAsPDF
 #' @param plotsPerPage Integer vector of length 2. Default \code{c(2,2)}. How man plots should be put on one page? The first number denotes the number of rows, the second one the number of columns.
 #' @template pdf_width
@@ -3096,7 +3117,7 @@ plotCorrelations <- function(GRN, type = "all.filtered",
 
 .checkForZeroPlots <- function(data.df) {
     if (nrow(data.df) == 0) {
-        message = paste0("No connections (left) after filtering. No plots are produced. Rerun the function and change the filters.")
+        message = paste0("plotCorrelations: No connections (left) after filtering. No plots are produced. Rerun the function and change the filters.")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         return(TRUE)
     } else {
@@ -3201,7 +3222,7 @@ plotGeneralGraphStats <- function(GRN, outputFolder = NULL, basenameOutput = NUL
                     ggplot2::theme_void()
                 
                 
-                message = "No genes found in the GRN object. Make sure the filtered connections contain also genes."
+                message = "plotGeneralGraphStats: No genes found in the GRN object. Make sure the filtered connections contain also genes."
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                 
             } else {
@@ -3594,7 +3615,7 @@ plotCommunitiesStats <- function(GRN, outputFolder = NULL, basenameOutput = NULL
             
             pageCounter = pageCounter + 1 
             
-            message = "No communities found in GRN object. Make sure the filtered connections contain also genes."
+            message = "plotCommunitiesStats: No communities found in GRN object. Make sure the filtered connections contain also genes."
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
             
         } else {
@@ -3861,7 +3882,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
                 # 5 TFs have been requested only 4 actually show any enriched terms
                 
                 if (nrow(GRN@stats$Enrichment$byCommunity[["combined"]][[ontologyCur]]) == 0) {
-                    message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
+                    message = paste0("plotCommunitiesEnrichment: No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
                     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                     next
                 }
@@ -3967,7 +3988,7 @@ plotCommunitiesEnrichment <- function(GRN, outputFolder = NULL, basenameOutput =
                 pageCounter = pageCounter + 1
                 
             } else {
-                message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
+                message = paste0("plotCommunitiesEnrichment: Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
             } 
             
@@ -4110,7 +4131,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
         }
         wrongTFs = setdiff(TF.IDs, unique(GRN@connections$all.filtered$`0`$TF.ID))
         if (length(wrongTFs) > 0) {
-            message = paste0("The following user-provided TF(s) \"",  paste0(wrongTFs, collapse = " + "), "\" are not in the filtered GRN. They will be ommited from the results.")
+            message = paste0("plotTFEnrichment: The following user-provided TF(s) \"",  paste0(wrongTFs, collapse = " + "), "\" are not in the filtered GRN. They will be ommited from the results.")
             .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
             
         }
@@ -4173,7 +4194,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
             pValPrefix = .getPValPrefix(display_pAdj, ontologyCur)
             
             if (display_pAdj && stringr::str_starts(ontologyCur, "GO_")) {
-                message = paste0("For ontology ", ontologyCur, ", only raw p-values can be displayed. Adjusted p-values are only available for the following ontologies: KEGG, Disease Ontology, Reactome")
+                message = paste0("plotTFEnrichment: For ontology ", ontologyCur, ", only raw p-values can be displayed. Adjusted p-values are only available for the following ontologies: KEGG, Disease Ontology, Reactome")
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
             }
             
@@ -4222,7 +4243,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
                     dplyr::filter(.data$TF.ID %in% c("all", as.character(TFset)))
                 
                 if (nrow(GRN@stats$Enrichment$byTF[["combined"]][[ontologyCur]]) == 0) {
-                    message = paste0("  No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
+                    message = paste0("plotTFEnrichment: No enrichment terms passed the filters when creating the across-community summary plot for ontology ", ontologyCur, ". Skipping. You may adjust the parameter nSignificant to a lower value")
                     .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
                     next
                 }
@@ -4324,7 +4345,7 @@ plotTFEnrichment <- function(GRN, rankType = "degree", n = NULL, TF.IDs = NULL,
                 pageCounter = pageCounter + 1
                 
             } else {
-                message = paste0(" Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
+                message = paste0("plotTFEnrichment: Cannot include ontology ", ontologyCur, " in overview with general enrichment because it is missing in the latter. Please rerun the function calculateGeneralEnrichment for the aforementioned ontology.")
                 .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
             } 
             
@@ -4691,7 +4712,7 @@ visualizeGRN <- function(GRN, outputFolder = NULL,  basenameOutput = NULL, plotA
     
     if (nrow(grn.merged) == 0) {
         
-        message = paste0("No rows left in the GRN. Creating empty plot.")
+        message = paste0("visualizeGRN: No rows left in the GRN. Creating empty plot.")
         .checkAndLogWarningsAndErrors(NULL, message, isWarning = TRUE)
         
         plot(c(0, 1), c(0, 1), ann = FALSE, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n', main = title)

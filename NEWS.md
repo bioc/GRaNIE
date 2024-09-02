@@ -1,3 +1,8 @@
+# GRaNIE 1.9.5 (2024-09-01)
+- single-cell vignette update, made it clearer which settings to change in the GRaNIE workflow for single-cell data
+- warning messages now also contain the name of the function they were originally called from
+- `forcats` warning for package versions of 1.0.0 and above fixed
+
 # GRaNIE 1.9.4 (2024-08-01)
 
 - changed default values for `gene.types` in `filterGRNAndConnectGenes()` to `all` and adjusted documentation across functions that have also this argument  - by default, there is now no standard filter for the gene type (genes were filtered to only protein-coding genes before using `protein_coding`). This results in bigger eGRNs and seems more sensible than to automatically filter genes for most use cases.
