@@ -2154,7 +2154,6 @@ addData_TFActivity <- function(GRN, normalization = "cyclicLoess", name = "TF_ac
     
     
     pb <- progress::progress_bar$new(total = length(allTF))
-    
     for (TFCur in allTF) {
       
       pb$tick()
@@ -2781,7 +2780,15 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
     GC_classes_perTF.l = list()
     pb <- progress::progress_bar$new(total = length(allTF))
     
+    if (percBackground_size == 0) {
+        futile.logger::flog.info(paste0("For each TF: Trying to automatically find the highest minimum percentage so that mimicking all GC bins with a relative frequency of at least ", 
+                                        threshold_percentage, " in the background works"))
+    }
+    
     for (TFCur in allTF) {
+        
+      futile.logger::flog.info(paste0("TF ", TFCur))
+        
       
       pb$tick()
       #start = Sys.time()
@@ -2797,6 +2804,14 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
       
       nPeaksForeground = nrow(peaksForeground)
       nPeaksBackground = nrow(peaksBackground)
+      
+      
+      
+      # The foreground can be empty: No peak actually overlaps with the TFBS from the TF
+      if (nPeaksForeground == 0) {
+          futile.logger::flog.info(paste0(" No peaks in foreground, skipping TF"))
+          next
+      }
       
       #.printExecutionTime(start, "Interval 1: ")
       #start = Sys.time()
@@ -2814,6 +2829,7 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
           tidyr::complete(.data$peak.GC.class, fill = list(n = 0)) %>%
           dplyr::mutate(n_rel = .data$n / nPeaksForeground, type = "foreground") %>%
           dplyr::arrange(dplyr::desc(.data$n_rel))
+
         
         GC_classes_background.df = peaksBackground %>%
           dplyr::group_by(.data$peak.GC.class) %>%
@@ -2893,6 +2909,10 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
             nPeaksCur = min(GC_classes_all.df$n.bg.needed[i], nrow(peaksBackgroundGCCur))
           }
           
+          if (!is.finite(GC_classes_all.df$n.bg.needed[i])) {
+              stop("This should not happen. Please report to the devs.")
+          }
+          
           if (GC_classes_all.df$n.bg.needed[i] > nrow(peaksBackgroundGCCur)) {
               #futile.logger::flog.info(paste0("Resampling for bin ", GC_classes_foreground.df$peak.GC.class[i], 
               #": Needed: ", GC_classes_all.df$n.bg.needed[i], ", available: ", nrow(peaksBackgroundGCCur)))
@@ -2904,6 +2924,7 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
           # Take a sample from the background, and record the row numbers
           
         }
+
         
         # We cannot simply select now the peakIDs, as some peaks may be present multiple times
         #peaksBackgroundGC = peaksBackground %>% dplyr::filter(peakID %in% peakIDsSel) 
@@ -2922,7 +2943,7 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
         n_fp_orig  = length(fp_orig)
         
       } else {
-        # TODO: Redudnant so far in this case
+        # TODO: Redundant so far in this case
         fp    =  fp_orig = sort.cor.m.sort[overlapNo, TFCur]
         n_fp_orig  = length(fp_orig)
       }
@@ -3119,14 +3140,13 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
   
   # Iterate over different background sizes
   minPerc = 0
-  futile.logger::flog.info(paste0("Trying to automatically find the highest minimum percentage so that mimicking all GC bins with a relative frequenc of at least ", 
-  threshold_percentage, " in the background works"))
+
   for (percCur in c(seq(100,10,-5),5)) {
     
     if (minPerc > 0) next
     targetNoPeaks = percCur/100 * nrow(peaksBackground)
     
-    futile.logger::flog.info(paste0(" Downscaling background to ", percCur, "%"))
+    futile.logger::flog.debug(paste0("  Downscaling background to ", percCur, "%"))
     
     #Check for each GC bin in the foreground, starting with the most abundant, whether we have enough background peaks to sample from
     
@@ -3139,6 +3159,11 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
       n_rel    = GC_classes_foreground.df$n_rel[i]
       GC.class.cur = GC_classes_foreground.df$peak.GC.class[i]
       
+      if (!is.finite(n_rel)) {
+          futile.logger::flog.debug(paste0("  GC.class ", GC.class.cur, ": n_rel is not finite for i = ", i, ", skipping"))
+          next
+      }
+      
       requiredNoPeaks = round(n_rel * targetNoPeaks, 0)
       # Check in background
       availableNoPeaks = GC_classes_background.df %>% 
@@ -3150,18 +3175,18 @@ addConnections_TF_peak <- function(GRN, plotDiagnosticPlots = TRUE, plotDetails 
           ignoredStr = paste0(" (ignored because relative frequency < ", threshold_percentage, ")")
       }
       
-      futile.logger::flog.info(paste0("  GC.class ", GC.class.cur, ": Required: ", requiredNoPeaks, ", available: ", availableNoPeaks, ignoredStr))
+      futile.logger::flog.debug(paste0("   GC.class ", GC.class.cur, ": Required: ", requiredNoPeaks, ", available: ", availableNoPeaks, ignoredStr))
       if ( availableNoPeaks < requiredNoPeaks) {
         #futile.logger::flog.info(paste0("  Not enough"))
       }
       if (availableNoPeaks < requiredNoPeaks & n_rel > threshold_percentage) {
-        futile.logger::flog.info(paste0("  Mimicking distribution FAILED (GC class ", GC.class.cur, " could not be mimicked."))
+        futile.logger::flog.debug(paste0("   Mimicking distribution FAILED (GC class ", GC.class.cur, " could not be mimicked. Aborting current downscaling value."))
         break
       }
       
       if (i == nrow(GC_classes_foreground.df)) {
         minPerc = percCur
-        futile.logger::flog.info(paste0("Found max. percentage of background that is able to mimick the foreground: ", percCur))
+        futile.logger::flog.info(paste0(" Found max. percentage of background that is able to mimick the foreground: ", percCur))
         
       }
       

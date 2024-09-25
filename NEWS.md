@@ -1,3 +1,8 @@
+# GRaNIE 1.9.7 (2024-09-25)
+
+## Bug fixes
+- we made a few adjustments for the still experimental GC correction feature  in `addConnections_TF_peak()` that threw errors for some edge cases when `percBackground_size = 0`
+
 # GRaNIE 1.9.6 (2024-09-01)
 
 ## New features 

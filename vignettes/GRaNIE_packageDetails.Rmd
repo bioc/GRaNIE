@@ -367,12 +367,10 @@ We provide the following downloads that can be directly used with GRaNIE:
 -   `PWMScan` + HOCOMOCO v10 ([Download
     here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm10/PWMScan_HOCOMOCOv10.tar.gz))
     
-**mm39: (COMING SOON, links do not yet work)**
+**mm39:**
 
 -   **`PWMScan` + HOCOMOCO v12 INVIVO collection** ([Download
     here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm39/PWMScan_HOCOMOCOv12_H12INVIVO.tar.gz))
--   `PWMScan` + HOCOMOCO v10 ([Download
-    here](https://s3.embl.de/zaugg-web/GRaNIE/TFBS/mm39/PWMScan_HOCOMOCOv10.tar.gz))
 
 To use them, simply download the file, extract and then reference the
 folder within the `motifFolder` argument in the `addTFBS()` function -
